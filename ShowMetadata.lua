@@ -29,21 +29,11 @@ local function showDialog()
       }
       dialogScope:setIndeterminate()
   
-      --[[
       local metaData = readMetaData(targetPhoto)
       metaData = filterInput(metaData)
-      parts = {}
-      for i in string.gmatch(str, "[^\n]+") do 
-        p = splitText(i, ":")
-        if (p ~= nill) then
-          parts[#parts] = p
-        end
-      end--]]
-      
       dialogScope:done() -- dialog is persisting behind the view dialog. it doesn't dismiss. urgh
       dialogScope:cancel()
       MetaDataDialog.textView.title = metaData
-      --MetaDataDialog.textView.title = "key = " .. parts[0].key 
       end
     )
     
