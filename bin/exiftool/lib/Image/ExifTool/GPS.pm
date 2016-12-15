@@ -12,7 +12,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.42';
+$VERSION = '1.45';
 
 my %coordConv = (
     ValueConv    => 'Image::ExifTool::GPS::ToDegrees($val)',
@@ -124,8 +124,8 @@ my %coordConv = (
         Count => 3,
         Shift => 'Time',
         Notes => q{
-            when writing, date is stripped off if present, and time is adjusted to UTC
-            if it includes a timezone
+            UTC time of GPS fix.  When writing, date is stripped off if present, and
+            time is adjusted to UTC if it includes a timezone
         },
         ValueConv => 'Image::ExifTool::GPS::ConvertTimeStamp($val)',
         ValueConvInv => '$val=~tr/:/ /;$val',
@@ -287,13 +287,13 @@ my %coordConv = (
         Name => 'GPSProcessingMethod',
         Writable => 'undef',
         Notes => 'values of "GPS", "CELLID", "WLAN" or "MANUAL" by the EXIF spec.',
-        RawConv => 'Image::ExifTool::Exif::ConvertExifText($self,$val,1)',
+        RawConv => 'Image::ExifTool::Exif::ConvertExifText($self,$val,1,$tag)',
         RawConvInv => 'Image::ExifTool::Exif::EncodeExifText($self,$val)',
     },
     0x001c => {
         Name => 'GPSAreaInformation',
         Writable => 'undef',
-        RawConv => 'Image::ExifTool::Exif::ConvertExifText($self,$val,1)',
+        RawConv => 'Image::ExifTool::Exif::ConvertExifText($self,$val,1,$tag)',
         RawConvInv => 'Image::ExifTool::Exif::EncodeExifText($self,$val)',
     },
     0x001d => {
@@ -441,7 +441,7 @@ sub PrintTimeStamp($)
 sub ToDMS($$;$$)
 {
     my ($et, $val, $doPrintConv, $ref) = @_;
-    my ($fmt, $num, $sign);
+    my ($fmt, @fmt, $num, $sign);
 
     if ($ref) {
         if ($val < 0) {
@@ -470,22 +470,34 @@ sub ToDMS($$;$$)
         } else {
             $fmt = "%d,%.6f$ref";   # use XMP standard format
         }
-        # count the number of format specifiers
-        $num = ($fmt =~ tr/%/%/);
+        # count (and capture) the format specifiers (max 3)
+        while ($fmt =~ /(%(%|[^%]*?[diouxXDOUeEfFgGcs]))/g) {
+            next if $1 eq '%%';
+            push @fmt, $1;
+            last if @fmt >= 3;
+        }
+        $num = scalar @fmt;
     } else {
         $num = 3;
     }
-    my ($d, $m, $s);
-    $d = $val;
+    my @c;  # coordinates (D) or (D,M) or (D,M,S)
+    $c[0] = $val;
     if ($num > 1) {
-        $d = int($d);
-        $m = ($val - $d) * 60;
+        $c[0] = int($c[0]);
+        $c[1] = ($val - $c[0]) * 60;
         if ($num > 2) {
-            $m = int($m);
-            $s = ($val - $d - $m / 60) * 3600;
+            $c[1] = int($c[1]);
+            $c[2] = ($val - $c[0] - $c[1] / 60) * 3600;
+        }
+        # handle round-off errors to ensure minutes and seconds are
+        # less than 60 (eg. convert "72 59 60.00" to "73 0 0.00")
+        $c[-1] = $doPrintConv ? sprintf($fmt[-1], $c[-1]) : ($c[-1] . '');
+        if ($c[-1] >= 60) {
+            $c[-1] -= 60;
+            ($c[-2] += 1) >= 60 and $num > 2 and $c[-2] -= 60, $c[-3] += 1;
         }
     }
-    return $doPrintConv ? sprintf($fmt, $d, $m, $s) : "$d $m $s$ref";
+    return $doPrintConv ? sprintf($fmt, @c) : "@c$ref";
 }
 
 #------------------------------------------------------------------------------
@@ -524,7 +536,7 @@ GPS (Global Positioning System) meta information in EXIF data.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -7,6 +7,11 @@ local LrView = import 'LrView'
 local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
+local LrLogger = import 'LrLogger'
+local LrStringUtils = import "LrStringUtils"
+
+local myLogger = LrLogger( 'libraryLogger' )
+myLogger:enable( "logfile" )
 
 isDebug = true
 
@@ -55,4 +60,18 @@ function splitText(str, delim)
   r.key = string.sub(str, 0, index-1)
   r.value = string.sub(str, index+1, #str)
   return r
+end
+
+function log(str)
+  myLogger:warn(str)
+end
+
+function parseDimens(strDimens) 
+  local index = string.find(strDimens, "x")
+  if (index == nill) then return nill end
+  local w = string.sub(strDimens, 0, index-1)
+  local h = string.sub(strDimens, index+1)
+  w = LrStringUtils.trimWhitespace(w)
+  h = LrStringUtils.trimWhitespace(h)
+  return tonumber(w), tonumber(h)  
 end

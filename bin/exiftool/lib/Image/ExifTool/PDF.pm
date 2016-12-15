@@ -21,7 +21,7 @@ use vars qw($VERSION $AUTOLOAD $lastFetched);
 use Image::ExifTool qw(:DataAccess :Utils);
 require Exporter;
 
-$VERSION = '1.37';
+$VERSION = '1.41';
 
 sub FetchObject($$$$);
 sub ExtractObject($$;$$);
@@ -51,11 +51,11 @@ my %supportedFilter = (
     '/JPXDecode' => 1, # (Jpeg2000 image - not filtered)
     '/LZWDecode' => 1, # (usually a bitmapped image)
     '/ASCIIHexDecode' => 1,
+    '/ASCII85Decode' => 1,
     # other standard filters that we currently don't support
     #'/JBIG2Decode' => 0, # (JBIG2 image format not supported)
     #'/CCITTFaxDecode' => 0,
     #'/RunLengthDecode' => 0,
-    #'/ASCII85Decode' => 0,
 );
 
 # tags in main PDF directories
@@ -326,6 +326,7 @@ my %supportedFilter = (
     },
     Image_stream => {
         Name => 'EmbeddedImage',
+        Groups => { 2 => 'Preview' },
         Binary => 1,
     },
 );
@@ -753,6 +754,11 @@ sub FetchObject($$$$)
         $et->Warn("$tag object ($obj) not found at $offset");
         return undef;
     }
+    # read the first line of data for the object (skipping comments if necessary)
+    for (;;) {
+        last if $data =~ /\S/ and $data !~ /^\s*%/;
+        $raf->ReadLine($data) or $et->Warn("Error reading $tag data"), return undef;
+    }
     return ExtractObject($et, \$data, $raf, $xref);
 }
 
@@ -920,7 +926,7 @@ sub ExtractObject($$;$$)
         }
         if ($$dict{$tag}) {
             # duplicate dictionary entries are not allowed
-            $et->Warn('Duplicate $tag entry in dictionary (ignored)');
+            $et->Warn("Duplicate '$tag' entry in dictionary (ignored)");
         } else {
             # save the entry
             push @tags, $tag;
@@ -1241,7 +1247,7 @@ sub DecodeStream($$)
                 } elsif ($$decodeParms{EarlyChange}) {
                     $et->WarnOnce("LZWDecode EarlyChange currently not supported");
                     return 0;
-                }                    
+                }
             }
             unless (DecodeLZW(\$$dict{_stream})) {
                 $et->WarnOnce('LZW decompress error');
@@ -1254,6 +1260,34 @@ sub DecodeStream($$)
             $$dict{_stream} =~ tr/0-9a-zA-Z//d; # remove illegal characters
             $$dict{_stream} = pack 'H*', $$dict{_stream};
 
+        } elsif ($filter eq '/ASCII85Decode') {
+
+            my ($err, @out, $i);
+            my ($n, $val) = (0, 0);
+            foreach (split //, $$dict{_stream}) {
+                if ($_ ge '!' and $_ le 'u') {;
+                    $val = 85 * $val + ord($_) - 33;
+                    next unless ++$n == 5;
+                } elsif ($_ eq '~') {
+                    $n == 1 and $err = 1;   # error to have a single char in the last group of 5
+                    for ($i=$n; $i<5; ++$i) { $val *= 85; }
+                } elsif ($_ eq 'z') {
+                    $n and $err = 2, last;  # error if 'z' isn't the first char
+                    $n = 5;
+                } else {
+                    next if /^\s$/;         # ignore white space
+                    $err = 3, last;         # any other character is an error
+                }
+                $val = unpack('V', pack('N', $val)); # reverse byte order
+                while (--$n > 0) {
+                    push @out, $val & 0xff;
+                    $val >>= 8;
+                }
+                last if $_ eq '~';
+                # (both $n and $val are zero again now)
+            }
+            $err and $et->WarnOnce("ASCII85Decode error $err");
+            $$dict{_stream} = pack('C*', @out);
         }
     }
     return 1;
@@ -1490,7 +1524,7 @@ sub DecryptInit($$$)
             # make sure there is no UTF-8 flag on the password
             if ($] >= 5.006 and (eval { require Encode; Encode::is_utf8($password) } or $@)) {
                 # repack by hand if Encode isn't available
-                $password = $@ ? pack('C*',unpack('U0C*',$password)) : Encode::encode('utf8',$password);
+                $password = $@ ? pack('C*',unpack($] < 5.010000 ? 'U0C*' : 'C0C*',$password)) : Encode::encode('utf8',$password);
             }
         } else {
             return 'Incorrect password';
@@ -1930,7 +1964,7 @@ sub ProcessDict($$$$;$$)
                     # otherwise we must first convert from PDFDocEncoding
                     $val = $et->Decode($val, ($val=~s/^\xfe\xff// ? 'UCS2' : 'PDFDoc'), 'MM');
                 }
-                if ($$tagInfo{List}) {
+                if ($$tagInfo{List} and not $$et{OPTIONS}{NoPDFList}) {
                     # separate tokens in comma or whitespace delimited lists
                     my @values = ($val =~ /,/) ? split /,+\s*/, $val : split ' ', $val;
                     foreach $val (@values) {
@@ -2006,6 +2040,12 @@ sub ProcessDict($$$$;$$)
         }
         # decode stream if necessary
         DecodeStream($et, $dict) or last;
+        if ($verbose > 2) {
+            $et->VPrint(2,"$$et{INDENT}$$et{DIR_NAME} stream data\n");
+            my %parms = ( Prefix => $$et{INDENT} );
+            $parms{MaxLen} = $verbose > 3 ? 1024 : 96 if $verbose < 5;
+            HexDump(\$$dict{_stream}, undef, %parms);
+        }
         # extract information from stream
         my %dirInfo = (
             DataPt   => \$$dict{_stream},
@@ -2296,7 +2336,7 @@ including AESV2 (AES-128) and AESV3 (AES-256).
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

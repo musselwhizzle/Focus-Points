@@ -37,14 +37,14 @@
 #              22) Bozi (K10D, http://www.cpanforum.com/posts/8480)
 #              23) Akos Szalkai (https://rt.cpan.org/Ticket/Display.html?id=43743)
 #              24) Albert Bogner private communication
-#              25) Niels Kristian Bech Jensen private communication
 #              26) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3444.0.html
 #              27) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3833.0.html
 #              28) Klaus Homeister http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,4803.0.html
 #              29) Louis Granboulan private communication (K-5II)
 #              30) http://u88.n24.queensu.ca/exiftool/forum/index.php?topic=5433
-#              31) Iliah Borg private communication (LibRaw)
+#              IB) Iliah Borg private communication (LibRaw)
 #              JD) Jens Duttke private communication
+#              NJ) Niels Kristian Bech Jensen private communication
 #
 # Notes:        See POD documentation at the bottom of this file
 #------------------------------------------------------------------------------
@@ -54,12 +54,14 @@ package Image::ExifTool::Pentax;
 use strict;
 use vars qw($VERSION %pentaxLensTypes);
 use Image::ExifTool::Exif;
+use Image::ExifTool::GPS;
 use Image::ExifTool::HP;
 
-$VERSION = '2.82';
+$VERSION = '3.07';
 
 sub CryptShutterCount($$);
 sub PrintFilter($$$);
+sub DecodeAFPoints($$$$;$);
 
 # pentax lens type codes (ref 4)
 # The first number gives the lens series, and the 2nd gives the model number
@@ -78,22 +80,25 @@ sub PrintFilter($$$);
         my ($val, $inv, $conv) = @_;
         return undef if $inv;
         # *istD may report a series number of 4 for series 7 lenses
-        $val =~ s/^4 /7 / and $$conv{$val} and return $$conv{$val} . " ($_[0])";
+        $val =~ s/^4 /7 / and $$conv{$val} and return "$$conv{$val} ($_[0])";
         # cameras that don't recognize SDM lenses (eg. older K10 firmware)
         # may report series 7 instead of 8
-        $val =~ s/^7 /8 / and $$conv{$val} and return $$conv{$val} . " ? ($_[0])";
+        $val =~ s/^7 /8 / and $$conv{$val} and return "$$conv{$val} ? ($_[0])";
+        # there seems to some inconsistency between FA and DFA lenses for the 645D...
+        ($val =~ s/^11 /13 / or $val =~ s/^13 /11 /) and $$conv{$val} and return "$$conv{$val} ? ($_[0])";
         return undef;
     },
     '0 0' => 'M-42 or No Lens', #17
     '1 0' => 'K or M Lens',
     '2 0' => 'A Series Lens', #7 (from smc PENTAX-A 400mm F5.6)
-    '3 0' => 'Sigma', # (includes 'Sigma 30mm F1.4 EX DC' - PH)
-    # (and 'Sigma 105mm F2.8 EX DG Macro', ref 24)
+    '3 0' => 'Sigma',
     # (and 'Sigma 18-50mm F2.8 EX Macro')
-    # (and 'Sigma 180mm F4.5 EX DG Macro')
-    # (and 'Sigma 70mm F2.8 EX DG Macro')
+    # (and 'Sigma 30mm F1.4 EX DC', ref PH)
     # (and 'Sigma 50-500mm F4-6.3 DG APO')
-    '3 17' => 'smc PENTAX-FA SOFT 85mm F2.8',
+    # (and 'Sigma 70mm F2.8 EX DG Macro')
+    # (and 'Sigma 105mm F2.8 EX DG Macro', ref 24)
+    # (and 'Sigma 180mm F4.5 EX DG Macro')
+    '3 17' => 'smc PENTAX-FA SOFT 85mm F2.8', # (also F version, ref 29)
     '3 18' => 'smc PENTAX-F 1.7X AF ADAPTER',
     '3 19' => 'smc PENTAX-F 24-50mm F4',
     '3 20' => 'smc PENTAX-F 35-80mm F4-5.6',
@@ -105,8 +110,8 @@ sub PrintFilter($$$);
     '3 23.3' => 'Tokina 80-200mm F2.8 ATX-Pro', #Exiv2
     '3 24' => 'smc PENTAX-F 35-135mm F3.5-4.5',
     '3 25' => 'smc PENTAX-F 35-105mm F4-5.6 or Sigma or Tokina Lens',
-    '3 25.1' => 'Sigma AF 28-300mm F3.5-5.6 DL IF', #11
-    '3 25.2' => 'Sigma 55-200mm F4-5.6 DC', #JD
+    '3 25.1' => 'Sigma 55-200mm F4-5.6 DC', #JD
+    '3 25.2' => 'Sigma AF 28-300mm F3.5-5.6 DL IF', #11
     '3 25.3' => 'Sigma AF 28-300mm F3.5-6.3 DL IF', #Exiv2
     '3 25.4' => 'Sigma AF 28-300mm F3.5-6.3 DG IF Macro', #JD
     '3 25.5' => 'Tokina 80-200mm F2.8 ATX-Pro', #12
@@ -115,7 +120,7 @@ sub PrintFilter($$$);
     '3 27.1' => 'Tokina AT-X Pro AF 28-70mm F2.6-2.8', #JD
     '3 28' => 'smc PENTAX-F 35-70mm F3.5-4.5 or Tokina Lens',
     '3 28.1' => 'Tokina 19-35mm F3.5-4.5 AF', #12
-    '3 28.2' => 'Tokina AT-X AF 400mm F5.6', #25
+    '3 28.2' => 'Tokina AT-X AF 400mm F5.6', #NJ
     '3 29' => 'PENTAX-F 28-80mm F3.5-4.5 or Sigma or Tokina Lens',
     '3 29.1' => 'Sigma AF 18-125mm F3.5-5.6 DC', #11
     '3 29.2' => 'Tokina AT-X PRO 28-70mm F2.6-2.8', #22
@@ -133,12 +138,15 @@ sub PrintFilter($$$);
     '3 40' => 'smc PENTAX-F Macro 100mm F2.8',
     '3 41' => 'smc PENTAX-F Macro 50mm F2.8 or Sigma Lens', #4
     '3 41.1' => 'Sigma 50mm F2.8 Macro', #16
+    '3 42' => 'Sigma 300mm F2.8 EX DG APO IF', #27
     '3 44' => 'Sigma or Tamron Lens (3 44)',
     '3 44.1' => 'Sigma AF 10-20mm F4-5.6 EX DC', #JD
     '3 44.2' => 'Sigma 12-24mm F4.5-5.6 EX DG', #12 (added "-5.6", ref 29)
     '3 44.3' => 'Sigma 17-70mm F2.8-4.5 DC Macro', #(Bart Hickman)
     '3 44.4' => 'Sigma 18-50mm F3.5-5.6 DC', #4
-    '3 44.5' => 'Tamron 35-90mm F4 AF', #12
+    '3 44.5' => 'Sigma 17-35mm F2.8-4 EX DG', #29
+    '3 44.6' => 'Tamron 35-90mm F4 AF', #12
+    '3 44.7' => 'Sigma AF 18-35mm F3.5-4.5 Aspherical', #29
     '3 46' => 'Sigma or Samsung Lens (3 46)',
     '3 46.1' => 'Sigma APO 70-200mm F2.8 EX',
     '3 46.2' => 'Sigma EX APO 100-300mm F4 IF', #JD
@@ -169,6 +177,7 @@ sub PrintFilter($$$);
     '4 2' => 'smc PENTAX-FA 80-320mm F4.5-5.6',
     '4 3' => 'smc PENTAX-FA 43mm F1.9 Limited',
     '4 6' => 'smc PENTAX-FA 35-80mm F4-5.6',
+    '4 10' => 'Irix 15mm F2.4', #forum3833
     '4 12' => 'smc PENTAX-FA 50mm F1.4', #17
     '4 15' => 'smc PENTAX-FA 28-105mm F4-5.6 [IF]',
     '4 16' => 'Tamron AF 80-210mm F4-5.6 (178D)', #13
@@ -187,7 +196,7 @@ sub PrintFilter($$$);
     '4 34' => 'smc PENTAX-FA 24-90mm F3.5-4.5 AL[IF]',
     '4 35' => 'smc PENTAX-FA 100-300mm F4.7-5.8',
   # '4 36' => 'Tamron AF70-300mm F4-5.6 LD Macro', # both 572D and A17 (Di) - ref JD
-    '4 36' => 'Tamron AF 70-300mm F4-5.6 LD Macro 1:2', #25
+    '4 36' => 'Tamron AF 70-300mm F4-5.6 LD Macro 1:2', #NJ
     '4 37' => 'Tamron SP AF 24-135mm F3.5-5.6 AD AL (190D)', #13
     '4 38' => 'smc PENTAX-FA 28-105mm F3.2-4.5 AL[IF]',
     '4 39' => 'smc PENTAX-FA 31mm F1.8 AL Limited',
@@ -200,7 +209,7 @@ sub PrintFilter($$$);
     '4 46' => 'smc PENTAX-FA J 28-80mm F3.5-5.6 AL',
     '4 47' => 'smc PENTAX-FA J 18-35mm F4-5.6 AL',
    #'4 49' => 'Tamron SP AF 28-75mm F2.8 XR Di (A09)',
-    '4 49' => 'Tamron SP AF 28-75mm F2.8 XR Di LD Aspherical [IF] Macro', #25
+    '4 49' => 'Tamron SP AF 28-75mm F2.8 XR Di LD Aspherical [IF] Macro', #NJ
     '4 51' => 'smc PENTAX-D FA 50mm F2.8 Macro',
     '4 52' => 'smc PENTAX-D FA 100mm F2.8 Macro',
     '4 55' => 'Samsung/Schneider D-XENOGON 35mm F2', #29
@@ -312,9 +321,19 @@ sub PrintFilter($$$);
     '8 27' => 'Sigma 18-200mm F3.5-6.3 II DC HSM', #27
     '8 28' => 'Sigma 18-250mm F3.5-6.3 DC Macro HSM', #27
     '8 29' => 'Sigma 35mm F1.4 DG HSM', #27
-    '8 30' => 'Sigma 17-70mm F2.8-4 DC Macro HSM Contemporary', #27
+    '8 30' => 'Sigma 17-70mm F2.8-4 DC Macro HSM | C', #27
     '8 31' => 'Sigma 18-35mm F1.8 DC HSM', #27
     '8 32' => 'Sigma 30mm F1.4 DC HSM | A', #27
+    '8 34' => 'Sigma 18-300mm F3.5-6.3 DC Macro HSM', #NJ
+    '8 59' => 'HD PENTAX-D FA 150-450mm F4.5-5.6 ED DC AW', #29
+    '8 60' => 'HD PENTAX-D FA* 70-200mm F2.8 ED DC AW', #29
+    '8 61' => 'HD PENTAX-D FA 28-105mm F3.5-5.6 ED DC WR', #PH
+    '8 62' => 'HD PENTAX-D FA 24-70mm F2.8 ED SDM WR', #PH
+    '8 63' => 'HD PENTAX-D FA 15-30mm F2.8 ED SDM WR', #PH
+    '8 197' => 'HD PENTAX-DA 55-300mm F4.5-6.3 ED PLM WR RE', #29
+    '8 198' => 'smc PENTAX-DA L 18-50mm F4-5.6 DC WR RE', #29
+    '8 199' => 'HD PENTAX-DA 18-50mm F4-5.6 DC WR RE', #29
+    '8 200' => 'HD PENTAX-DA 16-85mm F3.5-5.6 ED DC WR', #29
     '8 209' => 'HD PENTAX-DA 20-40mm F2.8-4 ED Limited DC WR', #29
     '8 210' => 'smc PENTAX-DA 18-270mm F3.5-6.3 ED SDM', #Helmut Schutz
     '8 211' => 'HD PENTAX-DA 560mm F5.6 ED AW', #PH
@@ -352,6 +371,7 @@ sub PrintFilter($$$);
     '11 14' => 'smc PENTAX-FA 645 55-110mm F5.6', #PH
     '11 16' => 'smc PENTAX-FA 645 33-55mm F4.5 AL', #PH
     '11 17' => 'smc PENTAX-FA 645 150-300mm F5.6 ED [IF]', #PH
+    '11 21' => 'HD PENTAX-D FA 645 35mm F3.5 AL [IF]', #29
     '13 18' => 'smc PENTAX-D FA 645 55mm F2.8 AL [IF] SDM AW', #PH
     '13 19' => 'smc PENTAX-D FA 645 25mm F4 AL [IF] SDM AW', #PH
     '13 20' => 'HD PENTAX-D FA 645 90mm F2.8 ED AW SR', #PH
@@ -370,6 +390,7 @@ sub PrintFilter($$$);
     '21 6' => '06 Telephoto Zoom 15-45mm F2.8', #PH
     '21 7' => '07 Mount Shield 11.5mm F9', #PH (NC)
     '21 8' => '08 Wide Zoom 3.8-5.9mm F3.7-4', #PH (NC)
+    '21 233' => 'Adapter Q for K-mount Lens', #29
 );
 
 # Pentax model ID codes - PH
@@ -501,6 +522,15 @@ my %pentaxModelID = (
     0x13006 => 'WG-20', # (Ricoh)
     0x13010 => '645Z',
     0x1301a => 'K-S1',
+    0x13024 => 'K-S2', #29 (Ricoh)
+    0x1302e => 'Q-S1',
+    0x13056 => 'WG-30', # (Ricoh)
+    0x1307e => 'WG-30W', # (Ricoh)
+    0x13088 => 'WG-5 GPS', # (Ricoh)
+    0x13092 => 'K-1', #IB (Ricoh)
+    0x1309c => 'K-3 II', #29 (Ricoh)
+    0x131f0 => 'WG-M2', # (Ricoh)
+    0x13222 => 'K-70', #29 (Ricoh)
 );
 
 # Pentax city codes - (PH, Optio WP)
@@ -576,7 +606,7 @@ my %pentaxCities = (
     68 => 'Amsterdam',
     69 => 'Stockholm',
     70 => 'Lisbon', #14
-    71 => 'Copenhagen', #25
+    71 => 'Copenhagen', #NJ
     72 => 'Warsaw',
     73 => 'Prague',
     74 => 'Budapest',
@@ -804,7 +834,16 @@ my %binaryDataAttrs = (
         # 9.0.0.0 - K-01
         # 9.1.2.0 - X-5
         # 10.0.0.0 - K-30, K-50, K-500, K-5 II
+        # 10.0.2.0 - Q10
+        # 10.2.0.0 - WG-3
+        # 10.2.1.0 - MX-1
+        # 10.4.1.0 - WG-3 GPS
+        # 10.6.1.0 - Q-S1, Q7
         # 11.0.0.0 - K-3
+        # 11.2.1.0 - 645Z
+        # 11.3.0.0 - K-S1
+        # 11.5.0.0 - K-S2
+        # 11.6.1.0 - K-3 II
     },
     0x0001 => { #PH
         Name => 'PentaxModelType',
@@ -817,6 +856,7 @@ my %binaryDataAttrs = (
         Writable => 'int16u',
         Count => 2,
         PrintConv => '$val =~ tr/ /x/; $val',
+        PrintConvInv => '$val =~ tr/x/ /; $val',
     },
     0x0003 => { #PH
         Name => 'PreviewImageLength',
@@ -886,6 +926,7 @@ my %binaryDataAttrs = (
             3 => 'TIFF', #5
             4 => 'RAW', #5
             5 => 'Premium', #PH (K20D)
+            7 => 'RAW (pixel shift enabled)', #forum6536 (K-3 II)
             65535 => 'n/a', #PH (Q MOV video)
         },
     },
@@ -975,10 +1016,10 @@ my %binaryDataAttrs = (
             30 => 'Self Portrait', #PH
             31 => 'Illustrations', #13
             33 => 'Digital Filter', #13
-            35 => 'Night Scene Portrait', #25
+            35 => 'Night Scene Portrait', #NJ
             37 => 'Museum', #PH
             38 => 'Food', #PH
-            39 => 'Underwater', #25
+            39 => 'Underwater', #NJ
             40 => 'Green Mode', #PH
             49 => 'Light Pet', #PH
             50 => 'Dark Pet', #PH
@@ -988,7 +1029,7 @@ my %binaryDataAttrs = (
             55 => 'Natural Skin Tone', #PH
             56 => 'Synchro Sound Record', #PH
             58 => 'Frame Composite', #14
-            59 => 'Report', #25
+            59 => 'Report', #NJ
             60 => 'Kids', #13
             61 => 'Blur Reduction', #13
             63 => 'Panorama 2', #PH (X-5)
@@ -999,6 +1040,7 @@ my %binaryDataAttrs = (
             80 => 'Miniature', #PH (VS20)
             81 => 'HDR', #PH (LS465)
             83 => 'Fisheye', #PH (VS20)
+            85 => 'Digital Filter 4', #PH (WG-5)
             221 => 'P', #PH (Optio 555)
             255=> 'PICT', #PH (Optio 555)
         }],
@@ -1075,37 +1117,84 @@ my %binaryDataAttrs = (
             },
         },
     ],
-    0x000e => [{ #7
+    0x000e => [{ #29
         Name => 'AFPointSelected',
-        Condition => '$$self{Model} !~ /K-3\b/',
+        Condition => '$$self{Model} =~ /K-1\b/',
         Writable => 'int16u',
-        Notes => 'all models but the K-3',
+        Notes => 'K-1',
         PrintConvColumns => 2,
         PrintConv => [{
-            # 0 - Contrast-detect AF? - PH (K-5)
             0xffff => 'Auto',
             0xfffe => 'Fixed Center',
             0xfffd => 'Automatic Tracking AF', #JD
             0xfffc => 'Face Detect AF', #JD
             0xfffb => 'AF Select', #PH (Q select from 25-areas)
-            0 => 'None', #PH (Q in manual focus mode)
-            1 => 'Upper-left',
-            2 => 'Top',
-            3 => 'Upper-right',
-            4 => 'Left',
-            5 => 'Mid-left',
-            6 => 'Center',
-            7 => 'Mid-right',
-            8 => 'Right',
-            9 => 'Lower-left',
-            10 => 'Bottom',
-            11 => 'Lower-right',
-        },
-        # (second number exists for K-5II(s) is usually 0, but is 1 for AF.C with
-        # AFPointMode=='Select' and extended tracking focus points are enabled in the settings)
-        ],
+            # AF pattern:
+            #       01 02 03 04 05
+            #    06 07 08 09 10 11 12
+            # 13 14 15 16 17 18 19 20 21
+            #    22 23 24 25 26 27 28
+            #       29 30 31 32 33
+            0 => 'None',
+            1 => 'Top-left',
+            2 => 'Top Near-left',
+            3 => 'Top',
+            4 => 'Top Near-right',
+            5 => 'Top-right',
+            6 => 'Upper Far-left',
+            7 => 'Upper-left',
+            8 => 'Upper Near-left',
+            9 => 'Upper-middle',
+            10 => 'Upper Near-right',
+            11 => 'Upper-right',
+            12 => 'Upper Far-right',
+            13 => 'Far Far Left',
+            14 => 'Far Left',
+            15 => 'Left',
+            16 => 'Near-left',
+            17 => 'Center',
+            18 => 'Near-right',
+            19 => 'Right',
+            20 => 'Far Right',
+            21 => 'Far Far Right',
+            22 => 'Lower Far-left',
+            23 => 'Lower-left',
+            24 => 'Lower Near-left',
+            25 => 'Lower-middle',
+            26 => 'Lower Near-right',
+            27 => 'Lower-right',
+            28 => 'Lower Far-right',
+            29 => 'Bottom-left',
+            30 => 'Bottom Near-left',
+            31 => 'Bottom',
+            32 => 'Bottom Near-right',
+            33 => 'Bottom-right',
+            263 => 'Zone Select Upper-left',       # 01,02;06,07,08;14,15,16
+            264 => 'Zone Select Upper Near-left',  # 01,02,03;07,08,09;15,16,17
+            265 => 'Zone Select Upper Middle',     # 02,03,04;08,09,10;16,17,18
+            266 => 'Zone Select Upper Near-right', # 03,04,05;09,10,11;17,18,19
+            267 => 'Zone Select Upper-right',      # 04,05;10,11,12;18,19,20
+            270 => 'Zone Select Far Left',         # 06,07;13,14,15;22,23
+            271 => 'Zone Select Left',             # 06,07,08;14,15,16;22,23,24
+            272 => 'Zone Select Near-left',        # 07,08,09;15,16,17;23,24,25
+            273 => 'Zone Select Center',           # 08,09,10;16,17,18;24,25,26
+            274 => 'Zone Select Near-right',       # 09,10,11;17,18,19;25,26,27
+            275 => 'Zone Select Right',            # 10,11,12;18,19,20;26,27,28
+            276 => 'Zone Select Far Right',        # 11,12;19,20,21;27,28
+            279 => 'Zone Select Lower-left',       # 14,15,16;22,23,24;29,30
+            280 => 'Zone Select Lower Near-left',  # 15,16,17;23,24,25;29,30,31
+            281 => 'Zone Select Lower-middle',     # 16,17,18;24,25,26;30,31,32
+            282 => 'Zone Select Lower Near-right', # 17,18,19;25,26,27;31,32,33
+            283 => 'Zone Select Lower-right',      # 18,19,20;26,27,28;32,33
+        },{
+            0 => 'Single Point',
+            1 => 'Expanded Area 9-point (S)',
+            3 => 'Expanded Area 25-point (M)',
+            5 => 'Expanded Area 33-point (L)',
+        }],
     },{
         Name => 'AFPointSelected',
+        Condition => '$$self{Model} =~ /K-3\b/',
         Writable => 'int16u',
         Notes => 'K-3',
         PrintConvColumns => 2,
@@ -1184,28 +1273,38 @@ my %binaryDataAttrs = (
             3 => 'Expanded Area 25-point (M)',
             5 => 'Expanded Area 27-point (L)',
         }],
+    },{ #7
+        Name => 'AFPointSelected',
+        Writable => 'int16u',
+        Notes => 'other models',
+        PrintConvColumns => 2,
+        PrintConv => [{
+            # 0 - Contrast-detect AF? - PH (K-5)
+            0xffff => 'Auto',
+            0xfffe => 'Fixed Center',
+            0xfffd => 'Automatic Tracking AF', #JD
+            0xfffc => 'Face Detect AF', #JD
+            0xfffb => 'AF Select', #PH (Q select from 25-areas)
+            0 => 'None', #PH (Q in manual focus mode)
+            1 => 'Upper-left',
+            2 => 'Top',
+            3 => 'Upper-right',
+            4 => 'Left',
+            5 => 'Mid-left',
+            6 => 'Center',
+            7 => 'Mid-right',
+            8 => 'Right',
+            9 => 'Lower-left',
+            10 => 'Bottom',
+            11 => 'Lower-right',
+        },
+        # (second number exists for K-5II(s) is usually 0, but is 1 for AF.C with
+        # AFPointMode=='Select' and extended tracking focus points are enabled in the settings)
+        ],
     }],
     0x000f => [{ #PH
         Name => 'AFPointsInFocus',
-        Condition => '$$self{Model} !~ /K-3\b/',
-        Notes => 'models other than the K-3',
-        Writable => 'int16u',
-        PrintHex => 1,
-        PrintConv => {
-            0xffff => 'None',
-            0 => 'Fixed Center or Multiple', #PH/14
-            1 => 'Top-left',
-            2 => 'Top-center',
-            3 => 'Top-right',
-            4 => 'Left',
-            5 => 'Center',
-            6 => 'Right',
-            7 => 'Bottom-left',
-            8 => 'Bottom-center',
-            9 => 'Bottom-right',
-        },
-    },{ #PH
-        Name => 'AFPointsInFocus',
+        Condition => '$$self{Model} =~ /K-3\b/',
         Writable => 'int32u',
         Notes => 'K-3 only',
         PrintHex => 1,
@@ -1240,6 +1339,24 @@ my %binaryDataAttrs = (
                 25 => 'Bottom Near-right',
                 26 => 'Bottom-right',
             },
+        },
+    },{ #PH
+        Name => 'AFPointsInFocus',
+        Notes => 'other models',
+        Writable => 'int16u',
+        PrintHex => 1,
+        PrintConv => {
+            0xffff => 'None',
+            0 => 'Fixed Center or Multiple', #PH/14
+            1 => 'Top-left',
+            2 => 'Top-center',
+            3 => 'Top-right',
+            4 => 'Left',
+            5 => 'Center',
+            6 => 'Right',
+            7 => 'Bottom-left',
+            8 => 'Bottom-center',
+            9 => 'Bottom-right',
         },
     }],
     0x0010 => { #PH
@@ -1307,10 +1424,10 @@ my %binaryDataAttrs = (
             33 => 51200, #PH
             34 => 64000, #PH (NC)
             35 => 80000, #PH (NC)
-            36 => 102400, #forum3833
+            36 => 102400, #27
             37 => 128000, #PH (NC)
             38 => 160000, #PH (NC)
-            39 => 204800, #forum3833
+            39 => 204800, #27
             # Optio 330/430 (oddball)
             50 => 50, #PH
             100 => 100, #PH
@@ -1511,15 +1628,15 @@ my %binaryDataAttrs = (
         Notes => '1 or 2 values',
         PrintConvColumns => 2,
         PrintConv => [{ # the *istD has pairs of values - PH
-            0 => 'Low', #PH
-            1 => 'Normal', #PH
-            2 => 'High', #PH
-            3 => 'Med Low', #2
-            4 => 'Med High', #2
-            5 => 'Very Low', #(NC)
-            6 => 'Very High', #(NC)
-            7 => '-4', #PH (K-5)
-            8 => '+4', #PH (NC)
+            0 => '-2 (low)', #PH
+            1 => '0 (normal)', #PH
+            2 => '+2 (high)', #PH
+            3 => '-1 (med low)', #2
+            4 => '+1 (med high)', #2
+            5 => '-3 (very low)', #PH
+            6 => '+3 (very high)', #PH (NC)
+            7 => '-4 (minimum)', #PH (NC)
+            8 => '+4 (maximum)', #PH (K-5)
             65535 => 'None', #PH (Monochrome)
         }],
     },
@@ -1530,16 +1647,16 @@ my %binaryDataAttrs = (
         Notes => '1 or 2 values',
         PrintConvColumns => 2,
         PrintConv => [{ # the *istD has pairs of values - PH
-            0 => 'Low', #PH
-            1 => 'Normal', #PH
-            2 => 'High', #PH
-            3 => 'Med Low', #2
-            4 => 'Med High', #2
-            5 => 'Very Low', #PH
-            6 => 'Very High', #PH (NC)
-            7 => '-4', #PH (NC)
-            8 => '+4', #PH (K-5)
-            # 65535 - got this for a Backlight Silhouette - PH (Q)
+            0 => '-2 (low)', #PH
+            1 => '0 (normal)', #PH
+            2 => '+2 (high)', #PH
+            3 => '-1 (med low)', #2
+            4 => '+1 (med high)', #2
+            5 => '-3 (very low)', #PH
+            6 => '+3 (very high)', #PH (NC)
+            7 => '-4 (minimum)', #PH (NC)
+            8 => '+4 (maximum)', #PH (K-5)
+            65535 => 'n/a', # got this for a Backlight Silhouette - PH (Q)
         }],
     },
     0x0021 => {
@@ -1549,15 +1666,15 @@ my %binaryDataAttrs = (
         Notes => '1 or 2 values',
         PrintConvColumns => 2,
         PrintConv => [{ # the *istD has pairs of values - PH
-            0 => 'Soft', #PH
-            1 => 'Normal', #PH
-            2 => 'Hard', #PH
-            3 => 'Med Soft', #2
-            4 => 'Med Hard', #2
-            5 => 'Very Soft', #(NC)
-            6 => 'Very Hard', #(NC)
-            7 => '-4', #PH (NC)
-            8 => '+4', #PH (NC)
+            0 => '-2 (soft)', #PH
+            1 => '0 (normal)', #PH
+            2 => '+2 (hard)', #PH
+            3 => '-1 (med soft)', #2
+            4 => '+1 (med hard)', #2
+            5 => '-3 (very soft)', #(NC)
+            6 => '+3 (very hard)', #(NC)
+            7 => '-4 (minimum)', #PH (NC)
+            8 => '+4 (maximum)', #PH (NC)
         }],
     },
     0x0022 => { #PH
@@ -1648,7 +1765,7 @@ my %binaryDataAttrs = (
             '1 0 0 0' => 'Resized', #PH (K-5)
             '2 0 0 0' => 'Cropped', #PH
             # note: doesn't apply to digital filters applied when picture is taken
-            '4 0 0 0' => 'Digital Filter 4', #PH (K10D)
+            '4 0 0 0' => 'Digital Filter 4', #PH (K10D, Ricoh WG-5)
             '6 0 0 0' => 'Digital Filter 6', #PH (K-5)
             '8 0 0 0' => 'Red-eye Correction', #PH (WG-10)
             '16 0 0 0' => 'Frame Synthesis?',
@@ -1714,6 +1831,7 @@ my %binaryDataAttrs = (
             '10 0' => 'Aperture Priority, Off-Auto-Aperture',
             '11 0' => 'Manual, Off-Auto-Aperture',
             '12 0' => 'Bulb, Off-Auto-Aperture',
+            '19 0' => 'Astrotracer', #29
             # extra K10D modes (ref 16)
             '13 0' => 'Shutter & Aperture Priority AE',
             '15 0' => 'Sensitivity Priority AE',
@@ -1830,7 +1948,7 @@ my %binaryDataAttrs = (
             },
         },
     },
-    0x003d => { #31
+    0x003d => { #IB
         Name => 'DataScaling',
         Writable => 'int16u',
         # divide by the second value of Pentax_0x0201 (WhitePoint), usually
@@ -1841,7 +1959,7 @@ my %binaryDataAttrs = (
         # or
         # log2(Pentax_0x007e*(Pentax_0x003d/(2^13))/(2^14))-0.5
         # where
-        # makernotes:Pentax_0x003d/(2^13) is the normalization factor. (ref 31)
+        # makernotes:Pentax_0x003d/(2^13) is the normalization factor. (ref IB)
         # - 8192 for most images, but occasionally 11571 for K100D/K110D,
         #   and 8289 or 8456 for the K-x (ref PH)
     },
@@ -1868,7 +1986,7 @@ my %binaryDataAttrs = (
         Writable => 'int16u',
     },
     0x0047 => { #PH
-        Name => 'CameraTemperature',
+        Name => 'CameraTemperature', # (chassis temperature, ref forum6677)
         Writable => 'int8s',
         PrintConv => '"$val C"',
         PrintConvInv => '$val=~s/ ?c$//i; $val',
@@ -1915,7 +2033,7 @@ my %binaryDataAttrs = (
             4 => 'Vibrant', # (K20D)
             5 => 'Monochrome', # (K20D)
             6 => 'Muted', # (645D)
-            7 => 'Reversal Film', # (645D)
+            7 => 'Reversal Film', # (645D) (Ricoh WG-5 "Slide Film")
             8 => 'Bleach Bypass', # (K-5)
             9 => 'Radiant', # (Q)
         },
@@ -1974,6 +2092,7 @@ my %binaryDataAttrs = (
         ValueConv => \&CryptShutterCount,
         ValueConvInv => '$val',
     },
+    # 0x005e -
     0x0060 => { #PH (K-5)
         Name => 'FaceInfo',
         Format => 'undef', # (written as int8u)
@@ -1995,8 +2114,11 @@ my %binaryDataAttrs = (
             10 => '10 (K-01,K-30)',
             11 => '11 (Q10)',
             12 => '12 (MX-1)',
-            13 => '13 (K-3)',
+            13 => '13 (K-3,K-3II)',
             14 => '14 (645Z)',
+            15 => '15 (K-S1,K-S2)', #PH
+            16 => '16 (K-1)', #PH
+            17 => '17 (K-70)', #29
         },
     },
     0x0067 => { #PH (K-5)
@@ -2250,7 +2372,7 @@ my %binaryDataAttrs = (
         Format => 'undef', # (written as int8u)
         SubDirectory => { TagTable => 'Image::ExifTool::Pentax::LensCorr' },
     },
-    0x007e => { #31
+    0x007e => { #IB
         Name => 'WhiteLevel', # (with black level already subtracted)
         Writable => 'int32u',
         # 15859,15860,15864,15865,16315 (K-5 PEF/DNG only) - PH
@@ -2310,6 +2432,7 @@ my %binaryDataAttrs = (
             2 => 'HDR 1',
             3 => 'HDR 2',
             4 => 'HDR 3',
+            5 => 'HDR Advanced', #29 (K-1)
         },{ # (K-01)
             0 => 'Auto-align Off',
             1 => 'Auto-align On',
@@ -2432,7 +2555,7 @@ my %binaryDataAttrs = (
             Condition => '$count == 91',
             SubDirectory => { TagTable => 'Image::ExifTool::Pentax::LensInfo4' },
         },{
-            Name => 'LensInfo', # K-01, K-30, K-50, K-500, K-3
+            Name => 'LensInfo', # K-01, K-30, K-50, K-500, K-3, K-3II
             Condition => '$count == 80 or $count == 128',
             SubDirectory => { TagTable => 'Image::ExifTool::Pentax::LensInfo5' },
         }
@@ -2668,6 +2791,14 @@ my %binaryDataAttrs = (
     # 0x023b - undef[9] (K-01)
     #  01a700500000000000, 91a700500000000000, 41a700500000000000, 002700500000000000
     #  c00500400000000000, 400500500000000000, 4004ff420100000000, 4087ff480000000000
+    0x0243 => { #PH
+        Name => 'PixelShiftInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::Pentax::PixelShiftInfo' },
+    },
+    0x0245 => { #29
+        Name => 'AFPointInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::Pentax::AFPointInfo' },
+    },
     0x03fe => { #PH
         Name => 'DataDump',
         Writable => 0,
@@ -2895,8 +3026,12 @@ my %binaryDataAttrs = (
         PrintConv => { 0 => 'Off', 1 => 'On' },
     },
     2 => {
-        Name => 'VignettingCorrection',
+        Name => 'PeripheralIlluminationCorr',
         PrintConv => { 0 => 'Off', 1 => 'On' },
+    },
+    3 => {
+        Name => 'DiffractionCorrection',
+        PrintConv => { 0 => 'Off', 16 => 'On' },
     },
 );
 
@@ -3753,6 +3888,11 @@ my %binaryDataAttrs = (
         PrintConv => \%pentaxLensTypes,
         SeparateTable => 1,
     },
+    3 => { #PH
+        Name => 'ExtenderStatus',
+        Notes => 'not valid if a non-AF lens is used',
+        PrintConv => { 0 => 'Not attached', 1 => 'Attached' },
+    },
     # this is a binaryData table because some cameras add an extra
     # byte or two here (typically zeros)...
 );
@@ -3884,7 +4024,7 @@ my %binaryDataAttrs = (
     },
 );
 
-# lens information for K-01 (ref PH)
+# lens information for K-01, K-30, K-50, K-500, K-3, K-3II, K-S1 (ref PH)
 %Image::ExifTool::Pentax::LensInfo5 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
@@ -3969,23 +4109,56 @@ my %binaryDataAttrs = (
         Name => 'LC1',
         %lensCode,
     },
-    3 => { # LC2 = distance data
-        Name => 'LC2',
-        %lensCode,
-        # FocusRange decoding needs more testing with various lenses - PH
-        TestName => 'FocusRange',
-        TestPrintConv => q{
-            my @v;
-            my $lsb = $val & 0x07;
-            my $msb = $val >> 3;
-            my $ls2 = $lsb ^ 0x07;
-            $ls2 ^= 0x01 if $ls2 & 0x02;
-            $ls2 ^= 0x03 if $ls2 & 0x04;
-            foreach ($ls2, $ls2+1) {
-                push(@v,'inf'), next if $_ > 7;
-                push @v, sprintf("%.2f m", 2 ** ($msb / 4) * 0.18 * ($_ + 4) / 16);
-            }
-            return join ' - ', @v;
+    # LC2 = distance data
+    3 => { #29
+        Name => 'MinFocusDistance',
+        Notes => 'minimum focus distance for the lens',
+        Mask => 0xf8,
+        PrintConv => {
+            0x00 => '0.13-0.19 m',  # (plus K or M lenses)
+            0x08 => '0.20-0.24 m',
+            0x10 => '0.25-0.28 m',
+            0x18 => '0.28-0.30 m',
+            0x20 => '0.35-0.38 m',
+            0x28 => '0.40-0.45 m',
+            0x30 => '0.49-0.50 m',  # (plus many Sigma lenses)
+            0x38 => '0.6 m',        #PH (NC)
+            0x40 => '0.7 m',        # (plus Sigma 55-200)
+            0x48 => '0.8-0.9 m',    #PH (NC) Tokina 28-70/2.6-2.8
+            0x50 => '1.0 m',        # (plus Sigma 70 macro)
+            0x58 => '1.1-1.2 m',
+            0x60 => '1.4-1.5 m',
+            0x68 => '1.5 m',        # Sigma 70-300/4-5.6 macro
+            0x70 => '2.0 m',
+            0x78 => '2.0-2.1 m',    #PH (NC)
+            0x80 => '2.1 m',        # Sigma 135-400 APO & DG: 2.0-2.2m
+            0x88 => '2.2-2.9 m',    #PH (NC)
+            0x90 => '3.0 m',        # Sigma 50-500 : 1.0-3.0m depending on the focal length
+                                   ## 50mm, 100mm => 1.0m
+                                   ## 200mm       => 1.1m
+                                   ## 300mm       => 1.5m
+                                   ## 400mm       => 2.2m
+                                   ## 500mm       => 3.0m
+            0x98 => '4-5 m',        #PH (NC)
+            0xa0 => '5.6 m',        # Pentax DA 560
+            # To check: Sigma 120-400 OS: MFD 1.5m
+            # To check: Sigma 150-500 OS: MFD 2.2m
+            # To check: Sigma 50-500 has MFD 50-180cm
+            # 0xd0 - seen for the Sigma 4.5mm F2.8 EX DC HSM Circular Fisheye (ref PH)
+        },
+    },
+    3.1 => { #29
+        Name => 'FocusRangeIndex',
+        Mask => 0x07,
+        PrintConv => {
+            7 => '0 (very close)',
+            6 => '1 (close)',
+            4 => '2',
+            5 => '3',
+            1 => '4',
+            0 => '5',
+            2 => '6 (far)',
+            3 => '7 (very far)',
         },
     },
     4 => { # LC3 = K-value data (AF pulses to displace image by unit length)
@@ -4008,9 +4181,11 @@ my %binaryDataAttrs = (
         Name => 'LC7',
         %lensCode,
     },
-    9 => { # LC8 = focal length data
-        Name => 'FocalLength',
+    9 => [{ # LC8 = focal length data
+        Name => 'LensFocalLength',
+        Notes => 'focal length of lens alone, without adapter', #PH
         Priority => 0,
+        Condition => '$$self{Model} !~ /645Z/', #PH (doesn't work for 645Z)
         ValueConv => '10*($val>>2) * 4**(($val&0x03)-2)', #JD
         ValueConvInv => q{
             my $range = int(log($val/10)/(2*log(2)));
@@ -4019,7 +4194,10 @@ my %binaryDataAttrs = (
         },
         PrintConv => 'sprintf("%.1f mm", $val)',
         PrintConvInv => '$val=~s/\s*mm//; $val',
-    },
+    },{
+        Name => 'LC8',
+        %lensCode,
+    }],
     # the following aperture values change with focal length
     10 => { # LC9 = nominal AVmin/AVmax data (open/closed aperture values)
         Name => 'NominalMaxAperture',
@@ -4501,11 +4679,11 @@ my %binaryDataAttrs = (
     # 0x0a - values: 00,05,0d,15,86,8e,a6,ae
     0x0b => { #JD
         Name => 'AFPointsInFocus',
-        Condition => '$$self{Model} !~ /K-3\b/',
+        Condition => '$$self{Model} !~ /K-[13]\b/',
         Notes => q{
-            models other than the K-3 only.  May report two points in focus even though
-            a single AFPoint has been selected, in which case the selected AFPoint is
-            the first reported
+            models other than the K-1 and K-3.  May report two points in focus even
+            though a single AFPoint has been selected, in which case the selected
+            AFPoint is the first reported
         },
         PrintConvColumns => 2,
         PrintConv => {
@@ -4531,6 +4709,12 @@ my %binaryDataAttrs = (
             19 => 'Center (vertical)', #PH
             20 => 'Mid-right',
         },
+    },
+    0x1fd => {
+        Name => 'AFHold',
+        Notes => 'decoded only for the K-3 II',
+        Condition => '$$self{Model} eq "PENTAX K-3 II"',
+        PrintConv => { 0 => 'Off', 1 => 'Short', 2 => 'Medium', 3 => 'Long' },
     },
 );
 
@@ -5036,13 +5220,13 @@ my %binaryDataAttrs = (
     },
     1 => {
         Name => 'RollAngle',
-        Notes => 'degrees of clockwise camera rotation',
+        Notes => 'converted to degrees of clockwise camera rotation',
         ValueConv => '-$val / 2',
         ValueConvInv => '-$val * 2',
     },
     2 => {
         Name => 'PitchAngle',
-        Notes => 'degrees of upward camera tilt',
+        Notes => 'converted to degrees of upward camera tilt',
         ValueConv => '-$val / 2',
         ValueConvInv => '-$val * 2',
     },
@@ -5149,6 +5333,47 @@ my %binaryDataAttrs = (
     }
 );
 
+# Pixel shift information for the K-3II (ref PH)
+%Image::ExifTool::Pentax::PixelShiftInfo = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    NOTES => 'Pixel shift information stored by the K-3 II.',
+    0x00 => {
+        Name => 'PixelShiftResolution',
+        PrintConv => { 0 => 'Off', 1 => 'On' },
+    },
+);
+
+# AF point information for the K-1 (ref 29)
+%Image::ExifTool::Pentax::AFPointInfo = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    NOTES => 'AF point information written by the K-1.',
+    # 0 - int16u: 1 (version?)
+    2 => {
+        Name => 'NumAFPoints',
+        Format => 'int16u',
+    },
+    4 => {
+        Name => 'AFPointsInFocus',
+        Condition => '$$self{Model} =~ /K-1\b/',
+        Format => 'int8u[9]',
+        PrintConv => 'Image::ExifTool::Pentax::DecodeAFPoints($val,33,2,0x02)',
+    },
+    4.1 => {
+        Name => 'AFPointsSelected',
+        Condition => '$$self{Model} =~ /K-1\b/',
+        Format => 'int8u[9]',
+        PrintConv => 'Image::ExifTool::Pentax::DecodeAFPoints($val,33,2,0x03)',
+    },
+    4.2 => {
+        Name => 'AFPointsSpecial',
+        Condition => '$$self{Model} =~ /K-1\b/',
+        Format => 'int8u[9]',
+        PrintConv => 'Image::ExifTool::Pentax::DecodeAFPoints($val,33,2,0x03,0x03)',
+    },
+);
+
 # temperature information for some models - PH
 %Image::ExifTool::Pentax::TempInfo = (
     %binaryDataAttrs,
@@ -5165,7 +5390,7 @@ my %binaryDataAttrs = (
     #  at least one on the sensor itself.  These temperatures seem to rise
     #  more quickly than CameraTemperature when shooting video.)
     0x0c => {
-        Name => 'CameraTemperature2',
+        Name => 'SensorTemperature', #forum6677 (was CameraTemperature2)
         Format => 'int16s',
         ValueConv => '$val / 10',
         ValueConvInv => '$val * 10',
@@ -5173,7 +5398,7 @@ my %binaryDataAttrs = (
         PrintConvInv => '$val=~s/ ?c$//i; $val',
     },
     0x0e => {
-        Name => 'CameraTemperature3',
+        Name => 'SensorTemperature2', #forum6677 (was CameraTemperature3)
         Format => 'int16s',
         ValueConv => '$val / 10',
         ValueConvInv => '$val * 10',
@@ -5304,6 +5529,8 @@ my %binaryDataAttrs = (
             800 => 800, #PH
             1600 => 1600, #PH
             3200 => 3200, #PH
+            # seen 65534 for Q-S1 MOV video - PH
+            # seen 65535 for K-S1 MOV video - PH
         },
     },
     0x0017 => {
@@ -5447,6 +5674,7 @@ my %binaryDataAttrs = (
     },
     0x04 => {
         Name => 'PreviewImage',
+        Groups => { 2 => 'Preview' },
         Format => 'undef[$val{0}]',
         Notes => '640-pixel-wide JPEG preview', # (360 pixels high, may depend on aspect ratio)
         RawConv => '$self->ValidateImage(\$val,$tag)',
@@ -5467,7 +5695,7 @@ my %binaryDataAttrs = (
         Description => 'Camera Model Name',
         Format => 'string[24]',
     },
-    0x38 => { # (NC)
+    0x38 => { #(NC)
         Name => 'ExposureTime',
         Format => 'int32u',
         ValueConv => '$val ? 10 / $val : 0',
@@ -5478,12 +5706,12 @@ my %binaryDataAttrs = (
         Format => 'rational64u',
         PrintConv => 'sprintf("%.1f",$val)',
     },
-    0x44 => { # (NC)
+    0x44 => { #(NC)
         Name => 'ExposureCompensation',
         Format => 'rational64s',
         PrintConv => '$val ? sprintf("%+.1f", $val) : 0',
     },
-    0x54 => { # (NC)
+    0x54 => { #(NC)
         Name => 'FocalLength',
         Format => 'int32u',
         PrintConv => '"$val mm"',
@@ -5498,7 +5726,7 @@ my %binaryDataAttrs = (
         Format => 'string[24]',
         Groups => { 2 => 'Time' },
     },
-    0xa7 => { # (NC)
+    0xa7 => { #(NC)
         Name => 'ISO',
         Format => 'int32u',
     },
@@ -5512,7 +5740,7 @@ my %binaryDataAttrs = (
     },
     0xcf => {
         Name => 'GPSLatitudeRef',
-        Condition => '$$self{GPSVersionID} and require Image::ExifTool::GPS',
+        Condition => '$$self{GPSVersionID}',
         Format => 'string[2]',
         Groups => { 1 => 'GPS', 2 => 'Location' },
         PrintConv => {
@@ -5610,12 +5838,13 @@ my %binaryDataAttrs = (
         Format => 'string[11]',
         ValueConv => 'Image::ExifTool::Exif::ExifDate($val)',
     },
-    0x173 => { # (NC)
+    0x173 => { #(NC)
         Name => 'AudioCodecID',
         Format => 'string[4]',
     },
     0x7d3 => {
         Name => 'PreviewImage',
+        Groups => { 2 => 'Preview' },
         Format => 'undef[$size-0x7d3]',
         Notes => '640x480 JPEG preview image', # (black borders pad to 480 pixels high)
         RawConv => '$self->ValidateImage(\$val,$tag)',
@@ -5667,6 +5896,7 @@ my %binaryDataAttrs = (
     },
     0x133 => {
         Name => 'ThumbnailImage',
+        Groups => { 2 => 'Preview' },
         Format => 'undef[$val{0x12f}]',
         Notes => '160x120 JPEG thumbnail image',
         RawConv => '$self->ValidateImage(\$val,$tag)',
@@ -5737,6 +5967,35 @@ sub PrintFilter($$$)
         push @cval, (0) x (17 - @cval) if @cval < 17; # pad with zeros if necessary
         return join(' ', @cval);
     }
+}
+
+#------------------------------------------------------------------------------
+# Decode AF bit mask (ref 29)
+# Inputs: 0) raw binary value, 1) number of AF points, 2) number of bits per AF point,
+#         3) bit mask, 4) bit value (undef for any bit set)
+sub DecodeAFPoints($$$$;$)
+{
+    my ($val, $num, $bits, $mask, $bitVal) = @_;
+    my @bytes = split ' ', $val;
+    my $i = 1;  # (starts at AF point number 1)
+    my $shift = 8 - $bits;
+    my $byte = shift @bytes;
+    my @bitList;
+    for (;;) {
+        if ($bitVal) {
+            push @bitList, $i if (($byte >> $shift) & $mask) == $bitVal;
+        } else {
+            push @bitList, $i if ($byte >> $shift) & $mask;
+        }
+        last if ++$i > $num;
+        $shift -= $bits;
+        if ($shift < 0) {
+            last unless @bytes;
+            $byte = shift @bytes;
+            $shift += 8;
+        }
+    }
+    return join(',', @bitList);
 }
 
 #------------------------------------------------------------------------------
@@ -5860,7 +6119,7 @@ values.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

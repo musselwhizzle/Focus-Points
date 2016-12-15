@@ -248,7 +248,7 @@ sub AddChunks($$;@)
         my $nvHash = $et->GetNewValueHash($tagInfo);
         # (native PNG information is always preferred, so don't check IsCreating)
         next unless $et->IsOverwriting($nvHash);
-        my $val = $et->GetNewValues($nvHash);
+        my $val = $et->GetNewValue($nvHash);
         if (defined $val) {
             next if $$nvHash{EditOnly};
             my $data;
@@ -366,7 +366,7 @@ This file contains routines to write PNG metadata.
 Compress::Zlib is required to write compressed text.
 
 Existing text tags are always rewritten in their original form (compressed
-zTXt, uncompressed tEXt or internation iTXt), so pre-existing compressed
+zTXt, uncompressed tEXt or international iTXt), so pre-existing compressed
 information can only be modified if Compress::Zlib is available.
 
 Newly created textual information is written in uncompressed tEXt form by
@@ -377,7 +377,7 @@ strings).
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

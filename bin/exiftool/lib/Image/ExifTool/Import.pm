@@ -12,7 +12,7 @@ require Exporter;
 
 use vars qw($VERSION @ISA @EXPORT_OK);
 
-$VERSION = '1.03';
+$VERSION = '1.05';
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(ReadCSV ReadJSON);
 
@@ -23,7 +23,7 @@ my $charset;
 
 #------------------------------------------------------------------------------
 # Read CSV file
-# Inputs: 0) CSV file name, 1) database hash ref, 2) missing tag value
+# Inputs: 0) CSV file name or file ref, 1) database hash ref, 2) missing tag value
 # Returns: undef on success, or error string
 # Notes: There are various flavours of CSV, but here we assume that only
 #        double quotes are escaped, and they are escaped by doubling them
@@ -31,11 +31,17 @@ sub ReadCSV($$;$)
 {
     local ($_, $/);
     my ($file, $database, $missingValue) = @_;
-    my ($buff, @tags, $found, $err);
+    my ($buff, @tags, $found, $err, $raf, $openedFile);
 
-    open CSVFILE, $file or return "Error opening CSV file '$file'";
-    binmode CSVFILE;
-    my $raf = new File::RandomAccess(\*CSVFILE);
+    if (ref $file eq 'GLOB') {
+        $raf = new File::RandomAccess($file);
+        $file = 'CSV file';
+    } else {
+        open CSVFILE, $file or return "Error opening CSV file '$file'";
+        binmode CSVFILE;
+        $openedFile = 1;
+        $raf = new File::RandomAccess(\*CSVFILE);
+    }
     # set input record separator by first newline found in the file
     # (safe because first line should contain only tag names)
     while ($raf->Read($buff, 65536)) {
@@ -93,7 +99,7 @@ sub ReadCSV($$;$)
             @tags or $err = 'No tags found', last;
         }
     }
-    close CSVFILE;
+    close CSVFILE if $openedFile;
     undef $raf;
     $err = 'No SourceFile column' unless $found or $err;
     return $err ? "$err in $file" : undef;
@@ -213,34 +219,44 @@ Tok: for (;;) {
 
 #------------------------------------------------------------------------------
 # Read JSON file
-# Inputs: 0) JSON file name, 1) database hash ref, 2) flag to delete "-" tags
-#         2) character set
+# Inputs: 0) JSON file name or file ref, 1) database hash ref,
+#         2) flag to delete "-" tags, 3) character set
 # Returns: undef on success, or error string
 sub ReadJSON($$;$$)
 {
     local $_;
     my ($file, $database, $missingValue, $chset) = @_;
+    my ($fp, $openedFile);
 
     # initialize character set for converting "\uHHHH" chars
     $charset = $chset || 'UTF8';
-    open JSONFILE, $file or return "Error opening JSON file '$file'";
-    binmode JSONFILE;
-    my $obj = ReadJSONObject(\*JSONFILE);
-    close JSONFILE;
+    if (ref $file eq 'GLOB') {
+        $fp = $file;
+        $file = 'JSON file';
+    } else {
+        open JSONFILE, $file or return "Error opening JSON file '$file'";
+        binmode JSONFILE;
+        $fp = \*JSONFILE;
+        $openedFile = 1;
+    }
+    my $obj = ReadJSONObject($fp);
+    close $fp if $openedFile;
     unless (ref $obj eq 'ARRAY') {
         ref $obj eq 'HASH' or return "Format error in JSON file '$file'";
         $obj = [ $obj ];
     }
     my ($info, $found);
     foreach $info (@$obj) {
-        next unless ref $info eq 'HASH' and $$info{SourceFile};
+        next unless ref $info eq 'HASH';
+        # assume a SourceFile of '*' if none specified
+        defined $$info{SourceFile} or $$info{SourceFile} = '*';
         if (defined $missingValue) {
             $$info{$_} eq $missingValue and $$info{$_} = undef foreach keys %$info;
         }
         $$database{$$info{SourceFile}} = $info;
         $found = 1;
     }
-    return $found ? undef : "No SourceFile entries in '$file'";
+    return $found ? undef : "No valid JSON objects in '$file'";
 }
 
 
@@ -279,7 +295,7 @@ Read CSV or JSON file into a database hash.
 
 =item Inputs:
 
-0) CSV file name.
+0) CSV file name or file reference.
 
 1) Hash reference for database object.
 
@@ -301,7 +317,7 @@ stored as hash lookups of tag name/value for each SourceFile.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

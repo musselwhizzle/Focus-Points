@@ -31,6 +31,7 @@
 #   19) http://nah6.com/~itsme/cvs-xdadevtools/iphone/tools/decodesinf.pl
 #   20) https://developer.apple.com/legacy/library/documentation/quicktime/reference/QT7-1_Update_Reference/QT7-1_Update_Reference.pdf
 #   21) Francois Bonzon private communication
+#   22) https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
 #------------------------------------------------------------------------------
 
 package Image::ExifTool::QuickTime;
@@ -39,8 +40,9 @@ use strict;
 use vars qw($VERSION $AUTOLOAD);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
+use Image::ExifTool::GPS;
 
-$VERSION = '1.84';
+$VERSION = '1.98';
 
 sub FixWrongFormat($);
 sub ProcessMOV($$;$);
@@ -62,6 +64,7 @@ sub WriteMOV($$);
 my %mimeLookup = (
    '3G2' => 'video/3gpp2',
    '3GP' => 'video/3gpp',
+    AAX  => 'audio/vnd.audible.aax',
     DVB  => 'video/vnd.dvb.file',
     F4A  => 'audio/mp4',
     F4B  => 'audio/mp4',
@@ -94,6 +97,7 @@ my %ftypLookup = (
     '3gp6' => '3GPP Media (.3GP) Release 6 Progressive Download', # video/3gpp
     '3gp6' => '3GPP Media (.3GP) Release 6 Streaming Servers', # video/3gpp
     '3gs7' => '3GPP Media (.3GP) Release 7 Streaming Servers', # video/3gpp
+    'aax ' => 'Audible Enhanced Audiobook (.AAX)', #PH
     'avc1' => 'MP4 Base w/ AVC ext [ISO 14496-12:2005]', # video/mp4
     'CAEP' => 'Canon Digital Camera',
     'caqv' => 'Casio Digital Camera',
@@ -176,7 +180,7 @@ my %timeInfo = (
     # so assume a time zero of Jan 1, 1970 if the date is before this
     RawConv => q{
         my $offset = (66 * 365 + 17) * 24 * 3600;
-        return $val - $offset if $val >= $offset;
+        return $val - $offset if $val >= $offset or $$self{OPTIONS}{QuickTimeUTC};
         $self->WarnOnce('Patched incorrect time zero for QuickTime date/time tag',1) if $val;
         return $val;
     },
@@ -195,6 +199,11 @@ my %timeInfo = (
 my %durationInfo = (
     ValueConv => '$$self{TimeScale} ? $val / $$self{TimeScale} : $val',
     PrintConv => '$$self{TimeScale} ? ConvertDuration($val) : $val',
+);
+# handle unknown tags
+my %unknownInfo = (
+    Unknown => 1,
+    ValueConv => '$val =~ /^([\x20-\x7e]*)\0*$/ ? $1 : \$val',
 );
 # parsing for most of the 3gp udta language text boxes
 my %langText = (
@@ -229,6 +238,7 @@ my %vendorID = (
    'SMI '=> 'Sorenson Media Inc.',
     ZORA => 'Zoran Corporation',
    'AR.D'=> 'Parrot AR.Drone',
+   ' KD '=> 'Kodak', # (FZ201)
 );
 
 # QuickTime data atom encodings for string types (ref 12)
@@ -295,9 +305,9 @@ my %graphicsMode = (
         stored as UTC.  Unfortunately, digital cameras often store local time values
         instead (presumably because they don't know the time zone).  For this
         reason, by default ExifTool does not assume a time zone for these values.
-        However, if the QuickTimeUTC option is set via the API or the ExifTool
-        configuration file, then ExifTool will assume these values are properly
-        stored as UTC, and will convert them to local time when extracting.
+        However, if the QuickTimeUTC API option is set, then ExifTool will assume
+        these values are properly stored as UTC, and will convert them to local time
+        when extracting.
 
         See
         L<http://developer.apple.com/mac/library/documentation/QuickTime/QTFF/QTFFChap1/qtff1.html>
@@ -322,6 +332,11 @@ my %graphicsMode = (
         },
         # (also Samsung WB750 uncompressed thumbnail data starting with "SDIC\0")
     ],
+    # fre1 - 4 bytes: "june" (Kodak PixPro SP360)
+    frea => {
+        Name => 'Kodak_frea',
+        SubDirectory => { TagTable => 'Image::ExifTool::Kodak::frea' },
+    },
     skip => [
         {
             Name => 'CanonSkip',
@@ -341,10 +356,12 @@ my %graphicsMode = (
     },
     PICT => {
         Name => 'PreviewPICT',
+        Groups => { 2 => 'Preview' },
         Binary => 1,
     },
     pict => { #8
         Name => 'PreviewPICT',
+        Groups => { 2 => 'Preview' },
         Binary => 1,
     },
     moov => {
@@ -363,7 +380,7 @@ my %graphicsMode = (
     junk => { Unknown => 1, Binary => 1 }, #8
     uuid => [
         { #9 (MP4 files)
-            Name => 'UUID-XMP',
+            Name => 'XMP',
             # *** this is where ExifTool writes XMP in MP4 videos (as per XMP spec) ***
             Condition => '$$valPt=~/^\xbe\x7a\xcf\xcb\x97\xa9\x42\xe8\x9c\x71\x99\x94\x91\xe3\xaf\xac/',
             SubDirectory => {
@@ -390,8 +407,7 @@ my %graphicsMode = (
         # "\x98\x7f\xa3\xdf\x2a\x85\x43\xc0\x8f\x8f\xd9\x7c\x47\x1e\x8e\xea" - unknown data in Flip videos
         { #8
             Name => 'UUID-Unknown',
-            Unknown => 1,
-            Binary => 1,
+            %unknownInfo,
         },
     ],
     _htc => {
@@ -404,7 +420,7 @@ my %graphicsMode = (
     },
     thum => { #PH
         Name => 'ThumbnailImage',
-        Groups => { 2 => 'Image' },
+        Groups => { 2 => 'Preview' },
         Binary => 1,
     },
     ardt => { #PH
@@ -605,12 +621,100 @@ my %graphicsMode = (
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::CleanAperture' },
     },
     # avcC - AVC configuration (ref http://thompsonng.blogspot.ca/2010/11/mp4-file-format-part-2.html)
+    # hvcC - HEVC configuration
     # svcC - 7 bytes: 00 00 00 00 ff e0 00
     # esds - elementary stream descriptor
     # d263
     gama => { Name => 'Gamma', Format => 'fixed32u' },
     # mjqt - default quantization table for MJPEG
     # mjht - default Huffman table for MJPEG
+#
+# spherical video v2 stuff (untested)
+#
+    st3d => {
+        Name => 'Stereoscopic3D',
+        Format => 'int8u',
+        ValueConv => '$val =~ s/.* //; $val', # (remove leading version/flags bytes?)
+        PrintConv => {
+            0 => 'Monoscopic',
+            1 => 'Stereoscopic Top-Bottom',
+            2 => 'Stereoscopic Left-Right',
+        },
+    },
+    sv3d => {
+        Name => 'SphericalVideo',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::sv3d' },
+    },
+);
+
+# 'sv3d' atom information (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
+%Image::ExifTool::QuickTime::sv3d = (
+    PROCESS_PROC => \&ProcessMOV,
+    GROUPS => { 2 => 'Video' },
+    NOTES => q{
+        Tags defined by the Spherical Video V2 specification (see
+        https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md).
+    },
+    svhd => {
+        Name => 'MetadataSource',
+        Format => 'undef',
+        ValueConv => '$val=~tr/\0//d; $val', # (remove version/flags? and terminator?)
+    },
+    proj => {
+        Name => 'Projection',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::proj' },
+    },
+);
+
+# 'proj' atom information (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
+%Image::ExifTool::QuickTime::proj = (
+    PROCESS_PROC => \&ProcessMOV,
+    GROUPS => { 2 => 'Video' },
+    prhd => {
+        Name => 'ProjectionHeader',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::prhd' },
+    },
+    cbmp => {
+        Name => 'CubemapProj',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::cbmp' },
+    },
+    equi => {
+        Name => 'EquirectangularProj',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::equi' },
+    },
+);
+
+# 'prhd' atom information (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
+%Image::ExifTool::QuickTime::prhd = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 2 => 'Video' },
+    FORMAT => 'fixed32s',
+    # 0 - version (high 8 bits) / flags (low 24 bits)
+    1 => 'PoseYawDegrees',
+    2 => 'PosePitchDegrees',
+    3 => 'PoseRollDegrees',
+);
+
+# 'cbmp' atom information (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
+%Image::ExifTool::QuickTime::cbmp = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 2 => 'Video' },
+    FORMAT => 'int32u',
+    # 0 - version (high 8 bits) / flags (low 24 bits)
+    1 => 'Layout',
+    2 => 'Padding',
+);
+
+# 'equi' atom information (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
+%Image::ExifTool::QuickTime::equi = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 2 => 'Video' },
+    FORMAT => 'int32u', # (actually 0.32 fixed point)
+    # 0 - version (high 8 bits) / flags (low 24 bits)
+    1 => { Name => 'ProjectionBoundsTop',   ValueConv => '$val / 4294967296' },
+    2 => { Name => 'ProjectionBoundsBottom',ValueConv => '$val / 4294967296' },
+    3 => { Name => 'ProjectionBoundsLeft',  ValueConv => '$val / 4294967296' },
+    4 => { Name => 'ProjectionBoundsRight', ValueConv => '$val / 4294967296' },
 );
 
 # 'btrt' atom information (ref http://lists.freedesktop.org/archives/gstreamer-commits/2011-October/054459.html)
@@ -699,8 +803,7 @@ my %graphicsMode = (
         },
         {
             Name => 'UUID-Unknown',
-            Unknown => 1,
-            Binary => 1,
+            %unknownInfo,
         },
     ],
     cmov => {
@@ -714,6 +817,7 @@ my %graphicsMode = (
     # prfl - Profile (ref 12)
     # clip - clipping --> contains crgn (clip region) (ref 12)
     # mvex - movie extends --> contains mehd (movie extends header), trex (track extends) (ref 14)
+    # ICAT - 4 bytes: "6350" (Nikon CoolPix S6900)
 );
 
 # movie header data block
@@ -819,10 +923,18 @@ my %graphicsMode = (
                 Start => 16,
             },
         },
+        { #https://github.com/google/spatial-media/blob/master/docs/spherical-video-rfc.md
+            Name => 'SphericalVideoXML',
+            Condition => '$$valPt=~/^\xff\xcc\x82\x63\xf8\x55\x4a\x93\x88\x14\x58\x7a\x02\x52\x1f\xdd/',
+            Flags => [ 'Binary', 'BlockExtract' ],
+            SubDirectory => {
+                TagTable => 'Image::ExifTool::XMP::Main',
+                Start => 16,
+            },
+        },
         {
             Name => 'UUID-Unknown',
-            Unknown => 1,
-            Binary => 1,
+            %unknownInfo,
         },
     ],
     # edts - edits --> contains elst (edit list)
@@ -983,6 +1095,22 @@ my %graphicsMode = (
         ValueConv => \&ConvertISO6709,
         PrintConv => \&PrintGPSCoordinates,
     },
+    # \xa9 tags written by DJI Phantom 3: (ref PH)
+    "\xa9xsp" => 'SpeedX', #PH (guess)
+    "\xa9ysp" => 'SpeedY', #PH (guess)
+    "\xa9zsp" => 'SpeedZ', #PH (guess)
+    "\xa9fpt" => 'Pitch', #PH
+    "\xa9fyw" => 'Yaw', #PH
+    "\xa9frl" => 'Roll', #PH
+    "\xa9gpt" => 'CameraPitch', #PH
+    "\xa9gyw" => 'CameraYaw', #PH
+    "\xa9grl" => 'CameraRoll', #PH
+    # and the following entries don't have the proper 4-byte header for \xa9 tags:
+    "\xa9dji" => { Name => 'UserData_dji', Format => 'undef', Binary => 1, Unknown => 1, Hidden => 1 },
+    "\xa9res" => { Name => 'UserData_res', Format => 'undef', Binary => 1, Unknown => 1, Hidden => 1 },
+    "\xa9uid" => { Name => 'UserData_uid', Format => 'undef', Binary => 1, Unknown => 1, Hidden => 1 },
+    "\xa9mdl" => { Name => 'Model',        Format => 'string', Notes => 'non-standard-format DJI tag' },
+    # end DJI tags
     name => 'Name',
     WLOC => {
         Name => 'WindowLocation',
@@ -1332,6 +1460,10 @@ my %graphicsMode = (
         Name => 'CanonCNTH',
         SubDirectory => { TagTable => 'Image::ExifTool::Canon::CNTH' },
     },
+    CNOP => { #PH (7DmkII)
+        Name => 'CanonCNOP',
+        SubDirectory => { TagTable => 'Image::ExifTool::Canon::CNOP' },
+    },
     # CNDB - 2112 bytes (550D)
     # CNDM - 4 bytes - 0xff,0xd8,0xff,0xd9 (S95)
     # CNDG - 10232 bytes, mostly zeros (N100)
@@ -1364,8 +1496,19 @@ my %graphicsMode = (
             ByteOrder => 'LittleEndian',
         },
     },
-    # ---- GoPro ----
-    GoPr => 'GoProType', #PH
+    # ---- GoPro ---- (ref PH)
+    GoPr => 'GoProType', # (Hero3+)
+    FIRM => 'FirmwareVersion', # (Hero4)
+    LENS => 'LensSerialNumber', # (Hero4)
+    CAME => { # (Hero4)
+        Name => 'SerialNumberHash',
+        Description => 'Camera Serial Number Hash',
+        ValueConv => 'unpack("H*",$val)',
+    },
+    # SETT? 12 bytes (Hero4)
+    # MUID? 32 bytes (Hero4, starts with serial number hash)
+    # HMMT? 404 bytes (Hero4, all zero)
+    # free (all zero)
     # --- HTC ----
     htcb => {
         Name => 'HTCBinary',
@@ -1377,6 +1520,18 @@ my %graphicsMode = (
         SubDirectory => { TagTable => 'Image::ExifTool::Kodak::DcMD' },
     },
     # AMBA => Ambarella AVC atom (unknown data written by Kodak Playsport video cam)
+    # tmlp - 1 byte: 0 (PixPro SP360)
+    # pivi - 72 bytes (PixPro SP360)
+    # pive - 12 bytes (PixPro SP360)
+    # m ev - 2 bytes: 0 0 (PixPro SP360)
+    # m wb - 4 bytes: 0 0 0 0 (PixPro SP360)
+    # mclr - 4 bytes: 0 0 0 0 (PixPro SP360)
+    # mmtr - 4 bytes: 6 0 0 0 (PixPro SP360)
+    # mflr - 4 bytes: 0 0 0 0 (PixPro SP360)
+    # lvlm - 24 bytes (PixPro SP360)
+    # ufdm - 4 bytes: 0 0 0 1 (PixPro SP360)
+    # mtdt - 1 byte: 0 (PixPro SP360)
+    # gdta - 75240 bytes (PixPro SP360)
     # ---- LG ----
     adzc => { Name => 'Unknown_adzc', Unknown => 1, Hidden => 1, %langText }, # "false\0/","true\0/"
     adze => { Name => 'Unknown_adze', Unknown => 1, Hidden => 1, %langText }, # "false\0/"
@@ -1434,13 +1589,16 @@ my %graphicsMode = (
         },{ #17 (format is in bytes 3-7)
             Name => 'ThumbnailImage',
             Condition => '$$valPt =~ /^.{8}\xff\xd8\xff\xdb/s',
+            Groups => { 2 => 'Preview' },
             ValueConv => 'substr($val, 8)',
         },{ #17 (format is in bytes 3-7)
             Name => 'ThumbnailPNG',
             Condition => '$$valPt =~ /^.{8}\x89PNG\r\n\x1a\n/s',
+            Groups => { 2 => 'Preview' },
             ValueConv => 'substr($val, 8)',
         },{
             Name => 'UnknownThumbnail',
+            Groups => { 2 => 'Preview' },
             Binary => 1,
         },
     ],
@@ -1482,6 +1640,7 @@ my %graphicsMode = (
     # ---- Ricoh ----
     RTHU => { #PH (GR)
         Name => 'PreviewImage',
+        Groups => { 2 => 'Preview' },
         RawConv => '$self->ValidateImage(\$val, $tag)',
     },
     RMKN => { #PH (GR)
@@ -1528,6 +1687,11 @@ my %graphicsMode = (
     albr => { Name => 'AlbumArtist', Groups => { 2 => 'Author' } },
     cvru => 'CoverURI',
     lrcu => 'LyricsURI',
+
+    tags => {   # found in Audible .m4b audio books (ref PH)
+        Name => 'Audible_tags',
+        SubDirectory => { TagTable => 'Image::ExifTool::Audible::tags' },
+    },
 );
 
 # Unknown information stored in HTC One (M8) videos - PH
@@ -1883,8 +2047,8 @@ my %graphicsMode = (
         Name => 'iTunesInfo',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::iTunesInfo' },
     },
-    aART => 'AlbumArtist',
-    covr => 'CoverArt',
+    aART => { Name => 'AlbumArtist', Groups => { 2 => 'Author' } },
+    covr => { Name => 'CoverArt',    Groups => { 2 => 'Preview' } },
     cpil => { #10
         Name => 'Compilation',
         PrintConv => { 0 => 'No', 1 => 'Yes' },
@@ -2108,11 +2272,11 @@ my %graphicsMode = (
             1114 => 'Music|Jazz|Smooth Jazz',
             1115 => 'Music|Latino|Latin Jazz',
             1116 => 'Music|Latino|Contemporary Latin',
-            1117 => 'Music|Latino|Pop Latino',
+            1117 => 'Music|Latino|Latin Pop',
             1118 => 'Music|Latino|Raices', # (Ra&iacute;ces)
             1119 => 'Music|Latino|Latin Urban',
             1120 => 'Music|Latino|Baladas y Boleros',
-            1121 => 'Music|Latino|Alternativo & Rock Latino',
+            1121 => 'Music|Latino|Latin Alternative & Rock',
             1122 => 'Music|Brazilian',
             1123 => 'Music|Latino|Regional Mexicano',
             1124 => 'Music|Latino|Salsa y Tropical',
@@ -2581,12 +2745,12 @@ my %graphicsMode = (
             1837 => 'Music Videos|Jazz|Ragtime',
             1838 => 'Music Videos|Jazz|Smooth Jazz',
             1839 => 'Music Videos|Jazz|Trad Jazz',
-            1840 => 'Music Videos|Latin|Alternativo & Rock Latino',
+            1840 => 'Music Videos|Latin|Alternative & Rock in Spanish',
             1841 => 'Music Videos|Latin|Baladas y Boleros',
             1842 => 'Music Videos|Latin|Contemporary Latin',
             1843 => 'Music Videos|Latin|Latin Jazz',
             1844 => 'Music Videos|Latin|Latin Urban',
-            1845 => 'Music Videos|Latin|Pop Latino',
+            1845 => 'Music Videos|Latin|Pop in Spanish',
             1846 => 'Music Videos|Latin|Raices',
             1847 => 'Music Videos|Latin|Regional Mexicano',
             1848 => 'Music Videos|Latin|Salsa y Tropical',
@@ -2976,12 +3140,12 @@ my %graphicsMode = (
             8218 => 'Tones|Ringtones|Korean|Korean Trad Instrumental',
             8219 => 'Tones|Ringtones|Korean|Korean Trad Song',
             8220 => 'Tones|Ringtones|Korean|Korean Trad Theater',
-            8221 => 'Tones|Ringtones|Latin|Alternativo & Rock Latino',
+            8221 => 'Tones|Ringtones|Latin|Alternative & Rock in Spanish',
             8222 => 'Tones|Ringtones|Latin|Baladas y Boleros',
             8223 => 'Tones|Ringtones|Latin|Contemporary Latin',
             8224 => 'Tones|Ringtones|Latin|Latin Jazz',
             8225 => 'Tones|Ringtones|Latin|Latin Urban',
-            8226 => 'Tones|Ringtones|Latin|Pop Latino',
+            8226 => 'Tones|Ringtones|Latin|Pop in Spanish',
             8227 => 'Tones|Ringtones|Latin|Raices',
             8228 => 'Tones|Ringtones|Latin|Regional Mexicano',
             8229 => 'Tones|Ringtones|Latin|Salsa y Tropical',
@@ -3200,9 +3364,9 @@ my %graphicsMode = (
             10053 => 'Books|Mysteries & Thrillers|Short Stories',
             10054 => 'Books|Mysteries & Thrillers|British Detectives',
             10055 => 'Books|Mysteries & Thrillers|Women Sleuths',
-            10056 => 'Books|Romance|Erotica',
+            10056 => 'Books|Romance|Erotic Romance',
             10057 => 'Books|Romance|Contemporary',
-            10058 => 'Books|Romance|Fantasy, Futuristic & Ghost',
+            10058 => 'Books|Romance|Paranormal',
             10059 => 'Books|Romance|Historical',
             10060 => 'Books|Romance|Short Stories',
             10061 => 'Books|Romance|Suspense',
@@ -3334,7 +3498,6 @@ my %graphicsMode = (
             11038 => 'Books|Biographies & Memoirs|Sports',
             11039 => 'Books|Biographies & Memoirs|Women',
             11040 => 'Books|Romance|New Adult',
-            11041 => 'Books|Romance|Paranormal',
             11042 => 'Books|Romance|Romantic Comedy',
             11043 => 'Books|Romance|Gay & Lesbian',
             11044 => 'Books|Fiction & Literature|Essays',
@@ -3378,6 +3541,226 @@ my %graphicsMode = (
             11083 => 'Books|Nonfiction|Philosophy|Political',
             11084 => 'Books|Nonfiction|Philosophy|Religion',
             11085 => 'Books|Reference|Manuals',
+            11086 => 'Books|Kids',
+            11087 => 'Books|Kids|Animals',
+            11088 => 'Books|Kids|Basic Concepts',
+            11089 => 'Books|Kids|Basic Concepts|Alphabet',
+            11090 => 'Books|Kids|Basic Concepts|Body',
+            11091 => 'Books|Kids|Basic Concepts|Colors',
+            11092 => 'Books|Kids|Basic Concepts|Counting & Numbers',
+            11093 => 'Books|Kids|Basic Concepts|Date & Time',
+            11094 => 'Books|Kids|Basic Concepts|General',
+            11095 => 'Books|Kids|Basic Concepts|Money',
+            11096 => 'Books|Kids|Basic Concepts|Opposites',
+            11097 => 'Books|Kids|Basic Concepts|Seasons',
+            11098 => 'Books|Kids|Basic Concepts|Senses & Sensation',
+            11099 => 'Books|Kids|Basic Concepts|Size & Shape',
+            11100 => 'Books|Kids|Basic Concepts|Sounds',
+            11101 => 'Books|Kids|Basic Concepts|Words',
+            11102 => 'Books|Kids|Biography',
+            11103 => 'Books|Kids|Careers & Occupations',
+            11104 => 'Books|Kids|Computers & Technology',
+            11105 => 'Books|Kids|Cooking & Food',
+            11106 => 'Books|Kids|Arts & Entertainment',
+            11107 => 'Books|Kids|Arts & Entertainment|Art',
+            11108 => 'Books|Kids|Arts & Entertainment|Crafts',
+            11109 => 'Books|Kids|Arts & Entertainment|Music',
+            11110 => 'Books|Kids|Arts & Entertainment|Performing Arts',
+            11111 => 'Books|Kids|Family',
+            11112 => 'Books|Kids|Fiction',
+            11113 => 'Books|Kids|Fiction|Action & Adventure',
+            11114 => 'Books|Kids|Fiction|Animals',
+            11115 => 'Books|Kids|Fiction|Classics',
+            11116 => 'Books|Kids|Fiction|Comics & Graphic Novels',
+            11117 => 'Books|Kids|Fiction|Culture, Places & People',
+            11118 => 'Books|Kids|Fiction|Family & Relationships',
+            11119 => 'Books|Kids|Fiction|Fantasy',
+            11120 => 'Books|Kids|Fiction|Fairy Tales, Myths & Fables',
+            11121 => 'Books|Kids|Fiction|Favorite Characters',
+            11122 => 'Books|Kids|Fiction|Historical',
+            11123 => 'Books|Kids|Fiction|Holidays & Celebrations',
+            11124 => 'Books|Kids|Fiction|Monsters & Ghosts',
+            11125 => 'Books|Kids|Fiction|Mysteries',
+            11126 => 'Books|Kids|Fiction|Nature',
+            11127 => 'Books|Kids|Fiction|Religion',
+            11128 => 'Books|Kids|Fiction|Sci-Fi',
+            11129 => 'Books|Kids|Fiction|Social Issues',
+            11130 => 'Books|Kids|Fiction|Sports & Recreation',
+            11131 => 'Books|Kids|Fiction|Transportation',
+            11132 => 'Books|Kids|Games & Activities',
+            11133 => 'Books|Kids|General Nonfiction',
+            11134 => 'Books|Kids|Health',
+            11135 => 'Books|Kids|History',
+            11136 => 'Books|Kids|Holidays & Celebrations',
+            11137 => 'Books|Kids|Holidays & Celebrations|Birthdays',
+            11138 => 'Books|Kids|Holidays & Celebrations|Christmas & Advent',
+            11139 => 'Books|Kids|Holidays & Celebrations|Easter & Lent',
+            11140 => 'Books|Kids|Holidays & Celebrations|General',
+            11141 => 'Books|Kids|Holidays & Celebrations|Halloween',
+            11142 => 'Books|Kids|Holidays & Celebrations|Hanukkah',
+            11143 => 'Books|Kids|Holidays & Celebrations|Other',
+            11144 => 'Books|Kids|Holidays & Celebrations|Passover',
+            11145 => 'Books|Kids|Holidays & Celebrations|Patriotic Holidays',
+            11146 => 'Books|Kids|Holidays & Celebrations|Ramadan',
+            11147 => 'Books|Kids|Holidays & Celebrations|Thanksgiving',
+            11148 => "Books|Kids|Holidays & Celebrations|Valentine's Day",
+            11149 => 'Books|Kids|Humor',
+            11150 => 'Books|Kids|Humor|Jokes & Riddles',
+            11151 => 'Books|Kids|Poetry',
+            11152 => 'Books|Kids|Learning to Read',
+            11153 => 'Books|Kids|Learning to Read|Chapter Books',
+            11154 => 'Books|Kids|Learning to Read|Early Readers',
+            11155 => 'Books|Kids|Learning to Read|Intermediate Readers',
+            11156 => 'Books|Kids|Nursery Rhymes',
+            11157 => 'Books|Kids|Government',
+            11158 => 'Books|Kids|Reference',
+            11159 => 'Books|Kids|Religion',
+            11160 => 'Books|Kids|Science & Nature',
+            11161 => 'Books|Kids|Social Issues',
+            11162 => 'Books|Kids|Social Studies',
+            11163 => 'Books|Kids|Sports & Recreation',
+            11164 => 'Books|Kids|Transportation',
+            11165 => 'Books|Young Adult',
+            11166 => 'Books|Young Adult|Animals',
+            11167 => 'Books|Young Adult|Biography',
+            11168 => 'Books|Young Adult|Careers & Occupations',
+            11169 => 'Books|Young Adult|Computers & Technology',
+            11170 => 'Books|Young Adult|Cooking & Food',
+            11171 => 'Books|Young Adult|Arts & Entertainment',
+            11172 => 'Books|Young Adult|Arts & Entertainment|Art',
+            11173 => 'Books|Young Adult|Arts & Entertainment|Crafts',
+            11174 => 'Books|Young Adult|Arts & Entertainment|Music',
+            11175 => 'Books|Young Adult|Arts & Entertainment|Performing Arts',
+            11176 => 'Books|Young Adult|Family',
+            11177 => 'Books|Young Adult|Fiction',
+            11178 => 'Books|Young Adult|Fiction|Action & Adventure',
+            11179 => 'Books|Young Adult|Fiction|Animals',
+            11180 => 'Books|Young Adult|Fiction|Classics',
+            11181 => 'Books|Young Adult|Fiction|Comics & Graphic Novels',
+            11182 => 'Books|Young Adult|Fiction|Culture, Places & People',
+            11183 => 'Books|Young Adult|Fiction|Dystopian',
+            11184 => 'Books|Young Adult|Fiction|Family & Relationships',
+            11185 => 'Books|Young Adult|Fiction|Fantasy',
+            11186 => 'Books|Young Adult|Fiction|Fairy Tales, Myths & Fables',
+            11187 => 'Books|Young Adult|Fiction|Favorite Characters',
+            11188 => 'Books|Young Adult|Fiction|Historical',
+            11189 => 'Books|Young Adult|Fiction|Holidays & Celebrations',
+            11190 => 'Books|Young Adult|Fiction|Horror, Monsters & Ghosts',
+            11191 => 'Books|Young Adult|Fiction|Crime & Mystery',
+            11192 => 'Books|Young Adult|Fiction|Nature',
+            11193 => 'Books|Young Adult|Fiction|Religion',
+            11194 => 'Books|Young Adult|Fiction|Romance',
+            11195 => 'Books|Young Adult|Fiction|Sci-Fi',
+            11196 => 'Books|Young Adult|Fiction|Coming of Age',
+            11197 => 'Books|Young Adult|Fiction|Sports & Recreation',
+            11198 => 'Books|Young Adult|Fiction|Transportation',
+            11199 => 'Books|Young Adult|Games & Activities',
+            11200 => 'Books|Young Adult|General Nonfiction',
+            11201 => 'Books|Young Adult|Health',
+            11202 => 'Books|Young Adult|History',
+            11203 => 'Books|Young Adult|Holidays & Celebrations',
+            11204 => 'Books|Young Adult|Holidays & Celebrations|Birthdays',
+            11205 => 'Books|Young Adult|Holidays & Celebrations|Christmas & Advent',
+            11206 => 'Books|Young Adult|Holidays & Celebrations|Easter & Lent',
+            11207 => 'Books|Young Adult|Holidays & Celebrations|General',
+            11208 => 'Books|Young Adult|Holidays & Celebrations|Halloween',
+            11209 => 'Books|Young Adult|Holidays & Celebrations|Hanukkah',
+            11210 => 'Books|Young Adult|Holidays & Celebrations|Other',
+            11211 => 'Books|Young Adult|Holidays & Celebrations|Passover',
+            11212 => 'Books|Young Adult|Holidays & Celebrations|Patriotic Holidays',
+            11213 => 'Books|Young Adult|Holidays & Celebrations|Ramadan',
+            11214 => 'Books|Young Adult|Holidays & Celebrations|Thanksgiving',
+            11215 => "Books|Young Adult|Holidays & Celebrations|Valentine's Day",
+            11216 => 'Books|Young Adult|Humor',
+            11217 => 'Books|Young Adult|Humor|Jokes & Riddles',
+            11218 => 'Books|Young Adult|Poetry',
+            11219 => 'Books|Young Adult|Politics & Government',
+            11220 => 'Books|Young Adult|Reference',
+            11221 => 'Books|Young Adult|Religion',
+            11222 => 'Books|Young Adult|Science & Nature',
+            11223 => 'Books|Young Adult|Coming of Age',
+            11224 => 'Books|Young Adult|Social Studies',
+            11225 => 'Books|Young Adult|Sports & Recreation',
+            11226 => 'Books|Young Adult|Transportation',
+            11227 => 'Books|Communications & Media',
+            11228 => 'Books|Military & Warfare',
+            11229 => 'Books|Romance|Inspirational',
+            11231 => 'Books|Romance|Holiday',
+            11232 => 'Books|Romance|Wholesome',
+            11233 => 'Books|Romance|Military',
+            11234 => 'Books|Arts & Entertainment|Art History',
+            11236 => 'Books|Arts & Entertainment|Design',
+            11243 => 'Books|Business & Personal Finance|Accounting',
+            11244 => 'Books|Business & Personal Finance|Hospitality',
+            11245 => 'Books|Business & Personal Finance|Real Estate',
+            11246 => 'Books|Humor|Jokes & Riddles',
+            11247 => 'Books|Religion & Spirituality|Comparative Religion',
+            11255 => 'Books|Cookbooks, Food & Wine|Culinary Arts',
+            11259 => 'Books|Mysteries & Thrillers|Cozy',
+            11260 => 'Books|Politics & Current Events|Current Events',
+            11261 => 'Books|Politics & Current Events|Foreign Policy & International Relations',
+            11262 => 'Books|Politics & Current Events|Local Government',
+            11263 => 'Books|Politics & Current Events|National Government',
+            11264 => 'Books|Politics & Current Events|Political Science',
+            11265 => 'Books|Politics & Current Events|Public Administration',
+            11266 => 'Books|Politics & Current Events|World Affairs',
+            11273 => 'Books|Nonfiction|Family & Relationships|Family & Childcare',
+            11274 => 'Books|Nonfiction|Family & Relationships|Love & Romance',
+            11275 => 'Books|Sci-Fi & Fantasy|Fantasy|Urban',
+            11276 => 'Books|Reference|Foreign Languages|Arabic',
+            11277 => 'Books|Reference|Foreign Languages|Bilingual Editions',
+            11278 => 'Books|Reference|Foreign Languages|African Languages',
+            11279 => 'Books|Reference|Foreign Languages|Ancient Languages',
+            11280 => 'Books|Reference|Foreign Languages|Chinese',
+            11281 => 'Books|Reference|Foreign Languages|English',
+            11282 => 'Books|Reference|Foreign Languages|French',
+            11283 => 'Books|Reference|Foreign Languages|German',
+            11284 => 'Books|Reference|Foreign Languages|Hebrew',
+            11285 => 'Books|Reference|Foreign Languages|Hindi',
+            11286 => 'Books|Reference|Foreign Languages|Italian',
+            11287 => 'Books|Reference|Foreign Languages|Japanese',
+            11288 => 'Books|Reference|Foreign Languages|Korean',
+            11289 => 'Books|Reference|Foreign Languages|Linguistics',
+            11290 => 'Books|Reference|Foreign Languages|Other Languages',
+            11291 => 'Books|Reference|Foreign Languages|Portuguese',
+            11292 => 'Books|Reference|Foreign Languages|Russian',
+            11293 => 'Books|Reference|Foreign Languages|Spanish',
+            11294 => 'Books|Reference|Foreign Languages|Speech Pathology',
+            11295 => 'Books|Science & Nature|Mathematics|Advanced Mathematics',
+            11296 => 'Books|Science & Nature|Mathematics|Algebra',
+            11297 => 'Books|Science & Nature|Mathematics|Arithmetic',
+            11298 => 'Books|Science & Nature|Mathematics|Calculus',
+            11299 => 'Books|Science & Nature|Mathematics|Geometry',
+            11300 => 'Books|Science & Nature|Mathematics|Statistics',
+            11301 => 'Books|Professional & Technical|Medical|Veterinary',
+            11302 => 'Books|Professional & Technical|Medical|Neuroscience',
+            11303 => 'Books|Professional & Technical|Medical|Immunology',
+            11304 => 'Books|Professional & Technical|Medical|Nursing',
+            11305 => 'Books|Professional & Technical|Medical|Pharmacology & Toxicology',
+            11306 => 'Books|Professional & Technical|Medical|Anatomy & Physiology',
+            11307 => 'Books|Professional & Technical|Medical|Dentistry',
+            11308 => 'Books|Professional & Technical|Medical|Emergency Medicine',
+            11309 => 'Books|Professional & Technical|Medical|Genetics',
+            11310 => 'Books|Professional & Technical|Medical|Psychiatry',
+            11311 => 'Books|Professional & Technical|Medical|Radiology',
+            11312 => 'Books|Professional & Technical|Medical|Alternative Medicine',
+            11317 => 'Books|Nonfiction|Philosophy|Political Philosophy',
+            11319 => 'Books|Nonfiction|Philosophy|Philosophy of Language',
+            11320 => 'Books|Nonfiction|Philosophy|Philosophy of Religion',
+            11327 => 'Books|Nonfiction|Social Science|Sociology',
+            11329 => 'Books|Professional & Technical|Engineering|Aeronautics',
+            11330 => 'Books|Professional & Technical|Engineering|Chemical & Petroleum Engineering',
+            11331 => 'Books|Professional & Technical|Engineering|Civil Engineering',
+            11332 => 'Books|Professional & Technical|Engineering|Computer Science',
+            11333 => 'Books|Professional & Technical|Engineering|Electrical Engineering',
+            11334 => 'Books|Professional & Technical|Engineering|Environmental Engineering',
+            11335 => 'Books|Professional & Technical|Engineering|Mechanical Engineering',
+            11336 => 'Books|Professional & Technical|Engineering|Power Resources',
+            11337 => 'Books|Comics & Graphic Novels|Manga|Boys',
+            11338 => 'Books|Comics & Graphic Novels|Manga|Men',
+            11339 => 'Books|Comics & Graphic Novels|Manga|Girls',
+            11340 => 'Books|Comics & Graphic Novels|Manga|Women',
+            11341 => 'Books|Comics & Graphic Novels|Manga|Other',
             12001 => 'Mac App Store|Business',
             12002 => 'Mac App Store|Developer Tools',
             12003 => 'Mac App Store|Education',
@@ -3660,8 +4043,8 @@ my %graphicsMode = (
             15211 => 'Textbooks|Religion & Spirituality|Spirituality',
             15212 => 'Textbooks|Romance',
             15213 => 'Textbooks|Romance|Contemporary',
-            15214 => 'Textbooks|Romance|Erotica',
-            15215 => 'Textbooks|Romance|Fantasy, Futuristic & Ghost',
+            15214 => 'Textbooks|Romance|Erotic Romance',
+            15215 => 'Textbooks|Romance|Paranormal',
             15216 => 'Textbooks|Romance|Historical',
             15217 => 'Textbooks|Romance|Short Stories',
             15218 => 'Textbooks|Romance|Suspense',
@@ -4004,6 +4387,7 @@ my %graphicsMode = (
             50000087 => 'Books|Comics & Graphic Novels|Manga|Sports',
             50000088 => 'Books|Fiction & Literature|Light Novels',
             50000089 => 'Books|Comics & Graphic Novels|Manga|Horror',
+            50000090 => 'Books|Comics & Graphic Novels|Comics',
         },
     },
     grup => 'Grouping', #10
@@ -4217,6 +4601,7 @@ my %graphicsMode = (
             21 => 'Podcast', #15
         },
     },
+    rate => 'RatingPercent', #PH
     titl => 'Title',
     tven => 'TVEpisodeID', #7
     tves => { #7/10
@@ -4241,7 +4626,24 @@ my %graphicsMode = (
     gspu => { Name => 'GooglePingURL',      Format => 'string' },
     gssd => { Name => 'GoogleSourceData',   Format => 'string' },
     gsst => { Name => 'GoogleStartTime',    Format => 'string' },
-    gstd => { Name => 'GoogleTrackDuration',Format => 'string' },
+    gstd => { Name => 'GoogleTrackDuration',Format => 'string', ValueConv => '$val / 1000',  PrintConv => 'ConvertDuration($val)' },
+
+    # atoms observed in AAX audiobooks (ref PH)
+    "\xa9cpy" => { Name => 'Copyright',  Groups => { 2 => 'Author' } },
+    "\xa9pub" => 'Publisher',
+    "\xa9nrt" => 'Narrator',
+    '@pti' => 'ParentTitle', # (guess -- same as "\xa9nam")
+    '@PST' => 'ParentShortTitle', # (guess -- same as "\xa9nam")
+    '@ppi' => 'ParentProductID', # (guess -- same as 'prID')
+    '@sti' => 'ShortTitle', # (guess -- same as "\xa9nam")
+    prID => 'ProductID',
+    rldt => { Name => 'ReleaseDate', Groups => { 2 => 'Time' }},
+    CDEK => { Name => 'Unknown_CDEK', Unknown => 1 }, # eg: "B004ZMTFEG" - used in URL's ("asin=")
+    CDET => { Name => 'Unknown_CDET', Unknown => 1 }, # eg: "ADBL"
+    VERS => 'ProductVersion',
+    GUID => 'GUID',
+    AACR => { Name => 'Unknown_AACR', Unknown => 1 }, # eg: "CR!1T1H1QH6WX7T714G2BMFX3E9MC4S"
+    # ausr - 30 bytes (User Alias?)
 );
 
 # item list keys (ref PH)
@@ -4273,9 +4675,11 @@ my %graphicsMode = (
     },
     description => { },
     director    => { },
+    title       => { }, #22
     genre       => { },
     information => { },
     keywords    => { },
+    producer    => { }, #22
     make        => { Name => 'Make',        Groups => { 2 => 'Camera' } },
     model       => { Name => 'Model',       Groups => { 2 => 'Camera' } },
     publisher   => { },
@@ -4335,6 +4739,7 @@ my %graphicsMode = (
         PrintConv => { 0 => 'Off', 1 => 'On' },
     },
     'rating.user'  => 'UserRating', # (Canon ELPH 510 HS)
+    'collection.user' => 'UserCollection', #22
     'Encoded_With' => 'EncodedWith',
 );
 
@@ -4403,8 +4808,11 @@ my %graphicsMode = (
     'Encoding Params' => {
         Name => 'EncodingParams',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::EncodingParams' },
-    }
+    },
     # also heard about 'iTunPGAP', but I haven't seen a sample
+    DISCNUMBER => 'DiscNumber', #PH
+    TRACKNUMBER => 'TrackNumber', #PH
+    popularimeter => 'Popularimeter', #PH
 );
 
 # iTunes audio encoding parameters
@@ -4885,6 +5293,8 @@ my %graphicsMode = (
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Wave' },
     },
     # alac - 28 bytes
+    # adrm - AAX DRM atom? 148 bytes
+    # aabd - AAX unknown 17kB (contains 'aavd' strings)
 );
 
 # AMR decode config box (ref 3)
@@ -5226,6 +5636,7 @@ my %graphicsMode = (
     },
     28 => {
         Name => 'PreviewImage',
+        Groups => { 2 => 'Preview' },
         Format => 'undef[$val{13}]',
         RawConv => '$self->ValidateImage(\$val, $tag)',
     },
@@ -5254,7 +5665,7 @@ my %graphicsMode = (
             my $size = $val[0];
             for (;;) {
                 $key = $self->NextTagKey($key) or last;
-                $size += $self->GetValue($key);
+                $size += $self->GetValue($key, 'ValueConv');
             }
             return int($size * 8 / $val[1] + 0.5);
         },
@@ -5264,19 +5675,13 @@ my %graphicsMode = (
         Require => 'QuickTime:GPSCoordinates',
         Groups => { 2 => 'Location' },
         ValueConv => 'my @c = split " ", $val; $c[0]',
-        PrintConv => q{
-            require Image::ExifTool::GPS;
-            Image::ExifTool::GPS::ToDMS($self, $val, 1, 'N');
-        },
+        PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")',
     },
     GPSLongitude => {
         Require => 'QuickTime:GPSCoordinates',
         Groups => { 2 => 'Location' },
         ValueConv => 'my @c = split " ", $val; $c[1]',
-        PrintConv => q{
-            require Image::ExifTool::GPS;
-            Image::ExifTool::GPS::ToDMS($self, $val, 1, 'E');
-        },
+        PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
     },
     # split altitude into GPSAltitude/GPSAltitudeRef like EXIF and XMP
     GPSAltitude => {
@@ -5301,20 +5706,14 @@ my %graphicsMode = (
         Require => 'QuickTime:LocationInformation',
         Groups => { 2 => 'Location' },
         ValueConv => '$val =~ /Lat=([-+.\d]+)/; $1',
-        PrintConv => q{
-            require Image::ExifTool::GPS;
-            Image::ExifTool::GPS::ToDMS($self, $val, 1, 'N');
-        },
+        PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")',
     },
     GPSLongitude2 => {
         Name => 'GPSLongitude',
         Require => 'QuickTime:LocationInformation',
         Groups => { 2 => 'Location' },
         ValueConv => '$val =~ /Lon=([-+.\d]+)/; $1',
-        PrintConv => q{
-            require Image::ExifTool::GPS;
-            Image::ExifTool::GPS::ToDMS($self, $val, 1, 'E');
-        },
+        PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
     },
     GPSAltitude2 => {
         Name => 'GPSAltitude',
@@ -5431,17 +5830,20 @@ sub FixWrongFormat($)
 sub ConvertISO6709($)
 {
     my $val = shift;
-    if ($val =~ /^([-+]\d{2}(?:\.\d*)?)([-+]\d{3}(?:\.\d*)?)([-+]\d+)?/) {
+    if ($val =~ /^([-+]\d{1,2}(?:\.\d*)?)([-+]\d{1,3}(?:\.\d*)?)([-+]\d+(?:\.\d*)?)?/) {
+        # +DD.DDD+DDD.DDD+AA.AAA
         $val = ($1 + 0) . ' ' . ($2 + 0);
         $val .= ' ' . ($3 + 0) if $3;
-    } elsif ($val =~ /^([-+])(\d{2})(\d{2}(?:\.\d*)?)([-+])(\d{3})(\d{2}(?:\.\d*)?)([-+]\d+)?/) {
+    } elsif ($val =~ /^([-+])(\d{2})(\d{2}(?:\.\d*)?)([-+])(\d{3})(\d{2}(?:\.\d*)?)([-+]\d+(?:\.\d*)?)?/) {
+        # +DDMM.MMM+DDDMM.MMM+AA.AAA
         my $lat = $2 + $3 / 60;
         $lat = -$lat if $1 eq '-';
         my $lon = $5 + $6 / 60;
         $lon = -$lon if $4 eq '-';
         $val = "$lat $lon";
         $val .= ' ' . ($7 + 0) if $7;
-    } elsif ($val =~ /^([-+])(\d{2})(\d{2})(\d{2}(?:\.\d*)?)([-+])(\d{3})(\d{2})(\d{2}(?:\.\d*)?)([-+]\d+)?/) {
+    } elsif ($val =~ /^([-+])(\d{2})(\d{2})(\d{2}(?:\.\d*)?)([-+])(\d{3})(\d{2})(\d{2}(?:\.\d*)?)([-+]\d+(?:\.\d*)?)?/) {
+        # +DDMMSS.SSS+DDDMMSS.SSS+AA.AAA
         my $lat = $2 + $3 / 60 + $4 / 3600;
         $lat = -$lat if $1 eq '-';
         my $lon = $6 + $7 / 60 + $8 / 3600;
@@ -5500,7 +5902,6 @@ sub PrintChapter($)
 sub PrintGPSCoordinates($)
 {
     my ($val, $et) = @_;
-    require Image::ExifTool::GPS;
     my @v = split ' ', $val;
     my $prt = Image::ExifTool::GPS::ToDMS($et, $v[0], 1, "N") . ', ' .
               Image::ExifTool::GPS::ToDMS($et, $v[1], 1, "E");
@@ -5773,7 +6174,7 @@ sub ProcessKeys($$$)
         if ($newInfo) {
             $msg or $msg = '';
             AddTagToTable($infoTable, $id, $newInfo);
-            $out and printf $out "$$et{INDENT}Added ItemList Tag $id = $tag$msg\n";
+            $out and print $out "$$et{INDENT}Added ItemList Tag $id = $tag$msg\n";
         }
         $pos += $len;
         ++$index;
@@ -5830,7 +6231,7 @@ sub ProcessMOV($$;$)
                 if ($ftypLookup{$type} and $ftypLookup{$type} =~ /\(\.(\w+)/) {
                     $fileType = $1;
                 # check compatible brands
-                } elsif ($buff =~ /^.{8}(.{4})+(mp41|mp42)/s) {
+                } elsif ($buff =~ /^.{8}(.{4})+(mp41|mp42|avc1)/s) {
                     $fileType = 'MP4';
                 } elsif ($buff =~ /^.{8}(.{4})+(f4v )/s) {
                     $fileType = 'F4V';
@@ -5921,8 +6322,7 @@ sub ProcessMOV($$;$)
                 $tagInfo = {
                     Name => "Unknown_$name",
                     Description => "Unknown $name",
-                    Unknown => 1,
-                    Binary => 1,
+                    %unknownInfo,
                 };
             }
             AddTagToTable($tagTablePtr, $tag, $tagInfo);
@@ -5932,8 +6332,21 @@ sub ProcessMOV($$;$)
             $et->HandleTag($tagTablePtr, "$tag-size", $size);
             $et->HandleTag($tagTablePtr, "$tag-offset", $raf->Tell()) if $$tagTablePtr{"$tag-offset"};
         }
-        # load values only if associated with a tag (or verbose) and < 16MB long
-        if ((defined $tagInfo or $verbose) and $size < 0x1000000) {
+        # load values only if associated with a tag (or verbose) and not too big
+        my $ignore;
+        if ($size > 0x2000000) {    # start to get worried above 32 MB
+            $ignore = 1;
+            if ($tagInfo and not $$tagInfo{Unknown}) {
+                my $t = $tag;
+                $t =~ s/([\x00-\x1f\x7f-\xff])/'x'.unpack('H*',$1)/eg;
+                if ($size > 0x8000000) {
+                    $et->Warn("Skipping '$t' atom > 128 MB", 1);
+                } else {
+                    $et->Warn("Skipping '$t' atom > 32 MB", 2) or $ignore = 0;
+                }
+            }
+        }
+        if (defined $tagInfo and not $ignore) {
             my $val;
             my $missing = $size - $raf->Read($val, $size);
             if ($missing) {
@@ -6049,6 +6462,8 @@ sub ProcessMOV($$;$)
                             if ($stringEncoding{$flags}) {
                                 # handle all string formats
                                 $value = $et->Decode($value, $stringEncoding{$flags});
+                                # (shouldn't be null terminated, but some software writes it anyway)
+                                $value =~ s/\0$// unless $$tagInfo{Binary};
                             } else {
                                 if (not $format) {
                                     if ($flags == 0x15 or $flags == 0x16) {
@@ -6118,6 +6533,10 @@ sub ProcessMOV($$;$)
                 } elsif ($tag =~ /^\xa9/ or $$tagInfo{IText}) {
                     # parse international text to extract all languages
                     my $pos = 0;
+                    if ($$tagInfo{Format}) {
+                        $et->FoundTag($tagInfo, ReadValue(\$val, 0, $$tagInfo{Format}, undef, length($val)));
+                        $pos = $size;
+                    }
                     for (;;) {
                         last if $pos + 4 > $size;
                         my ($len, $lang) = unpack("x${pos}nn", $val);
@@ -6240,7 +6659,7 @@ information from QuickTime and MP4 video, and M4A audio files.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

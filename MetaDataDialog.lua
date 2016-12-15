@@ -15,16 +15,28 @@ function MetaDataDialog.create()
   local viewFactory = LrView.osFactory()
   
   local myText = viewFactory:static_text {
-    title = "Will place information here",
+    title = "Will place label here",
+    selectable = true, 
+  }
+  
+  local myText2 = viewFactory:static_text {
+    title = "Will place data here",
+    selectable = true, 
+  }
+  
+  local row = viewFactory:row {
+    myText, myText2, 
+    margin_left = 5, 
   }
   
   local scrollView = viewFactory:scrolled_view {
-    myText, 
+    row, 
     width = appWidth * .7,
     height = appHeight *.7,
   }
   
   MetaDataDialog.contents = scrollView
-  MetaDataDialog.textView = myText
+  MetaDataDialog.labels = myText
+  MetaDataDialog.data = myText2
   
 end

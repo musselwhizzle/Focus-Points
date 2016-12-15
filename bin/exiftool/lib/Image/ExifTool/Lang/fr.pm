@@ -11,7 +11,7 @@ package Image::ExifTool::Lang::fr;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.28';
+$VERSION = '1.30';
 
 %Image::ExifTool::Lang::fr::Translate = (
    'AEAperture' => 'Ouverture AE',
@@ -1118,15 +1118,19 @@ $VERSION = '1.28';
    'Contrast' => {
       Description => 'Contraste',
       PrintConv => {
+        '+1 (med high)' => '+1 (Assez fort)',
+        '+2 (high)' => '+2 (Forte)',
+        '+3 (very high)' => '+3 (Très fort)',
+        '-1 (med low)' => '-1 (Assez faible)',
+        '-2 (low)' => '-2 (Faible)',
+        '-3 (very low)' => '-3 (Très faible)',
+        '0 (normal)' => '0 (Normale)',
         'High' => 'Dur',
         'Low' => 'Doux',
-        'Med High' => 'Assez fort',
-        'Med Low' => 'Assez faible',
         'Medium High' => 'Moyen Haut',
         'Medium Low' => 'Moyen Faible',
         'Normal' => 'Normale',
-        'Very High' => 'Très fort',
-        'Very Low' => 'Très faible',
+        'n/a' => 'Non établie',
       },
     },
    'ContrastCurve' => 'Courbe de contraste',
@@ -2870,7 +2874,6 @@ $VERSION = '1.28';
         'Multi-spot' => 'MultiSpot',
         'Other' => 'Autre',
         'Partial' => 'Partielle',
-        'Spot' => 'Grain',
         'Unknown' => 'Inconnu',
       },
     },
@@ -3747,14 +3750,17 @@ $VERSION = '1.28';
    'SamplesPerPixel' => 'Nombre de composantes',
    'Saturation' => {
       PrintConv => {
+        '+1 (med high)' => '+1 (Assez fort)',
+        '+2 (high)' => '+2 (Forte)',
+        '+3 (very high)' => '+3 (Très fort)',
+        '-1 (med low)' => '-1 (Assez faible)',
+        '-2 (low)' => '-2 (Faible)',
+        '-3 (very low)' => '-3 (Très faible)',
+        '0 (normal)' => '0 (Normale)',
         'High' => 'Forte',
         'Low' => 'Faible',
-        'Med High' => 'Assez forte',
-        'Med Low' => 'Assez faible',
         'None' => 'Non établie',
         'Normal' => 'Normale',
-        'Very High' => 'Très forte',
-        'Very Low' => 'Très faible',
       },
     },
    'ScanImageEnhancer' => {
@@ -3971,13 +3977,16 @@ $VERSION = '1.28';
    'Sharpness' => {
       Description => 'Accentuation',
       PrintConv => {
+        '+1 (med hard)' => '+1 (Assez dure)',
+        '+2 (hard)' => '+2 (Dure)',
+        '+3 (very hard)' => '+3 (Très dure)',
+        '-1 (med soft)' => '-1 (Assez dure)',
+        '-2 (soft)' => '-2 (Douce)',
+        '-3 (very soft)' => '-3 (Très douce)',
+        '0 (normal)' => '0 (Normale)',
         'Hard' => 'Dure',
-        'Med Hard' => 'Assez dure',
-        'Med Soft' => 'Assez douce',
         'Normal' => 'Normale',
         'Soft' => 'Douce',
-        'Very Hard' => 'Très dure',
-        'Very Soft' => 'Très douce',
         'n/a' => 'Non établie',
       },
     },
@@ -4583,7 +4592,7 @@ $VERSION = '1.28';
    'WB_RGGBLevelsFluorescent' => 'Niveaux BB RVVB fluorescent',
    'WB_RGGBLevelsFluorescentD' => 'Niveaux BB RVVB fluorescent',
    'WB_RGGBLevelsFluorescentN' => 'Niveaux BB RVVB fluo N',
-   'WB_RGGBLevelsFluorescentW' => 'Niveaux BB RVVB fluo W',
+   'WB_RGGBLevelsFluorescentW' => 'Niveaux BB RVVB fluo W',
    'WB_RGGBLevelsShade' => 'Niveaux BB RVVB ombre',
    'WB_RGGBLevelsTungsten' => 'Niveaux BB RVVB tungstène',
    'WCSProfiles' => 'Profil Windows Color System',
@@ -4731,7 +4740,7 @@ and values.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

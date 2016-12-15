@@ -21,7 +21,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.36';
+$VERSION = '1.37';
 
 # older Casio maker notes (ref 1)
 %Image::ExifTool::Casio::Main = (
@@ -401,6 +401,7 @@ $VERSION = '1.36';
         # this image data is also referenced by tags 3 and 4
         # (nasty that they double-reference the image!)
         %Image::ExifTool::previewImageTagInfo,
+        Groups => { 2 => 'Preview' },
     },
     0x2001 => { #PH
         # I downloaded images from 12 different EX-Z50 cameras, and they showed
@@ -1608,7 +1609,7 @@ $VERSION = '1.36';
     0x3015 => {
         Name => 'ColorMode',
         Writable => 'int16u',
-        PrintConv => {  
+        PrintConv => {
             0 => 'Off',
             2 => 'Black & White', #PH (EX-Z400,FH20)
             3 => 'Sepia', #PH (EX-Z400)
@@ -2031,7 +2032,7 @@ Casio maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -14,7 +14,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.06';
+$VERSION = '1.07';
 
 sub ProcessBitStream($$$);
 
@@ -110,6 +110,7 @@ sub ProcessBitStream($$$);
     7 => 'PictureLength',
     8 => {
         Name => 'Picture',
+        Groups => { 2 => 'Preview' },
         Format => 'undef[$val{7}]',
         Binary => 1,
     },
@@ -273,7 +274,7 @@ information from Free Lossless Audio Codec (FLAC) audio files.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -251,12 +251,12 @@ meta information from Adobe InDesign (.IND, .INDD and .INDT) files.
 2) A new XMP stream may not be created, so XMP tags may only be written to
 InDesign files which previously contained XMP.
 
-3) File sizes of greater than 2 GB and are currently not supported because
-the ability to handle large files like this is system dependent.
+3) File sizes of greater than 2 GB are supported only if the system supports
+them and the LargeFileSupport option is enabled.
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

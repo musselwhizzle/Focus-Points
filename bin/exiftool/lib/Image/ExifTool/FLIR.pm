@@ -22,8 +22,9 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
+use Image::ExifTool::GPS;
 
-$VERSION = '1.10';
+$VERSION = '1.14';
 
 sub ProcessFLIR($$;$);
 sub ProcessFLIRText($$$);
@@ -115,11 +116,11 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     0x05 => { #6
         Name => 'GainDeadData',
         SubDirectory => { TagTable => 'Image::ExifTool::FLIR::GainDeadData' },
-    }, 
+    },
     0x06 => { #6
         Name => 'CoarseData',
         SubDirectory => { TagTable => 'Image::ExifTool::FLIR::CoarseData' },
-    },       
+    },
     # 7 = ImageMap (ref 3)
     0x0e => {
         Name => 'EmbeddedImage',
@@ -154,7 +155,7 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     0x28 => {
         Name => 'PaintData',
         SubDirectory => { TagTable => 'Image::ExifTool::FLIR::PaintData' },
-    },       
+    },
     0x2a => {
         Name => 'PiP',
         SubDirectory => {
@@ -235,6 +236,7 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     },
     16.1 => {
         Name => 'RawThermalImage',
+        Groups => { 2 => 'Preview' },
         RawConv => '\$$self{RawThermalImage}',
     },
 );
@@ -359,6 +361,7 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     },
     16.1 => {
         Name => 'EmbeddedImage',
+        Groups => { 2 => 'Preview' },
         Format => 'undef[$size-0x20]',
         Binary => 1,
     },
@@ -411,18 +414,18 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     0x070 => { Name => 'AtmosphericTransAlpha1', %float6f }, #1 (value: 0.006569)
     0x074 => { Name => 'AtmosphericTransAlpha2', %float6f }, #1 (value: 0.012620)
     0x078 => { Name => 'AtmosphericTransBeta1',  %float6f }, #1 (value: -0.002276)
-    0x07C => { Name => 'AtmosphericTransBeta2',  %float6f }, #1 (value: -0.006670)
+    0x07c => { Name => 'AtmosphericTransBeta2',  %float6f }, #1 (value: -0.006670)
     0x080 => { Name => 'AtmosphericTransX',      %float6f }, #1 (value: 1.900000)
     # 0x84,0x88: 0
     # 0x8c - float: 0,4,6
     0x90 => { Name => 'CameraTemperatureRangeMax', %floatKelvin },
     0x94 => { Name => 'CameraTemperatureRangeMin', %floatKelvin },
-    0x98 => { Name => 'UnknownTemperature1', %floatKelvin, Unknown => 1 }, # 50 degrees over camera max
-    0x9c => { Name => 'UnknownTemperature2', %floatKelvin, Unknown => 1 }, # usually 10 or 20 degrees below camera min
-    0xa0 => { Name => 'UnknownTemperature3', %floatKelvin, Unknown => 1 }, # same as camera max
-    0xa4 => { Name => 'UnknownTemperature4', %floatKelvin, Unknown => 1 }, # same as camera min
-    0xa8 => { Name => 'UnknownTemperature5', %floatKelvin, Unknown => 1 }, # usually 50 or 88 degrees over camera max
-    0xac => { Name => 'UnknownTemperature6', %floatKelvin, Unknown => 1 }, # usually 10, 20 or 40 degrees below camera min
+    0x98 => { Name => 'CameraTemperatureMaxClip', %floatKelvin }, # 50 degrees over camera max
+    0x9c => { Name => 'CameraTemperatureMinClip', %floatKelvin }, # usually 10 or 20 degrees below camera min
+    0xa0 => { Name => 'CameraTemperatureMaxWarn', %floatKelvin }, # same as camera max
+    0xa4 => { Name => 'CameraTemperatureMinWarn', %floatKelvin }, # same as camera min
+    0xa8 => { Name => 'CameraTemperatureMaxSaturated', %floatKelvin }, # usually 50 or 88 degrees over camera max
+    0xac => { Name => 'CameraTemperatureMinSaturated', %floatKelvin }, # usually 10, 20 or 40 degrees below camera min
     0xd4 => { Name => 'CameraModel',        Format => 'string[32]' },
     0xf4 => { Name => 'CameraPartNumber',   Format => 'string[16]' }, #1
     0x104 => { Name => 'CameraSerialNumber',Format => 'string[16]' }, #1
@@ -438,7 +441,7 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     0x1ec => { Name => 'FilterModel',       Format => 'string[16]' },
     0x1fc => { Name => 'FilterPartNumber',  Format => 'string[32]' },
     0x21c => { Name => 'FilterSerialNumber',Format => 'string[32]' },
-    0x308 => { Name => 'PlanckO',           Format => 'int16s' }, #1
+    0x308 => { Name => 'PlanckO',           Format => 'int32s' }, #1
     0x30c => { Name => 'PlanckR2',          %float8g }, #1
     0x338 => { Name => 'RawValueMedian',    Format => 'int16u', Groups => { 2 => 'Image' } },
     0x33c => { Name => 'RawValueRange',     Format => 'int16u', Groups => { 2 => 'Image' } },
@@ -735,7 +738,7 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
             return $val;
         },
     },
-    
+
     326 => {
         Name => 'Reading4Units',
         DataMember => 'Reading4Units',
@@ -928,7 +931,7 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
         },
         {
             Name => 'ThumbnailImage',
-            Groups => { 2 => 'Image' },
+            Groups => { 2 => 'Preview' },
             Condition => '$$valPt=~/^\x91\xaf\x9b\x93\x45\x9b\x44\x56\x98\xd1\x5e\x76\xea\x01\x04\xac....\xff\xd8\xff/s',
             RawConv => 'substr($val, 20)',
             Binary => 1,
@@ -1104,7 +1107,6 @@ my %float8g = ( Format => 'float', PrintConv => 'sprintf("%.8g",$val)' );
     },
     1 => {
         Name => 'GPSLatitude',
-        RawConv => 'require Image::ExifTool::GPS; $val', # to load Composite tags and routines
         PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")',
     },
     2 => {
@@ -1323,11 +1325,11 @@ sub ProcessMeasInfo($$$)
             AddTagToTable($tagTablePtr, $tag, $tagInfo);
         }
         # extract measurement tool type
-        $et->HandleTag($tagTablePtr, "${pre}Type", undef, 
+        $et->HandleTag($tagTablePtr, "${pre}Type", undef,
             DataPt=>$dataPt, DataPos=>$dataPos, Start=>$pos+0x0a, Size=>2);
         last if $pos + 0x24 + $coordLen > $dirEnd;
         # extract measurement parameters
-        $et->HandleTag($tagTablePtr, "${pre}Params", undef, 
+        $et->HandleTag($tagTablePtr, "${pre}Params", undef,
             DataPt=>$dataPt, DataPos=>$dataPos, Start=>$pos+0x24, Size=>$coordLen);
         my @uni;
         # extract label (sometimes-null-terminated Unicode)
@@ -1382,10 +1384,11 @@ sub ProcessFLIR($$;$)
 
     # determine byte ordering by validating version number
     # (in my samples FLIR APP1 is big-endian, FFF files are little-endian)
-    my $ver = Get32u(\$hdr, 0x14);
-    if ($ver != 100) {
-        $ver == 0x64000000 or $et->Warn("Unsupported FLIR $type version"), return 1;
+    for ($i=0; ; ++$i) {
+        my $ver = Get32u(\$hdr, 0x14);
+        last if $ver >= 100 and $ver < 200; # (have seen 100 and 101 - PH)
         ToggleByteOrder();
+        $i and $et->Warn("Unsupported FLIR $type version"), return 1;
     }
 
     # read the FLIR record directory
@@ -1494,7 +1497,7 @@ Systems Inc. thermal image files (FFF, FPF and JPEG format).
 
 =head1 AUTHOR
 
-Copyright 2003-2014, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
