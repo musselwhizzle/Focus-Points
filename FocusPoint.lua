@@ -8,7 +8,6 @@ local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 
-require "NikonView"
 require "UiDialog"
 require "Utils"
 require "PointsRendererFactory"
