@@ -3,11 +3,11 @@ local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
 
-UiDialog = {}
-UiDialog.myText = nil
-UiDialog.display = nil
+FocusPointDialog = {}
+FocusPointDialog.myText = nil
+FocusPointDialog.display = nil
 
-function UiDialog.createDialog(targetPhoto, overlayView) 
+function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
@@ -24,7 +24,15 @@ function UiDialog.createDialog(targetPhoto, overlayView)
     photoH = math.min(h, contentH)
     photoW = w/h * photoH
   end
+  return photoW, photoH
   
+end
+
+function FocusPointDialog.createDialog(targetPhoto, overlayView) 
+  local appWidth, appHeight = LrSystemInfo.appWindowSize()
+  local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+  
+  local viewFactory = LrView.osFactory()
   local myPhoto = viewFactory:catalog_photo {
     width = photoW, 
     height = photoH,
@@ -44,7 +52,7 @@ function UiDialog.createDialog(targetPhoto, overlayView)
     place = 'overlapping', 
   }
   
-  UiDialog.myText = myText
-  UiDialog.display = myView
+  FocusPointDialog.myText = myText
+  FocusPointDialog.display = myView
 
 end

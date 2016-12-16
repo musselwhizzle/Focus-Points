@@ -24,6 +24,7 @@ function startDebug()
     LrMobdebug.start()
   end
 end
+
 function getExifCmd(targetPhoto) 
   
   local path = targetPhoto:getRawMetadata("path")

@@ -8,7 +8,7 @@ local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 
-require "UiDialog"
+require "FocusPointDialog"
 require "Utils"
 require "PointsRendererFactory"
 
@@ -19,22 +19,23 @@ local function showDialog()
       local targetPhoto = catalog:getTargetPhoto()
       
       LrTasks.startAsyncTask(function(context)
-          local developSettings = targetPhoto:getDevelopSettings()
-          local metaData = readMetaData(targetPhoto)
-          
-          local rendererTable = PointsRendererFactory.createRenderer("Nikon")
-          local overlay = rendererTable.createView(targetPhoto, metaData, developSettings)
-          UiDialog.createDialog(targetPhoto, overlay)
-          
-          -- display the contents
-          LrDialogs.presentModalDialog {
-            title = "My Picture Viewer Dialog",
-            cancelVerb = "< exclude >",
-            actionVerb = "OK",
-            contents = UiDialog.display
-          }
-      end
-      )
+        local developSettings = targetPhoto:getDevelopSettings()
+        local metaData = readMetaData(targetPhoto)
+        local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+        log("FocusPoint.photoW: " .. photoW)
+        
+        local rendererTable = PointsRendererFactory.createRenderer("Nikon")
+        local overlay = rendererTable.createView(targetPhoto, metaData, developSettings, photoW, photoH)
+        FocusPointDialog.createDialog(targetPhoto, overlay)
+        
+        -- display the contents
+        LrDialogs.presentModalDialog {
+          title = "My Picture Viewer Dialog",
+          cancelVerb = "< exclude >",
+          actionVerb = "OK",
+          contents = FocusPointDialog.display
+        }
+      end)
     end
   )
   
