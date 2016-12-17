@@ -14,10 +14,10 @@ NikonView = {}
 --                So the 6000x4000 may only display at 600x400
 --]]
 function NikonView.createView(targetPhoto, metaData, developSettings, photoDisplayW, photoDisplayH)
-  local orgPhotoW = 6000; -- width of the photo before any cropping
-  local orgPhotoH = 4000; -- height of the photo before any cropping
-  local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
-  local croppedPhotoW, croppedPhotoH = parseDimens(dimens) -- cropped size of the photo
+  local dimens = targetPhoto:getFormattedMetadata("dimensions")
+  orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
+  local croppedDimens = targetPhoto:getFormattedMetadata("croppedDimensions")
+  local croppedPhotoW, croppedPhotoH = parseDimens(croppedDimens) -- cropped size of the photo
   
   local focusPoint = NikonView.getAutoFocusPoint(metaData)
   local x = NikonView.focusPoints[focusPoint][1]
@@ -30,9 +30,8 @@ function NikonView.createView(targetPhoto, metaData, developSettings, photoDispl
   
   local displayRatioW = photoDisplayW/croppedPhotoW
   local displayRatioH = photoDisplayH/croppedPhotoH
-  local adjustedX = (displayRatioW * x) 
+  local adjustedX = displayRatioW * x
   local adjustedY = displayRatioH * y
-  log("adjustedX: " .. adjustedX)
   
   return NikonView.buildView(targetPhoto, adjustedX, adjustedY)
   
