@@ -10,17 +10,29 @@ NikonView = {}
 -- targetPhoto - the selected catalog photo
 -- metaData - the Exif metaData string extracted from the image
 -- developSettings - the result of targetPhoto:getDevelopSettings()
--- photoW, photoH - the width and height that the photo is going to display as. 
+-- photoDisplayW, photoDisplayH - the width and height that the photo is going to display as. 
 --                So the 6000x4000 may only display at 600x400
 --]]
-function NikonView.createView(targetPhoto, metaData, developSettings, photoW, photoH)
+function NikonView.createView(targetPhoto, metaData, developSettings, photoDisplayW, photoDisplayH)
+  local orgPhotoW = 6000; -- width of the photo before any cropping
+  local orgPhotoH = 4000; -- height of the photo before any cropping
+  local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
+  local photoW, photoH = parseDimens(dimens) -- cropped size of the photo
   
   local focusPoint = NikonView.getAutoFocusPoint(metaData)
   local x = NikonView.focusPoints[focusPoint][1]
   local y = NikonView.focusPoints[focusPoint][2]
   
-  local adjustedX = photoW/6000 * x;
-  local adjustedY = photoH/4000 * y;
+  local leftCropAmount = developSettings["CropLeft"] * orgPhotoW
+  local topCropAmount = developSettings["CropTop"] * orgPhotoH
+  x = x - leftCropAmount
+  y = y - topCropAmount
+  
+  local displayRatioW = photoDisplayW/photoW
+  local displayRatioH = photoDisplayH/photoH
+  local adjustedX = (displayRatioW * x) 
+  local adjustedY = displayRatioH * y
+  log("adjustedX: " .. adjustedX)
   
   return NikonView.buildView(targetPhoto, adjustedX, adjustedY)
   
@@ -53,9 +65,9 @@ NikonView.focusPointDimen = {300, 250}
 NikonView.focusPoints = {}
 
 -- 1st column
-NikonView.focusPoints.B1 = {820, 1550}
-NikonView.focusPoints.C1 = {820, 1880}
-NikonView.focusPoints.D1 = {820, 2210}
+NikonView.focusPoints.B1 = {810, 1550} -- verified in LR
+NikonView.focusPoints.C1 = {810, 1865} -- verified in LR
+NikonView.focusPoints.D1 = {810, 2210} -- verified in LR
 
 -- 2nd column
 NikonView.focusPoints.A1 = {1205, 1220}
@@ -77,3 +89,25 @@ NikonView.focusPoints.B4 = {1975, 1550}
 NikonView.focusPoints.C4 = {1975, 1880}
 NikonView.focusPoints.D4 = {1975, 2210}
 NikonView.focusPoints.E3 = {1975, 2540}
+
+-- 5th column
+NikonView.focusPoints.A4 = {2430, 1090}
+NikonView.focusPoints.B5 = {2430, 1470}
+NikonView.focusPoints.C5 = {2430, 1880}
+NikonView.focusPoints.D5 = {2430, 2270}
+NikonView.focusPoints.E4 = {2430, 2630}
+
+-- 6th column
+NikonView.focusPoints.A5 = {2840, 1090}
+NikonView.focusPoints.B6 = {2840, 1470}
+NikonView.focusPoints.C6 = {2840, 1880}
+NikonView.focusPoints.D6 = {2840, 2270}
+NikonView.focusPoints.E5 = {2840, 2630}
+
+
+-- 7th column
+NikonView.focusPoints.A6 = {3250, 1085}
+NikonView.focusPoints.B7 = {3250, 1475}
+NikonView.focusPoints.C7 = {3250, 1880}
+NikonView.focusPoints.D7 = {3250, 2270}
+NikonView.focusPoints.E6 = {3250, 2640}

@@ -27,6 +27,7 @@ local function showDialog()
         local rendererTable = PointsRendererFactory.createRenderer("Nikon")
         local overlay = rendererTable.createView(targetPhoto, metaData, developSettings, photoW, photoH)
         FocusPointDialog.createDialog(targetPhoto, overlay)
+        FocusPointDialog.myText.title = "CL: " .. developSettings["CropLeft"] .. ", CT: " .. developSettings["CropTop"] .. ", CR: " .. developSettings["CropRight"] .. ", CB: " .. developSettings["CropBottom"] .. ", CropAngle: " .. developSettings["CropAngle"]
         
         -- display the contents
         LrDialogs.presentModalDialog {
