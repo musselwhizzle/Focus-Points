@@ -17,7 +17,7 @@ function NikonView.createView(targetPhoto, metaData, developSettings, photoDispl
   local orgPhotoW = 6000; -- width of the photo before any cropping
   local orgPhotoH = 4000; -- height of the photo before any cropping
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
-  local photoW, photoH = parseDimens(dimens) -- cropped size of the photo
+  local croppedPhotoW, croppedPhotoH = parseDimens(dimens) -- cropped size of the photo
   
   local focusPoint = NikonView.getAutoFocusPoint(metaData)
   local x = NikonView.focusPoints[focusPoint][1]
@@ -28,8 +28,8 @@ function NikonView.createView(targetPhoto, metaData, developSettings, photoDispl
   x = x - leftCropAmount
   y = y - topCropAmount
   
-  local displayRatioW = photoDisplayW/photoW
-  local displayRatioH = photoDisplayH/photoH
+  local displayRatioW = photoDisplayW/croppedPhotoW
+  local displayRatioH = photoDisplayH/croppedPhotoH
   local adjustedX = (displayRatioW * x) 
   local adjustedY = displayRatioH * y
   log("adjustedX: " .. adjustedX)
