@@ -2,6 +2,7 @@ local LrSystemInfo = import 'LrSystemInfo'
 local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
+require "Utils"
 
 FocusPointDialog = {}
 FocusPointDialog.myText = nil

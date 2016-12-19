@@ -9,7 +9,6 @@ local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 
 require "FocusPointDialog"
-require "Utils"
 require "PointsRendererFactory"
 
 local function showDialog()
@@ -18,16 +17,31 @@ local function showDialog()
       local catalog = LrApplication.activeCatalog()
       local targetPhoto = catalog:getTargetPhoto()
       
-      LrTasks.startAsyncTask(function(context)
-        local developSettings = targetPhoto:getDevelopSettings()
-        local metaData = readMetaData(targetPhoto)
+      LrTasks.startAsyncTask(function(context) 
+        if (targetPhoto:checkPhotoAvailability() == false) then
+          LrDialogs.message("Photo is not available. Make sure hard drives are attached and try again", nil, nil)
+          return
+        end
+          
+          
         local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-        log("FocusPoint.photoW: " .. photoW)
-        
         local rendererTable = PointsRendererFactory.createRenderer("Nikon")
-        local overlay = rendererTable.createView(targetPhoto, metaData, developSettings, photoW, photoH)
+        if (rendererTable == nil) then
+          LrDialogs.message("Unknown camera type. Can not display", nil, nil)
+          return
+        end
+        local focusPoints = PointsRendererFactory.getFocusPoints("Nikon")
+        if (focusPoints == nil) then
+          LrDialogs.message("Unknown focus points. Can not display", nil, nil)
+          return
+        end
+        local focusPointDimens = PointsRendererFactory.getFocusPointDimens("Nikon")
+        if (focusPoints == nil) then
+          LrDialogs.message("Unknown focus point dimensions. Can not display", nil, nil)
+          return
+        end
+        local overlay = rendererTable.createView(targetPhoto, photoW, photoH, focusPoints, focusPointDimens)
         FocusPointDialog.createDialog(targetPhoto, overlay)
-        FocusPointDialog.myText.title = "CL: " .. developSettings["CropLeft"] .. ", CT: " .. developSettings["CropTop"] .. ", CR: " .. developSettings["CropRight"] .. ", CB: " .. developSettings["CropBottom"] .. ", CropAngle: " .. developSettings["CropAngle"]
         
         -- display the contents
         LrDialogs.presentModalDialog {
