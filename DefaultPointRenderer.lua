@@ -1,3 +1,9 @@
+--[[
+  This object is responsible for creating the focus point icon and figuring out where to place it. 
+  This logic should be universally reuseable, but if it's not, this object can be replaced in the 
+  PointsRendererFactory. 
+--]]
+
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
@@ -5,8 +11,10 @@ local LrColor = import 'LrColor'
 require "ExifUtils"
 
 DefaultPointRenderer = {}
-DefaultPointRenderer.focusPoints = nil
-DefaultPointRenderer.focusPointDimens = nil
+DefaultPointRenderer.metaOrientation90 = "90"
+DefaultPointRenderer.metaOrientation270 = "270"
+DefaultPointRenderer.metaAFUsed = "AF Points Used"
+DefaultPointRenderer.metaOrientation = "Orientation"
 
 --[[
 -- targetPhoto - the selected catalog photo
@@ -25,25 +33,20 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local focusPoint = DefaultPointRenderer.getAutoFocusPoint(metaData)
   local x = focusPoints[focusPoint][1]
   local y = focusPoints[focusPoint][2]
-  log("orgPhotoW: " .. orgPhotoW .. ", orgPhotoH: " .. orgPhotoH)
-  log("focusPoint: " .. focusPoint .. ", x: " .. x .. ", y: " .. y)
   
   local leftCropAmount = developSettings["CropLeft"] * orgPhotoW
   local topCropAmount = developSettings["CropTop"] * orgPhotoH
-  
-
   local metaOrientation = DefaultPointRenderer.getOrientation(metaData)
-  log ("metaOrientation: " .. metaOrientation)
   
   --[[ lightroom does not report if a photo has been rotated. code below 
         make sure the rotation matches the expected width and height --]]
-  if (string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH) then
+  if (string.match(metaOrientation, DefaultPointRenderer.metaOrientation90) and orgPhotoW < orgPhotoH) then
     x = orgPhotoW - y - focusPointDimen[1]
     y = focusPoints[focusPoint][1]
     leftCropAmount = (1- developSettings["CropBottom"]) * orgPhotoW
     topCropAmount = developSettings["CropLeft"] * orgPhotoH
     
-  elseif (string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH) then
+  elseif (string.match(metaOrientation, DefaultPointRenderer.metaOrientation270) and orgPhotoW < orgPhotoH) then
     x = focusPoints[focusPoint][2]
     y = orgPhotoH - focusPoints[focusPoint][1] - focusPointDimen[1]
     leftCropAmount = developSettings["CropTop"] * orgPhotoW
@@ -83,11 +86,11 @@ end
 
 
 function DefaultPointRenderer.getAutoFocusPoint(metaData)
-  local focusPointUsed = ExifUtils.findValue(metaData, "AF Points Used")
+  local focusPointUsed = ExifUtils.findValue(metaData, DefaultPointRenderer.metaAFUsed)
   return focusPointUsed
 end
 
 function DefaultPointRenderer.getOrientation(metaData)
-  local orientation = ExifUtils.findValue(metaData, "Orientation")
+  local orientation = ExifUtils.findValue(metaData, DefaultPointRenderer.metaOrientation)
   return orientation
 end

@@ -1,3 +1,8 @@
+--[[
+  The focus points mapping for a Nikon D7200 camera (and perhaps others). The focus points are measured 
+  in pixels from the top left corner of the image to the top left corner of the focus point.
+--]]
+
 CameraNikonD7200 = {}
 CameraNikonD7200.focusPointDimens = {300, 250}
 CameraNikonD7200.focusPoints = {}

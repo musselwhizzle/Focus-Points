@@ -22,8 +22,7 @@ local function showDialog()
           LrDialogs.message("Photo is not available. Make sure hard drives are attached and try again", nil, nil)
           return
         end
-          
-          
+        
         local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
         local rendererTable = PointsRendererFactory.createRenderer("Nikon")
         if (rendererTable == nil) then
