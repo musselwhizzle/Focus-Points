@@ -54,10 +54,9 @@ function FocusPointDialog.createDialog(targetPhoto, overlayView)
     width = photoW, 
     height = photoH,
     photo = targetPhoto,
-    background_color = LrColor("magenta")
   }
   local myText = viewFactory:static_text {
-    title = "Will place information here",
+    title = "",
   }
       
   local column = viewFactory:column {

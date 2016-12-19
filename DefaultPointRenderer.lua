@@ -71,6 +71,7 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   end
   -- TODO: check for "normal" to make sure the width is bigger than the height. if not, prompt
   -- the user to ask which way the photo was rotated
+  -- TODO: adjust point for rotation of crop
   
   x = x - leftCropAmount
   y = y - topCropAmount
@@ -86,8 +87,9 @@ end
 
 function DefaultPointRenderer.buildView(targetPhoto, focusPointX, focusPointY) 
   local viewFactory = LrView.osFactory()
+  
   local myBox = viewFactory:picture {
-    value = _PLUGIN:resourceId("bin/imgs/focus_point0.png"),
+    value = _PLUGIN:resourceId("bin/imgs/focus_box_hor.png"),
   }
   
   local boxView = viewFactory:view {

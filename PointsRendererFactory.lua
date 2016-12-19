@@ -20,7 +20,7 @@
 --]]
 
 require "DefaultPointRenderer"
-require "CameraNikonD7200"
+require "PointsUtils"
 
 PointsRendererFactory = {}
 
@@ -31,10 +31,9 @@ end
 function PointsRendererFactory.getFocusPoints(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
-  log("cameraMake: " .. cameraMake .. ", cameraModel: " .. cameraModel)
   if (cameraMake == "NIKON CORPORATION") then
     if (cameraModel == "NIKON D7200") then
-      return CameraNikonD7200.focusPoints, CameraNikonD7200.focusPointDimens
+      return PointsUtils.readIntoTable("nikon", "D7200.lua")
     end
   else 
     return nil
