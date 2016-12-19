@@ -30,45 +30,52 @@ require "PointsRendererFactory"
 local function showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
       
-      local catalog = LrApplication.activeCatalog()
-      local targetPhoto = catalog:getTargetPhoto()
+    local catalog = LrApplication.activeCatalog()
+    local targetPhoto = catalog:getTargetPhoto()
+    
+    LrTasks.startAsyncTask(function(context) 
+      if (targetPhoto:checkPhotoAvailability() == false) then
+        LrDialogs.message("Photo is not available. Make sure hard drives are attached and try again", nil, nil)
+        return
+      end
       
-      LrTasks.startAsyncTask(function(context) 
-        if (targetPhoto:checkPhotoAvailability() == false) then
-          LrDialogs.message("Photo is not available. Make sure hard drives are attached and try again", nil, nil)
-          return
-        end
-        
-        local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-        local rendererTable = PointsRendererFactory.createRenderer("Nikon")
-        if (rendererTable == nil) then
-          LrDialogs.message("Unknown camera type. Can not display", nil, nil)
-          return
-        end
-        local focusPoints = PointsRendererFactory.getFocusPoints("Nikon")
-        if (focusPoints == nil) then
-          LrDialogs.message("Unknown focus points. Can not display", nil, nil)
-          return
-        end
-        local focusPointDimens = PointsRendererFactory.getFocusPointDimens("Nikon")
-        if (focusPoints == nil) then
-          LrDialogs.message("Unknown focus point dimensions. Can not display", nil, nil)
-          return
-        end
-        local overlay = rendererTable.createView(targetPhoto, photoW, photoH, focusPoints, focusPointDimens)
-        FocusPointDialog.createDialog(targetPhoto, overlay)
-        
-        -- display the contents
-        LrDialogs.presentModalDialog {
-          title = "My Picture Viewer Dialog",
-          cancelVerb = "< exclude >",
-          actionVerb = "OK",
-          contents = FocusPointDialog.display
+      local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+      local rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
+      if (rendererTable == nil) then
+        LrDialogs.message("Unknown camera type. Can not display", nil, nil)
+        return
+      end
+      local focusPoints, focusPointDimens = PointsRendererFactory.getFocusPoints(targetPhoto)
+      if (focusPointDimens == nil) then focusPointDimens = {300, 250} end
+      if (focusPoints == nil) then
+        LrDialogs.message("Unknown focus points. Can not display", nil, nil)
+        return
+      end
+      
+      -- let the renderer build the view now and show progress dialog
+      LrFunctionContext.callWithContext("innerContext", function(dialogContext)
+        local dialogScope = LrDialogs.showModalProgressDialog {
+          title = "Loading Data",
+          caption = "Calculating Focus Point", 
+          width = 200,
+          cannotCancel = false,
+          functionContext = dialogContext, 
         }
+        dialogScope:setIndeterminate()
+        -- not local overlay. Need the scope outside for the dialog box below
+        overlay = rendererTable.createView(targetPhoto, photoW, photoH, focusPoints, focusPointDimens)
       end)
-    end
-  )
-  
+      FocusPointDialog.createDialog(targetPhoto, overlay)
+      
+      -- display the contents
+      LrDialogs.presentModalDialog {
+        title = "Focus Point Viewer",
+        cancelVerb = "< exclude >",
+        actionVerb = "OK",
+        contents = FocusPointDialog.display
+      }
+    end)
+  end)
 end
 
 showDialog()

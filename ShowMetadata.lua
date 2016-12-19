@@ -36,40 +36,38 @@ local function showDialog()
   
   LrTasks.startAsyncTask(function(context)
     --https://forums.adobe.com/thread/359790
-    LrFunctionContext.callWithContext("a function", function(dialogContext)
-      local dialogScope = LrDialogs.showModalProgressDialog {
-        title = "Loading Data",
-        caption = "Reading Metadata", 
-        width = 200,
-        cannotCancel = false,
-        functionContext = dialogContext, 
+    LrFunctionContext.callWithContext("function", function(dialogContext)
+        LrFunctionContext.callWithContext("function2", function(dialogContext2)
+          local dialogScope = LrDialogs.showModalProgressDialog {
+            title = "Loading Data",
+            caption = "Reading Metadata", 
+            width = 200,
+            cannotCancel = false,
+            functionContext = dialogContext2, 
+          }
+          dialogScope:setIndeterminate()
+    
+          local metaData = readMetaData(targetPhoto)
+          metaData = filterInput(metaData)
+          local column1, column2 = splitForColumns(metaData)
+        
+          dialogScope:done()
+          MetaDataDialog.labels.title = column1
+          MetaDataDialog.data.title = column2
+          --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
+        end)
+    
+      LrTasks.sleep(0)
+      LrDialogs.presentModalDialog {
+        title = "Metadata display",
+        resizable = true, 
+        cancelVerb = "< exclude >",
+        actionVerb = "OK",
+        contents = MetaDataDialog.contents
       }
-      dialogScope:setIndeterminate()
-  
-      local metaData = readMetaData(targetPhoto)
-      metaData = filterInput(metaData)
-      local column1, column2 = splitForColumns(metaData)
-      
-      dialogScope:done() -- dialog is persisting behind the view dialog. it doesn't dismiss. urgh
-      dialogScope:cancel()
-      MetaDataDialog.labels.title = column1
-      MetaDataDialog.data.title = column2
-      --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
-      end
-    )
     
-    LrDialogs.presentModalDialog {
-      title = "Metadata display",
-      resizable = true, 
-      cancelVerb = "< exclude >",
-      actionVerb = "OK",
-      contents = MetaDataDialog.contents
-    }
-    
-    end 
-  )
-  
-  
+    end)
+  end)
 end)
 end
 showDialog()
