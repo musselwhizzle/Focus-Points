@@ -9,13 +9,24 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 Installing
 --------
-TODO: Write me
-
+1. Use the green button in this webpage called "Clone or download". 
+2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin" 
+3. Move this folder to where you'd normally kept your Lightroom plugins.
+4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 
 
 Adding your own camera
 --------
-TODO: Write me
+If you wish to contribute, this should be as painless as possible. You will need to map all of your camera's focus points to pixel coordinates. Refer to the "focus_points/nikon/D7200.lua" as an example. 
+```
+-- 1st column
+B1 = {810, 1550}
+C1 = {810, 1865}
+D1 = {810, 2210}
+
+-- an so on
+```
+The best way I found to do this was to set up a rule, get out my camera and I took a photo at each of the focus points. I think imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I think took the image into photoshop and measured from the top left corner of the image to where the focus point was. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.lua". PointsRendererFactory will need to be updated to account for the new camera. Then all is done. 
 
 
 Known Issues
