@@ -3,7 +3,7 @@ Focus Points
 
 A plugin for Lightroom to show which focus point was active when the picture was taken
 
-![](screens/plugin_ex.png =160)
+![](screens/plugin_ex.png =160x)
 
 
 
