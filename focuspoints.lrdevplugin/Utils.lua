@@ -47,7 +47,7 @@ function getExifCmd(targetPhoto)
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
   
-  local cmd = exiftool .. " -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'";
+  local cmd = "'"..exiftool .. "' -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'";
   return cmd, metaDataFile
   
 end

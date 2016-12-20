@@ -46,6 +46,7 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local croppedDimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local croppedPhotoW, croppedPhotoH = parseDimens(croppedDimens) -- cropped size of the photo
   
+  log("metaData: " .. metaData)
   local focusPoint = DefaultPointRenderer.getAutoFocusPoint(metaData)
   local x = focusPoints[focusPoint][1]
   local y = focusPoints[focusPoint][2]
