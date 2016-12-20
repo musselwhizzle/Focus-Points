@@ -7,6 +7,11 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 
 
+Supported Cameras
+--------
+* Nikon D7200
+
+
 Installing
 --------
 1. Use the green button in this webpage called "Clone or download". 
