@@ -31,11 +31,11 @@ end
 function PointsRendererFactory.getFocusPoints(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
-  if (cameraMake == "NIKON CORPORATION") then
-    if (cameraModel == "NIKON D7200") then
-      return PointsUtils.readIntoTable("nikon", "D7200.lua")
-    end
+  local focusPoints, focusPointDimens =  PointsUtils.readIntoTable(string.lower(cameraMake), string.lower(cameraModel) .. ".txt")
+  
+  if (focusPoints == nil) then
+    return "No (or incorrect) mapping found at: \n" .. string.lower(cameraMake) .. "/" .. string.lower(cameraModel) .. ".txt"
   else 
-    return nil
+    return focusPoints, focusPointDimens
   end
 end

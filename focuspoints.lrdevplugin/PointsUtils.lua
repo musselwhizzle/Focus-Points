@@ -26,14 +26,20 @@ function PointsUtils.readFromFile(folder, filename)
   local file = LrPathUtils.child( _PLUGIN.path, "focus_points" )
   file = LrPathUtils.child(file, folder)
   file = LrPathUtils.child(file, filename)
-  local data = LrFileUtils.readFile(file)
-  return data
+  
+  if (LrFileUtils.exists(file) ~= false) then
+    local data = LrFileUtils.readFile(file)
+    return data
+  else 
+    return nil
+  end 
 end
 
 function PointsUtils.readIntoTable(folder, filename)
   local focusPoints = {}
   local focusPointDimens = {}
   local data = PointsUtils.readFromFile(folder, filename)
+  if (data == nil) then return nil end
   for i in string.gmatch(data, "[^\\\n]+") do 
     p = splitText(i, "=")
     if (p ~= nill) then

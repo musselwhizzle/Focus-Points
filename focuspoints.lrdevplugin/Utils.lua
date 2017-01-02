@@ -29,7 +29,7 @@ local LrStringUtils = import "LrStringUtils"
 local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
-isDebug = true
+isDebug = false
 
 exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")

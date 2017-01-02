@@ -42,13 +42,13 @@ local function showDialog()
       local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
       local rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
       if (rendererTable == nil) then
-        LrDialogs.message("Unknown camera type. Can not display", nil, nil)
+        LrDialogs.message("Unmapped points renderer.", nil, nil)
         return
       end
       local focusPoints, focusPointDimens = PointsRendererFactory.getFocusPoints(targetPhoto)
       if (focusPointDimens == nil) then focusPointDimens = {300, 250} end
-      if (focusPoints == nil) then
-        LrDialogs.message("Unknown focus points. Can not display", nil, nil)
+      if (type(focusPoints) == "string") then
+        LrDialogs.message(focusPoints, nil, nil)
         return
       end
       

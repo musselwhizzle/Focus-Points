@@ -46,7 +46,7 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local croppedDimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local croppedPhotoW, croppedPhotoH = parseDimens(croppedDimens) -- cropped size of the photo
   
-  log("metaData: " .. metaData)
+  
   local focusPoint = DefaultPointRenderer.getAutoFocusPoint(metaData)
   local x = focusPoints[focusPoint][1]
   local y = focusPoints[focusPoint][2]
@@ -57,40 +57,56 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   
   --[[ lightroom does not report if a photo has been rotated. code below 
         make sure the rotation matches the expected width and height --]]
+  local isRotated = false
   if (string.match(metaOrientation, DefaultPointRenderer.metaOrientation90) and orgPhotoW < orgPhotoH) then
     x = orgPhotoW - y - focusPointDimen[1]
     y = focusPoints[focusPoint][1]
     leftCropAmount = (1- developSettings["CropBottom"]) * orgPhotoW
     topCropAmount = developSettings["CropLeft"] * orgPhotoH
-    
+    isRotated = true
   elseif (string.match(metaOrientation, DefaultPointRenderer.metaOrientation270) and orgPhotoW < orgPhotoH) then
     x = focusPoints[focusPoint][2]
     y = orgPhotoH - focusPoints[focusPoint][1] - focusPointDimen[1]
     leftCropAmount = developSettings["CropTop"] * orgPhotoW
     topCropAmount = (1-developSettings["CropRight"]) * orgPhotoH
-    
+    isRotated = true
   end
   -- TODO: check for "normal" to make sure the width is bigger than the height. if not, prompt
   -- the user to ask which way the photo was rotated
-  -- TODO: adjust point for rotation of crop
+  -- TODO: take into account rotation during crop
   
-  x = x - leftCropAmount
-  y = y - topCropAmount
+  local radRotation = math.rad(developSettings["CropAngle"])
+  local xx = math.cos(radRotation) * (x - orgPhotoW/2) - math.sin(radRotation) * (y - orgPhotoH/2) + orgPhotoW/2
+  local yy = math.sin(radRotation) * (x - orgPhotoW/2) + math.cos(radRotation) * (y - orgPhotoH/2) + orgPhotoH/2
+  
+  -- xrot=cos(θ)⋅(x−cx)−sin(θ)⋅(y−cy)+cx
+  log( "x: " .. x .. ", xx: " .. xx .. ", y: " .. y .. ", yy: " .. yy)
+  local deltaX = xx - x
+  local deltaY = yy - y
+  
+  x = x - leftCropAmount + deltaX
+  y = y - topCropAmount + deltaY
   
   local displayRatioW = photoDisplayW/croppedPhotoW
   local displayRatioH = photoDisplayH/croppedPhotoH
   local adjustedX = displayRatioW * x
   local adjustedY = displayRatioH * y
   
-  return DefaultPointRenderer.buildView(targetPhoto, adjustedX, adjustedY)
+  return DefaultPointRenderer.buildView(targetPhoto, adjustedX, adjustedY, isRotated)
   
 end
 
-function DefaultPointRenderer.buildView(targetPhoto, focusPointX, focusPointY) 
+function DefaultPointRenderer.buildView(targetPhoto, focusPointX, focusPointY, isRotated) 
   local viewFactory = LrView.osFactory()
+  local focusAsset
+  if (isRotated) then 
+    focusAsset = "bin/imgs/focus_box_vert.png"
+  else 
+    focusAsset = "bin/imgs/focus_box_hor.png"
+  end
   
   local myBox = viewFactory:picture {
-    value = _PLUGIN:resourceId("bin/imgs/focus_box_hor.png"),
+    value = _PLUGIN:resourceId(focusAsset),
   }
   
   local boxView = viewFactory:view {

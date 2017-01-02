@@ -49,6 +49,9 @@ function FocusPointDialog.createDialog(targetPhoto, overlayView)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
   
+  -- temporary for dev'ing
+  local developSettings = targetPhoto:getDevelopSettings()
+  
   local viewFactory = LrView.osFactory()
   local myPhoto = viewFactory:catalog_photo {
     width = photoW, 
@@ -56,7 +59,7 @@ function FocusPointDialog.createDialog(targetPhoto, overlayView)
     photo = targetPhoto,
   }
   local myText = viewFactory:static_text {
-    title = "",
+    title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
   }
       
   local column = viewFactory:column {
