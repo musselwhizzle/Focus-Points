@@ -14,7 +14,7 @@
   limitations under the License.
 --]]
 
-local LrMobdebug = import 'LrMobdebug'
+
 local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
@@ -36,9 +36,7 @@ exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 
 function startDebug()
-  if isDebug then
-    LrMobdebug.start()
-  end
+  -- no op
 end
 
 function getExifCmd(targetPhoto) 
