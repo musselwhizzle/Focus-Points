@@ -30,6 +30,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
+isLog = false
 
 exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")
@@ -78,7 +79,9 @@ function splitText(str, delim)
 end
 
 function log(str)
-  myLogger:warn(str)
+  if (isLog) then
+    myLogger:warn(str)
+  end 
 end
 
 function parseDimens(strDimens) 
