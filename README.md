@@ -22,7 +22,7 @@ Installing
 
 Adding your own camera
 --------
-If you wish to contribute, this should be as painless as possible. You will need to map all of your camera's focus points to pixel coordinates. Refer to the "focus_points/nikon corporation/nikon d7200.lua" as an example. 
+If you wish to contribute, this should be as painless as possible. You will need to map all of your camera's focus points to pixel coordinates. Refer to the "focus_points/nikon corporation/nikon d7200.txt" as an example. 
 ```
 -- 1st column
 B1 = {810, 1550}
