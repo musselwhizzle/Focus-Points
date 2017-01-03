@@ -93,11 +93,11 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local adjustedX = displayRatioW * x
   local adjustedY = displayRatioH * y
   
-  return DefaultPointRenderer.buildView(targetPhoto, adjustedX, adjustedY, isRotated)
+  return DefaultPointRenderer.buildView(adjustedX, adjustedY, isRotated)
   
 end
 
-function DefaultPointRenderer.buildView(targetPhoto, focusPointX, focusPointY, isRotated) 
+function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
   local viewFactory = LrView.osFactory()
   local focusAsset
   if (isRotated) then 
