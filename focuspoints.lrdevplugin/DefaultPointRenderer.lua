@@ -30,6 +30,7 @@ DefaultPointRenderer = {}
 DefaultPointRenderer.metaOrientation90 = "90"
 DefaultPointRenderer.metaOrientation270 = "270"
 DefaultPointRenderer.metaAFUsed = "AF Points Used"
+DefaultPointRenderer.metaPrimaryAFPoint = "Primary AF Point"
 DefaultPointRenderer.metaOrientation = "Orientation"
 
 --[[
@@ -92,11 +93,11 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local adjustedX = displayRatioW * x
   local adjustedY = displayRatioH * y
   
-  return DefaultPointRenderer.buildView(targetPhoto, adjustedX, adjustedY, isRotated)
+  return DefaultPointRenderer.buildView(adjustedX, adjustedY, isRotated)
   
 end
 
-function DefaultPointRenderer.buildView(targetPhoto, focusPointX, focusPointY, isRotated) 
+function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
   local viewFactory = LrView.osFactory()
   local focusAsset
   if (isRotated) then 
@@ -122,6 +123,11 @@ end
 
 function DefaultPointRenderer.getAutoFocusPoint(metaData)
   local focusPointUsed = ExifUtils.findValue(metaData, DefaultPointRenderer.metaAFUsed)
+
+  if "(none)" == focusPointUsed then
+    focusPointUsed = ExifUtils.findValue( metaData, DefaultPointRenderer.metaPrimaryAFPoint )
+  end
+
   return focusPointUsed
 end
 
