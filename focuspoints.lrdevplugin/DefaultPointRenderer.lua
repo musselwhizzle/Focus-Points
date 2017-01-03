@@ -51,7 +51,7 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   
   local focusPoint = DefaultPointRenderer.getAutoFocusPoint(metaData)
 
-  if -1 == focusPoint then
+  if nil == focusPoint then
     LrErrors.throwUserError( "Unable to find any AF point info within the file." )
     return
   end
@@ -136,7 +136,7 @@ function DefaultPointRenderer.getAutoFocusPoint(metaData)
   end
 
   if "(none)" == focusPointUsed then
-    focusPointUsed = -1
+    focusPointUsed = nil
   end
 
   return focusPointUsed
