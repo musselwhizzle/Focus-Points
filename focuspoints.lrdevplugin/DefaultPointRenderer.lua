@@ -30,6 +30,7 @@ DefaultPointRenderer = {}
 DefaultPointRenderer.metaOrientation90 = "90"
 DefaultPointRenderer.metaOrientation270 = "270"
 DefaultPointRenderer.metaAFUsed = "AF Points Used"
+DefaultPointRenderer.metaPrimaryAFPoint = "Primary AF Point"
 DefaultPointRenderer.metaOrientation = "Orientation"
 
 --[[
@@ -122,6 +123,11 @@ end
 
 function DefaultPointRenderer.getAutoFocusPoint(metaData)
   local focusPointUsed = ExifUtils.findValue(metaData, DefaultPointRenderer.metaAFUsed)
+
+  if "(none)" == focusPointUsed then
+    focusPointUsed = ExifUtils.findValue( metaData, DefaultPointRenderer.metaPrimaryAFPoint )
+  end
+
   return focusPointUsed
 end
 
