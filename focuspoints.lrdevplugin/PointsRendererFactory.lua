@@ -25,6 +25,13 @@ require "PointsUtils"
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
+  
+  -- TODO: abstract out this type of logic. It will get messy
+  local cameraMake = photo:getFormattedMetadata("cameraMake")
+  local cameraModel = photo:getFormattedMetadata("cameraModel")
+  if (string.lower(cameraMake) == "ricoh imaging company, ltd." and string.lower(cameraModel) == "pentax k-1") then
+    DefaultPointRenderer.metaAFUsed = "AF Points Selected"
+  end
   return DefaultPointRenderer
 end
 
