@@ -10,6 +10,7 @@ A plugin for Lightroom to show which focus point was active when the picture was
 Supported Cameras
 --------
 * Nikon D7200
+* Nikon D800
 
 
 Installing
