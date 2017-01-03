@@ -23,6 +23,7 @@
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
+local LrErrors = import 'LrErrors'
 
 require "ExifUtils"
 
@@ -49,6 +50,12 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   
   
   local focusPoint = DefaultPointRenderer.getAutoFocusPoint(metaData)
+
+  if -1 == focusPoint then
+    LrErrors.throwUserError( "Unable to find any AF point info within the file." )
+    return
+  end
+
   local x = focusPoints[focusPoint][1]
   local y = focusPoints[focusPoint][2]
   
@@ -126,6 +133,10 @@ function DefaultPointRenderer.getAutoFocusPoint(metaData)
 
   if "(none)" == focusPointUsed then
     focusPointUsed = ExifUtils.findValue( metaData, DefaultPointRenderer.metaPrimaryAFPoint )
+  end
+
+  if "(none)" == focusPointUsed then
+    focusPointUsed = -1
   end
 
   return focusPointUsed
