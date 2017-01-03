@@ -19,6 +19,8 @@ Installing
 2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin" 
 3. Move this folder to where you'd normally kept your Lightroom plugins.
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
+5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point"
+<img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
 
 Adding your own camera
