@@ -20,17 +20,28 @@
 --]]
 
 require "DefaultPointRenderer"
+require "FujiPointRenderer"
 require "PointsUtils"
 
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
-  return DefaultPointRenderer
+  local cameraMake = photo:getFormattedMetadata("cameraMake")
+  if (cameraMake == "FUJIFILM") then
+    return FujiPointRenderer
+  else 
+    return DefaultPointRenderer
+  end
 end
 
 function PointsRendererFactory.getFocusPoints(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
+
+  if (cameraMake == "FUJIFILM") then
+    return {0, 0}, nil
+  end
+
   local focusPoints, focusPointDimens =  PointsUtils.readIntoTable(string.lower(cameraMake), string.lower(cameraModel) .. ".txt")
   
   if (focusPoints == nil) then
