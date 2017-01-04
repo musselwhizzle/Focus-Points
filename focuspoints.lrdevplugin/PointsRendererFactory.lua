@@ -34,9 +34,10 @@ function PointsRendererFactory.createRenderer(photo)
       DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
       DefaultPointRenderer.focusPointDimen = {1,1}
   else 
-    DefaultDelegates.focusPointsMap = PointsRendererFactory.getFocusPoints(photo)
+    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
+    DefaultDelegates.focusPointsMap = pointsMap
     DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
-    DefaultPointRenderer.focusPointDimen = DefaultDelegates.focusPointsMap.focusPointDimens
+    DefaultPointRenderer.focusPointDimen = pointDimen
   end
   
   DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation

@@ -28,9 +28,11 @@ local LrErrors = import 'LrErrors'
 require "ExifUtils"
 
 DefaultPointRenderer = {}
+
+--[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
 DefaultPointRenderer.funcGetAFPixels = nil
 DefaultPointRenderer.funcGetShotOrientation = nil
-DefaultPointRenderer.focusPointDimen = {300, 250}
+DefaultPointRenderer.focusPointDimen = nil
 
 --[[
 -- targetPhoto - the selected catalog photo

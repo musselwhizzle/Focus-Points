@@ -57,7 +57,7 @@ local function showDialog()
         }
         dialogScope:setIndeterminate()
         -- not local overlay. Need the scope outside for the dialog box below
-        overlay = rendererTable.createView(targetPhoto, photoW, photoH, {300, 250})
+        overlay = rendererTable.createView(targetPhoto, photoW, photoH)
       end)
       FocusPointDialog.createDialog(targetPhoto, overlay)
       
