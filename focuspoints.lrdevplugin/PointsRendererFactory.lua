@@ -15,22 +15,45 @@
 --]]
 
 --[[
-  Factory for creating the focus point renderer and getting the focus points. To expand this plugin to allow for more
-  camera, just add more mapped points to the #getFocusPoints() and #getFocusPointDimens() methods
+  Factory for creating the focus point renderer and getting the focus points.
 --]]
 
 require "DefaultPointRenderer"
 require "PointsUtils"
+require "DefaultDelegates"
+require "FujiDelegates"
+local LrErrors = import 'LrErrors'
 
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
+  local cameraMake = photo:getFormattedMetadata("cameraMake")
+  local cameraModel = photo:getFormattedMetadata("cameraModel")
+  
+  -- change the metadata names here
+  if (string.lower(cameraMake) == "ricoh imaging company, ltd." and string.lower(cameraModel) == "pentax k-1") then
+    DefaultDelegates.metaKeyAfPointUsed = "AF Points Selected"
+  end
+  
+  if (cameraMake == "FUJIFILM") then
+      DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
+      DefaultPointRenderer.focusPointDimen = {1,1} -- this is wrong. it's probably more like 300,250
+  else 
+    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
+    DefaultDelegates.focusPointsMap = pointsMap
+    DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
+    DefaultPointRenderer.focusPointDimen = pointDimen
+  end
+  
+  
+  DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation
   return DefaultPointRenderer
 end
 
 function PointsRendererFactory.getFocusPoints(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
+  
   local focusPoints, focusPointDimens =  PointsUtils.readIntoTable(string.lower(cameraMake), string.lower(cameraModel) .. ".txt")
   
   if (focusPoints == nil) then
