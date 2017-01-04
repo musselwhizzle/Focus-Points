@@ -21,23 +21,33 @@
 
 require "DefaultPointRenderer"
 require "PointsUtils"
+require "DefaultDelegates"
+require "FujiDelegates"
+local LrErrors = import 'LrErrors'
 
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
-  
-  -- TODO: abstract out this type of logic. It will get messy
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
-  if (string.lower(cameraMake) == "ricoh imaging company, ltd." and string.lower(cameraModel) == "pentax k-1") then
-    DefaultPointRenderer.metaAFUsed = "AF Points Selected"
+  if (cameraMake == "FUJIFILM") then
+      DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
+      DefaultPointRenderer.focusPointDimen = {1,1}
+  else 
+    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
+    DefaultDelegates.focusPointsMap = pointsMap
+    DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
+    DefaultPointRenderer.focusPointDimen = pointDimen
   end
+  
+  DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation
   return DefaultPointRenderer
 end
 
 function PointsRendererFactory.getFocusPoints(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
+  
   local focusPoints, focusPointDimens =  PointsUtils.readIntoTable(string.lower(cameraMake), string.lower(cameraModel) .. ".txt")
   
   if (focusPoints == nil) then
