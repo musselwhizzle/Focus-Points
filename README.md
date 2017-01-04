@@ -11,6 +11,7 @@ Supported Cameras
 --------
 * Nikon D7200
 * Nikon D800
+* Fuji cameras (beta)
 
 
 Installing
