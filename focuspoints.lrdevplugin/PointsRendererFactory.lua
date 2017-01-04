@@ -15,8 +15,7 @@
 --]]
 
 --[[
-  Factory for creating the focus point renderer and getting the focus points. To expand this plugin to allow for more
-  camera, just add more mapped points to the #getFocusPoints() and #getFocusPointDimens() methods
+  Factory for creating the focus point renderer and getting the focus points.
 --]]
 
 require "DefaultPointRenderer"
