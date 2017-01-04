@@ -51,8 +51,6 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local x = pX
   local y = pY
 
-  local leftCropAmount = developSettings["CropLeft"] * orgPhotoW
-  local topCropAmount = developSettings["CropTop"] * orgPhotoH
   local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(targetPhoto, metaData)
 
   --[[ lightroom does not report if a photo has been rotated. code below
@@ -61,39 +59,108 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   if (shotOrientation == 90) then
     x = orgPhotoW - y - focusPointDimen[1]
     y = pX
-    leftCropAmount = (1- developSettings["CropBottom"]) * orgPhotoW
-    topCropAmount = developSettings["CropLeft"] * orgPhotoH
     isRotated = true
   elseif (shotOrientation == 270) then
     x = pY
     y = orgPhotoH - pX - focusPointDimen[1]
-    leftCropAmount = developSettings["CropTop"] * orgPhotoW
-    topCropAmount = (1-developSettings["CropRight"]) * orgPhotoH
     isRotated = true
   end
   -- TODO: check for "normal" to make sure the width is bigger than the height. if not, prompt
   -- the user to ask which way the photo was rotated
-  -- TODO: take into account rotation during crop
 
+  if isRotated then
+    log( "rotated" )
+  end
+
+  log( "orig x: " .. x .. ", y: " .. y )
+
+  -- indicate the center for a given operation
+  local x0
+  local y0
+
+  log( "photoDisplayW: " .. photoDisplayW .. ", photoDisplayH: " .. photoDisplayH .. ", croppedPhotoW: " .. croppedPhotoW .. ", croppedPhotoH: " .. croppedPhotoH )
+  log( "cropLeft: " .. developSettings["CropLeft"] .. ", cropRight:" .. developSettings["CropRight"] )
+  log( "cropTop: " .. developSettings["CropTop"] .. ", cropBottom: " .. developSettings["CropBottom"] )
+
+  -- rotate
   local radRotation = math.rad(developSettings["CropAngle"])
-  local xx = math.cos(radRotation) * (x - orgPhotoW/2) - math.sin(radRotation) * (y - orgPhotoH/2) + orgPhotoW/2
-  local yy = math.sin(radRotation) * (x - orgPhotoW/2) + math.cos(radRotation) * (y - orgPhotoH/2) + orgPhotoH/2
 
-  -- xrot=cos(θ)⋅(x−cx)−sin(θ)⋅(y−cy)+cx
-  log( "x: " .. x .. ", xx: " .. xx .. ", y: " .. y .. ", yy: " .. yy)
-  local deltaX = xx - x
-  local deltaY = yy - y
+  if 0 ~= radRotation then
+    x0 = orgPhotoW / 2
+    y0 = orgPhotoH / 2
 
-  x = x - leftCropAmount + deltaX
-  y = y - topCropAmount + deltaY
+    -- theta is angle from the center of the image to the focus point, before rotation
+    local theta = -math.atan( (y-y0) / (x-x0) )
 
-  local displayRatioW = photoDisplayW/croppedPhotoW
-  local displayRatioH = photoDisplayH/croppedPhotoH
-  local adjustedX = displayRatioW * x
-  local adjustedY = displayRatioH * y
+    -- radius is the distance from the center of the image to the focus point
+    local radius = -((y-y0) / math.sin( theta ))
 
-  return DefaultPointRenderer.buildView(adjustedX, adjustedY, isRotated)
+    -- newTheta is the current theta plus the image rotation
+    local newTheta = theta + radRotation
 
+    log( "deg: " .. developSettings["CropAngle"] .. ", rad: " .. radRotation .. ", theta: " .. theta .. ", radius: " .. radius .. ", newTheta: " .. newTheta )
+
+    -- build the right triangle for the post-rotation focus point
+    local opposite = radius * math.sin( newTheta )
+    local adjacent = radius * math.cos( newTheta )
+
+    log( "opposite: " .. opposite .. ", adjacent: " .. adjacent )
+
+    -- adjust the focus point for the rotation
+    x = (x0 + adjacent)
+    y = (y0 - opposite)
+
+    log( "rotated x: " .. x .. ", y: " .. y )
+  end
+
+  -- offset from center of image to center of crop
+  local xCL = developSettings["CropLeft"] * orgPhotoW
+  local xCR = developSettings["CropRight"] * orgPhotoW
+  local yCT = developSettings["CropTop"] * orgPhotoH
+  local yCB = developSettings["CropBottom"] * orgPhotoH
+  log( "xCL: " .. xCL .. ", xCR: " .. xCR .. ", yCT: " .. yCT .. ", yCB: " .. yCB )
+
+  x0 = orgPhotoW / 2
+  y0 = orgPhotoH / 2
+  xC = (xCL + xCR) / 2
+  yC = (yCB + yCT) / 2
+  log( "x0: " .. x0 .. ", y0: " .. y0 .. ", xC: " .. xC .. ", yC: " .. yC )
+
+  x = x - (xC - x0)
+  y = y - (yC - y0)
+
+  log( "offset x: " .. x .. ", y: " .. y )
+
+  -- crop
+  local leftCropAmount = (orgPhotoW - croppedPhotoW) / 2
+  local topCropAmount = (orgPhotoH - croppedPhotoH) / 2
+
+  log( "leftCropAmount: " .. leftCropAmount .. ", topCropAmount: " .. topCropAmount )
+
+  x = x - leftCropAmount
+  y = y - topCropAmount
+
+  log( "cropped x: " .. x .. ", y: " .. y )
+
+  -- scale
+  x0 = croppedPhotoW / 2
+  y0 = croppedPhotoH / 2
+  local xFromCenter = x0 - x
+  local yFromCenter = y0 - y
+  local xScaleFactor = (photoDisplayW/croppedPhotoW)
+  local yScaleFactor = (photoDisplayH/croppedPhotoH)
+
+  x = (x0 * xScaleFactor) - (xFromCenter * xScaleFactor)
+  y = (y0 * yScaleFactor) - (yFromCenter * yScaleFactor)
+
+  log( "scaled x: " .. x .. ", y: " .. y )
+
+  -- done!
+  if (x > photoDisplayW) or (x < 0) or (y > photoDisplayH) or (y < 0) then
+    LrErrors.throwUserError("Sorry, something went wrong rendering the AF point.  Please submit logs.")
+  end
+
+  return DefaultPointRenderer.buildView(x, y, isRotated)
 end
 
 function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
