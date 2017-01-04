@@ -19,6 +19,7 @@
 --]]
 
 local LrStringUtils = import "LrStringUtils"
+local LrErrors = import 'LrErrors'
 require "Utils"
 
 DefaultDelegates = {}
@@ -36,7 +37,8 @@ function DefaultDelegates.getDefaultAfPoints(metaData)
     focusPoint = ExifUtils.findValue(metaData, "Primary AF Point")
   end
 
-  if "(none)" == focusPoint then
+  if "(none)" == focusPoint or focusPoint == nil then
+    LrErrors.throwUserError("Unable to find any AF point info within the file.")
     return nil, nil
   end
   
