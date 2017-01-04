@@ -30,7 +30,7 @@ DefaultDelegates.focusPointsMap = nil
 -- metaData - the metadata as read by exiftool
 -- focusPoints - table containing px locations of the focus points
 --]]
-function DefaultDelegates.getDefaultAfPoints(metaData)
+function DefaultDelegates.getDefaultAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, "AF Points Used")
 
   if "(none)" == focusPoint then
