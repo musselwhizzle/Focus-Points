@@ -16,7 +16,7 @@
 
 --[[
   A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Fuji 
+  the camera is Fuji
 --]]
 
 local LrStringUtils = import "LrStringUtils"
@@ -27,13 +27,23 @@ FujiDelegates = {}
 --[[
 -- metaData - the metadata as read by exiftool
 --]]
-function FujiDelegates.getFujiAfPoints(metaData)
+function FujiDelegates.getFujiAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, "Focus Pixel")
   if focusPoint == nil then return nil end
   local values = splitText(focusPoint, " ")
   local x = LrStringUtils.trimWhitespace(values.key)
   local y = LrStringUtils.trimWhitespace(values.value)
-  
-  return tonumber(x), tonumber(y)
-  
+
+  local imageWidth = ExifUtils.findValue(metaData, "Image Width")
+  local imageHeight = ExifUtils.findValue(metaData, "Image Height")
+  if imageWidth == nil or imageHeight == nil then return nil end
+
+  local dimens = photo:getFormattedMetadata("dimensions")
+  orgPhotoW, orgPhotoH = parseDimens(dimens)
+
+  if orgPhotoW >= orgPhotoH then
+    return orgPhotoW * tonumber(x) / tonumber(imageWidth), orgPhotoH * tonumber(y) / tonumber(imageHeight)
+  else
+    return orgPhotoH * tonumber(x) / tonumber(imageWidth), orgPhotoW * tonumber(y) / tonumber(imageHeight)
+  end
 end
