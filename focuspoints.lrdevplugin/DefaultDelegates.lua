@@ -34,6 +34,7 @@ DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
 function DefaultDelegates.getDefaultAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
 
+  -- fallback for Nikon back-button Autofocusing. 
   if "(none)" == focusPoint then
     focusPoint = ExifUtils.findValue(metaData, "Primary AF Point")
   end
