@@ -45,12 +45,6 @@ local function showDialog()
         LrDialogs.message("Unmapped points renderer.", nil, nil)
         return
       end
-      local focusPoints, focusPointDimens = PointsRendererFactory.getFocusPoints(targetPhoto)
-      if (focusPointDimens == nil) then focusPointDimens = {300, 250} end
-      if (type(focusPoints) == "string") then
-        LrDialogs.message(focusPoints, nil, nil)
-        return
-      end
       
       -- let the renderer build the view now and show progress dialog
       LrFunctionContext.callWithContext("innerContext", function(dialogContext)
@@ -63,7 +57,7 @@ local function showDialog()
         }
         dialogScope:setIndeterminate()
         -- not local overlay. Need the scope outside for the dialog box below
-        overlay = rendererTable.createView(targetPhoto, photoW, photoH, focusPoints, focusPointDimens)
+        overlay = rendererTable.createView(targetPhoto, photoW, photoH, {300, 250})
       end)
       FocusPointDialog.createDialog(targetPhoto, overlay)
       
