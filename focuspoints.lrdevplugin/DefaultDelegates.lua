@@ -24,6 +24,7 @@ require "Utils"
 
 DefaultDelegates = {}
 DefaultDelegates.focusPointsMap = nil
+DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
 
 
 --[[
@@ -31,8 +32,9 @@ DefaultDelegates.focusPointsMap = nil
 -- focusPoints - table containing px locations of the focus points
 --]]
 function DefaultDelegates.getDefaultAfPoints(photo, metaData)
-  local focusPoint = ExifUtils.findValue(metaData, "AF Points Used")
+  local focusPoint = ExifUtils.findValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
 
+  -- fallback for Nikon back-button Autofocusing. 
   if "(none)" == focusPoint then
     focusPoint = ExifUtils.findValue(metaData, "Primary AF Point")
   end

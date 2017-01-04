@@ -17,8 +17,8 @@
 return {
   -- http://notebook.kulchenko.com/zerobrane/debugging-lightroom-plugins-zerobrane-studio-ide
   -- tail -f ~/Documents/libraryLogger.log
-	LrSdkVersion = 6.0,
-  LrSdkMinimumVersion = 6.0,
+	LrSdkVersion = 5.0,
+  LrSdkMinimumVersion = 5.0,
 
 	LrToolkitIdentifier = 'com.thewhizzbang.focuspoint',
 	LrPluginName = "Focus Point",
