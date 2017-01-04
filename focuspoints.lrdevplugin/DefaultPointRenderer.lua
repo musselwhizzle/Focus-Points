@@ -75,6 +75,7 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   -- the user to ask which way the photo was rotated
   -- TODO: take into account rotation during crop
   
+  --[[
   local radRotation = math.rad(developSettings["CropAngle"])
   local xx = math.cos(radRotation) * (x - orgPhotoW/2) - math.sin(radRotation) * (y - orgPhotoH/2) + orgPhotoW/2
   local yy = math.sin(radRotation) * (x - orgPhotoW/2) + math.cos(radRotation) * (y - orgPhotoH/2) + orgPhotoH/2
@@ -86,6 +87,9 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   
   x = x - leftCropAmount + deltaX
   y = y - topCropAmount + deltaY
+  --]]
+  x = x - leftCropAmount
+  y = y - topCropAmount
   
   local displayRatioW = photoDisplayW/croppedPhotoW
   local displayRatioH = photoDisplayH/croppedPhotoH
