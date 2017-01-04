@@ -28,19 +28,18 @@ local LrErrors = import 'LrErrors'
 require "ExifUtils"
 
 DefaultPointRenderer = {}
-DefaultPointRenderer.metaOrientation90 = "90"
-DefaultPointRenderer.metaOrientation270 = "270"
-DefaultPointRenderer.metaAFUsed = "AF Points Used"
-DefaultPointRenderer.metaPrimaryAFPoint = "Primary AF Point"
-DefaultPointRenderer.metaOrientation = "Orientation"
+
+--[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
+DefaultPointRenderer.funcGetAFPixels = nil
+DefaultPointRenderer.funcGetShotOrientation = nil
+DefaultPointRenderer.focusPointDimen = nil
 
 --[[
 -- targetPhoto - the selected catalog photo
 -- photoDisplayW, photoDisplayH - the width and height that the photo view is going to display as.
--- focusPoints - table containing app of the map focus points needed
--- focusPointDimen - table of dimension for the focus point. e.g. 300px x 200px is how big the D7200 focus point is
 --]]
-function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDisplayH, focusPoints, focusPointDimen)
+function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDisplayH)
+  local focusPointDimen = DefaultPointRenderer.focusPointDimen 
   local developSettings = targetPhoto:getDevelopSettings()
   local metaData = readMetaData(targetPhoto)
   local dimens = targetPhoto:getFormattedMetadata("dimensions")
@@ -48,33 +47,26 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local croppedDimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local croppedPhotoW, croppedPhotoH = parseDimens(croppedDimens) -- cropped size of the photo
   
-  
-  local focusPoint = DefaultPointRenderer.getAutoFocusPoint(metaData)
-
-  if nil == focusPoint then
-    LrErrors.throwUserError( "Unable to find any AF point info within the file." )
-    return
-  end
-
-  local x = focusPoints[focusPoint][1]
-  local y = focusPoints[focusPoint][2]
+  local pX, pY = DefaultPointRenderer.funcGetAFPixels(metaData)
+  local x = pX
+  local y = pY
   
   local leftCropAmount = developSettings["CropLeft"] * orgPhotoW
   local topCropAmount = developSettings["CropTop"] * orgPhotoH
-  local metaOrientation = DefaultPointRenderer.getOrientation(metaData)
+  local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(targetPhoto, metaData)
   
   --[[ lightroom does not report if a photo has been rotated. code below 
         make sure the rotation matches the expected width and height --]]
   local isRotated = false
-  if (string.match(metaOrientation, DefaultPointRenderer.metaOrientation90) and orgPhotoW < orgPhotoH) then
+  if (shotOrientation == 90) then
     x = orgPhotoW - y - focusPointDimen[1]
-    y = focusPoints[focusPoint][1]
+    y = pX
     leftCropAmount = (1- developSettings["CropBottom"]) * orgPhotoW
     topCropAmount = developSettings["CropLeft"] * orgPhotoH
     isRotated = true
-  elseif (string.match(metaOrientation, DefaultPointRenderer.metaOrientation270) and orgPhotoW < orgPhotoH) then
-    x = focusPoints[focusPoint][2]
-    y = orgPhotoH - focusPoints[focusPoint][1] - focusPointDimen[1]
+  elseif (shotOrientation == 270) then
+    x = pY
+    y = orgPhotoH - pX - focusPointDimen[1]
     leftCropAmount = developSettings["CropTop"] * orgPhotoW
     topCropAmount = (1-developSettings["CropRight"]) * orgPhotoH
     isRotated = true
@@ -127,22 +119,3 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
   
 end
 
-
-function DefaultPointRenderer.getAutoFocusPoint(metaData)
-  local focusPointUsed = ExifUtils.findValue(metaData, DefaultPointRenderer.metaAFUsed)
-
-  if "(none)" == focusPointUsed then
-    focusPointUsed = ExifUtils.findValue( metaData, DefaultPointRenderer.metaPrimaryAFPoint )
-  end
-
-  if "(none)" == focusPointUsed then
-    focusPointUsed = nil
-  end
-
-  return focusPointUsed
-end
-
-function DefaultPointRenderer.getOrientation(metaData)
-  local orientation = ExifUtils.findValue(metaData, DefaultPointRenderer.metaOrientation)
-  return orientation
-end
