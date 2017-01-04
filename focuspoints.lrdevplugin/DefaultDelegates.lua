@@ -24,7 +24,7 @@ require "Utils"
 
 DefaultDelegates = {}
 DefaultDelegates.focusPointsMap = nil
-DefaultDelegates.focusPointsDimen = nil
+DefaultDelegates.focusPointDimen = nil
 DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
 
 
@@ -47,8 +47,8 @@ function DefaultDelegates.getDefaultAfPoints(photo, metaData)
 
   -- TODO: The addition of the dimension should be removed once all config files have been
   -- updated to reflect the center of the focus points
-  local x = DefaultDelegates.focusPointsMap[focusPoint][1] + DefaultDelegates.focusPointsDimen[1]
-  local y = DefaultDelegates.focusPointsMap[focusPoint][2] + DefaultDelegates.focusPointsDimen[2]
+  local x = DefaultDelegates.focusPointsMap[focusPoint][1] + DefaultDelegates.focusPointDimen[1]
+  local y = DefaultDelegates.focusPointsMap[focusPoint][2] + DefaultDelegates.focusPointDimen[2]
 
   return x, y
 end
