@@ -25,14 +25,13 @@ exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 
 function ExifUtils.getExifCmd(targetPhoto)
-
   local path = targetPhoto:getRawMetadata("path")
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
 
   local cmd = "'"..exiftool .. "' -a -u -g1 -sort '" .. path .. "' > '" .. metaDataFile .. "'";
-  return cmd, metaDataFile
 
+  return cmd, metaDataFile
 end
 
 function ExifUtils.readMetaData(targetPhoto)
