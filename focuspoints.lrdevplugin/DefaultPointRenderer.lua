@@ -131,4 +131,3 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, rotation)
 
   return boxView
 end
-

@@ -11,7 +11,7 @@ Supported Cameras
 --------
 * Nikon D7200
 * Nikon D800
-* Fuji cameras: at least recent ones as X-T1, X-T2, X-Pro1, X-Pro2, X-T10, X100T, X30, X70
+* Fuji cameras - Should work with all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 
 
 Installing
