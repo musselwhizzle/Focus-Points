@@ -37,12 +37,18 @@ function DefaultDelegates.getDefaultAfPoints(photo, metaData)
   for key,keyword in pairs(DefaultDelegates.metaKeyAfPointUsed) do
     focusPoint = ExifUtils.findValue(metaData, keyword)
     if focusPoint ~= "(none)" and focusPoint ~= nil then
+      log(keyword .. " -> " .. focusPoint)
       break
     end
   end
 
   if focusPoint == "(none)" or focusPoint == nil then
     LrErrors.throwUserError("Unable to find any AF point info within the file.")
+    return nil, nil
+  end
+
+  if DefaultDelegates.focusPointsMap[focusPoint] == nil then
+    LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
     return nil, nil
   end
 
