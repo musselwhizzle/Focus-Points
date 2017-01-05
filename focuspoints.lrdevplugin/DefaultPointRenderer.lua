@@ -24,6 +24,12 @@ local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
 local LrErrors = import 'LrErrors'
+local LrPathUtils = import 'LrPathUtils'
+
+imgPath = LrPathUtils.child("", "bin" )
+imgPath = LrPathUtils.child(imgPath, "imgs")
+imgVert = LrPathUtils.child(imgPath, "focus_box_vert.png")
+imgHor = LrPathUtils.child(imgPath, "focus_box_hor.png")
 
 require "ExifUtils"
 
@@ -100,15 +106,18 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
   local viewFactory = LrView.osFactory()
   local focusAsset
   if (isRotated) then
-    focusAsset = "bin/imgs/focus_box_vert.png"
+    focusAsset = imgVert
   else
-    focusAsset = "bin/imgs/focus_box_hor.png"
+    focusAsset = imgHor
   end
 
+  log("FocusAsset: " .. focusAsset)
   local myBox = viewFactory:picture {
     value = _PLUGIN:resourceId(focusAsset),
   }
 
+  log("Coords of box: " .. focusPointX .. "," .. focusPointY)
+  log(myBox.value)
   local boxView = viewFactory:view {
     myBox,
     margin_left = focusPointX,

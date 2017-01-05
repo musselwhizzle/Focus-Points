@@ -46,7 +46,9 @@ function getExifCmd(targetPhoto)
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
   
-  local cmd = "'"..exiftool .. "' -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'";
+  -- local cmd = "\"'" .. exiftool .. "' -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'\"";
+  local cmd = "\"\"".. exiftool .. "\" -a -u -g1 \"" .. path .. "\" > \"" .. metaDataFile .. "\"\""
+  log("ExifTool command: " .. cmd)
   return cmd, metaDataFile
   
 end
@@ -63,6 +65,7 @@ function filterInput(str)
   --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
   -- FIXME: doesn't strip - or ] correctly
   local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
+  -- log("filterInput result:" .. result)
   return result
 end
 

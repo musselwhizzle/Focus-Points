@@ -43,9 +43,17 @@ function DefaultDelegates.getDefaultAfPoints(photo, metaData)
     LrErrors.throwUserError("Unable to find any AF point info within the file.")
     return nil, nil
   end
+  log("Focus Point: " .. focusPoint)
   
-  local x = DefaultDelegates.focusPointsMap[focusPoint][1]
-  local y = DefaultDelegates.focusPointsMap[focusPoint][2]
+  local index = string.find(focusPoint, ",")
+  if index ~= nill then
+    -- For now, take the first point
+    focusPoint = splitText(focusPoint, ",").key
+  end
+  log("Selected point: " .. focusPoint)
+  local selectedFocusPoint = DefaultDelegates.focusPointsMap[focusPoint]
+  local x = selectedFocusPoint[1]
+  local y = selectedFocusPoint[2]
 
   return x, y
 end
