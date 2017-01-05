@@ -1,7 +1,7 @@
 Focus Points
 =======
 
-A plugin for Lightroom to show which focus point was active when the picture was taken
+A plugin for Lightroom to show which focus point was active when the picture was taken. (Currently not working on windows. Hopefully that'll be fixed in a matter of days)
 
 <img src="screens/sample.png" alt="Screenshot" style="width: 200px;"/>
 
@@ -35,13 +35,16 @@ D1 = {810, 2210}
 
 -- an so on
 ```
-The best way I found to do this was to set up a ruler/tape measure, get out my camera and I took a photo at each of the focus points lining it up exactly with the 1-inch mark. I then imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I then took the image into photoshop and measured from the top left corner of the image to the top left corner of the focus point. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.txt" using all lowercase. Then all is done.
+The best way I found to do this was to set up a ruler/tape measure, get out my camera and I took a photo at each of the focus points lining it up exactly with the 1-inch mark. I then imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I then took the image into photoshop and measured from the top left corner of the image to the center of the focus point. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.txt" using all lowercase. Then all is done.
 
 If 2 or more cameras share a common points mapping, then PointsRendererFactory will need to be updated to know this. For example, the D7200 and D7100 could share a common focus points map (I don't know). If they do, PointsRendererFactory can be updated in code. I would prefer not see copying and pasting of focus point files such as "nikon d7200.txt" and "nikon d7100.txt" containing the exact same info.
+
+If adding a camera which does not needed mapped because the focus point is given dynamically (like Fuji) or is a pattern (like A7Rii), create a new {ModelName}Delegate.getDefaultAfPoints(photo, metaData) for the camera and dynamically return the correct x,y point for the selected autofocus. Update PointsRendererFactory to set this delegate method on the Renderer.
 
 
 Known Issues
 --------
+Not currently working on Windows. Should be fixed soon.
 1. Lightroom does not allow for resizing of images or dynamically creating a box with a frame. As such,
 the focus point image can not be the exact size as your cameras. It can only estimate.
 2. Lightroom has a bug where lrPhoto:getDevelopSettings()["Orientation"] always returns nil. Lightroom does not

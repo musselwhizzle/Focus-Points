@@ -63,14 +63,14 @@ function DefaultDelegates.getShotOrientation(photo, metaData)
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
 
   local metaOrientation = ExifUtils.findValue(metaData, "Orientation")
-  if (string.match(metaOrientation, "90 CW") or string.match(metaOrientation, "90")) and orgPhotoW < orgPhotoH then
-    return 270
-  elseif (string.match(metaOrientation, "270 CW") or string.match(metaOrientation, "270")) and orgPhotoW < orgPhotoH then
-    return 90
-  elseif string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
-    return 90
+  if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
+    return 90     -- 90 CCW   = 90 trigo
   elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
-    return 270
+    return 270    -- 270 CCW  = 270 trigo
+  elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
+    return 270    -- 90 CW    = 270 trigo
+  elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
+    return 90     -- 270 CCW  = 90 trigo
   end
 
   return 0
