@@ -26,18 +26,12 @@ local LrPathUtils = import 'LrPathUtils'
 local LrLogger = import 'LrLogger'
 local LrStringUtils = import "LrStringUtils"
 
-require "ExifUtils"
 
 local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
 isLog = false
-
-exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
-exiftool = LrPathUtils.child(exiftool, "exiftool")
-exiftool = LrPathUtils.child(exiftool, "exiftool")
-
 
 
 function splitText(str, delim)
