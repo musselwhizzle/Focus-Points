@@ -37,8 +37,8 @@ DefaultPointRenderer.focusPointDimen = nil
 --[[ The default focus box images with the x and y offsets to the center --]]
 -- DefaultPointRenderer.focusBoxImagePath_Vertical = { "bin/imgs/focus_box_vert.png", 20, 17 }
 -- DefaultPointRenderer.focusBoxImagePath_Horizontal = { "bin/imgs/focus_box_hor.png", 17, 20 }
-DefaultPointRenderer.focusBoxImageVertical = { "bin/imgs/focus_box.png", 34, 34 }
-DefaultPointRenderer.focusBoxImageHorizontal = { "bin/imgs/focus_box.png", 34, 34 }
+DefaultPointRenderer.focusBoxImageHorizontal = { "bin/imgs/focus_box_hor.png", 40, 34 }
+DefaultPointRenderer.focusBoxImageVertical = { "bin/imgs/focus_box_vert.png", 34, 40 }
 
 --[[
 -- targetPhoto - the selected catalog photo
@@ -97,6 +97,7 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
   local displayRatioH = photoDisplayH/croppedPhotoH
   local adjustedX = displayRatioW * x
   local adjustedY = displayRatioH * y
+  
 
   return DefaultPointRenderer.buildView(adjustedX, adjustedY, isRotated)
 
