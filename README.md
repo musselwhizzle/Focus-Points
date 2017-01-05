@@ -44,13 +44,13 @@ If adding a camera which does not needed mapped because the focus point is given
 
 Known Issues
 --------
-Not currently working on Windows. Should be fixed soon.
-1. Lightroom does not allow for resizing of images or dynamically creating a box with a frame. As such,
+1. Not currently working on Windows. Should be fixed soon.
+2. Lightroom does not allow for resizing of images or dynamically creating a box with a frame. As such,
 the focus point image can not be the exact size as your cameras. It can only estimate.
-2. Lightroom has a bug where lrPhoto:getDevelopSettings()["Orientation"] always returns nil. Lightroom does not
+3. Lightroom has a bug where lrPhoto:getDevelopSettings()["Orientation"] always returns nil. Lightroom does not
 track if you have rotated the photo in development. As such, if the photo was rotated, the focus point could be
 wrong. The code attempts to resolve this, but it's only an attempt.
-3. Not compatible if photo was edited in Photoshop. If the photo has been edited in Photoshop, the metadata in the photo telling the focus point was deleted. Perhaps in the future I can update the code to look for the original file and get the focus point from that.
+4. Not compatible if photo was edited in Photoshop. If the photo has been edited in Photoshop, the metadata in the photo telling the focus point was deleted. Perhaps in the future I can update the code to look for the original file and get the focus point from that.
 
 
 TODOs
