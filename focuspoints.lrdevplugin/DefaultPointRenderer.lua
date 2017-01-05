@@ -34,6 +34,12 @@ DefaultPointRenderer.funcGetAFPixels = nil
 DefaultPointRenderer.funcGetShotOrientation = nil
 DefaultPointRenderer.focusPointDimen = nil
 
+--[[ The default focus box images with the x and y offsets to the center --]]
+-- DefaultPointRenderer.focusBoxImagePath_Vertical = { "bin/imgs/focus_box_vert.png", 20, 17 }
+-- DefaultPointRenderer.focusBoxImagePath_Horizontal = { "bin/imgs/focus_box_hor.png", 17, 20 }
+DefaultPointRenderer.focusBoxImagePath_Vertical = { "bin/imgs/focus_point.png", 15, 15 }
+DefaultPointRenderer.focusBoxImagePath_Horizontal = { "bin/imgs/focus_point.png", 15, 15 }
+
 --[[
 -- targetPhoto - the selected catalog photo
 -- photoDisplayW, photoDisplayH - the width and height that the photo view is going to display as.
@@ -59,14 +65,14 @@ function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDispla
         make sure the rotation matches the expected width and height --]]
   local isRotated = false
   if (shotOrientation == 90) then
-    x = orgPhotoW - y - focusPointDimen[1]
+    x = orgPhotoW - pY
     y = pX
     leftCropAmount = (1- developSettings["CropBottom"]) * orgPhotoW
     topCropAmount = developSettings["CropLeft"] * orgPhotoH
     isRotated = true
   elseif (shotOrientation == 270) then
     x = pY
-    y = orgPhotoH - pX - focusPointDimen[1]
+    y = orgPhotoH - pX
     leftCropAmount = developSettings["CropTop"] * orgPhotoW
     topCropAmount = (1-developSettings["CropRight"]) * orgPhotoH
     isRotated = true
@@ -98,21 +104,21 @@ end
 
 function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
   local viewFactory = LrView.osFactory()
-  local focusAsset
+  local focusResource
   if (isRotated) then
-    focusAsset = "bin/imgs/focus_box_vert.png"
+    focusResource = DefaultPointRenderer.focusBoxImagePath_Vertical
   else
-    focusAsset = "bin/imgs/focus_box_hor.png"
+    focusResource = DefaultPointRenderer.focusBoxImagePath_Horizontal
   end
 
   local myBox = viewFactory:picture {
-    value = _PLUGIN:resourceId(focusAsset),
+    value = _PLUGIN:resourceId(focusResource[1]),
   }
 
   local boxView = viewFactory:view {
     myBox,
-    margin_left = focusPointX,
-    margin_top = focusPointY,
+    margin_left = focusPointX - focusResource[2],
+    margin_top = focusPointY - focusResource[3],
   }
 
   return boxView

@@ -15,7 +15,7 @@
 --]]
 
 --[[
-  A collection of delegate functions to be passed into the DefaultPointRenderer. 
+  A collection of delegate functions to be passed into the DefaultPointRenderer.
 --]]
 
 local LrStringUtils = import "LrStringUtils"
@@ -24,6 +24,7 @@ require "Utils"
 
 DefaultDelegates = {}
 DefaultDelegates.focusPointsMap = nil
+DefaultDelegates.focusPointDimen = nil
 DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
 
 
@@ -34,7 +35,7 @@ DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
 function DefaultDelegates.getDefaultAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
 
-  -- fallback for Nikon back-button Autofocusing. 
+  -- fallback for Nikon back-button Autofocusing.
   if "(none)" == focusPoint then
     focusPoint = ExifUtils.findValue(metaData, "Primary AF Point")
   end
@@ -43,9 +44,11 @@ function DefaultDelegates.getDefaultAfPoints(photo, metaData)
     LrErrors.throwUserError("Unable to find any AF point info within the file.")
     return nil, nil
   end
-  
-  local x = DefaultDelegates.focusPointsMap[focusPoint][1]
-  local y = DefaultDelegates.focusPointsMap[focusPoint][2]
+
+  -- TODO: The addition of the dimension should be removed once all config files have been
+  -- updated to reflect the center of the focus points
+  local x = DefaultDelegates.focusPointsMap[focusPoint][1] + DefaultDelegates.focusPointDimen[1]
+  local y = DefaultDelegates.focusPointsMap[focusPoint][2] + DefaultDelegates.focusPointDimen[2]
 
   return x, y
 end
@@ -57,14 +60,14 @@ end
 function DefaultDelegates.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
-  
+
   local metaOrientation = ExifUtils.findValue(metaData, "Orientation")
   if (string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH) then
     return 90
   elseif (string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH) then
     return 270
-  else 
+  else
     return 0
   end
-  
+
 end
