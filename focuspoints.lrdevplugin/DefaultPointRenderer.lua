@@ -114,8 +114,8 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, rotation)
 
   local fileName = focusBoxImage["nameTemplate"]
   if focusBoxImage["angleStep"] ~= nil and focusBoxImage["angleStep"] ~= 0 then
-    local fileRotationStr = focusBoxImage["angleStep"] * math.floor(0.5 + (math.deg(rotation) % 360) / focusBoxImage["angleStep"])
-    fileName = string.format(fileName, fileRotationStr)
+    local fileRotationSuffix = (focusBoxImage["angleStep"] * math.floor(0.5 + (math.deg(rotation) % 360) / focusBoxImage["angleStep"])) % 360
+    fileName = string.format(fileName, fileRotationSuffix)
   end
   log("focusPointFileName: " .. fileName .. "")
 
