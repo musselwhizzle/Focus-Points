@@ -49,15 +49,15 @@ end
 function log(str)
   if (isLog) then
     myLogger:warn(str)
-  end 
+  end
 end
 
-function parseDimens(strDimens) 
+function parseDimens(strDimens)
   local index = string.find(strDimens, "x")
   if (index == nill) then return nill end
   local w = string.sub(strDimens, 0, index-1)
   local h = string.sub(strDimens, index+1)
   w = LrStringUtils.trimWhitespace(w)
   h = LrStringUtils.trimWhitespace(h)
-  return tonumber(w), tonumber(h)  
+  return tonumber(w), tonumber(h)
 end

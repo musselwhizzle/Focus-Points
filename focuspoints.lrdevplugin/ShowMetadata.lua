@@ -30,43 +30,43 @@ require "Utils"
 
 local function showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
-  
+
   MetaDataDialog.create()
   local catalog = LrApplication.activeCatalog()
   local targetPhoto = catalog:getTargetPhoto()
-  
+
   LrTasks.startAsyncTask(function(context)
     --https://forums.adobe.com/thread/359790
     LrFunctionContext.callWithContext("function", function(dialogContext)
         LrFunctionContext.callWithContext("function2", function(dialogContext2)
           local dialogScope = LrDialogs.showModalProgressDialog {
             title = "Loading Data",
-            caption = "Reading Metadata", 
+            caption = "Reading Metadata",
             width = 200,
             cannotCancel = false,
-            functionContext = dialogContext2, 
+            functionContext = dialogContext2,
           }
           dialogScope:setIndeterminate()
-    
+
           local metaData = ExifUtils.readMetaData(targetPhoto)
           metaData = ExifUtils.filterInput(metaData)
           local column1, column2 = splitForColumns(metaData)
-        
+
           dialogScope:done()
           MetaDataDialog.labels.title = column1
           MetaDataDialog.data.title = column2
           --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
         end)
-    
+
       LrTasks.sleep(0)
       LrDialogs.presentModalDialog {
         title = "Metadata display",
-        resizable = true, 
+        resizable = true,
         cancelVerb = "< exclude >",
         actionVerb = "OK",
         contents = MetaDataDialog.contents
       }
-    
+
     end)
   end)
 end)
@@ -84,23 +84,29 @@ function splitForColumns(metaData)
     if (v == nill) then v = "" end
     l = LrStringUtils.trimWhitespace(l)
     v = LrStringUtils.trimWhitespace(v)
-    
+
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
   return labels, values
-  
+
 end
 
 function createParts(metaData)
   local parts = {}
   local num = 0;
-  for i in string.gmatch(metaData, "[^\\\n]+") do 
+  for i in string.gmatch(metaData, "[^\\\n]+") do
     log("i = " .. i)
+
     p = splitText(i, ":")
-    if (p ~= nill) then
+    if p ~= nill then
       parts[num] = p
-      num = num+1
+      num = num + 1
+    elseif string.sub(i, 1, 4) == "----" then       -- We have a category, lets create the corresponding parts
+      parts[num] = { ["key"] = "", ["value"] = "" }
+      num = num + 1
+      parts[num] = { ["key"] = "----" .. string.upper(i) .. "----", ["value"] = "" }
+      num = num + 1
     end
   end
   return parts
