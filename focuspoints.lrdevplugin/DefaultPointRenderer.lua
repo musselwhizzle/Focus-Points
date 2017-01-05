@@ -43,7 +43,7 @@ DefaultPointRenderer.focusBoxImage = { ["nameTemplate"] = "bin/imgs/focus_point_
 --]]
 function DefaultPointRenderer.createView(targetPhoto, photoDisplayWidth, photoDisplayHeight)
   local developSettings = targetPhoto:getDevelopSettings()
-  local metaData = readMetaData(targetPhoto)
+  local metaData = ExifUtils.readMetaData(targetPhoto)
 
   local originalWidth, originalHeight = parseDimens(targetPhoto:getFormattedMetadata("dimensions"))
   local croppedWidth, croppedHeight = parseDimens(targetPhoto:getFormattedMetadata("croppedDimensions"))
