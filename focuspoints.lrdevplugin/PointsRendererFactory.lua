@@ -41,6 +41,7 @@ function PointsRendererFactory.createRenderer(photo)
   else 
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
     DefaultDelegates.focusPointsMap = pointsMap
+    DefaultDelegates.focusPointDimen = pointDimen
     DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
     DefaultPointRenderer.focusPointDimen = pointDimen
   end

@@ -37,8 +37,8 @@ DefaultPointRenderer.focusPointDimen = nil
 --[[ The default focus box images with the x and y offsets to the center --]]
 -- DefaultPointRenderer.focusBoxImagePath_Vertical = { "bin/imgs/focus_box_vert.png", 20, 17 }
 -- DefaultPointRenderer.focusBoxImagePath_Horizontal = { "bin/imgs/focus_box_hor.png", 17, 20 }
-DefaultPointRenderer.focusBoxImagePath_Vertical = { "bin/imgs/focus_point.png", 15, 15 }
-DefaultPointRenderer.focusBoxImagePath_Horizontal = { "bin/imgs/focus_point.png", 15, 15 }
+DefaultPointRenderer.focusBoxImageVertical = { "bin/imgs/focus_box.png", 34, 34 }
+DefaultPointRenderer.focusBoxImageHorizontal = { "bin/imgs/focus_box.png", 34, 34 }
 
 --[[
 -- targetPhoto - the selected catalog photo
@@ -106,9 +106,9 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
   local viewFactory = LrView.osFactory()
   local focusResource
   if (isRotated) then
-    focusResource = DefaultPointRenderer.focusBoxImagePath_Vertical
+    focusResource = DefaultPointRenderer.focusBoxImageVertical
   else
-    focusResource = DefaultPointRenderer.focusBoxImagePath_Horizontal
+    focusResource = DefaultPointRenderer.focusBoxImageHorizontal
   end
 
   local myBox = viewFactory:picture {
@@ -117,8 +117,8 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
 
   local boxView = viewFactory:view {
     myBox,
-    margin_left = focusPointX - focusResource[2],
-    margin_top = focusPointY - focusResource[3],
+    margin_left = focusPointX - focusResource[2] * .5,
+    margin_top = focusPointY - focusResource[3] * .5,
   }
 
   return boxView
