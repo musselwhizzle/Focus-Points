@@ -32,97 +32,103 @@ DefaultPointRenderer = {}
 --[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
 DefaultPointRenderer.funcGetAFPixels = nil
 DefaultPointRenderer.funcGetShotOrientation = nil
-DefaultPointRenderer.focusPointDimen = nil
 
---[[ The default focus box images with the x and y offsets to the center --]]
--- DefaultPointRenderer.focusBoxImagePath_Vertical = { "bin/imgs/focus_box_vert.png", 20, 17 }
--- DefaultPointRenderer.focusBoxImagePath_Horizontal = { "bin/imgs/focus_box_hor.png", 17, 20 }
-DefaultPointRenderer.focusBoxImageHorizontal = { "bin/imgs/focus_box_hor.png", 40, 34 }
-DefaultPointRenderer.focusBoxImageVertical = { "bin/imgs/focus_box_vert.png", 34, 40 }
+--[[ The default focus box images with the rotational step as well as x and y offsets to the anchor point --]]
+-- DefaultPointRenderer.focusBoxImage = { ["template"] = "bin/imgs/focus_box_%s.png", ["angleStep"] = 90, ["anchorX"] = 20, ["anchorY"] = 20 }
+DefaultPointRenderer.focusBoxImage = { ["nameTemplate"] = "bin/imgs/focus_point_%s.png", ["angleStep"] = 5, ["anchorX"] = 23, ["anchorY"] = 23 }
 
 --[[
 -- targetPhoto - the selected catalog photo
--- photoDisplayW, photoDisplayH - the width and height that the photo view is going to display as.
+-- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
 --]]
-function DefaultPointRenderer.createView(targetPhoto, photoDisplayW, photoDisplayH)
-  local focusPointDimen = DefaultPointRenderer.focusPointDimen
+function DefaultPointRenderer.createView(targetPhoto, photoDisplayWidth, photoDisplayHeight)
   local developSettings = targetPhoto:getDevelopSettings()
   local metaData = readMetaData(targetPhoto)
-  local dimens = targetPhoto:getFormattedMetadata("dimensions")
-  orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
-  local croppedDimens = targetPhoto:getFormattedMetadata("croppedDimensions")
-  local croppedPhotoW, croppedPhotoH = parseDimens(croppedDimens) -- cropped size of the photo
 
-  local pX, pY = DefaultPointRenderer.funcGetAFPixels(targetPhoto, metaData)
-  local x = pX
-  local y = pY
+  local originalWidth, originalHeight = parseDimens(targetPhoto:getFormattedMetadata("dimensions"))
+  local croppedWidth, croppedHeight = parseDimens(targetPhoto:getFormattedMetadata("croppedDimensions"))
+  local cropAngle = math.rad(developSettings["CropAngle"])
+  local cropLeft = developSettings["CropLeft"]
+  local cropTop = developSettings["CropTop"]
 
-  local leftCropAmount = developSettings["CropLeft"] * orgPhotoW
-  local topCropAmount = developSettings["CropTop"] * orgPhotoH
   local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(targetPhoto, metaData)
+  log("Shot orientation: " .. shotOrientation)
+
+  local originalX, originalY = DefaultPointRenderer.funcGetAFPixels(targetPhoto, metaData)
+
+  log( "cL: " .. cropLeft .. ", cT: " .. cropTop .. ", cAngle: " .. math.deg(cropAngle) .. "°")
+
+  local x = originalX
+  local y = originalY
 
   --[[ lightroom does not report if a photo has been rotated. code below
         make sure the rotation matches the expected width and height --]]
-  local isRotated = false
-  if (shotOrientation == 90) then
-    x = orgPhotoW - pY
-    y = pX
-    leftCropAmount = (1- developSettings["CropBottom"]) * orgPhotoW
-    topCropAmount = developSettings["CropLeft"] * orgPhotoH
-    isRotated = true
-  elseif (shotOrientation == 270) then
-    x = pY
-    y = orgPhotoH - pX
-    leftCropAmount = developSettings["CropTop"] * orgPhotoW
-    topCropAmount = (1-developSettings["CropRight"]) * orgPhotoH
-    isRotated = true
+  local additionalRotation = 0
+  if shotOrientation == 90 then
+    x = originalY
+    y = originalHeight - originalX
+    cropLeft = developSettings["CropTop"]
+    cropTop = 1 - developSettings["CropRight"]
+    additionalRotation = math.pi / 2
+  elseif shotOrientation == 270 then
+    x = originalWidth - originalY
+    y = originalX
+    cropLeft = 1 - developSettings["CropBottom"]
+    cropTop = developSettings["CropLeft"]
+    additionalRotation = -math.pi / 2
   end
-  -- TODO: check for "normal" to make sure the width is bigger than the height. if not, prompt
-  -- the user to ask which way the photo was rotated
-  -- TODO: take into account rotation during crop
 
-  local radRotation = math.rad(developSettings["CropAngle"])
-  local xx = math.cos(radRotation) * (x - orgPhotoW/2) - math.sin(radRotation) * (y - orgPhotoH/2) + orgPhotoW/2
-  local yy = math.sin(radRotation) * (x - orgPhotoW/2) + math.cos(radRotation) * (y - orgPhotoH/2) + orgPhotoH/2
+  log("shotOrientation: " .. shotOrientation .. "°, totalRotation: " .. math.deg(cropAngle + additionalRotation) .. "°")
 
-  -- xrot=cos(θ)⋅(x−cx)−sin(θ)⋅(y−cy)+cx
-  log( "x: " .. x .. ", xx: " .. xx .. ", y: " .. y .. ", yy: " .. yy)
-  local deltaX = xx - x
-  local deltaY = yy - y
+  -- Rotation around 0,0
+  local rX = x * math.cos(cropAngle) + y * math.sin(cropAngle)
+  local rY = -x * math.sin(cropAngle) + y * math.cos(cropAngle)
 
-  x = x - leftCropAmount + deltaX
-  y = y - topCropAmount + deltaY
+  -- Rotation of top left corner
+  local oX = cropLeft * originalWidth
+  local oY = cropTop * originalHeight
+  local roX = oX * math.cos(cropAngle) + oY * math.sin(cropAngle)
+  local roY = -oX * math.sin(cropAngle) + oY * math.cos(cropAngle)
 
-  local displayRatioW = photoDisplayW/croppedPhotoW
-  local displayRatioH = photoDisplayH/croppedPhotoH
-  local adjustedX = displayRatioW * x
-  local adjustedY = displayRatioH * y
-  
+  -- Translation so the top left corner become the origin
+  local tX = rX - roX
+  local tY = rY - roY
 
-  return DefaultPointRenderer.buildView(adjustedX, adjustedY, isRotated)
+  -- Let's resize everything to match the view
+  tX = tX * photoDisplayWidth / croppedWidth
+  tY = tY * photoDisplayHeight / croppedHeight
 
+  return DefaultPointRenderer.buildView(tX, tY, cropAngle + additionalRotation)
 end
 
-function DefaultPointRenderer.buildView(focusPointX, focusPointY, isRotated)
+--[[
+-- Creates a view with the focus box placed and rotated at the right place
+-- As Lightroom does not allow for rotating icons, we get the rotated image for the corresponding files
+-- focusPointX, focusPointY - the center of the AF box
+-- rotation - the rotation angle of the cropped image
+--]]
+function DefaultPointRenderer.buildView(focusPointX, focusPointY, rotation)
   local viewFactory = LrView.osFactory()
-  local focusResource
-  if (isRotated) then
-    focusResource = DefaultPointRenderer.focusBoxImageVertical
-  else
-    focusResource = DefaultPointRenderer.focusBoxImageHorizontal
+
+  local focusBoxImage = DefaultPointRenderer.focusBoxImage
+
+  local fileName = focusBoxImage["nameTemplate"]
+  if focusBoxImage["angleStep"] ~= nil and focusBoxImage["angleStep"] ~= 0 then
+    local fileRotationStr = focusBoxImage["angleStep"] * math.floor(0.5 + (math.deg(rotation) % 360) / focusBoxImage["angleStep"])
+    fileName = string.format(fileName, fileRotationStr)
   end
+  log("focusPointFileName: " .. fileName .. "")
 
   local myBox = viewFactory:picture {
-    value = _PLUGIN:resourceId(focusResource[1]),
+    value = _PLUGIN:resourceId(fileName)
   }
 
   local boxView = viewFactory:view {
     myBox,
-    margin_left = focusPointX - focusResource[2] * .5,
-    margin_top = focusPointY - focusResource[3] * .5,
+    margin_left = focusPointX - focusBoxImage["anchorX"],
+    margin_top = focusPointY - focusBoxImage["anchorY"],
   }
 
   return boxView
-
 end
 

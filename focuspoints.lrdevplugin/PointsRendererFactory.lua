@@ -27,39 +27,34 @@ local LrErrors = import 'LrErrors'
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
-  local cameraMake = photo:getFormattedMetadata("cameraMake")
-  local cameraModel = photo:getFormattedMetadata("cameraModel")
-  
-  -- change the metadata names here
-  if (string.lower(cameraMake) == "ricoh imaging company, ltd." and string.lower(cameraModel) == "pentax k-1") then
-    DefaultDelegates.metaKeyAfPointUsed = "AF Points Selected"
-  end
-  
-  if (cameraMake == "FUJIFILM") then
-      DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
-      DefaultPointRenderer.focusPointDimen = {1,1} -- this is wrong. it's probably more like 300,250
-  else 
+  local cameraMake = string.lower(photo:getFormattedMetadata("cameraMake"))
+  local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
+
+  if (cameraMake == "fujifilm") then
+    DefaultDelegates.focusPointsMap = nil     -- unused
+    DefaultDelegates.focusPointDimen = nil    -- unused
+    DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
+  else
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
     DefaultDelegates.focusPointsMap = pointsMap
     DefaultDelegates.focusPointDimen = pointDimen
     DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
-    DefaultPointRenderer.focusPointDimen = pointDimen
   end
-  
-  
+
   DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation
+
   return DefaultPointRenderer
 end
 
 function PointsRendererFactory.getFocusPoints(photo)
-  local cameraMake = photo:getFormattedMetadata("cameraMake")
-  local cameraModel = photo:getFormattedMetadata("cameraModel")
-  
-  local focusPoints, focusPointDimens =  PointsUtils.readIntoTable(string.lower(cameraMake), string.lower(cameraModel) .. ".txt")
-  
+  local cameraMake = string.lower(photo:getFormattedMetadata("cameraMake"))
+  local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
+
+  local focusPoints, focusPointDimens = PointsUtils.readIntoTable(cameraMake, cameraModel .. ".txt")
+
   if (focusPoints == nil) then
-    return "No (or incorrect) mapping found at: \n" .. string.lower(cameraMake) .. "/" .. string.lower(cameraModel) .. ".txt"
-  else 
+    return "No (or incorrect) mapping found at: \n" .. cameraMake .. "/" .. cameraModel .. ".txt"
+  else
     return focusPoints, focusPointDimens
   end
 end
