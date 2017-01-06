@@ -63,10 +63,23 @@ function ExifUtils.findValue(metaData, key)
     if (key == l) then
       return v
     end
-
   end
-  return nil
 
+  return nil
+end
+
+function ExifUtils.findFirstMatchingValue(metaData, keys)
+  local value = nil
+
+  for key,keyword in pairs(keys) do
+    value = ExifUtils.findValue(metaData, keyword)
+
+    if value ~= nil and value ~= "(none)" then
+      return value
+    end
+  end
+
+  return nil
 end
 
 function ExifUtils.splitForColumns(metaData)
@@ -92,7 +105,7 @@ function ExifUtils.createParts(metaData)
   local parts = {}
   local num = 0;
   for i in string.gmatch(metaData, "[^\\\n]+") do
-    p = splitText(i, ":")
+    p = splitToKeyValue(i, ":")
     if (p ~= nill) then
       parts[num] = p
       num = num+1
