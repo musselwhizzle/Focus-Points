@@ -9,9 +9,11 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 Supported Cameras
 --------
+* Canon - Sould work with all recent bodies
 * Nikon D7200
 * Nikon D800
 * Fuji cameras - Should work with all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
+* Olympus cameras where 'AF Point Selected' appears in Metadata (Should work on recent E-* bodies)
 
 
 Installing

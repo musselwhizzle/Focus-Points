@@ -35,6 +35,8 @@ DefaultDelegates.pointTemplates = {
   },
   af_focus = {
     center = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/focus_point_grey_corner_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/focus_point_grey_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
   af_selected = {

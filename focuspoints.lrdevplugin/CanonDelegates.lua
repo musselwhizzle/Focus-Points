@@ -73,14 +73,14 @@ function CanonDelegates.getAfPoints(photo, metaData)
   if afPointsSelected == nil then
     afPointsSelected = {}
   else
-    afPointsSelected = split(afPointsSelected, " ")
+    afPointsSelected = split(afPointsSelected, ",")
   end
 
   local afPointsInFocus = ExifUtils.findFirstMatchingValue(metaData, { "AF Points In Focus" })
   if afPointsInFocus == nil then
     afPointsInFocus = {}
   else
-    afPointsInFocus = split(afPointsInFocus, " ")
+    afPointsInFocus = split(afPointsInFocus, ",")
   end
 
   local result = {
