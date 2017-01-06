@@ -17,7 +17,8 @@
 --[[
   A collection of delegate functions to be passed into the DefaultPointRenderer when
   the camera is Olympus
-  E-M1, E-M1 II focus point metadata:
+  
+  Assume that focus point metadata look like:
   
     AF Areas                        : (118,32)-(137,49)
     AF Point Selected               : (50%,15%) (50%,15%)
@@ -26,15 +27,17 @@
         AF Point Selected appears to be % of photo from upper left corner (X%, Y%)
         AF Areas appears to be focus box as coordinates relative to 0..255 from upper left corner (x,y)
         
-  2017-01-06 - MJ - E-Mn family only
-  
+  2017-01-06 - MJ - Test for 'AF Point Selected' in Metadata, assume it's good if found
+                    Add basic errorhandling if not found
+
+TODO: Verify math by comparing focs point locations Olympus OV3 software
+TODO: Try using 'AF Areas' instead. This should allow display of properly sized focus box
+
 --]]
 
 local LrStringUtils = import "LrStringUtils"
 local LrErrors = import 'LrErrors'
 require "Utils"
-
-local supportedOlympusCameras = {"E-M1", "E-M1MarkII", "E-M10MarkII", "E-M5MarkII", "E-P1" }
 
 OlympusDelegates = {}
 
@@ -43,17 +46,23 @@ OlympusDelegates = {}
 --]]
 function OlympusDelegates.getOlympusAfPoints(photo, metaData)
     local cameraModel = photo:getFormattedMetadata("cameraModel")
-    
-  if string.find(table.concat(supportedOlympusCameras, " "), cameraModel, 1, true) then
     local focusPoint = ExifUtils.findValue(metaData, "AF Point Selected")
+    
+  if focusPoint then
     local focusX, focusY = string.match(focusPoint, "%((%d+)%%,(%d+)")
+    if focusX == nil or focusY == nil then
+        LrErrors.throwUserError("Focus point not found in 'AF Point Selected' metadata tag")
+        return nil, nil
+    end
     log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint  )
-    if focusX == nil or focusY == nil then return nil, nil end
   
     local dimens = photo:getFormattedMetadata("dimensions")
     orgPhotoW, orgPhotoH = parseDimens(dimens)
     log ( "orgPhotoW: " .. orgPhotoW .. " orgPhotoH: ".. orgPhotoH )
-    if orgPhotoW == nil or orgPhotoH == nil then return nil, nil end
+    if orgPhotoW == nil or orgPhotoH == nil then
+        LrErrors.throwUserError("Metadata has no Dimensions")
+        return nil, nil
+    end
   
     log ( "Focus px: " .. tonumber(orgPhotoW) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoH) * tonumber(focusY)/100)
  
@@ -63,7 +72,7 @@ function OlympusDelegates.getOlympusAfPoints(photo, metaData)
         return  tonumber(orgPhotoW) * tonumber(focusY)/100, tonumber(orgPhotoH) * tonumber(focusX)/100
     end
   else
-    LrErrors.throwUserError("Unsupported Olympus Camera.")
+    LrErrors.throwUserError("Unsupported Olympus Camera or 'AF Point Selected' metadata tag not found.")
     return nil, nil    
   end
 end
