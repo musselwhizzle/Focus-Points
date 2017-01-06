@@ -15,7 +15,7 @@
 --]]
 
 --[[
-  A collection of delegate functions to be passed into the DefaultPointRenderer. 
+  A collection of delegate functions to be passed into the DefaultPointRenderer.
 --]]
 
 local LrStringUtils = import "LrStringUtils"
@@ -24,7 +24,8 @@ require "Utils"
 
 DefaultDelegates = {}
 DefaultDelegates.focusPointsMap = nil
-DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
+DefaultDelegates.focusPointDimen = nil
+DefaultDelegates.metaKeyAfPointUsed = { "AF Points Used", "AF Points Selected", "Primary AF Point" }
 
 
 --[[
@@ -32,39 +33,51 @@ DefaultDelegates.metaKeyAfPointUsed = "AF Points Used"
 -- focusPoints - table containing px locations of the focus points
 --]]
 function DefaultDelegates.getDefaultAfPoints(photo, metaData)
-  local focusPoint = ExifUtils.findValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
-
-  -- fallback for Nikon back-button Autofocusing. 
-  if "(none)" == focusPoint then
-    focusPoint = ExifUtils.findValue(metaData, "Primary AF Point")
+  local focusPoint = nil
+  for key,keyword in pairs(DefaultDelegates.metaKeyAfPointUsed) do
+    focusPoint = ExifUtils.findValue(metaData, keyword)
+    if focusPoint ~= "(none)" and focusPoint ~= nil then
+      log(keyword .. " -> " .. focusPoint)
+      break
+    end
   end
 
-  if "(none)" == focusPoint or focusPoint == nil then
+  if focusPoint == "(none)" or focusPoint == nil then
     LrErrors.throwUserError("Unable to find any AF point info within the file.")
     return nil, nil
   end
-  
-  local x = DefaultDelegates.focusPointsMap[focusPoint][1]
-  local y = DefaultDelegates.focusPointsMap[focusPoint][2]
+
+  if DefaultDelegates.focusPointsMap[focusPoint] == nil then
+    LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
+    return nil, nil
+  end
+
+  -- TODO: The addition of the dimension should be removed once all config files have been
+  -- updated to reflect the center of the focus points
+  local x = DefaultDelegates.focusPointsMap[focusPoint][1] + (.5 * DefaultDelegates.focusPointDimen[1])
+  local y = DefaultDelegates.focusPointsMap[focusPoint][2] + (.5 * DefaultDelegates.focusPointDimen[2])
 
   return x, y
 end
 
 --[[
   -- method figures out the orientation the photo was shot at by looking at the metadata
-  -- returns 90, 270, or 0
+  -- returns 90, 270, or 0 (in trigonometric sense)
 --]]
 function DefaultDelegates.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
-  
+
   local metaOrientation = ExifUtils.findValue(metaData, "Orientation")
-  if (string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH) then
-    return 90
-  elseif (string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH) then
-    return 270
-  else 
-    return 0
+  if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
+    return 90     -- 90 CCW   = 90 trigo
+  elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
+    return 270    -- 270 CCW  = 270 trigo
+  elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
+    return 270    -- 90 CW    = 270 trigo
+  elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
+    return 90     -- 270 CCW  = 90 trigo
   end
-  
+
+  return 0
 end

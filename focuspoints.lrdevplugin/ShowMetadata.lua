@@ -25,6 +25,7 @@ local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
 
 require "MetaDataDialog"
+require "ExifUtils"
 require "Utils"
 
 local function showDialog()
@@ -47,8 +48,8 @@ local function showDialog()
           }
           dialogScope:setIndeterminate()
     
-          local metaData = readMetaData(targetPhoto)
-          metaData = filterInput(metaData)
+          local metaData = ExifUtils.readMetaData(targetPhoto)
+          metaData = ExifUtils.filterInput(metaData)
           local column1, column2 = splitForColumns(metaData)
         
           dialogScope:done()

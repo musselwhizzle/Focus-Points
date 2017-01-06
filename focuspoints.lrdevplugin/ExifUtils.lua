@@ -20,6 +20,9 @@ local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
 
 ExifUtils = {}
+exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
+exiftool = LrPathUtils.child(exiftool, "exiftool")
+exiftool = LrPathUtils.child(exiftool, "exiftool")
 
 function ExifUtils.getExifCmd(targetPhoto) 
   
@@ -27,7 +30,7 @@ function ExifUtils.getExifCmd(targetPhoto)
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
   
-  local cmd = exiftool .. " -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'";
+  local cmd = "'"..exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
   return cmd, metaDataFile
   
 end
