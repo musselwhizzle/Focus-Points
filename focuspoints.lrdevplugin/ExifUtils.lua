@@ -30,6 +30,7 @@ function ExifUtils.getExifCmd(targetPhoto)
   metaDataFile = metaDataFile .. "-metadata.txt"
 
   local cmd = "'"..exiftool .. "' -a -u -g1 -sort '" .. path .. "' > '" .. metaDataFile .. "'";
+
   return cmd, metaDataFile
 end
 
