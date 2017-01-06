@@ -23,6 +23,8 @@ require "PointsUtils"
 require "DefaultDelegates"
 require "CanonDelegates"
 require "FujifilmDelegates"
+require "OlympusDelegates"
+
 local LrErrors = import 'LrErrors'
 
 PointsRendererFactory = {}
@@ -33,7 +35,6 @@ function PointsRendererFactory.createRenderer(photo)
 
   log ("cameraMake: " .. cameraMake)
   log ("cameraModel: " .. cameraModel)
-
 
   if (cameraMake == nil or cameraModel == nil) then
     LrErrors.throwUserError("File doesn't contain camera maker or model")
@@ -50,6 +51,10 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = CanonDelegates.getAfPoints
+  elseif (string.find(cameraMake, "olympus", 1, true)) then
+    DefaultDelegates.focusPointsMap = nil     -- unused
+    DefaultDelegates.focusPointDimen = nil    -- unused
+    DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints
   else
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
     DefaultDelegates.focusPointsMap = pointsMap

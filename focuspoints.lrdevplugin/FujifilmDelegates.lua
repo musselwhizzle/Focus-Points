@@ -35,6 +35,9 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local values = split(focusPoint, " ")
   local x = LrStringUtils.trimWhitespace(values[1])
   local y = LrStringUtils.trimWhitespace(values[2])
+  if x == nil or y == nil then
+    return nil
+  end
 
   local imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Exif Image Width" })
   local imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Exif Image Height" })
