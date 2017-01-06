@@ -9,9 +9,10 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 Supported Cameras
 --------
+* Canon cameras with support for AF-Points position and size when possible, directly from the Exif fields
 * Nikon D7200
 * Nikon D800
-* Fuji cameras - Should work with all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
+* Fuji cameras with support for face recognition when possible - Should work with all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 * Olympus cameras where 'AF Point Selected' appears in Metadata (Should work on recent E-* bodies)
 
 
@@ -46,19 +47,16 @@ If adding a camera which does not needed mapped because the focus point is given
 Known Issues
 --------
 1. Not currently working on Windows. Should be fixed soon.
-2. Lightroom does not allow for resizing of images or dynamically creating a box with a frame. As such,
-the focus point image can not be the exact size as your cameras. It can only estimate.
-3. Lightroom has a bug where lrPhoto:getDevelopSettings()["Orientation"] always returns nil. Lightroom does not
+2. Lightroom has a bug where lrPhoto:getDevelopSettings()["Orientation"] always returns nil. Lightroom does not
 track if you have rotated the photo in development. As such, if the photo was rotated, the focus point could be
 wrong. The code attempts to resolve this, but it's only an attempt.
-4. Not compatible if photo was edited in Photoshop. If the photo has been edited in Photoshop, the metadata in the photo telling the focus point was deleted. Perhaps in the future I can update the code to look for the original file and get the focus point from that.
+3. Not compatible if photo was edited in Photoshop. If the photo has been edited in Photoshop, the metadata in the photo telling the focus point was deleted. Perhaps in the future I can update the code to look for the original file and get the focus point from that.
 
 
 TODOs
 --------
  * check for "normal" to make sure the width is bigger than the height. if not, prompt
   the user to ask which way the photo was rotated
- * update the "MetaData" for an alphabetized order
  * show ExifTool license in plugin
 
 
