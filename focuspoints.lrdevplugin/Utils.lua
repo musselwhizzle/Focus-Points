@@ -24,7 +24,7 @@ local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrLogger = import 'LrLogger'
-local LrStringUtils = import "LrStringUtils"
+local LrStringUtils = import 'LrStringUtils'
 
 local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
@@ -46,8 +46,10 @@ function getExifCmd(targetPhoto)
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
   
-  -- local cmd = "\"'" .. exiftool .. "' -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'\"";
-  local cmd = "\"\"".. exiftool .. "\" -a -u -g1 \"" .. path .. "\" > \"" .. metaDataFile .. "\"\""
+  local cmd = "\"'" .. exiftool .. "' -a -u -g1 '" .. path .. "' > '" .. metaDataFile .. "'\"";
+  if (WIN_ENV) then
+    cmd = "\"\"".. exiftool .. "\" -a -u -g1 \"" .. path .. "\" > \"" .. metaDataFile .. "\"\""
+  end
   log("ExifTool command: " .. cmd)
   return cmd, metaDataFile
   
@@ -62,9 +64,8 @@ function readMetaData(targetPhoto)
 end
 
 function filterInput(str)
-  --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
   -- FIXME: doesn't strip - or ] correctly
-  local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
+  local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\]~`]", "?");
   -- log("filterInput result:" .. result)
   return result
 end

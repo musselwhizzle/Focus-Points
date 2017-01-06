@@ -30,7 +30,6 @@ require "Utils"
 local function showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
   
-  MetaDataDialog.create()
   local catalog = LrApplication.activeCatalog()
   local targetPhoto = catalog:getTargetPhoto()
   
@@ -49,28 +48,36 @@ local function showDialog()
     
           local metaData = readMetaData(targetPhoto)
           metaData = filterInput(metaData)
-          local column1, column2 = splitForColumns(metaData)
+          --local column1, column2 = splitForColumns(metaData)
         
           dialogScope:done()
-          MetaDataDialog.labels.title = column1
-          MetaDataDialog.data.title = column2
+          --log("Column 1:" .. column1)
+          --log("Column 2:" .. column2)
+          MetaDataDialog.create(createParts(metaData))
           --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
+          --log("Labels title:" .. MetaDataDialog.labels.title)
+          --log("Data title:" .. MetaDataDialog.data.title)
+          LrDialogs.presentModalDialog {
+            title = "Metadata display",
+            resizable = true, 
+            cancelVerb = "< exclude >",
+            actionVerb = "OK",
+            contents = MetaDataDialog.contents
+          }
         end)
     
       LrTasks.sleep(0)
-      LrDialogs.presentModalDialog {
-        title = "Metadata display",
-        resizable = true, 
-        cancelVerb = "< exclude >",
-        actionVerb = "OK",
-        contents = MetaDataDialog.contents
-      }
     
     end)
   end)
 end)
 end
 showDialog()
+
+local endOfLine = "\r";
+if (WIN_ENV) then
+  endOfLine = "\n";
+end
 
 function splitForColumns(metaData)
   local parts = createParts(metaData)
@@ -84,8 +91,8 @@ function splitForColumns(metaData)
     l = LrStringUtils.trimWhitespace(l)
     v = LrStringUtils.trimWhitespace(v)
     
-    labels = labels .. l .. "\r"
-    values = values .. v .. "\r"
+    labels = labels .. l .. endOfLine
+    values = values .. v .. endOfLine
   end
   return labels, values
   

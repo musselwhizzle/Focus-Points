@@ -23,37 +23,33 @@ local LrView = import 'LrView'
 local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
+local LrStringUtils = import 'LrStringUtils'
 
 MetaDataDialog = {}
 
-function MetaDataDialog.create()
+function MetaDataDialog.create(values)
 
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
-  local viewFactory = LrView.osFactory()
+  local v = LrView.osFactory()
   
-  local myText = viewFactory:static_text {
-    title = "Will place label here",
-    selectable = true, 
-  }
+  local rows = {}
   
-  local myText2 = viewFactory:static_text {
-    title = "Will place data here",
-    selectable = true, 
-  }
+  for k in pairs(values) do
+    local key = values[k].key
+    local value = values[k].value
+    if (key == nill) then key = "" end
+    if (value == nill) then value = "" end
+    key = LrStringUtils.trimWhitespace(key)
+    value = LrStringUtils.trimWhitespace(value)
+    values[k].title = key .. " = " .. value
+  end
   
-  local row = viewFactory:row {
-    myText, myText2, 
-    margin_left = 5, 
-  }
-  
-  local scrollView = viewFactory:scrolled_view {
-    row, 
+  local view = v:simple_list {
+    items = values,
     width = appWidth * .7,
-    height = appHeight *.7,
+    height = appHeight * .7,
   }
   
-  MetaDataDialog.contents = scrollView
-  MetaDataDialog.labels = myText
-  MetaDataDialog.data = myText2
+  MetaDataDialog.contents = view
   
 end
