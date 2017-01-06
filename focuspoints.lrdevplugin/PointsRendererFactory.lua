@@ -29,13 +29,17 @@ PointsRendererFactory = {}
 function PointsRendererFactory.createRenderer(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
+  
+  log ("cameraMake: " .. cameraMake)
+  log ("cameraModel: " .. cameraModel)
+  
 
-  if (camerMake == nil or camerModel == nil) then
+  if (cameraMake == nil or cameraModel == nil) then
     LrErrors.throwUserError("File doesn't contain camera maker or model")
   end
 
-  cameraMake = string.lower(camerMake)
-  cameraModel = string.lower(camerModel)
+  cameraMake = string.lower(cameraMake)
+  cameraModel = string.lower(cameraModel)
 
   if (cameraMake == "fujifilm") then
     DefaultDelegates.focusPointsMap = nil     -- unused
