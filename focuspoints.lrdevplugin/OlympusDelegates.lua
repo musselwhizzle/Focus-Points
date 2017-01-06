@@ -26,7 +26,6 @@
         AF Point Selected appears to be % of photo from upper left corner (X%, Y%)
         AF Areas appears to be focus box as coordinates relative to 0..255 from upper left corner (x,y)
         
-        
   2017-01-06 - MJ - E-Mn family only
   
 --]]
@@ -34,6 +33,8 @@
 local LrStringUtils = import "LrStringUtils"
 local LrErrors = import 'LrErrors'
 require "Utils"
+
+local supportedOlympusCameras = {"E-M1", "E-M1MarkII", "E-M10MarkII", "E-M5MarkII", "E-P1" }
 
 OlympusDelegates = {}
 
@@ -43,7 +44,7 @@ OlympusDelegates = {}
 function OlympusDelegates.getOlympusAfPoints(photo, metaData)
     local cameraModel = photo:getFormattedMetadata("cameraModel")
     
-  if (cameraModel == "E-M1") or (cameraModel == "E-M1MarkII")  or (cameraModel == "E-M10MarkII") or (cameraModel == "E-M5MarkII") then
+  if string.find(table.concat(supportedOlympusCameras, " "), cameraModel, 1, true) then
     local focusPoint = ExifUtils.findValue(metaData, "AF Point Selected")
     local focusX, focusY = string.match(focusPoint, "%((%d+)%%,(%d+)")
     log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint  )
