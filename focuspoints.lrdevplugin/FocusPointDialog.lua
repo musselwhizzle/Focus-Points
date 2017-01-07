@@ -21,53 +21,57 @@ local LrColor = import 'LrColor'
 require "Utils"
 
 FocusPointDialog = {}
+FocusPointDialog.myText = nil
+FocusPointDialog.display = nil
 
 function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
   local viewFactory = LrView.osFactory()
-  local contentWidth = appWidth * .7
-  local contentHeight = appHeight * .7
-
-  local photoWidth
-  local photoHeight
+  local contentW = appWidth * .7
+  local contentH = appHeight * .7
+  
+  local photoW
+  local photoH
   if (w > h) then
-    photoWidth = math.min(w, contentWidth)
-    photoHeight = h/w * photoWidth
-  else
-    photoHeight = math.min(h, contentHeight)
-    photoWidth = w/h * photoHeight
+    photoW = math.min(w, contentW)
+    photoH = h/w * photoW
+  else 
+    photoH = math.min(h, contentH)
+    photoW = w/h * photoH
   end
-  return photoWidth, photoHeight
-
+  return photoW, photoH
+  
 end
 
-function FocusPointDialog.createDialog(targetPhoto, overlayView)
+function FocusPointDialog.createDialog(targetPhoto, overlayView) 
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
-  local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-
+  local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+  
   -- temporary for dev'ing
   local developSettings = targetPhoto:getDevelopSettings()
-
-  local f = LrView.osFactory()
-
-  local view = f:view {
-    f:column {
-      f:catalog_photo {
-        width = photoWidth,
-        height = photoHeight,
-        photo = targetPhoto,
-      },
-      f:static_text {
-        title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
-      },
-    },
-
-    overlayView,
-
-    place = "overlapping"
+  
+  local viewFactory = LrView.osFactory()
+  local myPhoto = viewFactory:catalog_photo {
+    width = photoW, 
+    height = photoH,
+    photo = targetPhoto,
   }
+  local myText = viewFactory:static_text {
+    title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
+  }
+      
+  local column = viewFactory:column {
+    myPhoto, myText,
+  }
+  
+  local myView = viewFactory:view {
+    column, overlayView, 
+    place = 'overlapping', 
+  }
+  
+  FocusPointDialog.myText = myText
+  FocusPointDialog.display = myView
 
-  return view
 end
