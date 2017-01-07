@@ -30,137 +30,104 @@ require "ExifUtils"
 DefaultPointRenderer = {}
 
 --[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
-DefaultPointRenderer.funcGetAfPoints = nil
+DefaultPointRenderer.funcGetAFPixels = nil
 DefaultPointRenderer.funcGetShotOrientation = nil
 
+--[[ The default focus box images with the rotational step as well as x and y offsets to the anchor point --]]
+-- DefaultPointRenderer.focusBoxImage = { ["template"] = "bin/imgs/focus_box_%s.png", ["angleStep"] = 90, ["anchorX"] = 20, ["anchorY"] = 20 }
+DefaultPointRenderer.focusBoxImage = { ["nameTemplate"] = "bin/imgs/focus_point_%s.png", ["angleStep"] = 5, ["anchorX"] = 23, ["anchorY"] = 23 }
+
 --[[
--- Returns a LrView.osFactory():view containg all needed icons to draw the points returned by DefaultPointRenderer.funcGetAfPoints
--- photo - the selected catalog photo
+-- targetPhoto - the selected catalog photo
 -- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
 --]]
-function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayHeight)
-  local developSettings = photo:getDevelopSettings()
-  local metaData = ExifUtils.readMetaData(photo)
+function DefaultPointRenderer.createView(targetPhoto, photoDisplayWidth, photoDisplayHeight)
+  local developSettings = targetPhoto:getDevelopSettings()
+  local metaData = ExifUtils.readMetaData(targetPhoto)
 
-  local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
-  local croppedWidth, croppedHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+  local originalWidth, originalHeight = parseDimens(targetPhoto:getFormattedMetadata("dimensions"))
+  local croppedWidth, croppedHeight = parseDimens(targetPhoto:getFormattedMetadata("croppedDimensions"))
   local cropAngle = math.rad(developSettings["CropAngle"])
   local cropLeft = developSettings["CropLeft"]
   local cropTop = developSettings["CropTop"]
-  log( "cL: " .. cropLeft .. ", cT: " .. cropTop .. ", cAngle: " .. math.deg(cropAngle) .. "°")
 
-  local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
+  local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(targetPhoto, metaData)
   log("Shot orientation: " .. shotOrientation)
 
-  local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, metaData)
-  if pointsTable == nil then
-    return nil
+  local originalX, originalY = DefaultPointRenderer.funcGetAFPixels(targetPhoto, metaData)
+
+  log( "cL: " .. cropLeft .. ", cT: " .. cropTop .. ", cAngle: " .. math.deg(cropAngle) .. "°")
+
+  local x = originalX
+  local y = originalY
+
+  --[[ lightroom does not report if a photo has been rotated. code below
+        make sure the rotation matches the expected width and height --]]
+  local additionalRotation = 0
+  if shotOrientation == 90 then
+    x = originalY
+    y = originalHeight - originalX
+    cropLeft = developSettings["CropTop"]
+    cropTop = 1 - developSettings["CropRight"]
+    additionalRotation = math.pi / 2
+  elseif shotOrientation == 270 then
+    x = originalWidth - originalY
+    y = originalX
+    cropLeft = 1 - developSettings["CropBottom"]
+    cropTop = developSettings["CropLeft"]
+    additionalRotation = -math.pi / 2
   end
 
-  -- Looping through the af-points and drawing them depending on their nature
-  local viewsTable = {
-    place = "overlapping"
-  }
+  log("shotOrientation: " .. shotOrientation .. "°, totalRotation: " .. math.deg(cropAngle + additionalRotation) .. "°")
 
-  for key, point in pairs(pointsTable.points) do
-    local originalX = point.x
-    local originalY = point.y
+  -- Rotation around 0,0
+  local rX = x * math.cos(cropAngle) + y * math.sin(cropAngle)
+  local rY = -x * math.sin(cropAngle) + y * math.cos(cropAngle)
 
-    local x = originalX
-    local y = originalY
+  -- Rotation of top left corner
+  local oX = cropLeft * originalWidth
+  local oY = cropTop * originalHeight
+  local roX = oX * math.cos(cropAngle) + oY * math.sin(cropAngle)
+  local roY = -oX * math.sin(cropAngle) + oY * math.cos(cropAngle)
 
-    --[[ lightroom does not report if a photo has been rotated. Code below
-          make sure the rotation matches the expected width and height --]]
-    local additionalRotation = 0
-    if shotOrientation == 90 then
-      x = originalY
-      y = originalHeight - originalX
-      cropLeft = developSettings["CropTop"]
-      cropTop = 1 - developSettings["CropRight"]
-      additionalRotation = math.pi / 2
-    elseif shotOrientation == 270 then
-      x = originalWidth - originalY
-      y = originalX
-      cropLeft = 1 - developSettings["CropBottom"]
-      cropTop = developSettings["CropLeft"]
-      additionalRotation = -math.pi / 2
-    end
-    --]]
+  -- Translation so the top left corner become the origin
+  local tX = rX - roX
+  local tY = rY - roY
 
-    log("shotOrientation: " .. shotOrientation .. "°, totalRotation: " .. math.deg(cropAngle + additionalRotation) .. "°")
+  -- Let's resize everything to match the view
+  tX = tX * photoDisplayWidth / croppedWidth
+  tY = tY * photoDisplayHeight / croppedHeight
 
-    local template = pointsTable.pointTemplates[point.pointType]
-    if template == nil then
-      LrErrors.throwUserError("Point template " .. point.pointType .. " could not be found.")
-      return nil
-    end
-
-    -- Inserting center icon view
-    local cX, cY
-    if template.center ~= nil then
-      cX, cY = transformCoordinates(x, y, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      table.insert(viewsTable, DefaultPointRenderer.createPointView(cX, cY, cropAngle + additionalRotation, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
-    end
-
-    -- Inserting corner icon views
-    if template.corner ~= nil then
-      -- Top Left, 0°
-      local offsetX, offsetY = transformCoordinates(-point.width/2, -point.height/2, 0, 0, additionalRotation, 1, 1)
-      local tlX, tlY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      -- Top Right, -90°
-      offsetX, offsetY = transformCoordinates(point.width/2, -point.height/2, 0, 0, additionalRotation, 1, 1)
-      local trX, trY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      -- Bottom Right, -180°
-      offsetX, offsetY = transformCoordinates(point.width/2, point.height/2, 0, 0, additionalRotation, 1, 1)
-      local brX, brY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      -- Bottom Left, -270°
-      offsetX, offsetY = transformCoordinates(-point.width/2, point.height/2, 0, 0, additionalRotation, 1, 1)
-      local blX, blY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-
-      -- Distance between tl and br corners in pixels on display
-      local dist = math.sqrt((tlX - brX)^2 + (tlY - brY)^2)
-      if dist > 25 then
-        local cornerTemplate = template.corner
-        if template.corner_small ~= nil and dist <= 100 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
-          cornerTemplate = template.corner_small
-        end
-
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropAngle + additionalRotation, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropAngle + additionalRotation - math.pi/2, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropAngle + additionalRotation - math.pi, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropAngle + additionalRotation - 3*math.pi/2, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-      end
-    end
-  end
-
-  return LrView.osFactory():view(viewsTable)
+  return DefaultPointRenderer.buildView(tX, tY, cropAngle + additionalRotation)
 end
 
 --[[
 -- Creates a view with the focus box placed and rotated at the right place
--- As Lightroom does not allow for rotating icons, we get the rotated image from the corresponding file
--- x, y - the center of the icon to be drawn
--- rotation - the rotation angle of the icon in radian
--- iconFileTemplate - the file path of the icon file to be used. %s will be replaced by the rotation angle module angleStep
--- anchorX, anchorY - the position in pixels of the anchor point in the image file
--- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
+-- As Lightroom does not allow for rotating icons, we get the rotated image for the corresponding files
+-- focusPointX, focusPointY - the center of the AF box
+-- rotation - the rotation angle of the cropped image
 --]]
-function DefaultPointRenderer.createPointView(x, y, rotation, iconFileTemplate, anchorX, anchorY, angleStep)
-  local fileName = iconFileTemplate
-  if angleStep ~= nil and angleStep ~= 0 then
-    local fileRotationSuffix = (angleStep * math.floor(0.5 + (math.deg(rotation) % 360) / angleStep)) % 360
-    fileName = string.format(fileName, fileRotationSuffix)
-  end
-
+function DefaultPointRenderer.buildView(focusPointX, focusPointY, rotation)
   local viewFactory = LrView.osFactory()
 
-  local view = viewFactory:view {
-    viewFactory:picture {
-      value = _PLUGIN:resourceId(fileName)
-    },
-    margin_left = x - anchorX,
-    margin_top = y - anchorY,
+  local focusBoxImage = DefaultPointRenderer.focusBoxImage
+
+  local fileName = focusBoxImage["nameTemplate"]
+  if focusBoxImage["angleStep"] ~= nil and focusBoxImage["angleStep"] ~= 0 then
+    local fileRotationSuffix = (focusBoxImage["angleStep"] * math.floor(0.5 + (math.deg(rotation) % 360) / focusBoxImage["angleStep"])) % 360
+    fileName = string.format(fileName, fileRotationSuffix)
+  end
+  log("focusPointFileName: " .. fileName .. "")
+
+  local myBox = viewFactory:picture {
+    value = _PLUGIN:resourceId(fileName)
   }
 
-  return view
+  local boxView = viewFactory:view {
+    myBox,
+    margin_left = focusPointX - focusBoxImage["anchorX"],
+    margin_top = focusPointY - focusBoxImage["anchorY"],
+  }
+
+  return boxView
 end

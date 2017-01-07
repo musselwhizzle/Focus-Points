@@ -21,8 +21,7 @@
 require "DefaultPointRenderer"
 require "PointsUtils"
 require "DefaultDelegates"
-require "CanonDelegates"
-require "FujifilmDelegates"
+require "FujiDelegates"
 require "OlympusDelegates"
 
 local LrErrors = import 'LrErrors'
@@ -32,9 +31,10 @@ PointsRendererFactory = {}
 function PointsRendererFactory.createRenderer(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
-
+  
   log ("cameraMake: " .. cameraMake)
   log ("cameraModel: " .. cameraModel)
+  
 
   if (cameraMake == nil or cameraModel == nil) then
     LrErrors.throwUserError("File doesn't contain camera maker or model")
@@ -46,20 +46,16 @@ function PointsRendererFactory.createRenderer(photo)
   if (cameraMake == "fujifilm") then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = FujifilmDelegates.getAfPoints
-  elseif (cameraMake == "canon") then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = CanonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
   elseif (string.find(cameraMake, "olympus", 1, true)) then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAFPixels = OlympusDelegates.getOlympusAfPoints    
   else
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
     DefaultDelegates.focusPointsMap = pointsMap
     DefaultDelegates.focusPointDimen = pointDimen
-    DefaultPointRenderer.funcGetAfPoints = DefaultDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
   end
 
   DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation
