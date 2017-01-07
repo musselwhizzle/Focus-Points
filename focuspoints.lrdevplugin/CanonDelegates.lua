@@ -104,15 +104,15 @@ function CanonDelegates.getAfPoints(photo, metaData)
     else
       height = afPointHeights[key] * xScale
     end
-    local pointType = "af_inactive"
+    local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
     local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
     local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
     if isInFocus and isSelected then
-      pointType = "af_selected_focus"
+      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
     elseif isInFocus then
-      pointType = "af_focus"
+      pointType = DefaultDelegates.POINTTYPE_AF_INFOCUS
     elseif isSelected then
-      pointType = "af_selected"
+      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
     end
 
     if width > 0 and height > 0 then
