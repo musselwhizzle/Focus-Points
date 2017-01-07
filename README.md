@@ -3,13 +3,13 @@ Focus Points
 
 A plugin for Lightroom to show which focus point was active when the picture was taken. (Currently not working on windows. Hopefully that'll be fixed in a matter of days)
 
-<img src="screens/sample.png" alt="Screenshot" style="width: 200px;"/>
+<img src="screens/sample_1.jpg" alt="Screenshot" style="width: 200px;"/>
 
 
 
 Supported Cameras
 --------
-* Canon cameras with support for AF-Points position and size when possible, directly from the Exif fields
+* Canon cameras with support for AF-Points position and size from the Exif fields when possible
 * Nikon D7200
 * Nikon D800
 * Fuji cameras with support for face recognition when possible - Should work with all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
@@ -25,6 +25,17 @@ Installing
 5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point"
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
+Supported AF-Points
+--------
+Currently, 5 types of AF-points will be displayed :
+
+* <img src="screens/af_selected_infocus.png" alt="AF selected in focus" style="width: 20px;"/> The AF-Point is selected and in focus
+* <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/> The AF-Point is selected
+* <img src="screens/af_infocus.png" alt="AF in focus" style="width: 20px;"/> The AF-Point is in focus
+* <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> The AF-Point is inactive
+* <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face was detected by the camera at this position
+
+Please note that not all cameras save the needed information in the Exifs of the photo. Thus, the accuracy of the displayed points will greatly depend on whether or not your camera supports it.
 
 Adding your own camera
 --------
