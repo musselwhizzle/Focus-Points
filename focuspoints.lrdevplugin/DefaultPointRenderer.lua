@@ -34,6 +34,7 @@ DefaultPointRenderer.funcGetAfPoints = nil
 DefaultPointRenderer.funcGetShotOrientation = nil
 
 --[[
+-- Returns a LrView.osFactory():view containg all needed icons to draw the points returned by DefaultPointRenderer.funcGetAfPoints
 -- photo - the selected catalog photo
 -- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
 --]]
@@ -137,9 +138,12 @@ end
 
 --[[
 -- Creates a view with the focus box placed and rotated at the right place
--- As Lightroom does not allow for rotating icons, we get the rotated image for the corresponding files
--- x, y - the center of the AF box
--- rotation - the rotation angle of the cropped image
+-- As Lightroom does not allow for rotating icons, we get the rotated image from the corresponding file
+-- x, y - the center of the icon to be drawn
+-- rotation - the rotation angle of the icon in radian
+-- iconFileTemplate - the file path of the icon file to be used. %s will be replaced by the rotation angle module angleStep
+-- anchorX, anchorY - the position in pixels of the anchor point in the image file
+-- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
 --]]
 function DefaultPointRenderer.createPointView(x, y, rotation, iconFileTemplate, anchorX, anchorY, angleStep)
   local fileName = iconFileTemplate
@@ -148,10 +152,10 @@ function DefaultPointRenderer.createPointView(x, y, rotation, iconFileTemplate, 
     fileName = string.format(fileName, fileRotationSuffix)
   end
 
-  local f = LrView.osFactory()
+  local viewFactory = LrView.osFactory()
 
-  local view = f:view {
-    f:picture {
+  local view = viewFactory:view {
+    viewFactory:picture {
       value = _PLUGIN:resourceId(fileName)
     },
     margin_left = x - anchorX,
