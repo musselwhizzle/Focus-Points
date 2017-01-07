@@ -29,8 +29,8 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
   local viewFactory = LrView.osFactory()
-  local contentW = appWidth * .7
-  local contentH = appHeight * .7
+  local contentW = appWidth * .5
+  local contentH = appHeight * .5
   
   local photoW
   local photoH
@@ -66,8 +66,24 @@ function FocusPointDialog.createDialog(targetPhoto, overlayView)
     myPhoto, myText,
   }
   
+  local myBox2 = viewFactory:catalog_photo {
+    width = 100, 
+    height = 100,
+    photo = targetPhoto,
+  }
+  
+  local myView1 = viewFactory:view {
+   column, 
+    place = 'overlapping', 
+  }
+  
+  local myView2 = viewFactory:view {
+   overlayView,
+    place = 'overlapping', 
+  }
+  
   local myView = viewFactory:view {
-    column, overlayView, 
+   myView2, myView1,
     place = 'overlapping', 
   }
   

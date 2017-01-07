@@ -31,7 +31,7 @@ require "Utils"
 local function showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
   
-  MetaDataDialog.create()
+ 
   local catalog = LrApplication.activeCatalog()
   local targetPhoto = catalog:getTargetPhoto()
   
@@ -53,9 +53,11 @@ local function showDialog()
           local column1, column2 = splitForColumns(metaData)
         
           dialogScope:done()
-          MetaDataDialog.labels.title = column1
-          MetaDataDialog.data.title = column2
-          --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
+          MetaDataDialog.create("Hello \r\n World", column2)
+          --MetaDataDialog.labels.title = "Foo"
+          --MetaDataDialog.data.title = metaData
+          --MetaDataDialog.labels.title = column1
+          --MetaDataDialog.data.title = column2
         end)
     
       LrTasks.sleep(0)
@@ -85,7 +87,7 @@ function splitForColumns(metaData)
     l = LrStringUtils.trimWhitespace(l)
     v = LrStringUtils.trimWhitespace(v)
     
-    labels = labels .. l .. "\r"
+    labels = labels .. l .. "\r\n"
     values = values .. v .. "\r"
   end
   return labels, values

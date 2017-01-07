@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = false
+isLog = true
 
 
 function splitText(str, delim)

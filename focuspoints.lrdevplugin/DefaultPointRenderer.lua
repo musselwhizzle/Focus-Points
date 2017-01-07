@@ -109,6 +109,7 @@ end
 --]]
 function DefaultPointRenderer.buildView(focusPointX, focusPointY, rotation)
   local viewFactory = LrView.osFactory()
+  log("focusPointX: " .. focusPointX .. ", focusPointY: " .. focusPointY)
 
   local focusBoxImage = DefaultPointRenderer.focusBoxImage
 
@@ -120,7 +121,8 @@ function DefaultPointRenderer.buildView(focusPointX, focusPointY, rotation)
   log("focusPointFileName: " .. fileName .. "")
 
   local myBox = viewFactory:picture {
-    value = _PLUGIN:resourceId(fileName)
+    value = _PLUGIN:resourceId(fileName), 
+    frame_width = 6, 
   }
 
   local boxView = viewFactory:view {
