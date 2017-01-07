@@ -77,7 +77,7 @@ function OlympusDelegates.getAfPoints(photo, metaData)
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = "af_selected_focus",
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
         x = x,
         y = y,
         width = 300,

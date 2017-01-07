@@ -57,7 +57,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = "af_selected_focus",
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
         x = x * xScale,
         y = y * yScale,
         width = 300,
@@ -78,7 +78,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
         local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
         local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
         table.insert(result.points, {
-          pointType = "face",
+          pointType = DefaultDelegates.POINTTYPE_FACE,
           x = (x1 + x2) / 2,
           y = (y1 + y2) / 2,
           width = math.abs(x1 - x2),
