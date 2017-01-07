@@ -33,29 +33,29 @@ DefaultDelegates.POINTTYPE_AF_SELECTED = "af_selected"                    -- The
 DefaultDelegates.POINTTYPE_AF_INACTIVE = "af_inactive"                    -- The AF-point is inactive
 DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A face has been detected
 DefaultDelegates.pointTemplates = {
-  DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = {
+  af_selected_infocus = {
     center = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/focus_point_red_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_red_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
-  DefaultDelegates.POINTTYPE_AF_INFOCUS = {
+  af_infocus = {
     center = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/focus_point_grey_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_grey_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
-  DefaultDelegates.POINTTYPE_AF_SELECTED = {
+  af_selected = {
     corner = { fileTemplate = "assets/imgs/focus_point_redgrey_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_redgrey_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
-  DefaultDelegates.POINTTYPE_AF_INACTIVE = {
+  af_inactive = {
     corner = { fileTemplate = "assets/imgs/focus_point_grey_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_grey_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
-  DefaultDelegates.POINTTYPE_FACE = {
+  face = {
     corner = { fileTemplate = "assets/imgs/focus_point_yellow_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_yellow_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
