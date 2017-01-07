@@ -28,9 +28,19 @@ CanonDelegates = {}
 -- metaData - the metadata as read by exiftool
 --]]
 function CanonDelegates.getAfPoints(photo, metaData)
-  local imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "AF Image Width", "Exif Image Width" })
-  local imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "AF Image Height", "Exif Image Height" })
-  if imageWidth == nil or imageHeight == nil then
+  local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
+
+  local imageWidth
+  local imageHeight
+
+  if cameraModel == "canon eos 5d" then   -- For some reason for this camera, the AF Image Width/Height has to be replaced by Canon Image Width/Height
+    imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Canon Image Width", "Exif Image Width" })
+    imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Canon Image Height", "Exif Image Height" })
+  else
+    imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "AF Image Width", "Exif Image Width" })
+    imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "AF Image Height", "Exif Image Height" })
+  end
+ if imageWidth == nil or imageHeight == nil then
     return nil
   end
 
@@ -90,8 +100,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
   }
 
   for key,value in pairs(afAreaXPositions) do
-    local x = (imageWidth/2 + afAreaXPositions[key]) * xScale
-    local y = (imageHeight/2 + afAreaYPositions[key]) * yScale
+    local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everithing is referenced from the center,
+    local y = (imageHeight/2 - afAreaYPositions[key]) * yScale    -- X positive toward the right and Y positive toward the TOP
     local width = 0
     local height = 0
     if afPointWidths[key] == nil then
