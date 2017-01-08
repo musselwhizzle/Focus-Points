@@ -21,8 +21,10 @@
 require "DefaultPointRenderer"
 require "PointsUtils"
 require "DefaultDelegates"
-require "FujiDelegates"
+require "CanonDelegates"
+require "FujifilmDelegates"
 require "OlympusDelegates"
+require "PanasonicDelegates"
 
 local LrErrors = import 'LrErrors'
 
@@ -31,10 +33,9 @@ PointsRendererFactory = {}
 function PointsRendererFactory.createRenderer(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
-  
+
   log ("cameraMake: " .. cameraMake)
   log ("cameraModel: " .. cameraModel)
-  
 
   if (cameraMake == nil or cameraModel == nil) then
     LrErrors.throwUserError("File doesn't contain camera maker or model")
@@ -46,16 +47,24 @@ function PointsRendererFactory.createRenderer(photo)
   if (cameraMake == "fujifilm") then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAFPixels = FujiDelegates.getFujiAfPoints
+    DefaultPointRenderer.funcGetAfPoints = FujifilmDelegates.getAfPoints
+  elseif (cameraMake == "canon") then
+    DefaultDelegates.focusPointsMap = nil     -- unused
+    DefaultDelegates.focusPointDimen = nil    -- unused
+    DefaultPointRenderer.funcGetAfPoints = CanonDelegates.getAfPoints
   elseif (string.find(cameraMake, "olympus", 1, true)) then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAFPixels = OlympusDelegates.getOlympusAfPoints    
-  else
+    DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints
+  elseif (string.find(cameraMake, "panasonic", 1, true)) then
+    DefaultDelegates.focusPointsMap = nil     -- unused
+    DefaultDelegates.focusPointDimen = nil    -- unused
+    DefaultPointRenderer.funcGetAfPoints = PanasonicDelegates.getAfPoints
+   else
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
     DefaultDelegates.focusPointsMap = pointsMap
     DefaultDelegates.focusPointDimen = pointDimen
-    DefaultPointRenderer.funcGetAFPixels = DefaultDelegates.getDefaultAfPoints
+    DefaultPointRenderer.funcGetAfPoints = DefaultDelegates.getAfPoints
   end
 
   DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation
