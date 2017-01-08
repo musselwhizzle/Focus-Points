@@ -33,7 +33,7 @@
                     Note that on cameras where it is possible to change the size of the focus box,
                     I.E - E-M1, the metadata doesn't show the true size, so all focus boxes will be
                     the same size.
-  2017-01-07 - MJ Fix math bug
+  2017-01-07 - MJ Fix math bug in rotated images
 
 TODO: Verify math by comparing focus point locations with in-camera views. 
 
