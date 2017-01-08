@@ -26,14 +26,20 @@ DefaultDelegates = {}
 DefaultDelegates.focusPointsMap = nil
 DefaultDelegates.focusPointDimen = nil
 DefaultDelegates.metaKeyAfPointUsed = { "AF Points Used", "AF Points Selected", "Primary AF Point" }
+
+DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = "af_selected_infocus"    -- The AF-point is selected and in focus
+DefaultDelegates.POINTTYPE_AF_INFOCUS = "af_infocus"                      -- The AF-point is in focus
+DefaultDelegates.POINTTYPE_AF_SELECTED = "af_selected"                    -- The AF-point is selected but not in focus
+DefaultDelegates.POINTTYPE_AF_INACTIVE = "af_inactive"                    -- The AF-point is inactive
+DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A face has been detected
 DefaultDelegates.pointTemplates = {
-  af_selected_focus = {
+  af_selected_infocus = {
     center = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/focus_point_red_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_red_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
-  af_focus = {
+  af_infocus = {
     center = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/focus_point_grey_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_grey_corner-small_%s.png", anchorX = 23, anchorY = 23 },
@@ -82,7 +88,7 @@ function DefaultDelegates.getAfPoints(photo, metaData)
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = "af_selected_focus",
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
         x = x,
         y = y,
         width = DefaultDelegates.focusPointDimen[1],

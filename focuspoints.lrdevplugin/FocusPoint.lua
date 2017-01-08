@@ -23,6 +23,7 @@ local LrColor = import 'LrColor'
 local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
+local LrErrors = import 'LrErrors'
 
 require "FocusPointDialog"
 require "PointsRendererFactory"
