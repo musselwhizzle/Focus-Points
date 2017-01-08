@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = false
+isLog = true
 
 
 function splitToKeyValue(str, delim)
@@ -73,31 +73,31 @@ end
 
 
 function arrayKeyOf(table, val)
-    for k,v in pairs(table) do
-      log(k .. " | " .. v .. " | " .. val)
-        if v == val then
-          return k
-        end
-    end
-    return nil
+  for k,v in pairs(table) do
+    log(k .. " | " .. v .. " | " .. val)
+      if v == val then
+        return k
+      end
+  end
+  return nil
 end
 
 function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
-    -- Rotation around 0,0
-    local rX = x * math.cos(angle) + y * math.sin(angle)
-    local rY = -x * math.sin(angle) + y * math.cos(angle)
+  -- Rotation around 0,0
+  local rX = x * math.cos(angle) + y * math.sin(angle)
+  local rY = -x * math.sin(angle) + y * math.cos(angle)
 
-    -- Rotation of origin corner
-    local roX = oX * math.cos(angle) + oY * math.sin(angle)
-    local roY = -oX * math.sin(angle) + oY * math.cos(angle)
+  -- Rotation of origin corner
+  local roX = oX * math.cos(angle) + oY * math.sin(angle)
+  local roY = -oX * math.sin(angle) + oY * math.cos(angle)
 
-    -- Translation so the top left corner become the origin
-    local tX = rX - roX
-    local tY = rY - roY
+  -- Translation so the top left corner become the origin
+  local tX = rX - roX
+  local tY = rY - roY
 
-    -- Let's resize everything to match the view
-    tX = tX * scaleX
-    tY = tY * scaleY
+  -- Let's resize everything to match the view
+  tX = tX * scaleX
+  tY = tY * scaleY
 
-    return tX, tY
+  return tX, tY
 end

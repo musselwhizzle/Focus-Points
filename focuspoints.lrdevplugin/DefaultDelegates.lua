@@ -40,8 +40,8 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
   af_selected = {
-    corner = { fileTemplate = "assets/imgs/focus_point_red_corner_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/focus_point_red_corner-small_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/focus_point_redgrey_corner_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/focus_point_redgrey_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
   af_inactive = {
