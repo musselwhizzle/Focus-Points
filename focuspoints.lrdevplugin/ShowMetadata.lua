@@ -98,7 +98,7 @@ function createParts(metaData)
   local num = 1;
   for i in string.gmatch(metaData, "[^\\\n]+") do 
     log("i = " .. i)
-    p = splitText(i, ":")
+    p = stringToKeyValue(i, ":")
     if (p ~= nill) then
       parts[num] = p
       num = num+1

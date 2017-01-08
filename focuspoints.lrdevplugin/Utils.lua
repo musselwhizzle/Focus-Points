@@ -67,7 +67,12 @@ function split(str, delim)
   return t
 end
 
-function splitText(str, delim)
+--[[
+ Splits a string into 2 parts: key and value. 
+ @str  the string to split
+ @delim the character used for splitting the string
+--]]
+function stringToKeyValue(str, delim)
   if str == nill then return nill end
   local index = string.find(str, delim)
   if index == nill then
