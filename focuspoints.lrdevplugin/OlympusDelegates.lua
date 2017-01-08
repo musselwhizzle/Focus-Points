@@ -29,9 +29,13 @@
 
   2017-01-06 - MJ - Test for 'AF Point Selected' in Metadata, assume it's good if found
                     Add basic errorhandling if not found
+  2017-01-07 - MJ Use 'AF Areas' tag to size focus box
+                    Note that on cameras where it is possible to change the size of the focus box,
+                    I.E - E-M1, the metadata doesn't show the true size, so all focus boxes will be
+                    the same size.
+  2017-01-07 - MJ Fix math bug in rotated images
 
-TODO: Verify math by comparing focs point locations Olympus OV3 software
-TODO: Try using 'AF Areas' instead. This should allow display of properly sized focus box
+TODO: Verify math by comparing focus point locations with in-camera views. 
 
 --]]
 
@@ -45,6 +49,7 @@ OlympusDelegates = {}
 -- metaData - the metadata as read by exiftool
 --]]
 function OlympusDelegates.getAfPoints(photo, metaData)
+  -- find selected AF point
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
   if focusPoint == nil then
     LrErrors.throwUserError("Unsupported Olympus Camera or 'AF Point Selected' metadata tag not found.")
@@ -56,23 +61,37 @@ function OlympusDelegates.getAfPoints(photo, metaData)
       LrErrors.throwUserError("Focus point not found in 'AF Point Selected' metadata tag")
       return nil
   end
-  log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint  )
+  log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
   local orgPhotoWidth, orgPhotoHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
       LrErrors.throwUserError("Metadata has no Dimensions")
       return nil
   end
-  log ( "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
+  log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
-  -- Is this really necessary when values are percentages ?
-  local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
-  local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
+  -- determine size of bounding box of AF area in image pixels
+  local afArea = ExifUtils.findFirstMatchingValue(metaData, { "AF Areas" })
+  local afAreaX1, afAreaY1, afAreaX2, afAreaY2 = string.match(afArea, "%((%d+),(%d+)%)%-%((%d+),(%d+)%)" )
+  local afAreaWidth = 300
+  local afAreaHeight = 300 
+  
+  if (afAreaX1 ~= nill and afAreaY1 ~= nill and afAreaX2 ~= nill and afAreaY2 ~= nill ) then
+      afAreaWidth = math.floor((tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth)/255)
+      afAreaHeight = math.floor((tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight)/255)
+  end
+  log ( "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
+
+  -- determine x,y location of center of focus point in image pixels
+  local x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusX) / 100)
+  local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY) / 100)
   if orgPhotoWidth < orgPhotoHeight then
-    x = tonumber(orgPhotoWidth) * tonumber(y) / 100
-    y = tonumber(orgPhotoHeight) * tonumber(x) / 100
+    x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusY) / 100)
+    y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusX) / 100)
   end
 
+  log("FocusXY: " .. x .. ", " .. y)
+  
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
@@ -80,8 +99,8 @@ function OlympusDelegates.getAfPoints(photo, metaData)
         pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
         x = x,
         y = y,
-        width = 300,
-        height = 300
+        width = afAreaWidth,
+        height = afAreaHeight
       }
     }
   }
