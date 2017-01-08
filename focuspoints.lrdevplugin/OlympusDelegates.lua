@@ -32,7 +32,8 @@
   2017-01-07 - MJ Use 'AF Areas' tag to size focus box
                     Note that on cameras where it is possible to change the size of the focus box,
                     I.E - E-M1, the metadata doesn't show the true size, so all focus boxes will be
-                    the same size. 
+                    the same size.
+  2017-01-07 - MJ Fix math bug in rotated images
 
 TODO: Verify math by comparing focus point locations with in-camera views. 
 
@@ -67,7 +68,7 @@ function OlympusDelegates.getAfPoints(photo, metaData)
       LrErrors.throwUserError("Metadata has no Dimensions")
       return nil
   end
-  log ( "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
+  log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
   -- determine size of bounding box of AF area in image pixels
   local afArea = ExifUtils.findFirstMatchingValue(metaData, { "AF Areas" })
@@ -85,10 +86,12 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   local x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusX) / 100)
   local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY) / 100)
   if orgPhotoWidth < orgPhotoHeight then
-    x = math.floor(tonumber(orgPhotoWidth) * tonumber(y) / 100)
-    y = math.floor(tonumber(orgPhotoHeight) * tonumber(x) / 100)
+    x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusY) / 100)
+    y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusX) / 100)
   end
 
+  log("FocusXY: " .. x .. ", " .. y)
+  
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
