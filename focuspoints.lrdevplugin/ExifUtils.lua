@@ -18,18 +18,26 @@ local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
+local LrSystemInfo = import "LrSystemInfo"
 
 ExifUtils = {}
 exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 
+exiftoolWindows = LrPathUtils.child( _PLUGIN.path, "bin" )
+exiftoolWindows = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
+
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
 
-  local cmd = "'"..exiftool .. "' -a -u -g1 -sort '" .. path .. "' > '" .. metaDataFile .. "'";
+  local cmd = "'".. exiftool .. "' -a -u -j '" .. path .. "' > '" .. metaDataFile .. "'";
+  if (WIN_ENV) then
+    cmd = "\"" .. exiftoolWindows .. "\" -a -u -j \"" .. path .. "\" > \"" .. metaDataFile .. "\"";
+  end
+  log("FILE | cmd: " .. cmd .. ", metaDataFile: " .. metaDataFile)
 
   return cmd, metaDataFile
 end
@@ -42,37 +50,16 @@ function ExifUtils.readMetaData(targetPhoto)
   return fileInfo
 end
 
-function ExifUtils.filterInput(str)
-  --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
-  -- FIXME: doesn't strip - or ] correctly
-  local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
-  return result
-end
-
-function ExifUtils.findValue(metaData, key)
-  local parts = ExifUtils.createParts(metaData)
-  local labels = ""
-  local values = ""
-  for k in pairs(parts) do
-    local l = parts[k].key
-    local v = parts[k].value
-    if (l == nill) then l = "" end
-    if (v == nill) then v = "" end
-    l = LrStringUtils.trimWhitespace(l)
-    v = LrStringUtils.trimWhitespace(v)
-    if (key == l) then
-      return v
-    end
-  end
-
-  return nil
-end
-
 function ExifUtils.findFirstMatchingValue(metaData, keys)
   local value = nil
 
   for key,keyword in pairs(keys) do
-    value = ExifUtils.findValue(metaData, keyword)
+    value = metaData[string.gsub(keyword, "%s+", "")]
+    if value == nil then
+      log("EXIF | Searching for " .. keyword .. " [" .. string.gsub(keyword, "%s+", "") .. "] -> NIL")
+    else
+      log("EXIF | Searching for " .. keyword .. " [" .. string.gsub(keyword, "%s+", "") .. "] -> " .. value)
+    end
 
     if value ~= nil and value ~= "(none)" then
       return value
@@ -80,36 +67,4 @@ function ExifUtils.findFirstMatchingValue(metaData, keys)
   end
 
   return nil
-end
-
-function ExifUtils.splitForColumns(metaData)
-  local parts = ExifUtils.createParts(metaData)
-  local labels = ""
-  local values = ""
-  for k in pairs(parts) do
-    local l = parts[k].key
-    local v = parts[k].value
-    if (l == nill) then l = "" end
-    if (v == nill) then v = "" end
-    l = LrStringUtils.trimWhitespace(l)
-    v = LrStringUtils.trimWhitespace(v)
-
-    labels = labels .. l .. "\r"
-    values = values .. v .. "\r"
-  end
-  return labels, values
-
-end
-
-function ExifUtils.createParts(metaData)
-  local parts = {}
-  local num = 0;
-  for i in string.gmatch(metaData, "[^\\\n]+") do
-    p = splitToKeyValue(i, ":")
-    if (p ~= nill) then
-      parts[num] = p
-      num = num+1
-    end
-  end
-  return parts
 end

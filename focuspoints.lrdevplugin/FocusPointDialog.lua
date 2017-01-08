@@ -43,6 +43,11 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
 
 end
 
+--[[
+-- Create the FocusPointDialog view and returns it
+-- targetPhoto - the LrPhoto to be displayed
+-- overlayView - the view containing all the need elements to be drawn over the photo (focus points, etc)
+--]]
 function FocusPointDialog.createDialog(targetPhoto, overlayView)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
@@ -66,7 +71,9 @@ function FocusPointDialog.createDialog(targetPhoto, overlayView)
 
     overlayView,
 
-    place = "overlapping"
+    place = "overlapping",
+    margin_top=0,
+    margin_left=0
   }
 
   return view

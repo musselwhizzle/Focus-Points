@@ -28,6 +28,7 @@ FujifilmDelegates = {}
 -- metaData - the metadata as read by exiftool
 --]]
 function FujifilmDelegates.getAfPoints(photo, metaData)
+  log("-- FujifilmDelegates --")
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, { "Focus Pixel" })
   if focusPoint == nil then
     return nil

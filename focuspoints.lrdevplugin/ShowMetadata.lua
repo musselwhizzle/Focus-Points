@@ -31,32 +31,32 @@ require "Utils"
 local function showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
 
-  MetaDataDialog.create()
   local catalog = LrApplication.activeCatalog()
   local targetPhoto = catalog:getTargetPhoto()
 
   LrTasks.startAsyncTask(function(context)
     --https://forums.adobe.com/thread/359790
     LrFunctionContext.callWithContext("function", function(dialogContext)
-        LrFunctionContext.callWithContext("function2", function(dialogContext2)
-          local dialogScope = LrDialogs.showModalProgressDialog {
-            title = "Loading Data",
-            caption = "Reading Metadata",
-            width = 200,
-            cannotCancel = false,
-            functionContext = dialogContext2,
-          }
-          dialogScope:setIndeterminate()
+      LrFunctionContext.callWithContext("function2", function(dialogContext2)
+        local dialogScope = LrDialogs.showModalProgressDialog {
+          title = "Loading Data",
+          caption = "Reading Metadata",
+          width = 200,
+          cannotCancel = false,
+          functionContext = dialogContext2,
+        }
 
-          local metaData = ExifUtils.readMetaData(targetPhoto)
-          metaData = ExifUtils.filterInput(metaData)
-          local column1, column2 = splitForColumns(metaData)
+        -- Starting to show progess dialog
+        dialogScope:setIndeterminate()
 
-          dialogScope:done()
-          MetaDataDialog.labels.title = column1
-          MetaDataDialog.data.title = column2
-          --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
-        end)
+        local jsonMetaData = ExifUtils.readMetaData(targetPhoto)
+        local keywords, values, keywords_max_length, values_max_length, line_count = splitForColumns(parseJson(jsonMetaData))
+
+        dialogScope:done()
+
+        -- Note that metaDataView is not local because used below
+        metaDataView = MetaDataDialog.createDialog(keywords, values, keywords_max_length, values_max_length, line_count)
+      end)
 
       LrTasks.sleep(0)
       LrDialogs.presentModalDialog {
@@ -64,7 +64,7 @@ local function showDialog()
         resizable = true,
         cancelVerb = "< exclude >",
         actionVerb = "OK",
-        contents = MetaDataDialog.contents
+        contents = metaDataView
       }
 
     end)
@@ -72,42 +72,3 @@ local function showDialog()
 end)
 end
 showDialog()
-
-function splitForColumns(metaData)
-  local parts = createParts(metaData)
-  local labels = ""
-  local values = ""
-  for k in pairs(parts) do
-    local l = parts[k].key
-    local v = parts[k].value
-    if (l == nill) then l = "" end
-    if (v == nill) then v = "" end
-    l = LrStringUtils.trimWhitespace(l)
-    v = LrStringUtils.trimWhitespace(v)
-
-    labels = labels .. l .. "\r"
-    values = values .. v .. "\r"
-  end
-  return labels, values
-
-end
-
-function createParts(metaData)
-  local parts = {}
-  local num = 0;
-  for i in string.gmatch(metaData, "[^\\\n]+") do
-    log("i = " .. i)
-
-    p = splitToKeyValue(i, ":")
-    if p ~= nill then
-      parts[num] = p
-      num = num + 1
-    elseif string.sub(i, 1, 4) == "----" then       -- We have a category, lets create the corresponding parts
-      parts[num] = { ["key"] = "", ["value"] = "" }
-      num = num + 1
-      parts[num] = { ["key"] = "----" .. string.upper(i) .. "----", ["value"] = "" }
-      num = num + 1
-    end
-  end
-  return parts
-end

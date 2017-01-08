@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = true
+isLog = false
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -93,18 +93,43 @@ end
 
 --[[
 -- Searches for a value in a table and returns the corresponding key
--- table - table to search inside
+-- tab - table to search inside
 -- val - value to search for
 --]]
-function arrayKeyOf(table, val)
-  for k,v in pairs(table) do
-    log(k .. " | " .. v .. " | " .. val)
+function arrayKeyOf(tab, val)
+  for k,v in pairs(tab) do
       if v == val then
         return k
       end
   end
   return nil
 end
+
+--[[
+-- Return a table iteraor which iterates through the table keys in alphabetical order
+-- tab - the table to iterate through
+-- comp - a comparison functon to be passed the native table.sort function
+--]]
+function pairsByKeys (tab, comp)
+    local a = {}
+    for key in pairs(tab) do
+        table.insert(a, key)
+    end
+
+    table.sort(a, comp)
+
+    local i = 0      -- iterator variable
+    local iter = function ()   -- iterator function
+      i = i + 1
+      if a[i] == nil then
+        return nil
+      else
+        return a[i], tab[a[i]]
+      end
+    end
+
+    return iter
+  end
 
 --[[
 -- Transform the coordinates around a center point and scale them
@@ -131,4 +156,53 @@ function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
   tY = tY * scaleY
 
   return tX, tY
+end
+
+--[[
+-- Parse a JSON string to a key/value table
+-- metaData - the json string - Does only support FLAT json structures (only on level)
+--]]
+
+function parseJson(str)
+  local parsedTable = {}
+
+  str = string.sub(str, 4, -5) .. ",\n"
+
+  for keyword, value in string.gmatch(str, " *\"([^\"]+)\"\: *\"?([^\r\n\"]*)\"?,\r?\n") do
+    if string.sub(value, -1) == "," then
+      value = string.sub(value, 1, -1)
+    end
+    value = LrStringUtils.trimWhitespace(value)
+    parsedTable[keyword] = value
+  end
+
+  return parsedTable
+end
+
+--[[
+-- Split a key/value table and returns 2 strings being the ordered list of keys and the ordered list of value
+-- as well as the max keyword length, the max value length and the number of lines in both strings
+-- tab - the table
+--]]
+function splitForColumns(tab)
+  local keywords = ""
+  local values = ""
+  local keywords_max_length = 0
+  local values_max_length = 0
+  local line_count = 0
+
+  for keyword, value in pairsByKeys(tab) do
+    if string.len(value) >= 1024 then         -- This might not be needed on mac and other platform but it is on Windows to prevent unwanted wrap
+      value = string.sub(value, 1, 1024)      -- We could check for the platform but limiting to 1K of data for each feld does not seem to be a limitation
+    end
+
+    keywords = keywords .. keyword .. "\n"
+    values = values .. value .. "\n"
+
+    keywords_max_length = math.max(keywords_max_length, string.len(keyword))
+    values_max_length = math.max(values_max_length, string.len(value))
+    line_count = line_count + 1
+  end
+
+  return keywords, values, keywords_max_length, values_max_length, line_count
 end
