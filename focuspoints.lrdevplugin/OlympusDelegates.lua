@@ -29,7 +29,10 @@
 
   2017-01-06 - MJ - Test for 'AF Point Selected' in Metadata, assume it's good if found
                     Add basic errorhandling if not found
-  2017-01-07 - MJ Use AF Areas to size focus box
+  2017-01-07 - MJ Use 'AF Areas' tag to size focus box
+                    Note that on cameras where it is possible to change the size of the focus box,
+                    I.E - E-M1, the metadata doesn't show the true size, so all focus boxes will be
+                    the same size. 
 
 TODO: Verify math by comparing focus point locations with in-camera views. 
 
@@ -57,7 +60,7 @@ function OlympusDelegates.getAfPoints(photo, metaData)
       LrErrors.throwUserError("Focus point not found in 'AF Point Selected' metadata tag")
       return nil
   end
-  log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint  )
+  log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
   local orgPhotoWidth, orgPhotoHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
@@ -66,24 +69,24 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   end
   log ( "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
-  -- determine bouning box of AF area 
+  -- determine size of bounding box of AF area in image pixels
   local afArea = ExifUtils.findFirstMatchingValue(metaData, { "AF Areas" })
   local afAreaX1, afAreaY1, afAreaX2, afAreaY2 = string.match(afArea, "%((%d+),(%d+)%)%-%((%d+),(%d+)%)" )
   local afAreaWidth = 300
   local afAreaHeight = 300 
   
   if (afAreaX1 ~= nill and afAreaY1 ~= nill and afAreaX2 ~= nill and afAreaY2 ~= nill ) then
-      afAreaWidth = (tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth)/255
-      afAreaHeight = (tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight)/255
+      afAreaWidth = math.floor((tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth)/255)
+      afAreaHeight = math.floor((tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight)/255)
   end
   log ( "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
 
-  -- Is this really necessary when values are percentages ?
-  local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
-  local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
+  -- determine x,y location of center of focus point in image pixels
+  local x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusX) / 100)
+  local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY) / 100)
   if orgPhotoWidth < orgPhotoHeight then
-    x = tonumber(orgPhotoWidth) * tonumber(y) / 100
-    y = tonumber(orgPhotoHeight) * tonumber(x) / 100
+    x = math.floor(tonumber(orgPhotoWidth) * tonumber(y) / 100)
+    y = math.floor(tonumber(orgPhotoHeight) * tonumber(x) / 100)
   end
 
   local result = {
