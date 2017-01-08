@@ -1,7 +1,7 @@
 Focus Points
 =======
 
-A plugin for Lightroom to show which focus point was active when the picture was taken. (Currently not working on windows. Hopefully that'll be fixed in a matter of days)
+A plugin for Lightroom (on Mac) to show which focus point was active when the picture was taken.
 
 <img src="screens/sample_1.jpg" alt="Screenshot" style="width: 200px;"/>
 
@@ -57,7 +57,7 @@ If adding a camera which does not needed mapped because the focus point is given
 
 Known Issues
 --------
-1. Not currently working on Windows. Should be fixed soon.
+1. Not currently working on Windows. 
 2. Lightroom has a bug where lrPhoto:getDevelopSettings()["Orientation"] always returns nil. Lightroom does not
 track if you have rotated the photo in development. As such, if the photo was rotated, the focus point could be
 wrong. The code attempts to resolve this, but it's only an attempt.
@@ -69,6 +69,11 @@ TODOs
  * check for "normal" to make sure the width is bigger than the height. if not, prompt
   the user to ask which way the photo was rotated
  * show ExifTool license in plugin
+
+
+Contributing as a Developer
+--------
+Please see the Contributing.md file before being any new work. 
 
 
 License
