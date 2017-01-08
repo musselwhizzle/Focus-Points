@@ -26,34 +26,39 @@ local LrPathUtils = import 'LrPathUtils'
 
 MetaDataDialog = {}
 
-function MetaDataDialog.create()
-
+--[[
+-- Create the MetaDataDialog view and returns it
+-- targetPhoto - the LrPhoto to be displayed
+-- overlayView - the view containing all the need elements to be drawn over the photo (focus points, etc)
+--]]
+function MetaDataDialog.createDialog(keywords, values, keywords_max_length, values_max_length, line_count)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
-  local viewFactory = LrView.osFactory()
-  
-  local myText = viewFactory:static_text {
-    title = "Will place label here",
-    selectable = true, 
-  }
-  
-  local myText2 = viewFactory:static_text {
-    title = "Will place data here",
-    selectable = true, 
-  }
-  
-  local row = viewFactory:row {
-    myText, myText2, 
-    margin_left = 5, 
-  }
-  
-  local scrollView = viewFactory:scrolled_view {
-    row, 
+  local f = LrView.osFactory()
+
+  local view = f:scrolled_view {
+    f:row {
+      f:static_text {
+        title = keywords,
+        selectable = true,
+        width_in_chars = keywords_max_length,
+        height_in_lines = line_count,
+        wrap = false
+      },
+
+      f:static_text {
+        title = values,
+        selectable = true,
+        width_in_chars = values_max_length,
+        height_in_lines = line_count,
+        wrap = false
+      },
+
+      margin_left = 5,
+    },
+
     width = appWidth * .7,
     height = appHeight *.7,
   }
-  
-  MetaDataDialog.contents = scrollView
-  MetaDataDialog.labels = myText
-  MetaDataDialog.data = myText2
-  
+
+  return view
 end

@@ -67,6 +67,7 @@ DefaultDelegates.pointTemplates = {
 -- metaData - the metadata as read by exiftool
 --]]
 function DefaultDelegates.getAfPoints(photo, metaData)
+  log("-- DefaultDelegates --")
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
 
   if focusPoint == nil then
@@ -108,7 +109,11 @@ function DefaultDelegates.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
 
-  local metaOrientation = ExifUtils.findValue(metaData, "Orientation")
+  local metaOrientation = ExifUtils.findFirstMatchingValue(metaData, { "Orientation" })
+  if metaOrientation == nil then
+    return 0
+  end
+
   if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
     return 90     -- 90 CCW   => 90 trigo
   elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then

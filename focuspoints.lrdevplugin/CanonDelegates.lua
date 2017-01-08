@@ -28,6 +28,7 @@ CanonDelegates = {}
 -- metaData - the metadata as read by exiftool
 --]]
 function CanonDelegates.getAfPoints(photo, metaData)
+  log("-- CanonDelegates --")
   local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
 
   local imageWidth

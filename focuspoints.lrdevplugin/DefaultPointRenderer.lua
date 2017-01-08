@@ -40,17 +40,40 @@ DefaultPointRenderer.funcGetShotOrientation = nil
 --]]
 function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayHeight)
   local developSettings = photo:getDevelopSettings()
-  local metaData = ExifUtils.readMetaData(photo)
+
+  local metaData = parseJson(ExifUtils.readMetaData(photo), true)
 
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   local croppedWidth, croppedHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
   local cropAngle = math.rad(developSettings["CropAngle"])
   local cropLeft = developSettings["CropLeft"]
   local cropTop = developSettings["CropTop"]
-  log( "cL: " .. cropLeft .. ", cT: " .. cropTop .. ", cAngle: " .. math.deg(cropAngle) .. "°")
 
   local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
-  log("Shot orientation: " .. shotOrientation)
+  --[[
+  Finally, we CAN get the rotation and mirroring that the user has chosen in LR.
+  To conveniently use it, we should migrate the af positioning algorithm to real matrix transfomations
+
+  local lrRotation = photo:getRawMetadata("orientation")
+  if lrRotation == "AB" then
+    -- Do nothing
+  elseif lrRotation == "BC" then
+    shotOrientation = shotOrientation - 90
+  elseif lrRotation == "CD" then
+    shotOrientation = shotOrientation - 180
+  elseif lrRotation == "DA" then
+    shotOrientation = shotOrientation - 270
+  elseif lrRotation == "BA" then
+    -- 0°, horizontal mirror - Unsupported yet
+  elseif lrRotation == "CB" then
+    -- 90°, horizontal mirror - Unsupported yet
+  elseif lrRotation == "DC" then
+    -- 180°, horizontal mirror - Unsupported yet
+  elseif lrRotation == "AD" then
+    -- 270°, horizontal mirror - Unsupported yet
+  end
+  shotOrientation = shotOrientation % 360
+  --]]
 
   local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, metaData)
   if pointsTable == nil then
@@ -87,7 +110,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     end
     --]]
 
-    log("shotOrientation: " .. shotOrientation .. "°, totalRotation: " .. math.deg(cropAngle + additionalRotation) .. "°")
+    log("AF | x: " .. x .. ", y: " .. y .. ", type: " .. point.pointType .. "")
 
     local template = pointsTable.pointTemplates[point.pointType]
     if template == nil then
@@ -158,6 +181,7 @@ function DefaultPointRenderer.createPointView(x, y, rotation, iconFileTemplate, 
     viewFactory:picture {
       value = _PLUGIN:resourceId(fileName)
     },
+
     margin_left = x - anchorX,
     margin_top = y - anchorY,
   }
