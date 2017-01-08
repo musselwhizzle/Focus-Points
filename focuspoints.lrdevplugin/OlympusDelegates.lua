@@ -29,9 +29,9 @@
 
   2017-01-06 - MJ - Test for 'AF Point Selected' in Metadata, assume it's good if found
                     Add basic errorhandling if not found
+  2017-01-07 - MJ Use AF Areas to size focus box
 
-TODO: Verify math by comparing focs point locations Olympus OV3 software
-TODO: Try using 'AF Areas' instead. This should allow display of properly sized focus box
+TODO: Verify math by comparing focus point locations with in-camera views. 
 
 --]]
 
@@ -45,6 +45,7 @@ OlympusDelegates = {}
 -- metaData - the metadata as read by exiftool
 --]]
 function OlympusDelegates.getAfPoints(photo, metaData)
+  -- find selected AF point
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
   if focusPoint == nil then
     LrErrors.throwUserError("Unsupported Olympus Camera or 'AF Point Selected' metadata tag not found.")
@@ -65,6 +66,18 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   end
   log ( "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
+  -- determine bouning box of AF area 
+  local afArea = ExifUtils.findFirstMatchingValue(metaData, { "AF Areas" })
+  local afAreaX1, afAreaY1, afAreaX2, afAreaY2 = string.match(afArea, "%((%d+),(%d+)%)%-%((%d+),(%d+)%)" )
+  local afAreaWidth = 300
+  local afAreaHeight = 300 
+  
+  if (afAreaX1 ~= nill and afAreaY1 ~= nill and afAreaX2 ~= nill and afAreaY2 ~= nill ) then
+      afAreaWidth = (tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth)/255
+      afAreaHeight = (tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight)/255
+  end
+  log ( "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
+
   -- Is this really necessary when values are percentages ?
   local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
   local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
@@ -80,8 +93,8 @@ function OlympusDelegates.getAfPoints(photo, metaData)
         pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
         x = x,
         y = y,
-        width = 300,
-        height = 300
+        width = afAreaWidth,
+        height = afAreaHeight
       }
     }
   }
