@@ -67,6 +67,20 @@ function split(str, delim)
   return t
 end
 
+function splitText(str, delim)
+  if str == nill then return nill end
+  local index = string.find(str, delim)
+  if index == nill then
+    return nill
+  end
+  local r = {}
+  r.key = string.sub(str, 0, index-1)
+  r.value = string.sub(str, index+1, #str)
+  return r
+end
+
+
+
 --[[
 -- Logging function. If the global variable isLog is false, does nothing
 -- str - string to be sent to the logger

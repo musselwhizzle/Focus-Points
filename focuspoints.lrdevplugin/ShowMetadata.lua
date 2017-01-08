@@ -79,34 +79,29 @@ function splitForColumns(metaData)
   local values = ""
   for k in pairs(parts) do
     local l = parts[k].key
+    
     local v = parts[k].value
     if (l == nill) then l = "" end
     if (v == nill) then v = "" end
     l = LrStringUtils.trimWhitespace(l)
     v = LrStringUtils.trimWhitespace(v)
-
+    
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
   return labels, values
-
+  
 end
 
 function createParts(metaData)
   local parts = {}
-  local num = 0;
-  for i in string.gmatch(metaData, "[^\\\n]+") do
+  local num = 1;
+  for i in string.gmatch(metaData, "[^\\\n]+") do 
     log("i = " .. i)
-
-    p = splitToKeyValue(i, ":")
-    if p ~= nill then
+    p = splitText(i, ":")
+    if (p ~= nill) then
       parts[num] = p
-      num = num + 1
-    elseif string.sub(i, 1, 4) == "----" then       -- We have a category, lets create the corresponding parts
-      parts[num] = { ["key"] = "", ["value"] = "" }
-      num = num + 1
-      parts[num] = { ["key"] = "----" .. string.upper(i) .. "----", ["value"] = "" }
-      num = num + 1
+      num = num+1
     end
   end
   return parts

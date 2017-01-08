@@ -29,7 +29,7 @@ function ExifUtils.getExifCmd(targetPhoto)
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
 
-  local cmd = "'"..exiftool .. "' -a -u -g1 -sort '" .. path .. "' > '" .. metaDataFile .. "'";
+  local cmd = "'"..exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
 
   return cmd, metaDataFile
 end
@@ -38,7 +38,7 @@ function ExifUtils.readMetaData(targetPhoto)
   local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
   LrTasks.execute(cmd)
   local fileInfo = LrFileUtils.readFile(metaDataFile)
-  LrFileUtils.delete(metaDataFile)
+  --LrFileUtils.delete(metaDataFile)
   return fileInfo
 end
 
