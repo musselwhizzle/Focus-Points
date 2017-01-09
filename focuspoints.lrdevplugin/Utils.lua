@@ -140,11 +140,11 @@ end
 
 --[[
 -- Searches for a value in a table and returns the corresponding key
--- table - table to search inside
+-- tab - table to search inside
 -- val - value to search for
 --]]
-function arrayKeyOf(table, val)
-  for k,v in pairs(table) do
+function arrayKeyOf(tab, val)
+  for k,v in pairs(tab) do
     log(k .. " | " .. v .. " | " .. val)
       if v == val then
         return k
@@ -154,7 +154,7 @@ function arrayKeyOf(table, val)
 end
 
 --[[
--- Return a table iteraor which iterates through the table keys in alphabetical order
+-- Return a table iterator which iterates through the table keys in alphabetical order
 -- tab - the table to iterate through
 -- comp - a comparison functon to be passed the native table.sort function
 --]]
