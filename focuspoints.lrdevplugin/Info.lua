@@ -21,7 +21,7 @@ return {
   LrSdkMinimumVersion = 5.0,
 
 	LrToolkitIdentifier = 'com.thewhizzbang.focuspoint',
-	LrPluginName = "Focus Point",
+	LrPluginName = "Focus Point Viewer",
 	
 	LrLibraryMenuItems = { 
     {

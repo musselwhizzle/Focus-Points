@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = true
+isLog = false
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -66,6 +66,25 @@ function split(str, delim)
   end
   return t
 end
+
+--[[
+ Splits a string into 2 parts: key and value. 
+ @str  the string to split
+ @delim the character used for splitting the string
+--]]
+function stringToKeyValue(str, delim)
+  if str == nill then return nill end
+  local index = string.find(str, delim)
+  if index == nill then
+    return nill
+  end
+  local r = {}
+  r.key = string.sub(str, 0, index-1)
+  r.value = string.sub(str, index+1, #str)
+  return r
+end
+
+
 
 --[[
 -- Logging function. If the global variable isLog is false, does nothing
