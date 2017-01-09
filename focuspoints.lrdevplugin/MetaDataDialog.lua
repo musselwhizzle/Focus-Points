@@ -33,11 +33,11 @@ MetaDataDialog = {}
 --]]
 function MetaDataDialog.createDialog(keywords, values, keywords_max_length, values_max_length, line_count)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
-  local f = LrView.osFactory()
+  local viewFactory = LrView.osFactory()
 
-  local view = f:scrolled_view {
-    f:row {
-      f:static_text {
+  local view = viewFactory:scrolled_view {
+    viewFactory:row {
+      viewFactory:static_text {
         title = keywords,
         selectable = true,
         width_in_chars = keywords_max_length,
@@ -45,7 +45,7 @@ function MetaDataDialog.createDialog(keywords, values, keywords_max_length, valu
         wrap = false
       },
 
-      f:static_text {
+      viewFactory:static_text {
         title = values,
         selectable = true,
         width_in_chars = values_max_length,

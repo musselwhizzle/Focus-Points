@@ -46,7 +46,7 @@ function ExifUtils.readMetaData(targetPhoto)
   local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
   LrTasks.execute(cmd)
   local fileInfo = LrFileUtils.readFile(metaDataFile)
-  --LrFileUtils.delete(metaDataFile)
+  LrFileUtils.delete(metaDataFile)
   return fileInfo
 end
 
