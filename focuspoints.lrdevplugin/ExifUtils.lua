@@ -33,9 +33,9 @@ function ExifUtils.getExifCmd(targetPhoto)
   local metaDataFile = LrPathUtils.removeExtension(path)
   metaDataFile = metaDataFile .. "-metadata.txt"
 
-  local cmd = "'" .. exiftool .. "' -a -u -j '" .. path .. "' > '" .. metaDataFile .. "'";
+  local cmd = "'" .. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
   if (WIN_ENV) then
-    cmd = exiftoolWindows .. " -a -u -j \"" .. path .. "\" > \"" .. metaDataFile .. "\"";
+    cmd = "\"" .. exiftoolWindows .. "\" -a -u -sort \"" .. path .. "\" > \"" .. metaDataFile .. "\"";
   end
   log("FILE | cmd: " .. cmd .. ", metaDataFile: " .. metaDataFile)
 
@@ -46,7 +46,7 @@ function ExifUtils.readMetaData(targetPhoto)
   local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
   LrTasks.execute(cmd)
   local fileInfo = LrFileUtils.readFile(metaDataFile)
-  LrFileUtils.delete(metaDataFile)
+  --LrFileUtils.delete(metaDataFile)
   return fileInfo
 end
 

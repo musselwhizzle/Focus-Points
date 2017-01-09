@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = false
+isLog = true
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -68,7 +68,35 @@ function split(str, delim)
 end
 
 --[[
- Splits a string into 2 parts: key and value. 
+-- Split a key/value table and returns 2 strings being the ordered list of keys and the ordered list of value
+-- as well as the max key length, the max value length and the number of lines in both strings
+-- tab - the table
+--]]
+function splitForColumns(tab)
+  local keys = ""
+  local values = ""
+  local keys_max_length = 0
+  local values_max_length = 0
+  local line_count = 0
+
+  for key, value in pairsByKeys(tab) do
+    if string.len(value) >= 1024 then         -- This might not be needed on mac and other platform but it is on Windows to prevent unwanted wrap
+      value = string.sub(value, 1, 1024)      -- We could check for the platform but limiting to 1K of data for each feld does not seem to be a limitation
+    end
+
+    keys = keys .. key .. "\n"
+    values = values .. value .. "\n"
+
+    keys_max_length = math.max(keys_max_length, string.len(key))
+    values_max_length = math.max(values_max_length, string.len(value))
+    line_count = line_count + 1
+  end
+
+  return keys, values, keys_max_length, values_max_length, line_count
+end
+
+--[[
+ Splits a string into 2 parts: key and value.
  @str  the string to split
  @delim the character used for splitting the string
 --]]
@@ -124,6 +152,32 @@ function arrayKeyOf(table, val)
   end
   return nil
 end
+
+--[[
+-- Return a table iteraor which iterates through the table keys in alphabetical order
+-- tab - the table to iterate through
+-- comp - a comparison functon to be passed the native table.sort function
+--]]
+function pairsByKeys (tab, comp)
+    local a = {}
+    for key in pairs(tab) do
+        table.insert(a, key)
+    end
+
+    table.sort(a, comp)
+
+    local i = 0      -- iterator variable
+    local iter = function ()   -- iterator function
+      i = i + 1
+      if a[i] == nil then
+        return nil
+      else
+        return a[i], tab[a[i]]
+      end
+    end
+
+    return iter
+  end
 
 --[[
 -- Transform the coordinates around a center point and scale them
