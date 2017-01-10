@@ -49,25 +49,34 @@ function FocusPointDialog.createDialog(targetPhoto, overlayView)
 
   -- temporary for dev'ing
   local developSettings = targetPhoto:getDevelopSettings()
-
-  local f = LrView.osFactory()
-
-  local view = f:view {
-    f:column {
-      f:catalog_photo {
-        width = photoWidth,
-        height = photoHeight,
-        photo = targetPhoto,
-      },
-      f:static_text {
-        title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
-      },
-    },
-
-    overlayView,
-
-    place = "overlapping"
+  
+  local viewFactory = LrView.osFactory()
+  local myPhoto = viewFactory:catalog_photo {
+    width = photoWidth, 
+    height = photoHeight,
+    photo = targetPhoto,
   }
-
-  return view
+  local myText = viewFactory:static_text {
+    title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
+  }
+      
+  local column = viewFactory:column {
+    myPhoto, myText,
+  }
+  
+  local myView = viewFactory:view {
+    column, overlayView, 
+    place = 'overlapping', 
+  }
+  
+  -- windows has the z index switched
+  if (WIN_ENV) then
+    myView = viewFactory:view {
+      overlayView, column, 
+      place = 'overlapping', 
+    }
+  end
+  
+  return myView
+  
 end
