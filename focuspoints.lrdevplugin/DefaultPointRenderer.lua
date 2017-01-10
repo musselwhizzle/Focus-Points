@@ -117,7 +117,9 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     local x, y = resultingTransformation(point.x, point.y)
     log("DPR | point.x: " .. point.x .. ", point.y: " .. point.y .. ", x: " .. x .. ", y: " .. y .. "")
     if template.center ~= nil then
-      table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + lrRotation, lrMirroring, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
+      if x >= 0 and x <= photoDisplayWidth and y >= 0 and y <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + lrRotation, lrMirroring, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
+      end
     end
 
     -- Inserting corner icon views
@@ -139,10 +141,18 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
           cornerTemplate = template.corner_small
         end
 
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + lrRotation,                lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + lrRotation - math.pi/2,    lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + lrRotation - math.pi,      lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + lrRotation - 3*math.pi/2,  lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        if tlX >= 0 and tlX <= photoDisplayWidth and tlY >= 0 and tlY <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + lrRotation,                lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        end
+        if trX >= 0 and trX <= photoDisplayWidth and trY >= 0 and trY <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + lrRotation - math.pi/2,    lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        end
+        if brX >= 0 and brX <= photoDisplayWidth and brY >= 0 and brY <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + lrRotation - math.pi,      lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        end
+        if blX >= 0 and blX <= photoDisplayWidth and blY >= 0 and blY <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + lrRotation - 3*math.pi/2,  lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        end
       end
     end
   end
@@ -173,7 +183,7 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
   end
 
   local fileName = string.format(iconFileTemplate, fileRotationStr .. fileMirroringStr)
-log(fileName)
+
   local viewFactory = LrView.osFactory()
 
   local view = viewFactory:view {
