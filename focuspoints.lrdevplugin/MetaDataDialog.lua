@@ -26,19 +26,28 @@ local LrPathUtils = import 'LrPathUtils'
 
 MetaDataDialog = {}
 
-function MetaDataDialog.create()
+function MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
+  
+  log("column1" .. column1)
+  log("column2" .. column2)
 
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local viewFactory = LrView.osFactory()
   
   local myText = viewFactory:static_text {
-    title = "Will place label here",
+    title = column1,
     selectable = true, 
+    width_in_chars = column1Length,
+    height_in_lines = numLines, 
+    wrap = false,
   }
   
   local myText2 = viewFactory:static_text {
-    title = "Will place data here",
+    title = column2,
     selectable = true, 
+    width_in_chars = column2Length,
+    height_in_lines = numLines, 
+    wrap = false,
   }
   
   local row = viewFactory:row {
@@ -52,8 +61,6 @@ function MetaDataDialog.create()
     height = appHeight *.7,
   }
   
-  MetaDataDialog.contents = scrollView
-  MetaDataDialog.labels = myText
-  MetaDataDialog.data = myText2
+  return scrollView
   
 end
