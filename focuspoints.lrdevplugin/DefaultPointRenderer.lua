@@ -43,7 +43,10 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local developSettings = photo:getDevelopSettings()
   local metaData = ExifUtils.readMetaDataAsTable(photo)
 
-  local lrRotation, lrMirroring = DefaultPointRenderer.getLightroomGridTransformation(photo)
+  local lrRotation, lrMirroring = DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
+
+  -- We read the rotation written in the Exif just for logging has it happens that the lightrrom rotation already includes it which is pretty handy
+  -- We should remove the funcGetShotOrientation later if this is proven to work
   local exifRotation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
 
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
@@ -161,11 +164,13 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
 end
 
 --[[
--- Creates a view with the focus box placed and rotated at the right place
--- As Lightroom does not allow for rotating icons, we get the rotated image from the corresponding file
+-- Creates a view with the focus box placed rotated and mirrored at the right place. As Lightroom does not allow
+--   for rotating icons right now nor for drawing, we get the rotated/mirrored image from the corresponding file name template
+-- The method replaces the first '%s' in the iconFileTemplate by the passed rotation rounded to angleStep steps
+--   and adds "-mirrored" to this if horizontalMirroring == -1
 -- x, y - the center of the icon to be drawn
 -- rotation - the rotation angle of the icon in radian
--- horizontalMirroring - false or true
+-- horizontalMirroring - 0 or -1
 -- iconFileTemplate - the file path of the icon file to be used. %s will be replaced by the rotation angle module angleStep
 -- anchorX, anchorY - the position in pixels of the anchor point in the image file
 -- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
@@ -204,7 +209,7 @@ end
 -- - rotation in rad in trigonometric sense
 -- - horizontal mirroring (0 -> none, -1 -> yes)
 --]]
-function DefaultPointRenderer.getLightroomGridTransformation(photo)
+function DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
   local lrRotation = photo:getRawMetadata("orientation")
   if lrRotation == nil or lrRotation == "AB" then
     return 0, 0
