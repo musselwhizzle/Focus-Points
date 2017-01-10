@@ -95,7 +95,7 @@ function splitForColumns(metaData)
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
-  return labels, values, maxLabelLength, maxValuesLength, numOfLines
+  return labels, values, maxLabelsLength, maxValuesLength, numOfLines
   
 end
 
