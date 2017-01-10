@@ -18,11 +18,15 @@ local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
+local LrSystemInfo = import "LrSystemInfo"
 
 ExifUtils = {}
 exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")
+
+exiftoolWindows = LrPathUtils.child( _PLUGIN.path, "bin" )
+exiftoolWindows = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
 
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
@@ -30,7 +34,12 @@ function ExifUtils.getExifCmd(targetPhoto)
   metaDataFile = metaDataFile .. "-metadata.txt"
 
   local cmd = "'"..exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
-
+  if (WIN_ENV) then
+    -- windows needs " around the entire command and then " around each path
+    -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt"" 
+    cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""';
+  end
+  
   return cmd, metaDataFile
 end
 
@@ -87,8 +96,8 @@ function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
 end
 
 function ExifUtils.filterInput(str)
-  --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
+  local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
   -- FIXME: doesn't strip - or ] correctly
-  local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
+  --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
   return result
 end
