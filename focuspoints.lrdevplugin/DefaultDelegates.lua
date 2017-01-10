@@ -68,34 +68,66 @@ DefaultDelegates.pointTemplates = {
 --]]
 function DefaultDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
+  local result = nil, nil
 
+  -- If the typical AF point data is not present, check for an absolute value
   if focusPoint == nil then
-    LrErrors.throwUserError("Unable to find any AF point info within the file.")
-    return nil, nil
-  end
+    local afAreaXPosition = ExifUtils.findFirstMatchingValue(metaData, {"AF Area X Position"})
+    local afAreaYPosition = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Y Position"})
+    local afAreaWidth = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Width"})
+    local afAreaHeight = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Height"})
 
-  if DefaultDelegates.focusPointsMap[focusPoint] == nil then
-    LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
-    return nil, nil
-  end
+    if (nil == afAreaXPosition) or (nil == afAreaYPosition) then
+      LrErrors.throwUserError("Unable to find any AF point info within the file.")
+      return nil, nil
+    end
 
-  -- TODO: The addition of the dimension should be removed once all config files have been
-  -- updated to reflect the center of the focus points
-  local x = DefaultDelegates.focusPointsMap[focusPoint][1] + (.5 * DefaultDelegates.focusPointDimen[1])
-  local y = DefaultDelegates.focusPointsMap[focusPoint][2] + (.5 * DefaultDelegates.focusPointDimen[2])
+    if nil == afAreaWidth then
+      afAreaWidth = DefaultDelegates.focusPointDimen[1]
+    end
 
-  local result = {
-    pointTemplates = DefaultDelegates.pointTemplates,
-    points = {
-      {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
-        x = x,
-        y = y,
-        width = DefaultDelegates.focusPointDimen[1],
-        height = DefaultDelegates.focusPointDimen[2]
+    if nil == afAreaHeight then
+      afAreaHeight = DefaultDelegates.focusPointDimen[2]
+    end
+
+    result = {
+      pointTemplates = DefaultDelegates.pointTemplates,
+      points = {
+        {
+          pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+          x = afAreaXPosition,
+          y = afAreaYPosition,
+          width = afAreaWidth,
+          height = afAreaHeight
+        }
       }
     }
-  }
+  else
+    -- OK typical AF points have been found
+
+    if DefaultDelegates.focusPointsMap[focusPoint] == nil then
+      LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
+      return nil, nil
+    end
+
+    -- TODO: The addition of the dimension should be removed once all config files have been
+    -- updated to reflect the center of the focus points
+    local x = DefaultDelegates.focusPointsMap[focusPoint][1] + (.5 * DefaultDelegates.focusPointDimen[1])
+    local y = DefaultDelegates.focusPointsMap[focusPoint][2] + (.5 * DefaultDelegates.focusPointDimen[2])
+
+    result = {
+      pointTemplates = DefaultDelegates.pointTemplates,
+      points = {
+        {
+          pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+          x = x,
+          y = y,
+          width = DefaultDelegates.focusPointDimen[1],
+          height = DefaultDelegates.focusPointDimen[2]
+        }
+      }
+    }
+  end
 
   return result
 end
