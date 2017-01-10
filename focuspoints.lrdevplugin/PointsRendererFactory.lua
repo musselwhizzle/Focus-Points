@@ -25,6 +25,7 @@ require "CanonDelegates"
 require "FujifilmDelegates"
 require "OlympusDelegates"
 require "PanasonicDelegates"
+require "NikonDuplicates"
 
 local LrErrors = import 'LrErrors'
 
@@ -34,15 +35,24 @@ function PointsRendererFactory.createRenderer(photo)
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
 
-  log ("cameraMake: " .. cameraMake)
-  log ("cameraModel: " .. cameraModel)
-
   if (cameraMake == nil or cameraModel == nil) then
     LrErrors.throwUserError("File doesn't contain camera maker or model")
   end
 
   cameraMake = string.lower(cameraMake)
   cameraModel = string.lower(cameraModel)
+  
+  log ("cameraMake: " .. cameraMake)
+  log ("cameraModel: " .. cameraModel)
+  
+  -- some cameras have the same mapping as other camera
+  -- check the cameraModel and switch it to a known map if it's a duplicate
+  if (cameraMake == "nikon corporation") then
+    local duplicateModel = NikonDuplicates[cameraModel]
+    if (duplicateModel ~= nil) then
+      cameraModel = duplicateModel
+    end
+  end
 
   if (cameraMake == "fujifilm") then
     DefaultDelegates.focusPointsMap = nil     -- unused
@@ -61,7 +71,7 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = PanasonicDelegates.getAfPoints
    else
-    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo)
+    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
     DefaultDelegates.focusPointsMap = pointsMap
     DefaultDelegates.focusPointDimen = pointDimen
     DefaultPointRenderer.funcGetAfPoints = DefaultDelegates.getAfPoints
@@ -72,10 +82,16 @@ function PointsRendererFactory.createRenderer(photo)
   return DefaultPointRenderer
 end
 
-function PointsRendererFactory.getFocusPoints(photo)
-  local cameraMake = string.lower(photo:getFormattedMetadata("cameraMake"))
-  local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
-
+--[[
+  Method to get the focus point maps from the text files. The params 
+  passed in may be changed from what the camera reports. For instance, if the camera is a Nikon D7100
+  the cameraModel will be passed as "nikon d7200" since they share the same
+  focus point map.
+  
+  cameraMake - make of the camera
+  cameraModel - make of the camera
+--]]
+function PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
   local focusPoints, focusPointDimens = PointsUtils.readIntoTable(cameraMake, cameraModel .. ".txt")
 
   if (focusPoints == nil) then
