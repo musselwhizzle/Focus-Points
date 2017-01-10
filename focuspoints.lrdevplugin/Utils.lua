@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = true
+isLog = false
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
