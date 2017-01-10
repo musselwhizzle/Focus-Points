@@ -40,7 +40,7 @@ DefaultPointRenderer.funcGetShotOrientation = nil
 --]]
 function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayHeight)
   local developSettings = photo:getDevelopSettings()
-  local metaData = ExifUtils.readMetaData(photo)
+  local metaData = ExifUtils.readMetaDataAsTable(photo)
 
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   local croppedWidth, croppedHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))

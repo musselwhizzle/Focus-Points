@@ -42,74 +42,53 @@ function ExifUtils.readMetaData(targetPhoto)
   return fileInfo
 end
 
+--[[
+-- Transforms the output of ExifUtils.readMetaData and returns a key/value lua Table
+-- targetPhoto - LrPhoto to extract the Exif from
+--]]
+function ExifUtils.readMetaDataAsTable(targetPhoto)
+  local metaData = ExifUtils.readMetaData(targetPhoto)
+  if metaData == nil then
+    return nil
+  end
+
+  local parsedTable = {}
+
+  for keyword, value in string.gmatch(metaData, "([^\:]+)\:([^\r\n]*)\r?\n") do
+    keyword = LrStringUtils.trimWhitespace(keyword)
+    value = LrStringUtils.trimWhitespace(value)
+    parsedTable[keyword] = value
+    log("EXIF | Parsed '" .. keyword .. "' = '" .. value .. "'")
+  end
+
+  return parsedTable
+end
+
+--[[
+-- Returns the first value of "keys" that could be found within the metaDataTable table
+-- Ignores nil and "(none)" as valid values
+-- metaDataTable - the medaData key/value table
+-- keys - the keys to be search for in order of importance
+--]]
+function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
+  local exifValue = nil
+
+  for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
+    exifValue = metaDataTable[value]
+
+    if exifValue ~= nil and exifValue ~= "(none)" then
+      log("EXIF | Searching for " .. value .. " -> " .. exifValue)
+      return exifValue
+    end
+  end
+
+  log("EXIF | Searching for { " .. table.concat(keys, " ") .. " returned nothing")
+  return nil
+end
+
 function ExifUtils.filterInput(str)
   --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
   -- FIXME: doesn't strip - or ] correctly
   local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
   return result
-end
-
-function ExifUtils.findValue(metaData, key)
-  local parts = ExifUtils.createParts(metaData)
-  local labels = ""
-  local values = ""
-  for k in pairs(parts) do
-    local l = parts[k].key
-    local v = parts[k].value
-    if (l == nill) then l = "" end
-    if (v == nill) then v = "" end
-    l = LrStringUtils.trimWhitespace(l)
-    v = LrStringUtils.trimWhitespace(v)
-    if (key == l) then
-      return v
-    end
-  end
-
-  return nil
-end
-
-function ExifUtils.findFirstMatchingValue(metaData, keys)
-  local value = nil
-
-  for key,keyword in pairs(keys) do
-    value = ExifUtils.findValue(metaData, keyword)
-
-    if value ~= nil and value ~= "(none)" then
-      return value
-    end
-  end
-
-  return nil
-end
-
-function ExifUtils.splitForColumns(metaData)
-  local parts = ExifUtils.createParts(metaData)
-  local labels = ""
-  local values = ""
-  for k in pairs(parts) do
-    local l = parts[k].key
-    local v = parts[k].value
-    if (l == nill) then l = "" end
-    if (v == nill) then v = "" end
-    l = LrStringUtils.trimWhitespace(l)
-    v = LrStringUtils.trimWhitespace(v)
-
-    labels = labels .. l .. "\r"
-    values = values .. v .. "\r"
-  end
-  return labels, values
-
-end
-
-function ExifUtils.createParts(metaData)
-  local parts = {}
-  local num = 0;
-  for i in string.gmatch(metaData, "[^\\\n]+") do
-    p = splitToKeyValue(i, ":")
-    if (p ~= nill) then
-      parts[num] = p
-      num = num+1
-    end
-  end
-  return parts
 end
