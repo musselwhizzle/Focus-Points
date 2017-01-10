@@ -89,6 +89,9 @@ function splitForColumns(metaData)
     maxValuesLength = math.max(maxValuesLength, string.len(v))
     numOfLines = numOfLines + 1
     
+    --log("l: " .. l)
+    --log("v: " .. v)
+    
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end

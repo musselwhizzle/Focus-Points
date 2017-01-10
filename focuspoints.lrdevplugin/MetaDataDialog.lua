@@ -57,8 +57,8 @@ function MetaDataDialog.create(column1, column2, column1Length, column2Length, n
   
   local scrollView = viewFactory:scrolled_view {
     row, 
-    width = appWidth * .7,
-    height = appHeight *.7,
+    width = appWidth * .5,
+    height = appHeight *.5,
   }
   
   return scrollView
