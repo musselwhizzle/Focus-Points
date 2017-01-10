@@ -26,6 +26,7 @@ local LrColor = import 'LrColor'
 local LrErrors = import 'LrErrors'
 
 require "ExifUtils"
+a = require "affine"
 
 DefaultPointRenderer = {}
 
@@ -42,15 +43,58 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local developSettings = photo:getDevelopSettings()
   local metaData = ExifUtils.readMetaDataAsTable(photo)
 
+  local lrRotation, lrMirroring = DefaultPointRenderer.getLightroomGridTransformation(photo)
+  local exifRotation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
+
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
-  local croppedWidth, croppedHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  local cropAngle = math.rad(developSettings["CropAngle"])
+  local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+  if lrRotation == math.pi/2 or lrRotation == -math.pi/2 then
+    -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
+    -- In this methods, width and height refer to the original width and height
+    local tmp = originalHeight
+    originalHeight = originalWidth
+    originalWidth = tmp
+
+    tmp = cropHeight
+    cropHeight = cropWidth
+    cropWidth = tmp
+  end
+  local cropRotation = math.rad(developSettings["CropAngle"])
   local cropLeft = developSettings["CropLeft"]
   local cropTop = developSettings["CropTop"]
-  log( "cL: " .. cropLeft .. ", cT: " .. cropTop .. ", cAngle: " .. math.deg(cropAngle) .. "°")
 
-  local shotOrientation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
-  log("Shot orientation: " .. shotOrientation)
+  log("DPR | originalDimensions: " .. originalWidth .. " x " .. originalHeight .. ", cropDimensions: " .. cropWidth .. " x " .. cropHeight .. ", displayDimensions: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
+  log("DPR | exifRotation: " .. math.deg(exifRotation) .. "°, lrRotation: " .. math.deg(lrRotation) .. "°, lrMirroring: " .. lrMirroring)
+  log("DPR | cropRotation: " .. math.deg(cropRotation) .. "°, cropLeft: " .. cropLeft .. ", cropTop: " .. cropTop)
+
+
+  -- Calculating transformations
+  local cropTransformation = a.rotate(-cropRotation) * a.trans(-cropLeft * originalWidth, -cropTop * originalHeight)
+
+  local lrRotationTransformation
+  local lrMirroringTransformation
+  local displayScalingTransformation
+  if lrRotation == math.pi/2 then
+    lrRotationTransformation = a.trans(0, photoDisplayHeight) * a.rotate(-lrRotation)
+    displayScalingTransformation = a.scale(photoDisplayHeight / cropWidth, photoDisplayWidth / cropHeight)
+  elseif lrRotation == -math.pi/2 then
+    lrRotationTransformation = a.trans(photoDisplayWidth, 0) * a.rotate(-lrRotation)
+    displayScalingTransformation = a.scale(photoDisplayHeight / cropWidth, photoDisplayWidth / cropHeight)
+  elseif lrRotation == math.pi then
+    lrRotationTransformation = a.trans(photoDisplayWidth, photoDisplayHeight) * a.rotate(-lrRotation)
+    displayScalingTransformation = a.scale(photoDisplayWidth / cropWidth, photoDisplayHeight / cropHeight)
+  else
+    lrRotationTransformation = a.trans(0, 0)
+    displayScalingTransformation = a.scale(photoDisplayWidth / cropWidth, photoDisplayHeight / cropHeight)
+  end
+
+  if lrMirroring == -1 then
+    lrMirroringTransformation = a.trans(photoDisplayWidth, 0) * a.scale(-1, 1)
+  else
+    lrMirroringTransformation = a.scale(1, 1)
+  end
+
+  local resultingTransformation = lrMirroringTransformation * (lrRotationTransformation * (displayScalingTransformation * cropTransformation))
 
   local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, metaData)
   if pointsTable == nil then
@@ -63,32 +107,6 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   }
 
   for key, point in pairs(pointsTable.points) do
-    local originalX = point.x
-    local originalY = point.y
-
-    local x = originalX
-    local y = originalY
-
-    --[[ lightroom does not report if a photo has been rotated. Code below
-          make sure the rotation matches the expected width and height --]]
-    local additionalRotation = 0
-    if shotOrientation == 90 then
-      x = originalY
-      y = originalHeight - originalX
-      cropLeft = developSettings["CropTop"]
-      cropTop = 1 - developSettings["CropRight"]
-      additionalRotation = math.pi / 2
-    elseif shotOrientation == 270 then
-      x = originalWidth - originalY
-      y = originalX
-      cropLeft = 1 - developSettings["CropBottom"]
-      cropTop = developSettings["CropLeft"]
-      additionalRotation = -math.pi / 2
-    end
-    --]]
-
-    log("shotOrientation: " .. shotOrientation .. "°, totalRotation: " .. math.deg(cropAngle + additionalRotation) .. "°")
-
     local template = pointsTable.pointTemplates[point.pointType]
     if template == nil then
       LrErrors.throwUserError("Point template " .. point.pointType .. " could not be found.")
@@ -96,26 +114,22 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     end
 
     -- Inserting center icon view
-    local cX, cY
+    local x, y = resultingTransformation(point.x, point.y)
+    log("DPR | point.x: " .. point.x .. ", point.y: " .. point.y .. ", x: " .. x .. ", y: " .. y .. "")
     if template.center ~= nil then
-      cX, cY = transformCoordinates(x, y, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      table.insert(viewsTable, DefaultPointRenderer.createPointView(cX, cY, cropAngle + additionalRotation, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
+      table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + lrRotation, lrMirroring, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
     end
 
     -- Inserting corner icon views
     if template.corner ~= nil then
       -- Top Left, 0°
-      local offsetX, offsetY = transformCoordinates(-point.width/2, -point.height/2, 0, 0, additionalRotation, 1, 1)
-      local tlX, tlY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
+      local tlX, tlY = resultingTransformation(point.x - point.width/2, point.y - point.height/2)
       -- Top Right, -90°
-      offsetX, offsetY = transformCoordinates(point.width/2, -point.height/2, 0, 0, additionalRotation, 1, 1)
-      local trX, trY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      -- Bottom Right, -180°
-      offsetX, offsetY = transformCoordinates(point.width/2, point.height/2, 0, 0, additionalRotation, 1, 1)
-      local brX, brY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
-      -- Bottom Left, -270°
-      offsetX, offsetY = transformCoordinates(-point.width/2, point.height/2, 0, 0, additionalRotation, 1, 1)
-      local blX, blY = transformCoordinates(x + offsetX, y + offsetY, cropLeft * originalWidth, cropTop * originalHeight, cropAngle, photoDisplayWidth / croppedWidth, photoDisplayHeight / croppedHeight)
+      local trX, trY = resultingTransformation(point.x + point.width/2, point.y - point.height/2)
+       -- Bottom Right, -180°
+      local brX, brY = resultingTransformation(point.x + point.width/2, point.y + point.height/2)
+       -- Bottom Left, -270°
+      local blX, blY = resultingTransformation(point.x - point.width/2, point.y + point.height/2)
 
       -- Distance between tl and br corners in pixels on display
       local dist = math.sqrt((tlX - brX)^2 + (tlY - brY)^2)
@@ -125,10 +139,10 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
           cornerTemplate = template.corner_small
         end
 
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropAngle + additionalRotation, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropAngle + additionalRotation - math.pi/2, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropAngle + additionalRotation - math.pi, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropAngle + additionalRotation - 3*math.pi/2, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + lrRotation,                lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + lrRotation - math.pi/2,    lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + lrRotation - math.pi,      lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + lrRotation - 3*math.pi/2,  lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
       end
     end
   end
@@ -141,17 +155,25 @@ end
 -- As Lightroom does not allow for rotating icons, we get the rotated image from the corresponding file
 -- x, y - the center of the icon to be drawn
 -- rotation - the rotation angle of the icon in radian
+-- horizontalMirroring - false or true
 -- iconFileTemplate - the file path of the icon file to be used. %s will be replaced by the rotation angle module angleStep
 -- anchorX, anchorY - the position in pixels of the anchor point in the image file
 -- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
 --]]
-function DefaultPointRenderer.createPointView(x, y, rotation, iconFileTemplate, anchorX, anchorY, angleStep)
-  local fileName = iconFileTemplate
+function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
+  local fileRotationStr = ""
+  local fileMirroringStr = ""
+
   if angleStep ~= nil and angleStep ~= 0 then
-    local fileRotationSuffix = (angleStep * math.floor(0.5 + (math.deg(rotation) % 360) / angleStep)) % 360
-    fileName = string.format(fileName, fileRotationSuffix)
+    fileRotationStr = (angleStep * math.floor(0.5 + (math.deg(rotation) % 360) / angleStep)) % 360
   end
 
+  if horizontalMirroring == -1 then
+    fileMirroringStr = "-mirrored"
+  end
+
+  local fileName = string.format(iconFileTemplate, fileRotationStr .. fileMirroringStr)
+log(fileName)
   local viewFactory = LrView.osFactory()
 
   local view = viewFactory:view {
@@ -163,4 +185,37 @@ function DefaultPointRenderer.createPointView(x, y, rotation, iconFileTemplate, 
   }
 
   return view
+end
+
+--[[
+-- Takes a LrPhoto and returns the rotation and horizontal mirroring that the use has set in Lightroom (generaly in grid mode)
+-- photo - the LrPhoto to calculate the values from
+-- returns:
+-- - rotation in rad in trigonometric sense
+-- - horizontal mirroring (0 -> none, -1 -> yes)
+--]]
+function DefaultPointRenderer.getLightroomGridTransformation(photo)
+  local lrRotation = photo:getRawMetadata("orientation")
+  if lrRotation == nil or lrRotation == "AB" then
+    return 0, 0
+  elseif lrRotation == "BC" then
+    return -math.pi/2, 0
+  elseif lrRotation == "CD" then
+    return math.pi, 0
+  elseif lrRotation == "DA" then
+    return math.pi/2, 0
+
+  -- Same with horizontal mirroring
+  elseif lrRotation == "BA" then
+    return 0, -1
+  elseif lrRotation == "CB" then
+    return -math.pi/2, -1
+  elseif lrRotation == "DC" then
+    return math.pi, -1
+  elseif lrRotation == "AD" then
+    return math.pi/2, -1
+  end
+
+  log("DPR | We should never get there with an lrRotation = " .. lrRotation)
+  return 0, 0
 end
