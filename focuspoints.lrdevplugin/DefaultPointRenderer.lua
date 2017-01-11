@@ -43,7 +43,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local developSettings = photo:getDevelopSettings()
   local metaData = ExifUtils.readMetaDataAsTable(photo)
 
-  local lrRotation, lrMirroring = DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
+  local userRotation, userMirroring = DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
 
   -- We read the rotation written in the Exif just for logging has it happens that the lightrrom rotation already includes it which is pretty handy
   -- We should remove the funcGetShotOrientation later if this is proven to work
@@ -51,7 +51,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
 
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  if lrRotation == 90 or lrRotation == -90 then
+  if userRotation == 90 or userRotation == -90 then
     -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
     -- In this methods, width and height refer to the original width and height
     local tmp = originalHeight
@@ -67,37 +67,37 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local cropTop = developSettings["CropTop"]
 
   log("DPR | originalDimensions: " .. originalWidth .. " x " .. originalHeight .. ", cropDimensions: " .. cropWidth .. " x " .. cropHeight .. ", displayDimensions: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
-  log("DPR | exifRotation: " .. exifRotation .. "°, lrRotation: " .. lrRotation .. "°, lrMirroring: " .. lrMirroring)
+  log("DPR | exifRotation: " .. exifRotation .. "°, userRotation: " .. userRotation .. "°, userMirroring: " .. userMirroring)
   log("DPR | cropRotation: " .. cropRotation .. "°, cropLeft: " .. cropLeft .. ", cropTop: " .. cropTop)
 
 
   -- Calculating transformations
   local cropTransformation = a.rotate(math.rad(-cropRotation)) * a.trans(-cropLeft * originalWidth, -cropTop * originalHeight)
 
-  local lrRotationTransformation
-  local lrMirroringTransformation
+  local userRotationTransformation
+  local userMirroringTransformation
   local displayScalingTransformation
-  if lrRotation == 90 then
-    lrRotationTransformation = a.trans(0, photoDisplayHeight) * a.rotate(math.rad(-lrRotation))
+  if userRotation == 90 then
+    userRotationTransformation = a.trans(0, photoDisplayHeight) * a.rotate(math.rad(-userRotation))
     displayScalingTransformation = a.scale(photoDisplayHeight / cropWidth, photoDisplayWidth / cropHeight)
-  elseif lrRotation == -90 then
-    lrRotationTransformation = a.trans(photoDisplayWidth, 0) * a.rotate(math.rad(-lrRotation))
+  elseif userRotation == -90 then
+    userRotationTransformation = a.trans(photoDisplayWidth, 0) * a.rotate(math.rad(-userRotation))
     displayScalingTransformation = a.scale(photoDisplayHeight / cropWidth, photoDisplayWidth / cropHeight)
-  elseif lrRotation == 180 then
-    lrRotationTransformation = a.trans(photoDisplayWidth, photoDisplayHeight) * a.rotate(math.rad(-lrRotation))
+  elseif userRotation == 180 then
+    userRotationTransformation = a.trans(photoDisplayWidth, photoDisplayHeight) * a.rotate(math.rad(-userRotation))
     displayScalingTransformation = a.scale(photoDisplayWidth / cropWidth, photoDisplayHeight / cropHeight)
   else
-    lrRotationTransformation = a.trans(0, 0)
+    userRotationTransformation = a.trans(0, 0)
     displayScalingTransformation = a.scale(photoDisplayWidth / cropWidth, photoDisplayHeight / cropHeight)
   end
 
-  if lrMirroring == -1 then
-    lrMirroringTransformation = a.trans(photoDisplayWidth, 0) * a.scale(-1, 1)
+  if userMirroring == -1 then
+    userMirroringTransformation = a.trans(photoDisplayWidth, 0) * a.scale(-1, 1)
   else
-    lrMirroringTransformation = a.scale(1, 1)
+    userMirroringTransformation = a.scale(1, 1)
   end
 
-  local resultingTransformation = lrMirroringTransformation * (lrRotationTransformation * (displayScalingTransformation * cropTransformation))
+  local resultingTransformation = userMirroringTransformation * (userRotationTransformation * (displayScalingTransformation * cropTransformation))
 
   local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, metaData)
   if pointsTable == nil then
@@ -121,7 +121,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     log("DPR | point.x: " .. point.x .. ", point.y: " .. point.y .. ", x: " .. x .. ", y: " .. y .. "")
     if template.center ~= nil then
       if x >= 0 and x <= photoDisplayWidth and y >= 0 and y <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + lrRotation, lrMirroring, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + userRotation, userMirroring, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
       end
     end
 
@@ -145,16 +145,16 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
         end
 
         if tlX >= 0 and tlX <= photoDisplayWidth and tlY >= 0 and tlY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + lrRotation, lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + userRotation, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
         end
         if trX >= 0 and trX <= photoDisplayWidth and trY >= 0 and trY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + lrRotation - 90, lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + userRotation - 90, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
         end
         if brX >= 0 and brX <= photoDisplayWidth and brY >= 0 and brY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + lrRotation - 180, lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + userRotation - 180, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
         end
         if blX >= 0 and blX <= photoDisplayWidth and blY >= 0 and blY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + lrRotation - 270, lrMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + userRotation - 270, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
         end
       end
     end
@@ -210,27 +210,27 @@ end
 -- - horizontal mirroring (0 -> none, -1 -> yes)
 --]]
 function DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
-  local lrRotation = photo:getRawMetadata("orientation")
-  if lrRotation == nil or lrRotation == "AB" then
+  local userRotation = photo:getRawMetadata("orientation")
+  if userRotation == nil or userRotation == "AB" then
     return 0, 0
-  elseif lrRotation == "BC" then
+  elseif userRotation == "BC" then
     return -90, 0
-  elseif lrRotation == "CD" then
+  elseif userRotation == "CD" then
     return 180, 0
-  elseif lrRotation == "DA" then
+  elseif userRotation == "DA" then
     return 90, 0
 
   -- Same with horizontal mirroring
-  elseif lrRotation == "BA" then
+  elseif userRotation == "BA" then
     return 0, -1
-  elseif lrRotation == "CB" then
+  elseif userRotation == "CB" then
     return -90, -1
-  elseif lrRotation == "DC" then
+  elseif userRotation == "DC" then
     return 180, -1
-  elseif lrRotation == "AD" then
+  elseif userRotation == "AD" then
     return 90, -1
   end
 
-  log("DPR | We should never get there with an lrRotation = " .. lrRotation)
+  log("DPR | We should never get there with an userRotation = " .. userRotation)
   return 0, 0
 end
