@@ -200,6 +200,7 @@ end
 function DefaultPointRenderer.getNormalizedDimensions(photo)
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+  local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
   if userRotation == 90 or userRotation == -90 then
     -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
