@@ -43,7 +43,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local developSettings = photo:getDevelopSettings()
   local metaData = ExifUtils.readMetaDataAsTable(photo)
 
-  local userRotation, userMirroring = DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
+  local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
   -- We read the rotation written in the Exif just for logging has it happens that the lightrrom rotation already includes it which is pretty handy
   -- We should remove the funcGetShotOrientation later if this is proven to work
@@ -203,13 +203,13 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
 end
 
 --[[
--- Takes a LrPhoto and returns the rotation and horizontal mirroring that the use has set in Lightroom (generaly in grid mode)
+-- Takes a LrPhoto and returns the rotation and horizontal mirroring that the user has choosen  in Lightroom (generaly in grid mode)
 -- photo - the LrPhoto to calculate the values from
 -- returns:
 -- - rotation in degrees in trigonometric sense
 -- - horizontal mirroring (0 -> none, -1 -> yes)
 --]]
-function DefaultPointRenderer.getLightroomRotationAndMirroring(photo)
+function DefaultPointRenderer.getUserRotationAndMirroring(photo)
   local userRotation = photo:getRawMetadata("orientation")
   if userRotation == nil or userRotation == "AB" then
     return 0, 0
