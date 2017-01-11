@@ -74,6 +74,7 @@ function DefaultDelegates.getAfPoints(photo, metaData)
   if focusPoint == nil then
     result = DefaultDelegates.getLiveViewAfPoints(photo, metaData)
     if (result == nil) then
+      -- TODO: throwing errors here makes the code hard to reuse. would be better to just return an error string
       LrErrors.throwUserError("The Auto Focus Points not be found within the metadata.")
     end
   else
