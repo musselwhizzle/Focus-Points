@@ -43,25 +43,13 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local developSettings = photo:getDevelopSettings()
   local metaData = ExifUtils.readMetaDataAsTable(photo)
 
+  local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
   -- We read the rotation written in the Exif just for logging has it happens that the lightrrom rotation already includes it which is pretty handy
   -- We should remove the funcGetShotOrientation later if this is proven to work
   local exifRotation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
 
-  local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
-  local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  if userRotation == 90 or userRotation == -90 then
-    -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
-    -- In this methods, width and height refer to the original width and height
-    local tmp = originalHeight
-    originalHeight = originalWidth
-    originalWidth = tmp
-
-    tmp = cropHeight
-    cropHeight = cropWidth
-    cropWidth = tmp
-  end
   local cropRotation = developSettings["CropAngle"]
   local cropLeft = developSettings["CropLeft"]
   local cropTop = developSettings["CropTop"]
@@ -200,6 +188,32 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
   }
 
   return view
+end
+
+--[[
+-- Takes a LrPhoto and returns the normalized original dimensions and cropped dimensions uninfluenced by the rotation
+-- photo - the LrPhoto to calculate the values from
+-- returns:
+-- - originalWidth, originalHeight - original dimensions in unrotated position
+-- - cropWidth, cropHeight - cropped dimensions in unrotated position
+--]]
+function DefaultPointRenderer.getNormalizedDimensions(photo)
+  local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
+  local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+
+  if userRotation == 90 or userRotation == -90 then
+    -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
+    -- In this methods, width and height refer to the original width and height
+    local tmp = originalHeight
+    originalHeight = originalWidth
+    originalWidth = tmp
+
+    tmp = cropHeight
+    cropHeight = cropWidth
+    cropWidth = tmp
+  end
+
+  return originalWidth, originalHeight, cropWidth, cropHeight
 end
 
 --[[
