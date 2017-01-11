@@ -128,7 +128,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
       local dist = math.sqrt((tlX - brX)^2 + (tlY - brY)^2)
       if dist > 25 then
         local cornerTemplate = template.corner
-        if template.corner_small ~= nil and dist <= 100 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
+        if template.corner_small ~= nil and dist <= 60 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
           cornerTemplate = template.corner_small
         end
 
