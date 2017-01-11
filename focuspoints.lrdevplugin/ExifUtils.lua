@@ -36,10 +36,10 @@ function ExifUtils.getExifCmd(targetPhoto)
   local cmd = "'"..exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
   if (WIN_ENV) then
     -- windows needs " around the entire command and then " around each path
-    -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt"" 
+    -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
     cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""';
   end
-  
+
   return cmd, metaDataFile
 end
 
@@ -67,7 +67,7 @@ function ExifUtils.readMetaDataAsTable(targetPhoto)
     keyword = LrStringUtils.trimWhitespace(keyword)
     value = LrStringUtils.trimWhitespace(value)
     parsedTable[keyword] = value
-    log("EXIF | Parsed '" .. keyword .. "' = '" .. value .. "'")
+    --log("EXIF | Parsed '" .. keyword .. "' = '" .. value .. "'")
   end
 
   return parsedTable
@@ -91,7 +91,7 @@ function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
     end
   end
 
-  log("EXIF | Searching for { " .. table.concat(keys, " ") .. " returned nothing")
+  log("EXIF | Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
   return nil
 end
 

@@ -35,7 +35,7 @@
                     the same size.
   2017-01-07 - MJ Fix math bug in rotated images
 
-TODO: Verify math by comparing focus point locations with in-camera views. 
+TODO: Verify math by comparing focus point locations with in-camera views.
 
 --]]
 
@@ -63,35 +63,29 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   end
   log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
-  local orgPhotoWidth, orgPhotoHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
       LrErrors.throwUserError("Metadata has no Dimensions")
       return nil
   end
   log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
+  local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
+  local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
+  log("FocusXY: " .. x .. ", " .. y)
+
   -- determine size of bounding box of AF area in image pixels
   local afArea = ExifUtils.findFirstMatchingValue(metaData, { "AF Areas" })
   local afAreaX1, afAreaY1, afAreaX2, afAreaY2 = string.match(afArea, "%((%d+),(%d+)%)%-%((%d+),(%d+)%)" )
   local afAreaWidth = 300
-  local afAreaHeight = 300 
-  
+  local afAreaHeight = 300
+
   if (afAreaX1 ~= nill and afAreaY1 ~= nill and afAreaX2 ~= nill and afAreaY2 ~= nill ) then
-      afAreaWidth = math.floor((tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth)/255)
-      afAreaHeight = math.floor((tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight)/255)
+      afAreaWidth = math.abs(tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth) / 255
+      afAreaHeight = math.abs(tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight) / 255
   end
   log ( "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
 
-  -- determine x,y location of center of focus point in image pixels
-  local x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusX) / 100)
-  local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY) / 100)
-  if orgPhotoWidth < orgPhotoHeight then
-    x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusY) / 100)
-    y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusX) / 100)
-  end
-
-  log("FocusXY: " .. x .. ", " .. y)
-  
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
