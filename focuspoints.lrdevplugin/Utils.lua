@@ -25,13 +25,14 @@ local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrLogger = import 'LrLogger'
 local LrStringUtils = import "LrStringUtils"
+local LrPrefs = import "LrPrefs"
 
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = false
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -87,11 +88,15 @@ end
 
 
 --[[
--- Logging function. If the global variable isLog is false, does nothing
+-- Logging function. If the pref enableLogging is false, does nothing
 -- str - string to be sent to the logger
 --]]
 function log(str)
-  if (isLog) then
+  if prefs.enableLogging == nil then
+    prefs.enableLogging = false
+  end
+
+  if (prefs.enableLogging) then
     myLogger:warn(str)
   end
 end
