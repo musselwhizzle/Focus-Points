@@ -31,7 +31,6 @@ require "Utils"
 local function showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
 
-  MetaDataDialog.create()
   local catalog = LrApplication.activeCatalog()
   local targetPhoto = catalog:getTargetPhoto()
 
@@ -50,12 +49,9 @@ local function showDialog()
 
           local metaData = ExifUtils.readMetaData(targetPhoto)
           metaData = ExifUtils.filterInput(metaData)
-          local column1, column2 = splitForColumns(metaData)
+          column1, column2, column1Length, column2Length, numLines = splitForColumns(metaData)
 
           dialogScope:done()
-          MetaDataDialog.labels.title = column1
-          MetaDataDialog.data.title = column2
-          --MetaDataDialog.labels.title = "parts: "  .. parts[1].key
         end)
 
       LrTasks.sleep(0)
@@ -64,7 +60,7 @@ local function showDialog()
         resizable = true,
         cancelVerb = "< exclude >",
         actionVerb = "OK",
-        contents = MetaDataDialog.contents
+        contents = MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
       }
 
     end)
@@ -77,6 +73,9 @@ function splitForColumns(metaData)
   local parts = createParts(metaData)
   local labels = ""
   local values = ""
+  local maxLabelsLength = 0
+  local maxValuesLength = 0
+  local numOfLines = 0;
   for k in pairs(parts) do
     local l = parts[k].key
     
@@ -86,10 +85,17 @@ function splitForColumns(metaData)
     l = LrStringUtils.trimWhitespace(l)
     v = LrStringUtils.trimWhitespace(v)
     
+    maxLabelsLength = math.max(maxLabelsLength, string.len(l))
+    maxValuesLength = math.max(maxValuesLength, string.len(v))
+    numOfLines = numOfLines + 1
+    
+    --log("l: " .. l)
+    --log("v: " .. v)
+    
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
-  return labels, values
+  return labels, values, maxLabelsLength, maxValuesLength, numOfLines
   
 end
 
