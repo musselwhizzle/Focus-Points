@@ -25,7 +25,8 @@ require "Utils"
 DefaultDelegates = {}
 DefaultDelegates.focusPointsMap = nil
 DefaultDelegates.focusPointDimen = nil
-DefaultDelegates.metaKeyAfPointUsed = { "AF Points Used", "AF Points Selected", "Primary AF Point" }
+DefaultDelegates.metaKeyAfPointUsed = { "AF Points Used"}
+DefaultDelegates.metaKeyAfPointSelected = { "AF Points Selected", "Primary AF Point" }
 
 DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = "af_selected_infocus"    -- The AF-point is selected and in focus
 DefaultDelegates.POINTTYPE_AF_INFOCUS = "af_infocus"                      -- The AF-point is in focus
@@ -67,12 +68,12 @@ DefaultDelegates.pointTemplates = {
 -- metaData - the metadata as read by exiftool
 --]]
 function DefaultDelegates.getAfPoints(photo, metaData)
-  local focusPoint = ExifUtils.findFirstMatchingValue(metaData, {"AF Points Used"}) 
+  local focusPoint = ExifUtils.findFirstMatchingValue(metaData, DefaultDelegates.metaKeyAfPointUsed) 
   local afPointType = nil
   if (focusPoint ~= nil) then
     afPointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
   else 
-    focusPoint = ExifUtils.findFirstMatchingValue(metaData, {"AF Points Selected", "Primary AF Point" })
+    focusPoint = ExifUtils.findFirstMatchingValue(metaData, DefaultDelegates.metaKeyAfPointSelected)
     if (focusPoint ~= nil) then
       afPointType = DefaultDelegates.POINTTYPE_AF_SELECTED
     end
