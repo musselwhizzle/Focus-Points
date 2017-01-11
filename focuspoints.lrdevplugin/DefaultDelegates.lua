@@ -68,46 +68,19 @@ DefaultDelegates.pointTemplates = {
 --]]
 function DefaultDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
-  local result = nil, nil
+  local result = nil
 
   -- If the typical AF point data is not present, check for an absolute value
   if focusPoint == nil then
-    local afAreaXPosition = ExifUtils.findFirstMatchingValue(metaData, {"AF Area X Position"})
-    local afAreaYPosition = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Y Position"})
-    local afAreaWidth = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Width"})
-    local afAreaHeight = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Height"})
-
-    if (nil == afAreaXPosition) or (nil == afAreaYPosition) then
-      LrErrors.throwUserError("Unable to find any AF point info within the file.")
-      return nil, nil
+    result = DefaultDelegates.getLiveViewAfPoints(photo, metaData)
+    if (result == nil) then
+      LrErrors.throwUserError("The Auto Focus Points not be found within the metadata.")
     end
-
-    if nil == afAreaWidth then
-      afAreaWidth = DefaultDelegates.focusPointDimen[1]
-    end
-
-    if nil == afAreaHeight then
-      afAreaHeight = DefaultDelegates.focusPointDimen[2]
-    end
-
-    result = {
-      pointTemplates = DefaultDelegates.pointTemplates,
-      points = {
-        {
-          pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
-          x = afAreaXPosition,
-          y = afAreaYPosition,
-          width = afAreaWidth,
-          height = afAreaHeight
-        }
-      }
-    }
   else
     -- OK typical AF points have been found
-
     if DefaultDelegates.focusPointsMap[focusPoint] == nil then
       LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
-      return nil, nil
+      return nil
     end
 
     -- TODO: The addition of the dimension should be removed once all config files have been
@@ -129,6 +102,45 @@ function DefaultDelegates.getAfPoints(photo, metaData)
     }
   end
 
+  return result
+end
+
+--[[
+  Function to get the autofocus points and focus size of the camera when shot in liveview mode
+  returns typical points table
+--]]
+function DefaultDelegates.getLiveViewAfPoints(photo, metaData)
+  local afAreaXPosition = ExifUtils.findFirstMatchingValue(metaData, {"AF Area X Position"})
+  local afAreaYPosition = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Y Position"})
+  local afAreaWidth = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Width"})
+  local afAreaHeight = ExifUtils.findFirstMatchingValue(metaData, {"AF Area Height"})
+
+  if (nil == afAreaXPosition) or (nil == afAreaYPosition) then
+    --LrErrors.throwUserError("Unable to find any AF point info within the file.")
+    return nil
+  end
+
+  if nil == afAreaWidth then
+    afAreaWidth = DefaultDelegates.focusPointDimen[1]
+  end
+
+  if nil == afAreaHeight then
+    afAreaHeight = DefaultDelegates.focusPointDimen[2]
+  end
+
+  result = {
+    pointTemplates = DefaultDelegates.pointTemplates,
+    points = {
+      {
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+        x = afAreaXPosition,
+        y = afAreaYPosition,
+        width = afAreaWidth,
+        height = afAreaHeight
+      }
+    }
+  }
+  
   return result
 end
 
