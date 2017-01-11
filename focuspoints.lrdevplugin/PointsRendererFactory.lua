@@ -70,7 +70,7 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = PanasonicDelegates.getAfPoints
-   else
+  else
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
     DefaultDelegates.focusPointsMap = pointsMap
     DefaultDelegates.focusPointDimen = pointDimen

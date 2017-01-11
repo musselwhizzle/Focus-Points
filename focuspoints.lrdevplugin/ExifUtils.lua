@@ -78,16 +78,18 @@ end
 -- Ignores nil and "(none)" as valid values
 -- metaDataTable - the medaData key/value table
 -- keys - the keys to be search for in order of importance
+-- return 1. value of the first key match, 2. which key was used
 --]]
 function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
   local exifValue = nil
 
+  
   for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
     exifValue = metaDataTable[value]
 
     if exifValue ~= nil and exifValue ~= "(none)" then
       log("EXIF | Searching for " .. value .. " -> " .. exifValue)
-      return exifValue
+      return exifValue, key
     end
   end
 

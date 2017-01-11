@@ -67,42 +67,53 @@ DefaultDelegates.pointTemplates = {
 -- metaData - the metadata as read by exiftool
 --]]
 function DefaultDelegates.getAfPoints(photo, metaData)
-  local focusPoint = ExifUtils.findFirstMatchingValue(metaData, DefaultDelegates.metaKeyAfPointUsed)
+  local focusPoint = ExifUtils.findFirstMatchingValue(metaData, {"AF Points Used"}) 
+  local afPointType = nil
+  if (focusPoint ~= nil) then
+    afPointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
+  else 
+    focusPoint = ExifUtils.findFirstMatchingValue(metaData, {"AF Points Selected", "Primary AF Point" })
+    if (focusPoint ~= nil) then
+      afPointType = DefaultDelegates.POINTTYPE_AF_SELECTED
+    end
+  end
+  
+  -- if we still haven't found a focus point, try getting it from the liveview mode
+  if (focusPoint == nil) then
+    local liveViewResult = DefaultDelegates.getLiveViewAfPoints(photo, metaData)
+    if (liveViewResult == nil) then
+      -- give up. can't find focus point information
+      return "Could not find focus point data in photo"
+    else 
+      return liveViewResult
+    end
+  end
+  
+  -- typical AF points have been found
   local result = nil
-
-  -- If the typical AF point data is not present, check for an absolute value
-  if focusPoint == nil then
-    result = DefaultDelegates.getLiveViewAfPoints(photo, metaData)
-    if (result == nil) then
-      -- TODO: throwing errors here makes the code hard to reuse. would be better to just return an error string
-      LrErrors.throwUserError("The Auto Focus Points not be found within the metadata.")
-    end
-  else
-    -- OK typical AF points have been found
-    if DefaultDelegates.focusPointsMap[focusPoint] == nil then
-      LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
-      return nil
-    end
-
-    -- TODO: The addition of the dimension should be removed once all config files have been
-    -- updated to reflect the center of the focus points
-    local x = DefaultDelegates.focusPointsMap[focusPoint][1] + (.5 * DefaultDelegates.focusPointDimen[1])
-    local y = DefaultDelegates.focusPointsMap[focusPoint][2] + (.5 * DefaultDelegates.focusPointDimen[2])
-
-    result = {
-      pointTemplates = DefaultDelegates.pointTemplates,
-      points = {
-        {
-          pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
-          x = x,
-          y = y,
-          width = DefaultDelegates.focusPointDimen[1],
-          height = DefaultDelegates.focusPointDimen[2]
-        }
-      }
-    }
+  focusPoint = DefaultDelegates.normalizeFocusPointName(focusPoint)
+  if DefaultDelegates.focusPointsMap[focusPoint] == nil then
+    LrErrors.throwUserError("The AF-Point " .. focusPoint .. " could not be found within the file.")
+    return nil
   end
 
+  -- TODO: The addition of the dimension should be removed once all config files have been
+  -- updated to reflect the center of the focus points
+  local x = DefaultDelegates.focusPointsMap[focusPoint][1] + (.5 * DefaultDelegates.focusPointDimen[1])
+  local y = DefaultDelegates.focusPointsMap[focusPoint][2] + (.5 * DefaultDelegates.focusPointDimen[2])
+
+  result = {
+    pointTemplates = DefaultDelegates.pointTemplates,
+    points = {
+      {
+        pointType = afPointType,
+        x = x,
+        y = y,
+        width = DefaultDelegates.focusPointDimen[1],
+        height = DefaultDelegates.focusPointDimen[2]
+      }
+    }
+  }
   return result
 end
 
@@ -143,6 +154,19 @@ function DefaultDelegates.getLiveViewAfPoints(photo, metaData)
   }
   
   return result
+end
+
+--[[
+  At random times, Nikon adds the word "(Center") to it's focus points. Strip all of this 
+  out. (Shame on you Nikon)
+  @focusPoint - the focus point such as C6 or B1 or E2
+  @return - normalized focus point name - C6 (Center) will return as C6
+--]]
+function DefaultDelegates.normalizeFocusPointName(focusPoint)
+  if (string.find(focusPoint, "Center") ~= nil) then
+    focusPoint = string.sub(focusPoint, 1, 2)
+  end
+  return focusPoint
 end
 
 --[[
