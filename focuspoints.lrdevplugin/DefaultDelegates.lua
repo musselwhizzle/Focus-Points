@@ -84,7 +84,8 @@ function DefaultDelegates.getAfPoints(photo, metaData)
     local liveViewResult = DefaultDelegates.getLiveViewAfPoints(photo, metaData)
     if (liveViewResult == nil) then
       -- give up. can't find focus point information
-      return "Could not find focus point data in photo"
+      LrErrors.throwUserError("Could not find Auto Focus data within the file.")
+      return nil
     else 
       return liveViewResult
     end
