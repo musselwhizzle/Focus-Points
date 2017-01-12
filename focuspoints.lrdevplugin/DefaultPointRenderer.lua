@@ -32,7 +32,6 @@ DefaultPointRenderer = {}
 
 --[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
 DefaultPointRenderer.funcGetAfPoints = nil
-DefaultPointRenderer.funcGetShotOrientation = nil
 
 --[[
 -- Returns a LrView.osFactory():view containg all needed icons to draw the points returned by DefaultPointRenderer.funcGetAfPoints
@@ -47,8 +46,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
   -- We read the rotation written in the Exif just for logging has it happens that the lightrrom rotation already includes it which is pretty handy
-  -- We should remove the funcGetShotOrientation later if this is proven to work
-  local exifRotation = DefaultPointRenderer.funcGetShotOrientation(photo, metaData)
+  local exifRotation = DefaultPointRenderer.getShotOrientation(photo, metaData)
 
   local cropRotation = developSettings["CropAngle"]
   local cropLeft = developSettings["CropLeft"]
@@ -236,7 +234,10 @@ function DefaultPointRenderer.getUserRotationAndMirroring(photo)
   local userRotation = photo:getRawMetadata("orientation")
   if userRotation == nil then
     logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
-    return 0, 0
+
+    -- Falling back by trying to find the information with exifs.
+    -- This is not working when the user rotates or mirrors the image within lightroom
+    return DefaultPointRenderer.getShotOrientation(photo), 0
   elseif userRotation == "AB" then
     return 0, 0
   elseif userRotation == "BC" then
@@ -259,4 +260,31 @@ function DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
   logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
   return 0, 0
+end
+
+--[[
+  -- method figures out the orientation the photo was shot at by looking at the metadata
+  -- returns the rotation in degrees in trigonometric sense
+--]]
+function DefaultPointRenderer.getShotOrientation(photo)
+  local metaData = ExifUtils.readMetaDataAsTable(photo)
+  local dimens = photo:getFormattedMetadata("dimensions")
+  local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
+
+  local metaOrientation = ExifUtils.findFirstMatchingValue(metaData, { "Orientation" })
+  if metaOrientation == nil then
+    return 0
+  end
+
+  if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
+    return 90     -- 90° CCW
+  elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
+    return -90    -- 270° CCW
+  elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
+    return -90    -- 90° CW
+  elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
+    return 90     -- 270° CCW
+  end
+
+  return 0
 end

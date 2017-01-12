@@ -172,29 +172,3 @@ function DefaultDelegates.normalizeFocusPointName(focusPoint)
   end
   return focusPoint
 end
-
---[[
-  -- method figures out the orientation the photo was shot at by looking at the metadata
-  -- returns the rotation in degrees in trigonometric sense
---]]
-function DefaultDelegates.getShotOrientation(photo, metaData)
-  local dimens = photo:getFormattedMetadata("dimensions")
-  local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
-
-  local metaOrientation = ExifUtils.findFirstMatchingValue(metaData, { "Orientation" })
-  if metaOrientation == nil then
-    return 0
-  end
-
-  if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
-    return 90     -- 90° CCW
-  elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
-    return -90    -- 270° CCW
-  elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
-    return -90    -- 90° CW
-  elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
-    return 90     -- 270° CCW
-  end
-
-  return 0
-end
