@@ -36,12 +36,14 @@ DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A f
 DefaultDelegates.pointTemplates = {
   af_selected_infocus = {
     center = { fileTemplate = "assets/imgs/focus_point_red-fat_center_%s.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/focus_point_red-fat_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_red-fat_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
   },
   af_infocus = {
     center = { fileTemplate = "assets/imgs/focus_point_red-fat_center_%s.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/focus_point_black_corner_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/focus_point_black_corner-small_%s.png", anchorX = 23, anchorY = 23 },
     angleStep = 5
