@@ -36,10 +36,10 @@ function ExifUtils.getExifCmd(targetPhoto)
   local cmd = "'"..exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
   if (WIN_ENV) then
     -- windows needs " around the entire command and then " around each path
-    -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt"" 
+    -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
     cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""';
   end
-  
+
   return cmd, metaDataFile
 end
 
@@ -67,7 +67,7 @@ function ExifUtils.readMetaDataAsTable(targetPhoto)
     keyword = LrStringUtils.trimWhitespace(keyword)
     value = LrStringUtils.trimWhitespace(value)
     parsedTable[keyword] = value
-    log("EXIF | Parsed '" .. keyword .. "' = '" .. value .. "'")
+    --log("EXIF | Parsed '" .. keyword .. "' = '" .. value .. "'")
   end
 
   return parsedTable
@@ -78,20 +78,22 @@ end
 -- Ignores nil and "(none)" as valid values
 -- metaDataTable - the medaData key/value table
 -- keys - the keys to be search for in order of importance
+-- return 1. value of the first key match, 2. which key was used
 --]]
 function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
   local exifValue = nil
 
+  
   for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
     exifValue = metaDataTable[value]
 
     if exifValue ~= nil and exifValue ~= "(none)" then
       log("EXIF | Searching for " .. value .. " -> " .. exifValue)
-      return exifValue
+      return exifValue, key
     end
   end
 
-  log("EXIF | Searching for { " .. table.concat(keys, " ") .. " returned nothing")
+  log("EXIF | Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
   return nil
 end
 

@@ -25,11 +25,11 @@
 
     Where:
         AF Point Position appears to be location of AF point from upper left corner (X%, Y%)
- 
+
   2017-01-06 - MJ - Test for 'AF Point Position' in Metadata, assume it's good if found
                     Add basic errorhandling if not found
-  
-TODO: Verify math by comparing focus point locations with in-camera views. 
+
+TODO: Verify math by comparing focus point locations with in-camera views.
 
 --]]
 
@@ -57,21 +57,16 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   end
   log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
-  local orgPhotoWidth, orgPhotoHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
       LrErrors.throwUserError("Metadata has no Dimensions")
       return nil
   end
-  log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
+  log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX) .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY))
 
   -- determine x,y location of center of focus point in image pixels
-  local x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusX))
-  local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY))
-  if orgPhotoWidth < orgPhotoHeight then
-    x = math.floor(tonumber(orgPhotoWidth) * tonumber(focusY))
-    y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusX))
-  end
-
+  local x = tonumber(orgPhotoWidth) * tonumber(focusX)
+  local y = tonumber(orgPhotoHeight) * tonumber(focusY)
   log("FocusXY: " .. x .. ", " .. y)
 
   local result = {
