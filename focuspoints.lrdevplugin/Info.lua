@@ -39,6 +39,7 @@ return {
 
 	VERSION = { major=0, minor=0, revision=1, build=1, },
 
+  LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 }
 
 --[[ 

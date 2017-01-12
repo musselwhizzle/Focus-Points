@@ -89,8 +89,8 @@ function splitForColumns(metaData)
     maxValuesLength = math.max(maxValuesLength, string.len(v))
     numOfLines = numOfLines + 1
     
-    --log("l: " .. l)
-    --log("v: " .. v)
+    --logDebug("ShowMetadata", "l: " .. l)
+    --logDebug("ShowMetadata", "v: " .. v)
     
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
@@ -103,7 +103,7 @@ function createParts(metaData)
   local parts = {}
   local num = 1;
   for i in string.gmatch(metaData, "[^\\\n]+") do 
-    log("i = " .. i)
+    logDebug("ShowMetadata", "i = " .. i)
     p = stringToKeyValue(i, ":")
     if (p ~= nill) then
       parts[num] = p

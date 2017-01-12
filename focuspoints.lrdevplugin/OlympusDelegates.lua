@@ -61,18 +61,18 @@ function OlympusDelegates.getAfPoints(photo, metaData)
       LrErrors.throwUserError("Focus point not found in 'AF Point Selected' metadata tag")
       return nil
   end
-  log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
+  logDebug("Olympus", "Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
       LrErrors.throwUserError("Metadata has no Dimensions")
       return nil
   end
-  log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
+  logDebug("Olympus", "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
   local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
   local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
-  log("FocusXY: " .. x .. ", " .. y)
+  logDebug("Olympus", "FocusXY: " .. x .. ", " .. y)
 
   -- determine size of bounding box of AF area in image pixels
   local afArea = ExifUtils.findFirstMatchingValue(metaData, { "AF Areas" })
@@ -84,7 +84,7 @@ function OlympusDelegates.getAfPoints(photo, metaData)
       afAreaWidth = math.abs(tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth) / 255
       afAreaHeight = math.abs(tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight) / 255
   end
-  log ( "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
+  logDebug("Olympus", "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
 
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,

@@ -55,19 +55,19 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
       LrErrors.throwUserError("Focus point not found in 'AF Point Position' metadata tag")
       return nil
   end
-  log ("Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
+  logDebug("Panasonic", "Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
       LrErrors.throwUserError("Metadata has no Dimensions")
       return nil
   end
-  log("Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX) .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY))
+  logDebug("Panasonic", "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX) .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY))
 
   -- determine x,y location of center of focus point in image pixels
   local x = tonumber(orgPhotoWidth) * tonumber(focusX)
   local y = tonumber(orgPhotoHeight) * tonumber(focusY)
-  log("FocusXY: " .. x .. ", " .. y)
+  logDebug("Panasonic", "FocusXY: " .. x .. ", " .. y)
 
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
