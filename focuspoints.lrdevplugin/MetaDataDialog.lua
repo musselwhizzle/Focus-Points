@@ -28,8 +28,8 @@ MetaDataDialog = {}
 
 function MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
   
-  log("column1" .. column1)
-  log("column2" .. column2)
+  logDebug("MetaDataDialog", "column1" .. column1)
+  logDebug("MetaDataDialog", "column2" .. column2)
 
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local viewFactory = LrView.osFactory()

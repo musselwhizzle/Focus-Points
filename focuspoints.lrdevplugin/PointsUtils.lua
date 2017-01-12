@@ -56,7 +56,7 @@ function PointsUtils.readIntoTable(folder, filename)
       y = LrStringUtils.trimWhitespace(y)
       points[1] = tonumber(x)
       points[2] = tonumber(y)
-      --log("pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
+      --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
 
       if (pointName == "focusPointDimens") then
         focusPointDimens = points

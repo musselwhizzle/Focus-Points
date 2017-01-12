@@ -42,8 +42,8 @@ function PointsRendererFactory.createRenderer(photo)
   cameraMake = string.lower(cameraMake)
   cameraModel = string.lower(cameraModel)
   
-  log ("cameraMake: " .. cameraMake)
-  log ("cameraModel: " .. cameraModel)
+  logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
+  logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
   
   -- some cameras have the same mapping as other camera
   -- check the cameraModel and switch it to a known map if it's a duplicate
