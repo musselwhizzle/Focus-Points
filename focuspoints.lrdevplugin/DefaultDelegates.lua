@@ -173,7 +173,7 @@ end
 
 --[[
   -- method figures out the orientation the photo was shot at by looking at the metadata
-  -- returns 90, 270, or 0 (in trigonometric sense)
+  -- returns the rotation in degrees in trigonometric sense
 --]]
 function DefaultDelegates.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
@@ -185,13 +185,13 @@ function DefaultDelegates.getShotOrientation(photo, metaData)
   end
 
   if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
-    return 90     -- 90 CCW   => 90 trigo
+    return 90     -- 90° CCW
   elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
-    return 270    -- 270 CCW  => 270 trigo
+    return -90    -- 270° CCW
   elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
-    return 270    -- 90 CW    => 270 trigo
+    return -90    -- 90° CW
   elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
-    return 90     -- 270 CCW  => 90 trigo
+    return 90     -- 270° CCW
   end
 
   return 0

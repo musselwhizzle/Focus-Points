@@ -31,7 +31,7 @@ local myLogger = LrLogger( 'libraryLogger' )
 myLogger:enable( "logfile" )
 
 isDebug = false
-isLog = false
+isLog = true
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -68,7 +68,7 @@ function split(str, delim)
 end
 
 --[[
- Splits a string into 2 parts: key and value. 
+ Splits a string into 2 parts: key and value.
  @str  the string to split
  @delim the character used for splitting the string
 --]]

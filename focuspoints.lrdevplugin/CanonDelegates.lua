@@ -44,13 +44,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
     return nil
   end
 
-  local orgPhotoWidth, orgPhotoHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local xScale = orgPhotoWidth / imageWidth
   local yScale = orgPhotoHeight / imageHeight
-  if orgPhotoWidth < orgPhotoHeight then
-    xScale = orgPhotoHeight / imageWidth
-    yScale = orgPhotoWidth / imageHeight
-  end
 
   local afPointWidth = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Width" })
   local afPointHeight = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Height" })
