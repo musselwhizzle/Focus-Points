@@ -20,17 +20,24 @@ local bind = LrView.bind
 
 FocusPointPrefs = {}
 
-function FocusPointPrefs.genSectionsForBottomOfDialog( f, p )
+function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
   return {
   {
     title = "Logging",
-    f:row {
+    viewFactory:row {
       bind_to_object = prefs,
-      spacing = f:control_spacing(),
-      f:checkbox {
-        title = "Enable logging",
-        value = bind 'enableLogging'
+      spacing = viewFactory:control_spacing(),
+      viewFactory:popup_menu {
+        title = "Logging level",
+        value = bind 'loggingLevel',
+        items = {
+          { title = "None", value = "NONE"},
+          { title = "Error", value = "ERROR"},
+          { title = "Warn", value = "WARN"},
+          { title = "Info", value = "INFO"},
+          { title = "Debug", value = "DEBUG"},
+        }
       },
     },
   },

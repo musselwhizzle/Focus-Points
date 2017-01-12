@@ -48,6 +48,8 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local xScale = orgPhotoWidth / imageWidth
   local yScale = orgPhotoHeight / imageHeight
+  
+  logInfo("Fujifilm", "AF points detected at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
 
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
@@ -73,6 +75,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
         local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
         local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
         local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
+        logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
         table.insert(result.points, {
           pointType = DefaultDelegates.POINTTYPE_FACE,
           x = (x1 + x2) / 2,

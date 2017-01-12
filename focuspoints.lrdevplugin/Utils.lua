@@ -85,19 +85,70 @@ function stringToKeyValue(str, delim)
   return r
 end
 
-
-
 --[[
--- Logging function. If the pref enableLogging is false, does nothing
--- str - string to be sent to the logger
+-- Logging functions. You are provided 5 levels of logging. Wisely choose the level of the message you want to report
+-- to prevent to much messages.
+-- Typical use cases: 
+--   - logDebug - Informations diagnostically helpful to people (developers, IT, sysadmins, etc.)
+--   - logInfo - Informations generally useful to log (service start/stop, configuration assumptions, etc)
+--   - logWarn - Informations about an unexpected state that won't generate a problem
+--   - logError - An error which is fatal to the operation
+-- These methods expects 2 parameters:
+--   - group - a logical grouping string (limited to 20 chars and converted to upper case) to make it easier to find the messages you are looking for
+--   - message - the message to be logged
+-- A call to logDebug("ExifUtils", "Searching for 'AF Point Used'") will result in the following log entry
+--    EXIFUTILS | Searching for 'AF Point Used'
+-- A call to logWarn("FUJIDELEGATE", "Face recognition algorithm returned an unexcepted value") will result in the following log entry
+-- FUJIDELEGATE | Face recognition algorithm returned an unexcepted value
 --]]
-function log(str)
-  if prefs.enableLogging == nil then
-    prefs.enableLogging = false
+function logDebug(group, message)
+  doLog("DEBUG", group, message)
+end
+
+function logInfo(group, message)
+  doLog("INFO", group, message)
+end
+
+function logWarn(group, message)
+  doLog("WARN", group, message)
+end
+
+function logError(group, message)
+  doLog("ERROR", group, message)
+end
+
+function doLog(level, group, message)
+  local levels = {
+    NONE = 0,
+    ERROR = 1,
+    WARN = 2,
+    INFO = 3,
+    DEBUG = 4
+  }
+
+  -- Looking for the prefs
+  if prefs.loggingLevel == nil or levels[prefs.loggingLevel] == nil then
+    prefs.loggingLevel = "NONE"
   end
 
-  if (prefs.enableLogging) then
+  local prefsLevel = levels[prefs.loggingLevel]
+  local msgLevel = levels[level]
+
+  if prefsLevel == 0 or msgLevel == nil or msgLevel > prefsLevel then
+    -- Unknown message log level or level set in preferences higher
+    -- No need to log this one, return
+    return
+  end
+
+  local str = string.format("%20s | %s", string.upper(string.sub(group, 1, 20)), message)
+  if level == "ERROR" then
+    myLogger:error(str)
+  elseif level == "WARN" then
     myLogger:warn(str)
+  elseif level == "INFO" then
+    myLogger:info(str)
+  else
+    myLogger:debug(str)
   end
 end
 
@@ -122,10 +173,9 @@ end
 --]]
 function arrayKeyOf(table, val)
   for k,v in pairs(table) do
-    log(k .. " | " .. v .. " | " .. val)
-      if v == val then
-        return k
-      end
+    if v == val then
+      return k
+    end
   end
   return nil
 end

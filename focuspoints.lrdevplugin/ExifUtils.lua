@@ -67,7 +67,7 @@ function ExifUtils.readMetaDataAsTable(targetPhoto)
     keyword = LrStringUtils.trimWhitespace(keyword)
     value = LrStringUtils.trimWhitespace(value)
     parsedTable[keyword] = value
-    --log("EXIF | Parsed '" .. keyword .. "' = '" .. value .. "'")
+    logDebug("ExifUtils", "Parsed '" .. keyword .. "' = '" .. value .. "'")
   end
 
   return parsedTable
@@ -88,12 +88,12 @@ function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
     exifValue = metaDataTable[value]
 
     if exifValue ~= nil and exifValue ~= "(none)" then
-      log("EXIF | Searching for " .. value .. " -> " .. exifValue)
+      logInfo("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
       return exifValue, key
     end
   end
 
-  log("EXIF | Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
+  logInfo("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
   return nil
 end
 
