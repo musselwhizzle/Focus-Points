@@ -104,31 +104,41 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
       return nil
     end
 
-    -- Inserting center icon view
+    -- Placing icons
     local x, y = resultingTransformation(point.x, point.y)
     log("DPR | point.x: " .. point.x .. ", point.y: " .. point.y .. ", x: " .. x .. ", y: " .. y .. "")
+
+    -- Top Left, 0°
+    local tlX, tlY = resultingTransformation(point.x - point.width/2, point.y - point.height/2)
+    -- Top Right, -90°
+    local trX, trY = resultingTransformation(point.x + point.width/2, point.y - point.height/2)
+     -- Bottom Right, -180°
+    local brX, brY = resultingTransformation(point.x + point.width/2, point.y + point.height/2)
+     -- Bottom Left, -270°
+    local blX, blY = resultingTransformation(point.x - point.width/2, point.y + point.height/2)
+
+    local dist = math.sqrt((tlX - brX)^2 + (tlY - brY)^2)
+
+    -- Inserting center icon view
     if template.center ~= nil then
       if x >= 0 and x <= photoDisplayWidth and y >= 0 and y <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + userRotation, userMirroring, template.center.fileTemplate, template.center.anchorX, template.center.anchorY, template.angleStep))
+        local centerTemplate = template.center
+        if template.center_small ~= nil and dist <= 100 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
+          centerTemplate = template.center_small
+        end
+
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + userRotation, userMirroring, centerTemplate.fileTemplate, centerTemplate.anchorX, centerTemplate.anchorY, template.angleStep))
       end
     end
 
     -- Inserting corner icon views
     if template.corner ~= nil then
-      -- Top Left, 0°
-      local tlX, tlY = resultingTransformation(point.x - point.width/2, point.y - point.height/2)
-      -- Top Right, -90°
-      local trX, trY = resultingTransformation(point.x + point.width/2, point.y - point.height/2)
-       -- Bottom Right, -180°
-      local brX, brY = resultingTransformation(point.x + point.width/2, point.y + point.height/2)
-       -- Bottom Left, -270°
-      local blX, blY = resultingTransformation(point.x - point.width/2, point.y + point.height/2)
-
       -- Distance between tl and br corners in pixels on display
       local dist = math.sqrt((tlX - brX)^2 + (tlY - brY)^2)
+      log(dist)
       if dist > 25 then
         local cornerTemplate = template.corner
-        if template.corner_small ~= nil and dist <= 60 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
+        if template.corner_small ~= nil and dist <= 100 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
           cornerTemplate = template.corner_small
         end
 
