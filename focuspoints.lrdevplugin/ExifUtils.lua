@@ -19,6 +19,7 @@ local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
 local LrSystemInfo = import "LrSystemInfo"
+local LrUUID = import "LrUUID"
 
 ExifUtils = {}
 exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
@@ -30,8 +31,7 @@ exiftoolWindows = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
 
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
-  local metaDataFile = LrPathUtils.removeExtension(path)
-  metaDataFile = metaDataFile .. "-metadata.txt"
+  local metaDataFile = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
 
   local cmd = "'"..exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
   if (WIN_ENV) then
