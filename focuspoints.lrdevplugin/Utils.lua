@@ -41,10 +41,10 @@ isDebug = false
 -- delim - delimiter
 --]]
 function splitToKeyValue(str, delim)
-  if str == nill then return nill end
+  if str == nil then return nil end
   local index = string.find(str, delim)
-  if index == nill then
-    return nill
+  if index == nil then
+    return nil
   end
   local r = {}
   r.key = string.sub(str, 0, index-1)
@@ -74,10 +74,10 @@ end
  @delim the character used for splitting the string
 --]]
 function stringToKeyValue(str, delim)
-  if str == nill then return nill end
+  if str == nil then return nil end
   local index = string.find(str, delim)
-  if index == nill then
-    return nill
+  if index == nil then
+    return nil
   end
   local r = {}
   r.key = string.sub(str, 0, index-1)
@@ -158,7 +158,7 @@ end
 --]]
 function parseDimens(strDimens)
   local index = string.find(strDimens, "x")
-  if (index == nill) then return nill end
+  if index == nil then return nil end
   local w = string.sub(strDimens, 0, index-1)
   local h = string.sub(strDimens, index+1)
   w = LrStringUtils.trimWhitespace(w)
