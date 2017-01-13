@@ -26,8 +26,8 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
-  local contentWidth = appWidth * .88
-  local contentHeight = appHeight * .88
+  local contentWidth = appWidth * .7
+  local contentHeight = appHeight * .7
 
   local photoWidth
   local photoHeight
