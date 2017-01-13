@@ -267,7 +267,7 @@ function DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
     -- Falling back by trying to find the information with exifs.
     -- This is not working when the user rotates or mirrors the image within lightroom
-    return DefaultPointRenderer.getShotOrientation(photo), 0
+    return DefaultPointRenderer.getShotOrientation(photo, ExifUtils.readMetaDataAsTable(photo)), 0
   elseif userRotation == "AB" then
     return 0, 0
   elseif userRotation == "BC" then
@@ -296,8 +296,7 @@ end
   -- method figures out the orientation the photo was shot at by looking at the metadata
   -- returns the rotation in degrees in trigonometric sense
 --]]
-function DefaultPointRenderer.getShotOrientation(photo)
-  local metaData = ExifUtils.readMetaDataAsTable(photo)
+function DefaultPointRenderer.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
 
