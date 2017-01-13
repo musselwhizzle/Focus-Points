@@ -97,8 +97,12 @@ function CanonDelegates.getAfPoints(photo, metaData)
   
   -- it seems Canon Point and Shoot cameras are reversed on the y-axis
   local exifCameraType = ExifUtils.findFirstMatchingValue(metaData, { "Camera Type" })
+  if (exifCameraType == nil) then
+    exifCameraType = ""
+  end
+  
   local ymult = -1
-  if exifCameraType == "Compact" then
+  if string.lower(exifCameraType) == "compact" then
     ymult = 1
   end
 
