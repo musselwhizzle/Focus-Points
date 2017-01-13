@@ -3,17 +3,17 @@ Focus Points
 
 A plugin for Lightroom (on Mac) to show which focus point was active when the picture was taken.
 
-<img src="screens/sample_1.jpg" alt="Screenshot" style="width: 200px;"/>
+<img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
 
 
 
 Supported Cameras
 --------
-* Canon cameras with support for AF-Points position and size from the Exif fields when possible
+* Canon cameras - all EOS and point and shoots. 7D Mark ii, 5D Mark iii, 5D Mark iv, etc. Powershot G12, G16, G1X, G5X, etc
 * Nikon D7100, D7200
 * Nikon D800 (and possibly D810 and D800E. Someone verify please)
-* Fuji cameras with support for face recognition when possible - Should work with all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
-* Olympus cameras where 'AF Point Selected' appears in Metadata (Should work on recent E-* bodies)
+* Fuji all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
+* Olympus cameras (Should work on recent E-* bodies)
 
 
 Installing
@@ -34,12 +34,17 @@ Currently, 5 types of AF-points will be displayed :
 * <img src="screens/af_infocus.png" alt="AF in focus" style="width: 20px;"/> The AF-Point is in focus
 * <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> The AF-Point is inactive
 * <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face was detected by the camera at this position
+<img src="screens/faces1.jpg" alt="Screenshot" style="width: 200px;"/>
 
 Please note that not all cameras save the needed information in the Exifs of the photo. Thus, the accuracy of the displayed points will greatly depend on whether or not your camera supports it.
 
 Adding your own camera
 --------
-If you wish to contribute, this should be as painless as possible. You will need to map all of your camera's focus points to pixel coordinates. Refer to the "focus_points/nikon corporation/nikon d7200.txt" as an example.
+It's very likely your camera is already supported. So try the plugin first before doing anything. :)
+
+If your camera reports its focus points dynamically, adding support for you camera should be easy. Simply update or create a new CameraDelegate which extracts the focus points. Update the PointsRendererFactory so it knows about this new camera.
+
+If your camera does not report its focus points dynamically, such as in the case of Nikons, this should be as painless as possible. You will need to map all of your camera's focus points to pixel coordinates. Refer to the "focus_points/nikon corporation/nikon d7200.txt" as an example.
 ```
 -- 1st column
 B1 = {810, 1550}
@@ -50,9 +55,7 @@ D1 = {810, 2210}
 ```
 The best way I found to do this was to set up a ruler/tape measure, get out my camera and I took a photo at each of the focus points lining it up exactly with the 1-inch mark. I then imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I then took the image into photoshop and measured from the top left corner of the image to the center of the focus point. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.txt" using all lowercase. Then all is done.
 
-If 2 or more cameras share a common points mapping, then PointsRendererFactory will need to be updated to know this. For example, the D7200 and D7100 could share a common focus points map (I don't know). If they do, PointsRendererFactory can be updated in code. I would prefer not see copying and pasting of focus point files such as "nikon d7200.txt" and "nikon d7100.txt" containing the exact same info.
-
-If adding a camera which does not needed mapped because the focus point is given dynamically (like Fuji) or is a pattern (like A7Rii), create a new {ModelName}Delegate.getDefaultAfPoints(photo, metaData) for the camera and dynamically return the correct x,y point for the selected autofocus. Update PointsRendererFactory to set this delegate method on the Renderer.
+If 2 or more cameras share a common points mapping, simplying add that to the list of known duplicate as in the NikonDuplicates file. With this, both Nikon D7100 and Nikon D7200 will share the same mapping file. 
 
 
 Known Issues
