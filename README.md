@@ -61,14 +61,7 @@ If 2 or more cameras share a common points mapping, simplying add that to the li
 Known Issues
 --------
 1. Not currently working on Windows.
-2. Not compatible if photo was edited in Photoshop. If the photo has been edited in Photoshop, the metadata in the photo telling the focus point was deleted. Perhaps in the future I can update the code to look for the original file and get the focus point from that.
-
-
-TODOs
---------
- * check for "normal" to make sure the width is bigger than the height. if not, prompt
-  the user to ask which way the photo was rotated
- * show ExifTool license in plugin
+2. Not compatible if photo was edited in Photoshop. 3rd party tools often remove the necessary metadata from the image. 
 
 
 Contributing as a Developer
