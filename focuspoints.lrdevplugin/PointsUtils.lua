@@ -42,7 +42,7 @@ function PointsUtils.readIntoTable(folder, filename)
   if (data == nil) then return nil end
   for i in string.gmatch(data, "[^\\\n]+") do
     p = splitToKeyValue(i, "=")
-    if (p ~= nill) then
+    if p ~= nil then
       local pointName = p.key
 
       pointName = LrStringUtils.trimWhitespace(pointName)

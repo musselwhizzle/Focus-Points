@@ -44,7 +44,7 @@ return {
 
 --[[ 
 KNOWN BUGS: 
- 1. LrPhoto.getDevelopmentSettings()["Orientation"] return nill. I have no way of knowing if the photo
+ 1. LrPhoto.getDevelopmentSettings()["Orientation"] return nil. I have no way of knowing if the photo
         was rotated in development mode
  2. Orientation must be determined from the metadata. The metdata does not tell me if the camera was upside down
         e.g. rotation of 180 degrees. It only tells me normal, 90, or 270

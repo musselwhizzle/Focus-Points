@@ -94,10 +94,21 @@ function CanonDelegates.getAfPoints(photo, metaData)
     points = {
     }
   }
+  
+  -- it seems Canon Point and Shoot cameras are reversed on the y-axis
+  local exifCameraType = ExifUtils.findFirstMatchingValue(metaData, { "Camera Type" })
+  if (exifCameraType == nil) then
+    exifCameraType = ""
+  end
+  
+  local yDirection = -1
+  if string.lower(exifCameraType) == "compact" then
+    yDirection = 1
+  end
 
   for key,value in pairs(afAreaXPositions) do
     local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everithing is referenced from the center,
-    local y = (imageHeight/2 - afAreaYPositions[key]) * yScale    -- X positive toward the right and Y positive toward the TOP
+    local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
     local width = 0
     local height = 0
     if afPointWidths[key] == nil then
