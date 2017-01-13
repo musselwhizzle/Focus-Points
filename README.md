@@ -9,9 +9,9 @@ A plugin for Lightroom (on Mac) to show which focus point was active when the pi
 
 Supported Cameras
 --------
-* Canon cameras - all EOS and point and shoots. 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 7D, 5D, etc, Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
+* Canon cameras - all EOS and point and shoots. 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 80D, 7D, 5D, etc, Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
 * Nikon D7100, D7200
-* Nikon D800 (and possibly D810 and D800E. Someone verify please)
+* Nikon D800 (and possibly D810 and D800E), D700.
 * Fuji all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 * Olympus cameras (Should work on recent E-* bodies)
 
@@ -53,7 +53,7 @@ D1 = {810, 2210}
 
 -- an so on
 ```
-The best way I found to do this was to set up a ruler/tape measure, get out my camera and I took a photo at each of the focus points lining it up exactly with the 1-inch mark. I then imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I then took the image into photoshop and measured from the top left corner of the image to the center of the focus point. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.txt" using all lowercase. Then all is done.
+The best way I found to do this was to set up a ruler/tape measure, get out my camera and I took a photo at each of the focus points lining it up exactly with the 1-inch mark. I then imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I then took the image into photoshop and measured from the top left corner of the image to the top left corner of the focus point. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.txt" using all lowercase. Then all is done.
 
 If 2 or more cameras share a common points mapping, simplying add that to the list of known duplicate as in the NikonDuplicates file. With this, both Nikon D7100 and Nikon D7200 will share the same mapping file. 
 
