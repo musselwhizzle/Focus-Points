@@ -101,15 +101,14 @@ function CanonDelegates.getAfPoints(photo, metaData)
     exifCameraType = ""
   end
   
-  local ymult = -1
+  local yDirection = -1
   if string.lower(exifCameraType) == "compact" then
-    ymult = 1
+    yDirection = 1
   end
 
   for key,value in pairs(afAreaXPositions) do
     local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everithing is referenced from the center,
-    --local y = (imageHeight/2 - afAreaYPositions[key]) * yScale    -- X positive toward the right and Y positive toward the TOP
-    local y = (imageHeight/2 + (afAreaYPositions[key] * ymult)) * yScale
+    local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
     local width = 0
     local height = 0
     if afPointWidths[key] == nil then
