@@ -35,40 +35,40 @@ DefaultDelegates.POINTTYPE_AF_INACTIVE = "af_inactive"                    -- The
 DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A face has been detected
 DefaultDelegates.pointTemplates = {
   af_selected_infocus = {
-    center = { fileTemplate = "assets/imgs/focus_point_red-fat_center_%s.png", anchorX = 23, anchorY = 23 },
-    center_small = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
-    corner = { fileTemplate = "assets/imgs/focus_point_red-fat_corner_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/focus_point_red-fat_corner-small_%s.png", anchorX = 23, anchorY = 23 },
+    center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/center/red/small.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/red/small_fat_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
   af_infocus = {
-    center = { fileTemplate = "assets/imgs/focus_point_red-fat_center_%s.png", anchorX = 23, anchorY = 23 },
-    center_small = { fileTemplate = "assets/imgs/focus_point_red_center_%s.png", anchorX = 23, anchorY = 23 },
-    corner = { fileTemplate = "assets/imgs/focus_point_black_corner_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/focus_point_black_corner-small_%s.png", anchorX = 23, anchorY = 23 },
+    center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/center/red/small.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/black/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
   af_selected = {
-    corner = { fileTemplate = "assets/imgs/focus_point_red_corner_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/focus_point_red_corner-small_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/red/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/red/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
   af_inactive = {
-    corner = { fileTemplate = "assets/imgs/focus_point_black_corner_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/focus_point_black_corner-small_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/grey/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/grey/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
   face = {
-    corner = { fileTemplate = "assets/imgs/focus_point_yellow_corner_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/focus_point_yellow_corner-small_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/yellow/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/yellow/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5

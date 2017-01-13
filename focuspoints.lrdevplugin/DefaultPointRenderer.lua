@@ -201,17 +201,18 @@ end
 --]]
 function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
   local fileRotationStr = ""
-  local fileMirroringStr = ""
 
   if angleStep ~= nil and angleStep ~= 0 then
-    fileRotationStr = (angleStep * math.floor(0.5 + (rotation % 360) / angleStep)) % 360
+    local closestAngle = (angleStep * math.floor(0.5 + rotation / angleStep)) % 360
+    if horizontalMirroring == -1 then
+        fileRotationStr = (630 - closestAngle) % 360
+    else
+        fileRotationStr = closestAngle
+    end
   end
 
-  if horizontalMirroring == -1 then
-    fileMirroringStr = "-mirrored"
-  end
-
-  local fileName = string.format(iconFileTemplate, fileRotationStr .. fileMirroringStr)
+  local fileName = string.format(iconFileTemplate, fileRotationStr)
+  logDebug("createPointView", "fileName: " .. fileName)
 
   local viewFactory = LrView.osFactory()
 
