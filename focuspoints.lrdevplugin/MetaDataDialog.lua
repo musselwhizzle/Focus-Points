@@ -27,12 +27,14 @@ local LrPathUtils = import 'LrPathUtils'
 MetaDataDialog = {}
 
 function MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
-  
-  logDebug("MetaDataDialog", "column1" .. column1)
-  logDebug("MetaDataDialog", "column2" .. column2)
-
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local viewFactory = LrView.osFactory()
+  
+  -- these props are needed on windows. on mac, they make the columns a bit larger than needed 
+  if (MAC_ENV) then
+    column1Length = nil
+    column2Length = nil
+  end
   
   local myText = viewFactory:static_text {
     title = column1,
