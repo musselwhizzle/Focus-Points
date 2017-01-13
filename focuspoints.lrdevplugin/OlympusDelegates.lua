@@ -80,7 +80,7 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   local afAreaWidth = 300
   local afAreaHeight = 300
 
-  if (afAreaX1 ~= nill and afAreaY1 ~= nill and afAreaX2 ~= nill and afAreaY2 ~= nill ) then
+  if afAreaX1 ~= nil and afAreaY1 ~= nil and afAreaX2 ~= nil and afAreaY2 ~= nil then
       afAreaWidth = math.abs(tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth) / 255
       afAreaHeight = math.abs(tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight) / 255
   end
