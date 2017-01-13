@@ -3,7 +3,7 @@ Focus Points
 
 A plugin for Lightroom (on Mac) to show which focus point was active when the picture was taken.
 
-<img src="screens/sample_1.jpg" alt="Screenshot" style="width: 200px;"/>
+<img src="screens/screen.jpg" alt="Screenshot" style="width: 200px;"/>
 
 
 
@@ -34,6 +34,7 @@ Currently, 5 types of AF-points will be displayed :
 * <img src="screens/af_infocus.png" alt="AF in focus" style="width: 20px;"/> The AF-Point is in focus
 * <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> The AF-Point is inactive
 * <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face was detected by the camera at this position
+<img src="screens/faces1.jpg" alt="Screenshot" style="width: 200px;"/>
 
 Please note that not all cameras save the needed information in the Exifs of the photo. Thus, the accuracy of the displayed points will greatly depend on whether or not your camera supports it.
 
