@@ -3,7 +3,7 @@ Focus Points
 
 A plugin for Lightroom (on Mac) to show which focus point was active when the picture was taken.
 
-<img src="screens/screen.jpg" alt="Screenshot" style="width: 200px;"/>
+<img src="screens/screen1.jpg" alt="Screenshot" style="width: 200px;"/>
 
 
 
