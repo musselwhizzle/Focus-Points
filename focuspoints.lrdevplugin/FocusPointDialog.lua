@@ -26,7 +26,6 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
-  local viewFactory = LrView.osFactory()
   local contentWidth = appWidth * .7
   local contentHeight = appHeight * .7
 
@@ -35,16 +34,23 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   if (w > h) then
     photoWidth = math.min(w, contentWidth)
     photoHeight = h/w * photoWidth
+    if photoHeight > contentHeight then
+        photoHeight = math.min(h, contentHeight)
+        photoWidth = w/h * photoHeight
+    end
   else
     photoHeight = math.min(h, contentHeight)
     photoWidth = w/h * photoHeight
+    if photoWidth > contentWidth then
+        photoWidth = math.min(w, contentWidth)
+        photoHeight = h/w * photoWidth
+    end
   end
   return photoWidth, photoHeight
 
 end
 
 function FocusPointDialog.createDialog(targetPhoto, overlayView)
-  local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
 
   -- temporary for dev'ing
