@@ -77,8 +77,6 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultPointRenderer.funcGetAfPoints = DefaultDelegates.getAfPoints
   end
 
-  DefaultPointRenderer.funcGetShotOrientation = DefaultDelegates.getShotOrientation
-
   return DefaultPointRenderer
 end
 
