@@ -84,6 +84,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
   end
 
   local resultingTransformation = userMirroringTransformation * (userRotationTransformation * (displayScalingTransformation * cropTransformation))
+  local inverseResultingTransformation = a.inverse(resultingTransformation)
 
   local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, metaData)
   if pointsTable == nil then
@@ -107,22 +108,44 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     local x, y = resultingTransformation(point.x, point.y)
     logInfo("DefaultPointRenderer", "Placing point of type '" .. point.pointType .. "' at position [" .. point.x .. ", " .. point.y .. "] -> ([" .. math.floor(x) .. ", " .. math.floor(y) .. "] on display)")
 
-    -- Top Left, 0°
-    local tlX, tlY = resultingTransformation(point.x - point.width/2, point.y - point.height/2)
-    -- Top Right, -90°
-    local trX, trY = resultingTransformation(point.x + point.width/2, point.y - point.height/2)
-     -- Bottom Right, -180°
-    local brX, brY = resultingTransformation(point.x + point.width/2, point.y + point.height/2)
-     -- Bottom Left, -270°
-    local blX, blY = resultingTransformation(point.x - point.width/2, point.y + point.height/2)
+    local useSmallIcons = false
+    local pointWidth = point.width
+    local pointHeight = point.height
 
-    local dist = math.sqrt((tlX - brX)^2 + (tlY - brY)^2)
+    -- Checking if the distance between corners goes under the value of template.bigToSmallTriggerDist
+    -- If so, we switch to small icons (when available)
+    local x0, y0 = resultingTransformation(0, 0)
+    local xHorizontal, yHorizontal = resultingTransformation(pointWidth, 0)
+    local distHorizontal = math.sqrt((xHorizontal - x0)^2 + (yHorizontal - y0)^2)
+    local xVertical, yVertical = resultingTransformation(0, pointHeight)
+    local distVertical = math.sqrt((xVertical - x0)^2 + (yVertical - y0)^2)
+
+    if template.bigToSmallTriggerDist ~= nil and (distHorizontal < template.bigToSmallTriggerDist or distVertical < template.bigToSmallTriggerDist) then
+      useSmallIcons = true
+      logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", bigToSmallTriggerDist: " .. template.bigToSmallTriggerDist .. " -> useSmallIcons: TRUE")
+    else
+      logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", bigToSmallTriggerDist: " .. template.bigToSmallTriggerDist .. " -> useSmallIcons: FALSE")
+    end
+
+    -- Checking if the distance between corners goes under the value of template.minCornerDist
+    -- If so, we set pointWidth and/or pointHeight to the corresponding size to garantee this minimum distance
+    local pixX0, pixY0 = inverseResultingTransformation(0, 0)
+    local pixX1, pixY1 = inverseResultingTransformation(template.minCornerDist, 0)
+    local minCornerPhotoDist = math.sqrt((pixX1 - pixX0)^2 + (pixY1 - pixY0)^2)
+
+    if distHorizontal < template.minCornerDist then
+      pointWidth = minCornerPhotoDist
+    end
+    if distVertical < template.minCornerDist then
+      pointHeight = minCornerPhotoDist
+    end
+    logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", minCornerDist: " .. template.minCornerDist .. ", minCornerPhotoDist: " .. minCornerPhotoDist)
 
     -- Inserting center icon view
     if template.center ~= nil then
       if x >= 0 and x <= photoDisplayWidth and y >= 0 and y <= photoDisplayHeight then
         local centerTemplate = template.center
-        if template.center_small ~= nil and dist <= 100 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
+        if useSmallIcons and template.center_small ~= nil then
           centerTemplate = template.center_small
         end
 
@@ -132,24 +155,31 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
 
     -- Inserting corner icon views
     if template.corner ~= nil then
-      if dist > 25 then
-        local cornerTemplate = template.corner
-        if template.corner_small ~= nil and dist <= 100 then  -- should the distance between the corners be pretty small we switch to a small template if existinging
-          cornerTemplate = template.corner_small
-        end
+      local cornerTemplate = template.corner
+      if useSmallIcons and template.corner_small ~= nil then
+        cornerTemplate = template.corner_small
+      end
 
-        if tlX >= 0 and tlX <= photoDisplayWidth and tlY >= 0 and tlY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + userRotation, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        end
-        if trX >= 0 and trX <= photoDisplayWidth and trY >= 0 and trY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + userRotation - 90, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        end
-        if brX >= 0 and brX <= photoDisplayWidth and brY >= 0 and brY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + userRotation - 180, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        end
-        if blX >= 0 and blX <= photoDisplayWidth and blY >= 0 and blY <= photoDisplayHeight then
-          table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + userRotation - 270, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
-        end
+      -- Top Left, 0°
+      local tlX, tlY = resultingTransformation(point.x - pointWidth/2, point.y - pointHeight/2)
+      -- Top Right, -90°
+      local trX, trY = resultingTransformation(point.x + pointWidth/2, point.y - pointHeight/2)
+       -- Bottom Right, -180°
+      local brX, brY = resultingTransformation(point.x + pointWidth/2, point.y + pointHeight/2)
+       -- Bottom Left, -270°
+      local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
+
+      if tlX >= 0 and tlX <= photoDisplayWidth and tlY >= 0 and tlY <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + userRotation, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+      end
+      if trX >= 0 and trX <= photoDisplayWidth and trY >= 0 and trY <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + userRotation - 90, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+      end
+      if brX >= 0 and brX <= photoDisplayWidth and brY >= 0 and brY <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + userRotation - 180, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+      end
+      if blX >= 0 and blX <= photoDisplayWidth and blY >= 0 and blY <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + userRotation - 270, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
       end
     end
   end
@@ -237,7 +267,7 @@ function DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
     -- Falling back by trying to find the information with exifs.
     -- This is not working when the user rotates or mirrors the image within lightroom
-    return DefaultPointRenderer.getShotOrientation(photo), 0
+    return DefaultPointRenderer.getShotOrientation(photo, ExifUtils.readMetaDataAsTable(photo)), 0
   elseif userRotation == "AB" then
     return 0, 0
   elseif userRotation == "BC" then
@@ -266,8 +296,7 @@ end
   -- method figures out the orientation the photo was shot at by looking at the metadata
   -- returns the rotation in degrees in trigonometric sense
 --]]
-function DefaultPointRenderer.getShotOrientation(photo)
-  local metaData = ExifUtils.readMetaDataAsTable(photo)
+function DefaultPointRenderer.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
 
