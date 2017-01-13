@@ -9,7 +9,7 @@ A plugin for Lightroom (on Mac) to show which focus point was active when the pi
 
 Supported Cameras
 --------
-* Canon cameras - all EOS and point and shoots. 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 7D, 5D, etc, Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
+* Canon cameras - all EOS and point and shoots. 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 80D, 7D, 5D, etc, Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
 * Nikon D7100, D7200
 * Nikon D800 (and possibly D810 and D800E. Someone verify please)
 * Fuji all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
