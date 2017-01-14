@@ -14,6 +14,7 @@ Supported Cameras
 * Nikon D800 (and possibly D810 and D800E), D700.
 * Fuji all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 * Olympus cameras (Should work on recent E-* bodies)
+* iphone and ipad
 
 
 Installing
@@ -66,8 +67,15 @@ Known Issues
 
 Contributing as a Developer
 --------
-Please see the Contributing.md file before being any new work.
+Please see the [Contributing.md](Contributing.md) file before being any new work.
 
+Special Thanks
+--------
+There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who has worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file):
+
+rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof. 
+
+<a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 
 License
 --------
