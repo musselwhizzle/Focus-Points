@@ -72,7 +72,7 @@ Please see the Contributing.md file before being any new work.
 License
 --------
 
-    Copyright 2016 Joshua Musselwhite, Whizzbang Inc.
+    Copyright 2016 Whizzbang Inc.
 
     Licensed under the Apache License, Version 2.0 (the "License");
     you may not use this file except in compliance with the License.
