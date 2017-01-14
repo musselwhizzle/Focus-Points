@@ -59,6 +59,7 @@ end
 -- delim - delimiter
 --]]
 function split(str, delim)
+  if str == nil then return nil end
   local t = {}
   local i = 1
   for str in string.gmatch(str, "([^" .. delim .. "]+)") do

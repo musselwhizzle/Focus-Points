@@ -25,6 +25,7 @@ require "CanonDelegates"
 require "FujifilmDelegates"
 require "OlympusDelegates"
 require "PanasonicDelegates"
+require "AppleDelegates"
 require "NikonDuplicates"
 
 local LrErrors = import 'LrErrors'
@@ -62,6 +63,10 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = CanonDelegates.getAfPoints
+  elseif (cameraMake == "apple") then
+    DefaultDelegates.focusPointsMap = nil     -- unused
+    DefaultDelegates.focusPointDimen = nil    -- unused
+    DefaultPointRenderer.funcGetAfPoints = AppleDelegates.getAfPoints
   elseif (string.find(cameraMake, "olympus", 1, true)) then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
