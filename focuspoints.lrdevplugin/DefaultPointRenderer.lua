@@ -24,6 +24,7 @@ local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
 local LrErrors = import 'LrErrors'
+local LrApplication = import 'LrApplication'
 
 require "ExifUtils"
 a = require "affine"
@@ -262,6 +263,12 @@ end
 -- - horizontal mirroring (0 -> none, -1 -> yes)
 --]]
 function DefaultPointRenderer.getUserRotationAndMirroring(photo)
+  -- LR 5 throws an error even trying to access getRawMetadata("orientation")
+  logDebug("DefaultPointRenderer", "LR version: " .. LrApplication.versionTable().major)
+  if (LrApplication.versionTable().major < 6) then
+    return DefaultPointRenderer.getShotOrientation(photo, ExifUtils.readMetaDataAsTable(photo)), 0
+  end
+
   local userRotation = photo:getRawMetadata("orientation")
   if userRotation == nil then
     logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
