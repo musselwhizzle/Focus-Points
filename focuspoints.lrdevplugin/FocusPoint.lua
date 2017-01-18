@@ -14,27 +14,37 @@
   limitations under the License.
 --]]
 
-local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
 local LrDialogs = import 'LrDialogs'
-local LrView = import 'LrView'
-local LrColor = import 'LrColor'
 local LrTasks = import 'LrTasks'
-local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
-local LrErrors = import 'LrErrors'
 
 require "FocusPointDialog"
 require "PointsRendererFactory"
 
-local function showDialog()
+FocusPoints = {}
+
+function FocusPoints.showDialog()
   LrFunctionContext.callWithContext("showDialog", function(context)
 
     local catalog = LrApplication.activeCatalog()
     local targetPhoto = catalog:getTargetPhoto()
 
-    LrTasks.startAsyncTask(function(context)
+    -- set overlay to nil, if errors during render, this can be checked to prevent showing the final dialog
+    local overlay = nil
+
+    -- let the renderer build the view now and show progress dialog
+    LrFunctionContext.callWithContext("innerContext", function(dialogContext)
+      -- Save LrProgressScope for checking if 'cancelled'
+      FocusPoints.dialogScope = LrDialogs.showModalProgressDialog {
+        title = "Loading Data",
+        caption = "Calculating Focus Point",
+        width = 200,
+        cannotCancel = false,
+        functionContext = dialogContext,
+      }
+      FocusPoints.dialogScope:setIndeterminate()
+                                    
       if (targetPhoto:checkPhotoAvailability() == false) then
         LrDialogs.message("Photo is not available. Make sure hard drives are attached and try again", nil, nil)
         return
@@ -47,21 +57,14 @@ local function showDialog()
         return
       end
 
-      -- let the renderer build the view now and show progress dialog
-      LrFunctionContext.callWithContext("innerContext", function(dialogContext)
-        local dialogScope = LrDialogs.showModalProgressDialog {
-          title = "Loading Data",
-          caption = "Calculating Focus Point",
-          width = 200,
-          cannotCancel = false,
-          functionContext = dialogContext,
-        }
-        dialogScope:setIndeterminate()
-        -- not local overlay. Need the scope outside for the dialog box below
-        overlay = rendererTable.createView(targetPhoto, photoW, photoH)
-      end)
+      -- Save overlay for next dialog display
+      overlay = rendererTable.createView(targetPhoto, photoW, photoH)
+                                    
+      FocusPoints.dialogScope:done()
+    end)
 
-
+    LrTasks.sleep(0)
+    if not FocusPoints.dialogScope:isCanceled() and overlay ~= nil then
       -- display the contents
       LrDialogs.presentModalDialog {
         title = "Focus Point Viewer",
@@ -69,11 +72,8 @@ local function showDialog()
         actionVerb = "OK",
         contents = FocusPointDialog.createDialog(targetPhoto, overlay)
       }
-    end)
+    end
   end)
 end
 
-showDialog()
-
-
-
+LrTasks.startAsyncTask(FocusPoints.showDialog)
