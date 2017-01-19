@@ -32,16 +32,19 @@ exiftoolWindows = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
   local metaDataFile = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
-
+  local singleQuoteWrap = '\'"\'"\''
+  
   local cmd
   if (WIN_ENV) then
     -- windows needs " around the entire command and then " around each path
     -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
     cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""';
   else
-    cmd = "'"..exiftool .. "' -a -u -sort '" .. string.gsub(path, "'", '\'"\'"\'') .. "' > '" .. metaDataFile .. "'";
+    exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
+    path = string.gsub(path, "'", singleQuoteWrap)
+    cmd = "'".. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
   end
---  logDebug("ExifUtils", "Command: " .. cmd)
+  logDebug("ExifUtils", "Exif cmd: " .. cmd)
 
   return cmd, metaDataFile
 end
