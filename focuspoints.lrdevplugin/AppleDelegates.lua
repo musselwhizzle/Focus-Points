@@ -20,6 +20,7 @@
 --]]
 
 local LrStringUtils = import "LrStringUtils"
+local LrErrors = import 'LrErrors'
 require "Utils"
 
 AppleDelegates = {}
@@ -42,6 +43,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
 
   local subjectArea = split(ExifUtils.findFirstMatchingValue(metaData, { "Subject Area" }), " ")
   if subjectArea == nil then
+    LrErrors.throwUserError("Could not find Subject Area data within the image.")
     return nil
   end
 
