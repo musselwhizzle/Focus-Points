@@ -14,6 +14,7 @@ Supported Cameras
 * Nikon D800 (and possibly D810 and D800E), D700.
 * Fuji all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 * Olympus cameras (Should work on recent E-* bodies)
+* Panasonic cameras
 * iphone and ipad
 
 
