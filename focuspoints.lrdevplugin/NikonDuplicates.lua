@@ -26,3 +26,6 @@ NikonDuplicates["nikon d7100"] = "nikon d7200"
 
 NikonDuplicates["nikon d800e"] = "nikon d800"
 NikonDuplicates["nikon d810"] = "nikon d800"
+
+NikonDuplicates["nikon d5300"] = "nikon d5500"
+NikonDuplicates["nikon d5200"] = "nikon d5500"
