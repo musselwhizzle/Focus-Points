@@ -11,7 +11,7 @@ Supported Cameras
 --------
 * Canon cameras 
   * all EOS and point and shoots. 
-  * 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 80D, 7D, 5D, etc, 
+  * 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 70D, 80D, 7D, 5D, etc, 
   * Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
 * Nikon 
   * D7100, D7200, D700, D800 (possibly D810 and D800E), D5500, D5300, D5200
