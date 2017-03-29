@@ -70,6 +70,23 @@ function split(str, delim)
 end
 
 --[[
+-- Breaks a delimited string into a table of substrings and removes whitespace
+-- split("A B C,D E", " ") -> { "A", "B", "C,D", "E" }
+-- str - string to be broken into pieces
+-- delim - delimiter
+--]]
+function splitTrim(str, delim)
+  if str == nil then return nil end
+  local t = {}
+  local i = 1
+  for str in string.gmatch(str, "([^" .. delim .. "]+)") do
+    t[i] = LrStringUtils.trimWhitespace(str)
+    i = i + 1
+  end
+  return t
+end
+
+--[[
  Splits a string into 2 parts: key and value. 
  @str  the string to split
  @delim the character used for splitting the string

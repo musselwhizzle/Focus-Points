@@ -1,6 +1,6 @@
 focusPointDimens = {300, 250}
 
--- "AF Points Selected"
+-- "AF Point Selected"
 -- numbers are makernotes:AFPointSelected (0x000e AFPointSelected)
 -- top row
 1 = {2787, 1832}
