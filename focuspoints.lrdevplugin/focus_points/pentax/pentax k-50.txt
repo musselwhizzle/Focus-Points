@@ -2,8 +2,6 @@
 -- Submitted by: roguephysicist
 -- 16.3 MP, 4928x3264
 -- AF System: 11 points, 9 cross-type
--- selected points: AFPointSelected
--- in-focus points: AFPointsInFocus
 
 -- point dimensions
 focusPointDimens = {250, 250}
