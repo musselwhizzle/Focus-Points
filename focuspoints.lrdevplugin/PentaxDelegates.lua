@@ -25,6 +25,8 @@
   Notes:
   * Back focus button sets AFPointsInFocus to 'None' regardless of point
     selection mode (sucks). AFPointSelected is set correctly with either button.
+  * For phase detection AF, the coordinates taken from the point map represent 
+    the center of each AF point.
 
   2017.03.29 - roguephysicist: works for Pentax K-50 with both phase and contrast detection
 --]]
@@ -42,6 +44,7 @@ PentaxDelegates.focusPointDimen = nil
 function PentaxDelegates.getAfPoints(photo, metaData)
   local focusMode = ExifUtils.findFirstMatchingValue(metaData, { "Focus Mode" })
   focusMode = splitTrim(focusMode, " ")
+  local result = nil
   if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
     result = PentaxDelegates.getAfPointsPhase(photo, metaData)
   elseif focusMode[1] == "Contrast-detect" then
