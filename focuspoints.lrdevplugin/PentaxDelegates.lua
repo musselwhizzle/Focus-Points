@@ -16,7 +16,11 @@
 
 --[[
   A collection of delegate functions to be passed into the DefaultPointRenderer
-  for Pentax cameras.
+  for Pentax cameras. 
+  
+  **Note: 
+  Unlike other point delegates, this point delegates shows all in-active focus points. I'm 
+  not sure what the means for the other delegates. Perhaps I'll update them. Perhaps I'll update this file.
 
   Notes:
   * Back focus button sets AFPointsInFocus to 'None' regardless of point
@@ -29,8 +33,6 @@ local LrStringUtils = import "LrStringUtils"
 local LrErrors = import 'LrErrors'
 require "Utils"
 
--- LrErrors.throwUserError(result)
-
 
 PentaxDelegates = {}
 
@@ -40,10 +42,13 @@ PentaxDelegates.metaKeyFocusMode = {"Focus Mode"}
 
 function PentaxDelegates.getAfPoints(photo, metaData)
   local focusMode = ExifUtils.findFirstMatchingValue(metaData, PentaxDelegates.metaKeyFocusMode)
+  local results = nil
   if (string.find(focusMode, 'AF%-S') ~= nil) then
     results = PentaxDelegates.getAfPointsPhase(photo, metaData)
   elseif (string.find(focusMode, 'Contrast%-detect') ~= nil) then
     results = PentaxDelegates.getAfPointsContrast(photo, metaData)
+  else 
+    LrErrors.throwUserError("Could not determine focus mode of the cameara.")
   end
   return results
 end
@@ -88,16 +93,15 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     elseif isSelected then
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
     end
-
-    if width > 0 and height > 0 then
-      table.insert(result.points, {
-        pointType = pointType,
-        x = x,
-        y = y,
-        width = width,
-        height = height
-      })
-    end
+    
+    table.insert(result.points, {
+      pointType = pointType,
+      x = x,
+      y = y,
+      width = width,
+      height = height
+    })
+    
   end
   return result
 end

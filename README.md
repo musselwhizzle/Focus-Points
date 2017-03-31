@@ -20,6 +20,9 @@ Supported Cameras
 * Olympus cameras 
   * (Should work on recent E-* bodies)
 * Panasonic cameras
+* Pentax
+  * K-50
+  * K-1
 * iphone and ipad
 
 
