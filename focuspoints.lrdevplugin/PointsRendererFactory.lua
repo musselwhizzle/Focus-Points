@@ -47,6 +47,11 @@ function PointsRendererFactory.createRenderer(photo)
   logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
   logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
   
+  -- normalize the camera names. Pentax can be called multiple things
+  if (cameraMake == "ricoh imaging company, ltd.") or (cameraMake == "pentax") then
+    cameraMake = "pentax"
+  end
+  
   -- some cameras have the same mapping as other camera
   -- check the cameraModel and switch it to a known map if it's a duplicate
   if (cameraMake == "nikon corporation") then
@@ -54,12 +59,6 @@ function PointsRendererFactory.createRenderer(photo)
     if (duplicateModel ~= nil) then
       cameraModel = duplicateModel
     end
-  elseif (cameraMake == "ricoh imaging company, ltd.") or (cameraMake == "pentax") then
-    cameraMake = "pentax"
-    -- local duplicateModel = PentaxDuplicates[cameraModel]
-    -- if (duplicateModel ~= nil) then
-    --   cameraModel = duplicateModel
-    -- end
   end
 
   if (cameraMake == "fujifilm") then
