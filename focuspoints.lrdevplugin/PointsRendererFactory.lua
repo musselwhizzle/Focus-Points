@@ -26,6 +26,7 @@ require "FujifilmDelegates"
 require "OlympusDelegates"
 require "PanasonicDelegates"
 require "AppleDelegates"
+require "PentaxDelegates"
 require "NikonDuplicates"
 
 local LrErrors = import 'LrErrors'
@@ -45,6 +46,11 @@ function PointsRendererFactory.createRenderer(photo)
   
   logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
   logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
+  
+  -- normalize the camera names. Pentax can be called multiple things
+  if (string.find(cameraMake, "ricoh imaging company", 1, true) or string.find(cameraMake, "pentax", 1, true)) then
+    cameraMake = "pentax"
+  end
   
   -- some cameras have the same mapping as other camera
   -- check the cameraModel and switch it to a known map if it's a duplicate
@@ -75,6 +81,11 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = PanasonicDelegates.getAfPoints
+  elseif (cameraMake == "pentax") then
+    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
+    PentaxDelegates.focusPointsMap = pointsMap
+    PentaxDelegates.focusPointDimen = pointDimen
+    DefaultPointRenderer.funcGetAfPoints = PentaxDelegates.getAfPoints
   else
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
     DefaultDelegates.focusPointsMap = pointsMap
