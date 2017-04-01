@@ -62,18 +62,6 @@ function PointsUtils.readIntoTable(folder, filename)
         points[i] = item
       end
       
-      --[[
-      local index = string.find(p.value, ",")
-      local points = {}
-      local x = string.sub(p.value, 1, index-1)
-      local y = string.sub(p.value, index+1, #p.value)
-      x = string.gsub(x, "[^0-9]", "")
-      y = string.gsub(y, "[^0-9]", "")
-      x = LrStringUtils.trimWhitespace(x)
-      y = LrStringUtils.trimWhitespace(y)
-      points[1] = tonumber(x)
-      points[2] = tonumber(y)
-      --]]
       --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
 
       if (pointName == "focusPointDimens") then
