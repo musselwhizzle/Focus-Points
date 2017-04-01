@@ -13,11 +13,11 @@ Top         = {2464, 1113}
 Upper-right = {3188, 1113}
 
 -- center row
-Left        = {1045, 1632}
+Left        = {1045, 1632, 250, 550}
 Mid-left    = {1740, 1632}
 Center      = {2464, 1632}
 Mid-right   = {3188, 1632}
-Right       = {3883, 1632}
+Right       = {3883, 1632, 250, 550}
 
 -- bottom row
 Lower-left  = {1740, 2151}

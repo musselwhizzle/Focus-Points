@@ -17,7 +17,6 @@
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
-
 require "Utils"
 
 PointsUtils = {}
@@ -43,9 +42,27 @@ function PointsUtils.readIntoTable(folder, filename)
   for i in string.gmatch(data, "[^\\\n]+") do
     p = splitToKeyValue(i, "=")
     if p ~= nil then
+      
+      -- variable or focus point name
       local pointName = p.key
-
       pointName = LrStringUtils.trimWhitespace(pointName)
+      
+      -- variable value
+      local value = LrStringUtils.trimWhitespace(p.value)
+      value = string.gsub(value, "{", "")
+      value = string.gsub(value, "}", "")
+      value = LrStringUtils.trimWhitespace(p.value)
+      local dataPoints = splitTrim(value, ",")
+      
+      local points = {}
+      for i in pairs(dataPoints) do
+        local item = dataPoints[i]
+        item = string.gsub(item, "[^0-9]", "")
+        item = LrStringUtils.trimWhitespace(item)
+        points[i] = item
+      end
+      
+      --[[
       local index = string.find(p.value, ",")
       local points = {}
       local x = string.sub(p.value, 1, index-1)
@@ -56,6 +73,7 @@ function PointsUtils.readIntoTable(folder, filename)
       y = LrStringUtils.trimWhitespace(y)
       points[1] = tonumber(x)
       points[2] = tonumber(y)
+      --]]
       --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
 
       if (pointName == "focusPointDimens") then
