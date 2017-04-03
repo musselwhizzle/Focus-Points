@@ -5,7 +5,7 @@
 -- Coordinates represent the CENTER of the AF point
 
 -- point dimensions
-focusPointDimens = {250, 250}
+focusPointDimens = {100, 100}
 
 -- top row
 Upper-left  = {1740, 1113}
@@ -13,11 +13,11 @@ Top         = {2464, 1113}
 Upper-right = {3188, 1113}
 
 -- center row
-Left        = {1045, 1632, 250, 550}
+Left        = {1045, 1632, 60, 200}
 Mid-left    = {1740, 1632}
 Center      = {2464, 1632}
 Mid-right   = {3188, 1632}
-Right       = {3883, 1632, 250, 550}
+Right       = {3883, 1632, 60, 200}
 
 -- bottom row
 Lower-left  = {1740, 2151}
