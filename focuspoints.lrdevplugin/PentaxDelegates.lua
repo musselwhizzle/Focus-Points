@@ -25,6 +25,8 @@
   Notes:
   * Back focus button sets AFPointsInFocus to 'None' regardless of point
     selection mode (sucks). AFPointSelected is set correctly with either button.
+  * For phase detection AF, the coordinates taken from the point map represent 
+    the center of each AF point.
 
   2017.03.29 - roguephysicist: works for Pentax K-50 with both phase and contrast detection
 --]]
@@ -38,19 +40,21 @@ PentaxDelegates = {}
 
 PentaxDelegates.focusPointsMap = nil
 PentaxDelegates.focusPointDimen = nil
-PentaxDelegates.metaKeyFocusMode = {"Focus Mode"}
 
 function PentaxDelegates.getAfPoints(photo, metaData)
-  local focusMode = ExifUtils.findFirstMatchingValue(metaData, PentaxDelegates.metaKeyFocusMode)
-  local results = nil
-  if (string.find(focusMode, 'AF%-S') ~= nil) then
-    results = PentaxDelegates.getAfPointsPhase(photo, metaData)
-  elseif (string.find(focusMode, 'Contrast%-detect') ~= nil) then
-    results = PentaxDelegates.getAfPointsContrast(photo, metaData)
-  else 
-    LrErrors.throwUserError("Could not determine focus mode of the cameara.")
+  local focusMode = ExifUtils.findFirstMatchingValue(metaData, { "Focus Mode" })
+  focusMode = splitTrim(focusMode, " ")
+  local result = nil
+  if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
+    result = PentaxDelegates.getAfPointsPhase(photo, metaData)
+  elseif focusMode[1] == "Contrast-detect" then
+    result = PentaxDelegates.getAfPointsContrast(photo, metaData)
+  elseif focusMode[1] == "Manual" then
+    LrErrors.throwUserError("Manual focus: no useful focusing information found.")
+  else
+    LrErrors.throwUserError("Could not determine the focus mode of the camera.")
   end
-  return results
+  return result
 end
 
 --[[
@@ -63,6 +67,7 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     afPointsSelected = {}
   else
     afPointsSelected = splitTrim(afPointsSelected, ";") -- pentax separates with ';'
+    afPointsSelected = PentaxDelegates.fixCenter(afPointsSelected)
   end
   local afPointsInFocus = ExifUtils.findFirstMatchingValue(metaData, { "AF Points In Focus" })
   if afPointsInFocus == nil then
@@ -78,10 +83,18 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
   }
 
   for key,value in pairs(PentaxDelegates.focusPointsMap) do
-    local x = PentaxDelegates.focusPointsMap[key][1]
-    local y = PentaxDelegates.focusPointsMap[key][2]
-    local width = PentaxDelegates.focusPointDimen[1]
-    local height = PentaxDelegates.focusPointDimen[2]
+    local pointsMap = PentaxDelegates.focusPointsMap[key]
+    local x = pointsMap[1]
+    local y = pointsMap[2]
+    local width
+    local height
+    if (#pointsMap > 2) then 
+      width = pointsMap[3] 
+      height = pointsMap[4]
+    else 
+      width = PentaxDelegates.focusPointDimen[1]
+      height = PentaxDelegates.focusPointDimen[2]
+    end
     
     local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
     local isInFocus = arrayKeyOf(afPointsInFocus, key) ~= nil
@@ -124,11 +137,11 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
     contrastAfMode = splitTrim(contrastAfMode, ";") -- pentax separates with ';'
   local faceDetectSize = ExifUtils.findFirstMatchingValue(metaData, { "Face Detect Frame Size" })
     faceDetectSize = splitTrim(faceDetectSize, " ")
+  local facesDetected = ExifUtils.findFirstMatchingValue(metaData, { "Faces Detected" })
+    facesDetected = tonumber(facesDetected)
   
-  if contrastAfMode[1] == "Face Detect AF" then 
+  if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then 
     local faces = {}
-    local facesDetected = ExifUtils.findFirstMatchingValue(metaData, { "Faces Detected" })
-
     for face=1,facesDetected do
       local facePosition = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Position" })
         facePosition = splitTrim(facePosition, " ")
@@ -151,6 +164,8 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
         })
       end
     end
+  elseif (contrastAfMode[1] == "Face Detect AF" and facesDetected == 0) then
+    LrErrors.throwUserError("Face Detect AF mode enabled, but no faces detected.")
   else -- 'Automatic Tracking AF', 'Fixed Center', 'AF Select'
     local contrastDetectArea = ExifUtils.findFirstMatchingValue(metaData, { "Contrast Detect AF Area" })
       contrastDetectArea = splitTrim(contrastDetectArea, " ")
@@ -176,7 +191,7 @@ end
 
 function PentaxDelegates.fixCenter(points)
   for k,v in pairs(points) do
-    if v == 'Center (vertical)' or v == 'Center (horizontal)' then
+    if v == 'Center (vertical)' or v == 'Center (horizontal)' or v == 'Fixed Center' then
       points[k] = 'Center'
     end
   end
