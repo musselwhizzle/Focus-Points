@@ -83,10 +83,18 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
   }
 
   for key,value in pairs(PentaxDelegates.focusPointsMap) do
-    local x = PentaxDelegates.focusPointsMap[key][1]
-    local y = PentaxDelegates.focusPointsMap[key][2]
-    local width = PentaxDelegates.focusPointDimen[1]
-    local height = PentaxDelegates.focusPointDimen[2]
+    local pointsMap = PentaxDelegates.focusPointsMap[key]
+    local x = pointsMap[1]
+    local y = pointsMap[2]
+    local width
+    local height
+    if (#pointsMap > 2) then 
+      width = pointsMap[3] 
+      height = pointsMap[4]
+    else 
+      width = PentaxDelegates.focusPointDimen[1]
+      height = PentaxDelegates.focusPointDimen[2]
+    end
     
     local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
     local isInFocus = arrayKeyOf(afPointsInFocus, key) ~= nil
