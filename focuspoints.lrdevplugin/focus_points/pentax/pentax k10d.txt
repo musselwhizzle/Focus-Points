@@ -1,0 +1,25 @@
+-- Pentax K10D
+-- Submitted by: roguephysicist
+-- 10 MP, 3872x2592
+-- AF System: 11 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {80, 80}
+
+-- top row
+Upper-left  = {1367, 884}
+Top         = {1936, 884}
+Upper-right = {2505, 884}
+
+-- center row
+Left        = {821, 1296, 50, 160}
+Mid-left    = {1367, 1296}
+Center      = {1936, 1296}
+Mid-right   = {2505, 1296}
+Right       = {3051, 1296, 50, 160}
+
+-- bottom row
+Lower-left  = {1367, 1708}
+Bottom      = {1936, 1708}
+Lower-right = {2505, 1708}

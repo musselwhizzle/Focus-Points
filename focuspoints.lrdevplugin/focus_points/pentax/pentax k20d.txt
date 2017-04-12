@@ -1,0 +1,25 @@
+-- Pentax K20D
+-- Submitted by: roguephysicist
+-- 14.5 MP, 4672x3104
+-- AF System: 11 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {95, 95}
+
+-- top row
+Upper-left  = {1650, 1058}
+Top         = {2336, 1058}
+Upper-right = {3022, 1058}
+
+-- center row
+Left        = {991, 1552, 57, 190}
+Mid-left    = {1650, 1552}
+Center      = {2336, 1552}
+Mid-right   = {3022, 1552}
+Right       = {3681, 1552, 57, 190}
+
+-- bottom row
+Lower-left  = {1650, 2046}
+Bottom      = {2336, 2046}
+Lower-right = {3022, 2046}

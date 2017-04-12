@@ -1,0 +1,45 @@
+-- Pentax K-3
+-- Submitted by: beholder3, roguephysicist
+-- 24 MP, 6016x4000
+-- AF System: 27 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {150, 150}
+
+-- top row
+Top-left = {2118,1352}
+Top Near-left = {2563,1352}
+Top = {3008,1352}
+Top Near-right = {3453,1352}
+Top-right = {3898,1352}
+
+-- upper row
+Upper-left = {2118,1676}
+Upper Near-left = {2563,1676}
+Upper-middle = {3008,1676}
+Upper Near-right = {3453,1676}
+Upper-right = {3898,1676}
+
+-- center row
+Far Left = {1221,2000, 73, 245}
+Left = {2118,2000}
+Near-left = {2563,2000}
+Center = {3008,2000}
+Near-right = {3453,2000}
+Right = {3898,2000}
+Far Right = {4795,2000, 73, 245}
+
+-- lower row
+Lower-left = {2118,2324}
+Lower Near-left = {2563,2324}
+Lower-middle = {3008,2324}
+Lower Near-right = {3453,2324}
+Lower-right = {3898,2324}
+
+-- bottom row
+Bottom-left = {2118,2648}
+Bottom Near-left = {2563,2648}
+Bottom = {3008,2648}
+Bottom Near-right = {3453,2648}
+Bottom-right= {3898,2648}

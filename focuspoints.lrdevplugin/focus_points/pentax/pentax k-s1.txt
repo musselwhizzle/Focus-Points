@@ -1,0 +1,25 @@
+-- Pentax K-S1
+-- Submitted by: roguephysicist
+-- 20 MP, 5472x3648
+-- AF System: 11 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {112, 112}
+
+-- top row
+Upper-left  = {1932, 1244}
+Top         = {2736, 1244}
+Upper-right = {3540, 1244}
+
+-- center row
+Left        = {1160, 1824, 67, 224}
+Mid-left    = {1932, 1824}
+Center      = {2736, 1824}
+Mid-right   = {3540, 1824}
+Right       = {4312, 1824, 67, 224}
+
+-- bottom row
+Lower-left  = {1932, 2404}
+Bottom      = {2736, 2404}
+Lower-right = {3540, 2404}

@@ -1,0 +1,25 @@
+-- Pentax K-x
+-- Submitted by: roguephysicist
+-- 12.2 MP, 4288x2848
+-- AF System: 11 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {88, 88}
+
+-- top row
+Upper-left  = {1514, 971}
+Top         = {2144, 971}
+Upper-right = {2774, 971}
+
+-- center row
+Left        = {909, 1424, 60, 175}
+Mid-left    = {1514, 1424}
+Center      = {2144, 1424}
+Mid-right   = {2774, 1424}
+Right       = {3379, 1424, 60, 175}
+
+-- bottom row
+Lower-left  = {1514, 1877}
+Bottom      = {2144, 1877}
+Lower-right = {2774, 1877}
