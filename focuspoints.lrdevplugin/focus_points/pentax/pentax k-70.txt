@@ -1,0 +1,25 @@
+-- Pentax K-70
+-- Submitted by: roguephysicist
+-- 24 MP, 6000x4000
+-- AF System: 11 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {122, 122}
+
+-- top row
+Upper-left  = {2118, 1364}
+Top         = {3000, 1364}
+Upper-right = {3881, 1364}
+
+-- center row
+Left        = {1272, 2000, 73, 245}
+Mid-left    = {2118, 2000}
+Center      = {3000, 2000}
+Mid-right   = {3881, 2000}
+Right       = {4728, 2000, 73, 245}
+
+-- bottom row
+Lower-left  = {2118, 2636}
+Bottom      = {3000, 2636}
+Lower-right = {3881, 2636}

@@ -1,0 +1,25 @@
+-- Pentax K-100D Super
+-- Submitted by: roguephysicist
+-- 6.0 MP, 3008x2008
+-- AF System: 11 point
+-- Coordinates represent the CENTER of the AF point
+
+-- point dimensions
+focusPointDimens = {62, 62}
+
+-- top row
+Upper-left  = {1062, 685}
+Top         = {1504, 685}
+Upper-right = {1946, 685}
+
+-- center row
+Left        = {639, 1004, 37, 124}
+Mid-left    = {1062, 1004}
+Center      = {1504, 1004}
+Mid-right   = {1946, 1004}
+Right       = {2370, 1004, 37, 124}
+
+-- bottom row
+Lower-left  = {1062, 1323}
+Bottom      = {1504, 1323}
+Lower-right = {1946, 1323}

@@ -20,9 +20,13 @@ Supported Cameras
 * Olympus cameras 
   * (Should work on recent E-* bodies)
 * Panasonic cameras
-* Pentax
-  * K-50
-  * K-1
+* Pentax ([full list](focuspoints.lrdevplugin/focus_points/pentax/README.md))
+  * Tested
+    * K-50, K-S1, K-5 II, K-5 IIs, K-5, K-30, K-7, K20D, K-r, K200D, K10D, K110D, K100D Super, K100D, *ist DS2, *ist DS, *ist D
+  * Working, but missing features
+    * K-1, K-3, K-3 II
+  * Untested, but should work:
+    * KP, K-70, K-S2, K-500, K-x
 * iphone and ipad
 
 
@@ -82,7 +86,7 @@ Special Thanks
 --------
 There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who has worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
 
-rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof. 
+rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist. 
 
 <a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 
