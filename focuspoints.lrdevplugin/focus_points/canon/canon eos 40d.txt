@@ -1,0 +1,25 @@
+focusPointDimens = {97, 98}
+
+-- ORIGINAL VALUES TAKEN FROM METADATA AFAreaXPositions, AFAreaYPositions
+
+-- Coordinate system taken from http://www.sno.phy.queensu.ca/~phil/exiftool/TagNames/Canon.html#AFInfo
+-- PhotoME
+-- Center is 0, 0
+-- X-axis is positive towards the right
+-- Y-axis is positive towards the top
+-- Size is 3888 x 2592 -> center is 1944, 1296
+
+-- Operation to perform:
+-- X -> originalX + 1944
+-- Y -> abs(originalY - 1296) 
+
+
+1 = {1944, 734} 
+2 = {1295, 998}
+3 = {2596, 998}
+4 = {910, 1296} 
+5 = {1944, 1296} 
+6 = {2978, 1296} 
+7 = {1295, 1594}
+8 = {2593, 1594} 
+9 = {1944, 1858}
