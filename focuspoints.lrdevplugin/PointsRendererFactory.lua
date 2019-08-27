@@ -52,6 +52,10 @@ function PointsRendererFactory.createRenderer(photo)
     cameraMake = "pentax"
   end
   
+  if (string.find(cameraMake, "nikon", 1, true)) then
+    cameraMake = "nikon corporation"
+  end
+
   -- some cameras have the same mapping as other camera
   -- check the cameraModel and switch it to a known map if it's a duplicate
   if (cameraMake == "nikon corporation") then
