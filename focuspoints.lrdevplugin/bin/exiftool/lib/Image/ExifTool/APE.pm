@@ -32,6 +32,11 @@ $VERSION = '1.05';
     Title   => { },
     Track   => { },
     Year    => { },
+    DURATION => {
+        Name => 'Duration',
+        ValueConv => '$val += 4294967296 if $val < 0 and $val >= -2147483648; $val * 1e-7',
+        PrintConv => 'ConvertDuration($val)',
+    },
     'Tool Version' => { Name => 'ToolVersion' },
     'Tool Name'    => { Name => 'ToolName' },
 );
@@ -258,7 +263,7 @@ Currently doesn't parse MAC header unless it is at the start of the file.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -11,15 +11,15 @@ package Image::ExifTool::TagInfoXML;
 use strict;
 require Exporter;
 
-use vars qw($VERSION @ISA);
+use vars qw($VERSION @ISA $makeMissing);
 use Image::ExifTool qw(:Utils :Vars);
 use Image::ExifTool::XMP;
 
-$VERSION = '1.28';
+$VERSION = '1.31';
 @ISA = qw(Exporter);
 
 # set this to a language code to generate Lang module with 'MISSING' entries
-my $makeMissing = '';
+$makeMissing = '';
 
 sub LoadLangModules($;$);
 sub WriteLangModule($$;$);
@@ -28,7 +28,7 @@ sub NumbersFirst;
 # names for acknowledgements in the POD documentation
 my %credits = (
     cs   => 'Jens Duttke and Petr MichE<aacute>lek',
-    de   => 'Jens Duttke and Herbert Kauer',
+    de   => 'Jens Duttke, Herbert Kauer and Jobi',
     es   => 'Jens Duttke, Santiago del BrE<iacute>o GonzE<aacute>lez and Emilio Sancha',
     fi   => 'Jens Duttke and Jarkko ME<auml>kineva',
     fr   => 'Jens Duttke, Bernard Guillotin, Jean Glasser, Jean Piquemal, Harry Nizard and Alphonse Philippe',
@@ -37,7 +37,7 @@ my %credits = (
     ko   => 'Jens Duttke and Jeong Beom Kim',
     nl   => 'Jens Duttke, Peter Moonen, Herman Beld and Peter van der Laan',
     pl   => 'Jens Duttke, Przemyslaw Sulek and Kacper Perschke',
-    ru   => 'Jens Duttke, Sergey Shemetov, Dmitry Yerokhin and Anton Sukhinov',
+    ru   => 'Jens Duttke, Sergey Shemetov, Dmitry Yerokhin, Anton Sukhinov and Alexander',
     sv   => 'Jens Duttke and BjE<ouml>rn SE<ouml>derstrE<ouml>m',
    'tr'  => 'Jens Duttke, Hasan Yildirim and Cihan Ulusoy',
     zh_cn => 'Jens Duttke and Haibing Zhong',
@@ -67,9 +67,9 @@ sub Write(;$$%)
 {
     local ($_, *PTIFILE);
     my ($file, $group, %opts) = @_;
-    my @groups = split ':', $group if $group;
     my $et = new Image::ExifTool;
-    my ($fp, $tableName, %langInfo, @langs, $defaultLang);
+    my ($fp, $tableName, %langInfo, @langs, $defaultLang, @groups);
+    @groups = split ':', $group if $group;
 
     Image::ExifTool::LoadAllTables();   # first load all our tables
     unless ($opts{NoDesc}) {
@@ -109,7 +109,7 @@ sub Write(;$$%)
         $numbersFirst = -1 if $$table{VARS} and $$table{VARS}{ALPHA_FIRST};
         my @keys = sort NumbersFirst TagTableKeys($table);
         $numbersFirst = 1;
-        # loop throug all tag ID's in this table
+        # loop through all tag ID's in this table
         foreach $tagID (@keys) {
             my @infoArray = GetTagInfoList($table, $tagID);
             my $xmlID = Image::ExifTool::XMP::FullEscapeXML($tagID);
@@ -127,7 +127,7 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                 }
                 unless ($didTag) {
                     my $tname = $$table{SHORT_NAME};
-                    print $fp "<table name='$tname' g0='$$grps{0}' g1='$$grps{1}' g2='$$grps{2}'>\n";
+                    print $fp "<table name='${tname}' g0='$$grps{0}' g1='$$grps{1}' g2='$$grps{2}'>\n";
                     unless ($opts{NoDesc}) {
                         # print table description
                         my $desc = $$table{TABLE_DESC};
@@ -140,13 +140,13 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                         foreach (@langs) {
                             $desc = $langInfo{$_}{$tableName} or next;
                             $desc = Image::ExifTool::XMP::EscapeXML($desc);
-                            print $fp " <desc lang='$_'>$desc</desc>\n";
+                            print $fp " <desc lang='${_}'>$desc</desc>\n";
                         }
                     }
                     $didTag = 1;
                 }
                 my $name = $$tagInfo{Name};
-                my $ind = @infoArray > 1 ? " index='$index'" : '';
+                my $ind = @infoArray > 1 ? " index='${index}'" : '';
                 my $format = $$tagInfo{Writable} || $$table{WRITABLE};
                 my $writable = $format ? 'true' : 'false';
                 # check our conversions to make sure we can really write this tag
@@ -171,7 +171,7 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                 }
                 my $count = '';
                 if ($format =~ s/\[.*?(\d*)\]$//) {
-                    $count = " count='$1'" if length $1;
+                    $count = " count='${1}'" if length $1;
                 } elsif ($$tagInfo{Count} and $$tagInfo{Count} > 1) {
                     $count = " count='$$tagInfo{Count}'";
                 }
@@ -199,11 +199,13 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                         ($groups[0] eq 'MakerNotes' and not defined $$tagInfo{Permanent});
                     $grp = " flags='" . join(',', sort @flags) . "'$grp" if @flags;
                 }
-                print $fp " <tag id='$xmlID' name='$name'$ind type='$format'$count writable='$writable'$grp";
+                print $fp " <tag id='${xmlID}' name='${name}'$ind type='${format}'$count writable='${writable}'$grp";
                 if ($opts{NoDesc}) {
                     # short output format
                     print $fp "/>\n";   # empty tag element
                     next;               # no descriptions or values
+                } else {
+                    print $fp ">";
                 }
                 my $desc = $$tagInfo{Description};
                 $desc = Image::ExifTool::MakeDescription($name) unless defined $desc;
@@ -220,12 +222,12 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                     # ignore descriptions that are the same as the default language
                     next if $ld eq $desc;
                     $ld = Image::ExifTool::XMP::EscapeXML($ld);
-                    $altDescr .= "\n  <desc lang='$_'>$ld</desc>";
+                    $altDescr .= "\n  <desc lang='${_}'>$ld</desc>";
                 }
                 # print tag descriptions
                 $desc = Image::ExifTool::XMP::EscapeXML($desc);
                 unless ($opts{Lang} and $altDescr) {
-                    print $fp ">\n  <desc lang='$defaultLang'>$desc</desc>";
+                    print $fp "\n  <desc lang='${defaultLang}'>$desc</desc>";
                 }
                 print $fp "$altDescr\n";
                 for (my $i=0; ; ++$i) {
@@ -234,7 +236,7 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                     if (ref $conv eq 'ARRAY') {
                         last unless $i < @$conv;
                         $conv = $$conv[$i];
-                        $idx = " index='$i'";
+                        $idx = " index='${i}'";
                     } else {
                         last if $i;
                     }
@@ -257,7 +259,7 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                         my $val = $$conv{$key};
                         my $xmlVal = Image::ExifTool::XMP::EscapeXML($val);
                         my $xmlKey = Image::ExifTool::XMP::FullEscapeXML($key);
-                        print $fp "   <key id='$xmlKey'>\n";
+                        print $fp "   <key id='${xmlKey}'>\n";
                         # add alternate language values
                         my $altConv = '';
                         foreach (@langConv) {
@@ -268,10 +270,10 @@ PTILoop:    for ($index=0; $index<@infoArray; ++$index) {
                             # ignore values that are missing or same as default
                             next unless defined $lv and $lv ne $val;
                             $lv = Image::ExifTool::XMP::EscapeXML($lv);
-                            $altConv .= "    <val lang='$_'>$lv</val>\n";
+                            $altConv .= "    <val lang='${_}'>$lv</val>\n";
                         }
                         unless ($opts{Lang} and $altConv) {
-                            print $fp "    <val lang='$defaultLang'>$xmlVal</val>\n"
+                            print $fp "    <val lang='${defaultLang}'>$xmlVal</val>\n"
                         }
                         print $fp "$altConv   </key>\n";
                     }
@@ -364,7 +366,12 @@ sub BuildLangModules($;$)
                 $id = Image::ExifTool::XMP::FullUnescapeXML($1);
                 $name = $2;
                 $index = $4;
-                $id = hex($id) if $id =~ /^0x[\da-fA-F]+$/; # convert hex ID's
+                # convert hex ID's unless HEX_ID is 0 (for string ID's that look like hex)
+                if ($id =~ /^0x[\da-fA-F]+$/ and (not defined $$table{VARS} or
+                    not defined $$table{VARS}{HEX_ID} or $$table{VARS}{HEX_ID}))
+                {
+                    $id = hex($id);
+                }
                 next;
             }
             if ($tok eq 'values') {
@@ -389,6 +396,7 @@ sub BuildLangModules($;$)
                 if ($makeMissing and $lang eq 'en') {
                     $lang = $makeMissing;
                     $val = 'MISSING';
+                    undef $cap;
                 }
                 my $isDefault = ($lang eq $Image::ExifTool::defaultLang);
                 unless ($langInfo{$lang} or $isDefault) {
@@ -403,13 +411,13 @@ sub BuildLangModules($;$)
                             $langInfo{$lang}{$tableName} eq $val;
                     $langInfo{$lang}{$tableName} = $val;
                     $changed{$lang} = 1;
-                    warn("Capitalized '$lang' val for $name: $val\n") if $cap;
+                    warn("Capitalized '${lang}' val for $name: $val\n") if $cap;
                     next;
                 }
                 my @infoArray = GetTagInfoList($table, $id);
 
                 # this will fail for UserDefined tags and tags without ID's
-                @infoArray or warn("Error loading tag for $tableName ID='$id'\n"), next;
+                @infoArray or warn("Error loading tag for $tableName ID='${id}'\n"), next;
                 my ($tagInfo, $langInfo);
                 if (defined $index) {
                     $tagInfo = $infoArray[$index];
@@ -443,7 +451,7 @@ sub BuildLangModules($;$)
                         my $t = "$lang $tagName";
                         unless (defined $different{$t} and $different{$t} eq $val) {
                             my $a = defined $different{$t} ? 'ANOTHER ' : '';
-                            warn "${a}Different '$lang' desc for $tagName: $val (was $$langInfo{Description})\n";
+                            warn "${a}Different '${lang}' desc for $tagName: $val (was $$langInfo{Description})\n";
                             next if defined $different{$t}; # don't change back again
                             $different{$t} = $val;
                         }
@@ -490,14 +498,14 @@ sub BuildLangModules($;$)
                         my $t = "$lang $tagName $convVal";
                         unless (defined $different{$t} and $different{$t} eq $val) {
                             my $a = defined $different{$t} ? 'ANOTHER ' : '';
-                            warn "${a}Different '$lang' val for $tagName '$convVal': $val (was $oldVal)\n";
+                            warn "${a}Different '${lang}' val for $tagName '${convVal}': $val (was $oldVal)\n";
                             next if defined $different{$t}; # don't change back again
                             $different{$t} = $val;
                         }
                         next unless $overrideDifferent;
                     }
                     next if $isDefault;
-                    warn("Capitalized '$lang' val for $tagName: $tval\n") if $cap;
+                    warn("Capitalized '${lang}' val for $tagName: $tval\n") if $cap;
                     $$lc{$convVal} = $val;
                 }
                 $changed{$lang} = 1;
@@ -555,7 +563,7 @@ package Image::ExifTool::Lang::$lang;
 use strict;
 use vars qw(\$VERSION);
 
-\$VERSION = '$ver';
+\$VERSION = '${ver}';
 
 HEADER
     print XOUT "\%Image::ExifTool::Lang::${lang}::Translate = (\n";
@@ -584,19 +592,19 @@ HEADER
         } else {
             next unless $conv;
         }
-        print XOUT "   '$tag' => ";
+        print XOUT "   '${tag}' => ";
         unless ($conv) {
-            print XOUT "'$desc',\n";
+            print XOUT "'${desc}',\n";
             next;
         }
         print XOUT "{\n";
-        print XOUT "      Description => '$desc',\n" if defined $desc;
+        print XOUT "      Description => '${desc}',\n" if defined $desc;
         if ($conv) {
             print XOUT "      PrintConv => {\n";
             foreach (sort keys %$conv) {
                 my $str = EscapePerl($_);
                 my $val = EscapePerl($$conv{$_});
-                print XOUT "        '$str' => '$val',\n";
+                print XOUT "        '${str}' => '${val}',\n";
             }
             print XOUT "      },\n";
         }
@@ -616,7 +624,6 @@ HEADER
 
 1;  # end
 
-
 __END__
 
 ~head1 NAME
@@ -630,7 +637,7 @@ and values.
 
 ~head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
@@ -814,7 +821,7 @@ Number of modules updated, or negative on error.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

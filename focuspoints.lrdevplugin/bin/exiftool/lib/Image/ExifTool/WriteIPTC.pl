@@ -105,7 +105,7 @@ sub CheckIPTC($$$)
     my $format = $$tagInfo{Format} || $$tagInfo{Table}{FORMAT} || '';
     if ($format =~ /^int(\d+)/) {
         my $bytes = int(($1 || 0) / 8);
-        if ($bytes ne 1 and $bytes ne 2 and $bytes ne 4) {
+        if ($bytes != 1 and $bytes != 2 and $bytes != 4) {
             return "Can't write $bytes-byte integer";
         }
         my $val = $$valPtr;
@@ -127,7 +127,7 @@ sub CheckIPTC($$$)
                 $len = $minlen;
             }
         }
-        if (defined $minlen) {
+        if (defined $minlen and $fmt ne 'string') { # (must truncate strings later, after recoding)
             $maxlen or $maxlen = $minlen;
             if ($len < $minlen) {
                 unless ($$et{OPTIONS}{IgnoreMinorErrors}) {
@@ -185,6 +185,26 @@ sub FormatIPTC($$$$$;$)
         } elsif ($$xlatPtr and $rec < 7 and $$valPtr =~ /[\x80-\xff]/) {
             TranslateCodedString($et, $valPtr, $xlatPtr, $read);
         }
+        # must check length now (after any string recoding)
+        if (not $read and $format =~ /^string\[(\d+),?(\d*)\]$/) {
+            my ($minlen, $maxlen) = ($1, $2);
+            my $len = length $$valPtr;
+            $maxlen or $maxlen = $minlen;
+            if ($len < $minlen) {
+                if ($et->Warn("String too short for IPTC:$$tagInfo{Name} (padded)", 2)) {
+                    $$valPtr .= ' ' x ($minlen - $len);
+                }
+            } elsif ($len > $maxlen) {
+                if ($et->Warn("IPTC:$$tagInfo{Name} exceeds length limit (truncated)", 2)) {
+                    $$valPtr = substr($$valPtr, 0, $maxlen);
+                    # make sure UTF-8 is still valid
+                    if (($$xlatPtr || $et->Options('Charset')) eq 'UTF8') {
+                        require Image::ExifTool::XMP;
+                        Image::ExifTool::XMP::FixUTF8($valPtr,'.');
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -195,7 +215,7 @@ sub FormatIPTC($$$$$;$)
 sub IptcDate($)
 {
     my $val = shift;
-    unless ($val =~ s/^.*(\d{4}):?(\d{2}):?(\d{2}).*/$1$2$3/s) {
+    unless ($val =~ s{^.*(\d{4})[-:/.]?(\d{2})[-:/.]?(\d{2}).*}{$1$2$3}s) {
         warn "Invalid date format (use YYYY:mm:dd)\n";
         undef $val;
     }
@@ -246,12 +266,12 @@ sub IptcTime($)
 
 #------------------------------------------------------------------------------
 # Inverse print conversion for IPTC date or time value
-# Inputs: 0) IPTC date or 'now'
+# Inputs: 0) ExifTool ref, 1) IPTC date or 'now'
 # Returns: IPTC date
-sub InverseDateOrTime($)
+sub InverseDateOrTime($$)
 {
-    my $val = shift;
-    return Image::ExifTool::TimeNow() if lc($val) eq 'now';
+    my ($et, $val) = @_;
+    return $et->TimeNow() if lc($val) eq 'now';
     return $val;
 }
 
@@ -670,6 +690,8 @@ sub WriteIPTC($$$)
         }
         last;
     }
+    # set changed if ForceWrite tag was set to "IPTC"
+    ++$$et{CHANGED} if defined $newData and length $newData and $$et{FORCE_WRITE}{IPTC};
     return $newData;
 }
 
@@ -693,7 +715,7 @@ seldom-used routines.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -11,7 +11,7 @@ package Image::ExifTool::Lang::ja;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.22';
+$VERSION = '1.25';
 
 %Image::ExifTool::Lang::ja::Translate = (
    'AEAperture' => 'AE絞り',
@@ -633,6 +633,7 @@ $VERSION = '1.22';
         'On' => 'オン',
       },
     },
+   'AutoBracketingSet' => 'オートブラケット設定',
    'AutoExposureBracketing' => {
       Description => 'フラッシュバイアス',
       PrintConv => {
@@ -820,6 +821,7 @@ $VERSION = '1.22';
    'BurstMode' => {
       Description => 'ブラストモード',
       PrintConv => {
+        'Auto Exposure Bracketing (AEB)' => '無限',
         'Infinite' => '無限',
         'Off' => 'オフ',
         'On' => 'オン',
@@ -1279,7 +1281,7 @@ $VERSION = '1.22';
       Description => '圧縮計画',
       PrintConv => {
         'JPEG' => 'JPEG圧縮率',
-        'JPEG (old-style)' => 'JPEG(古い形式)',
+        'JPEG (old-style)' => 'JPEG (古い形式)',
         'None' => '無し',
         'Uncompressed' => '非圧縮',
       },
@@ -1324,10 +1326,10 @@ $VERSION = '1.22';
    'Contrast' => {
       Description => 'コントラスト',
       PrintConv => {
-        '+1 (med high)' => '+1 (少し高い)',
+        '+1 (medium high)' => '+1 (少し高い)',
         '+2 (high)' => '+2 (ハード)',
         '+3 (very high)' => '+3 (かなり高い)',
-        '-1 (med low)' => '-1 (少し低い)',
+        '-1 (medium low)' => '-1 (少し低い)',
         '-2 (low)' => '-2 (ソフト)',
         '-3 (very low)' => '-3 (かなり低い)',
         '0 (normal)' => '0 (スタンダード)',
@@ -2190,6 +2192,7 @@ $VERSION = '1.22';
    'FlashEnergy' => 'フラッシュ強度',
    'FlashExposureBracketValue' => 'フラッシュ露出ブラケット値',
    'FlashExposureComp' => 'フラッシュ露出補正',
+   'FlashExposureComp2' => 'フラッシュ露出補正',
    'FlashExposureCompSet' => 'ストロボ露出補正設定',
    'FlashExposureLock' => {
       PrintConv => {
@@ -2753,6 +2756,9 @@ $VERSION = '1.22';
    'HighISONoiseReduction' => {
       Description => '高感度ノイズリダクション',
       PrintConv => {
+        '+2 (strong)' => '+2 (強)',
+        '-2 (weak)' => '-2 (弱)',
+        '-4 (weakest)' => '-4 (微弱)',
         'Auto' => 'オート',
         'High' => '高い',
         'Low' => 'ソフト',
@@ -3349,6 +3355,7 @@ $VERSION = '1.22';
    'MaskedAreas' => 'マスク領域',
    'MasterDocumentID' => 'マスタ文書ID',
    'MasterGain' => 'マスターゲイン',
+   'MatrixMetering' => '分割測光',
    'Matteing' => 'マッチング',
    'MaxAperture' => '最大絞り',
    'MaxApertureAtCurrentFocal' => '現在焦点距離の最大絞り',
@@ -3469,6 +3476,7 @@ $VERSION = '1.22';
     },
    'Model' => '画像入力機器モデル',
    'Model2' => '画像入力機器モデル(2)',
+   'ModelID' => 'モデルID',
    'ModelTiePoint' => 'モデル拘束ポイントタグ',
    'ModelTransform' => 'モデル変化タグ',
    'ModelingFlash' => {
@@ -4212,6 +4220,7 @@ $VERSION = '1.22';
         'n/a' => '未設定',
       },
     },
+   'Quality2' => '品質',
    'QualityMode' => {
       Description => '品質モード',
       PrintConv => {
@@ -4525,13 +4534,18 @@ $VERSION = '1.22';
    'Saturation' => {
       Description => '彩度',
       PrintConv => {
-        '+1 (med high)' => '+1 (少し高い)',
+        '+1 (medium high)' => '+1 (少し高い)',
         '+2 (high)' => '+2 (ハード)',
         '+3 (very high)' => '+3 (かなり高い)',
-        '-1 (med low)' => '-1 (少し低い)',
+        '+4 (highest)' => '+4',
+        '+4 (maximum)' => '+4',
+        '-1 (medium low)' => '-1 (少し低い)',
         '-2 (low)' => '-2 (ソフト)',
         '-3 (very low)' => '-3 (かなり低い)',
+        '-4 (lowest)' => '-4',
+        '-4 (minimum)' => '-4',
         '0 (normal)' => '0 (スタンダード)',
+        'B&W' => '黒＆白',
         'Film Simulation' => 'フィルムシミュレーション',
         'High' => '高い彩度',
         'Low' => '低い彩度',
@@ -4847,12 +4861,16 @@ $VERSION = '1.22';
    'Sharpness' => {
       Description => 'シャープネス',
       PrintConv => {
-        '+1 (med hard)' => '+1 (少しハード)',
+        '+1 (medium hard)' => '+1 (少しハード)',
         '+2 (hard)' => '+2 (ハード)',
         '+3 (very hard)' => '+3 (かなりハード)',
-        '-1 (med soft)' => '-1 (ミドルソフト)',
+        '+4 (hardest)' => '+4',
+        '+4 (maximum)' => '+4',
+        '-1 (medium soft)' => '-1 (ミドルソフト)',
         '-2 (soft)' => '-2 (ソフト)',
         '-3 (very soft)' => '-3 (かなりソフト)',
+        '-4 (minimum)' => '-4',
+        '-4 (softest)' => '-4',
         '0 (normal)' => '0 (ノーマル)',
         'Film Simulation' => 'フィルムシミュレーション',
         'Hard' => 'ハード',
@@ -5050,6 +5068,7 @@ $VERSION = '1.22';
    'SpecialInstructions' => '手順',
    'SpecialMode' => 'スペシャルモード',
    'SpectralSensitivity' => 'スペクトル感度',
+   'Sport' => 'スポーツ',
    'SpotFocusPointX' => 'スポットフォーカスポイントX',
    'SpotFocusPointY' => 'スポットフォーカスポイントY',
    'SpotMeterLinkToAFPoint' => {
@@ -5682,6 +5701,10 @@ $VERSION = '1.22';
         'Custom WB 4' => 'カスタムホワイトバランス4',
         'Custom WB 5400K' => 'カスタムホワイトバランス5400K',
         'Custom WB 8000K' => 'カスタムホワイトバランス8000K',
+        'One Touch WB 1' => 'カスタムホワイトバランス1',
+        'One Touch WB 2' => 'カスタムホワイトバランス2',
+        'One Touch WB 3' => 'カスタムホワイトバランス3',
+        'One Touch WB 4' => 'カスタムホワイトバランス4',
       },
     },
    'WhiteBalanceAdj' => {
@@ -5818,7 +5841,7 @@ and values.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

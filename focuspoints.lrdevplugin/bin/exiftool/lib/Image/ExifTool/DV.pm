@@ -136,6 +136,7 @@ my @dvTags = (
     VARS => { NO_ID => 1 },
     NOTES => 'The following tags are extracted from DV videos.',
     DateTimeOriginal => {
+        Description => 'Date/Time Original',
         Groups => { 2 => 'Time' },
         PrintConv => '$self->ConvertDateTime($val)',
     },
@@ -295,7 +296,7 @@ information from DV (raw Digital Video) files.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

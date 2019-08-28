@@ -19,7 +19,7 @@ use strict;
 use vars qw($VERSION %sigmaLensTypes);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.22';
+$VERSION = '1.28';
 
 # sigma LensType lookup (ref IB)
 %sigmaLensTypes = (
@@ -74,6 +74,7 @@ $VERSION = '1.22';
     0x169 => 'Sigma 18-50mm F2.8 EX DC', #PH (NC)
     0x183 => 'Sigma 500mm F4.5 EX HSM APO',
     0x184 => 'Sigma 500mm F4.5 EX DG HSM APO',
+    0x185 => 'Sigma 500mm F4 DG OS HSM | S', #JR (NC; based on product number) (016)
     0x194 => 'Sigma 300mm F2.8 EX HSM APO',
     0x195 => 'Sigma 300mm F2.8 EX DG HSM APO',
     0x200 => 'Sigma 12-24mm F4.5-5.6 EX DG ASP HSM',
@@ -81,17 +82,22 @@ $VERSION = '1.22';
     0x202 => 'Sigma 10-20mm F3.5 EX DC HSM',
     0x203 => 'Sigma 8-16mm F4.5-5.6 DC HSM',
     0x204 => 'Sigma 12-24mm F4.5-5.6 DG HSM II',
+    0x205 => 'Sigma 12-24mm F4 DG HSM | A', #JR (NC; based on product number) (016)
     0x210 => 'Sigma 18-35mm F1.8 DC HSM | A',
+    0x240 => 'Sigma 135mm F1.8 DG HSM | A', #JR (NC; based on product number) (017)
     0x256 => 'Sigma 105mm F2.8 EX Macro',
     0x257 => 'Sigma 105mm F2.8 EX DG Macro',
     0x258 => 'Sigma 105mm F2.8 EX DG OS HSM Macro',
+    0x259 => 'Sigma 105mm F1.4 DG HSM | A', #IB (A018)
     0x270 => 'Sigma 70mm F2.8 EX DG Macro', #NJ (SD1)
+    0x271 => 'Sigma 70mm F2.8 DG Macro | A', #IB (A018)
     0x300 => 'Sigma 30mm F1.4 EX DC HSM',
     0x301 => 'Sigma 30mm F1.4 DC HSM | A',
     0x302 => 'Sigma 30mm F1.4 DC DN | C', #JR (DN lenses are only for Sony E or MFT mount)
     0x310 => 'Sigma 50mm F1.4 EX DG HSM',
     0x311 => 'Sigma 50mm F1.4 DG HSM | A',
     0x320 => 'Sigma 85mm F1.4 EX DG HSM',
+    0x321 => 'Sigma 85mm F1.4 DG HSM | A', #JR (NC; based on product number) (016)
     0x330 => 'Sigma 30mm F2.8 EX DN',
     0x340 => 'Sigma 35mm F1.4 DG HSM',
     0x345 => 'Sigma 50mm F2.8 EX Macro',
@@ -103,6 +109,7 @@ $VERSION = '1.22';
     0x412 => 'Sigma 20mm F1.4 DG HSM | A',
     0x432 => 'Sigma 24mm F1.8 EX DG ASP Macro',
     0x440 => 'Sigma 28mm F1.8 EX DG ASP Macro',
+    0x450 => 'Sigma 14mm F1.8 DH HSM | A', #JR (NC; based on product number) (017)
     0x461 => 'Sigma 14mm F2.8 EX ASP HSM',
     0x475 => 'Sigma 15mm F2.8 EX Diagonal FishEye',
     0x476 => 'Sigma 15mm F2.8 EX DG Diagonal Fisheye',
@@ -111,6 +118,8 @@ $VERSION = '1.22';
     0x484 => 'Sigma 8mm F4 EX DG Circular Fisheye',
     0x485 => 'Sigma 8mm F3.5 EX DG Circular Fisheye',
     0x486 => 'Sigma 4.5mm F2.8 EX DC HSM Circular Fisheye',
+    0x504 => 'Sigma 70-300mm F4-5.6 Macro Super', #IB
+    0x505 => 'Sigma APO 70-300mm F4-5.6 Macro Super', #IB
     0x506 => 'Sigma 70-300mm F4-5.6 APO Macro Super II',
     0x507 => 'Sigma 70-300mm F4-5.6 DL Macro Super II',
     0x508 => 'Sigma 70-300mm F4-5.6 DG APO Macro',
@@ -123,6 +132,7 @@ $VERSION = '1.22';
     0x521 => 'Sigma 18-50mm F3.5-5.6 DC Macro',
     0x527 => 'Sigma 100-300mm F4 EX IF HSM',
     0x529 => 'Sigma 120-300mm F2.8 EX HSM IF APO',
+    0x545 => 'Sigma 28-70mm F2.8 EX ASP DF', #IB
     0x547 => 'Sigma 24-60mm F2.8 EX DG',
     0x548 => 'Sigma 24-70mm F2.8 EX DG Macro',
     0x549 => 'Sigma 28-70mm F2.8 EX DG',
@@ -132,6 +142,7 @@ $VERSION = '1.22';
     0x569 => 'Sigma 70-200 F2.8 EX DG HSM APO Macro',
     0x571 => 'Sigma 24-70mm F2.8 IF EX DG HSM',
     0x572 => 'Sigma 70-300mm F4-5.6 DG OS',
+    0x576 => 'Sigma 24-70mm F2.8 DG OS HSM | A', #JR (NC; based on product number) (017)
     0x579 => 'Sigma 70-200mm F2.8 EX DG HSM APO Macro', # (also II version)
     0x580 => 'Sigma 18-50mm F2.8 EX DC',
     0x581 => 'Sigma 18-50mm F2.8 EX DC Macro', #PH (SD1)
@@ -144,6 +155,7 @@ $VERSION = '1.22';
     0x597 => 'Sigma 200-500mm F2.8 APO EX DG',
     0x5A8 => 'Sigma 70-300mm F4-5.6 APO DG Macro (Motorized)',
     0x5A9 => 'Sigma 70-300mm F4-5.6 DG Macro (Motorized)',
+    0x605 => 'Sigma 24-70mm F3.5-5.6 ASP HF', #IB
     0x633 => 'Sigma 28-70mm F2.8-4 HS',
     0x634 => 'Sigma 28-70mm F2.8-4 DG',
     0x635 => 'Sigma 24-105mm F4 DG OS HSM | A',
@@ -161,12 +173,15 @@ $VERSION = '1.22';
     0x690 => 'Sigma 50-150mm F2.8 EX DC HSM APO',
     0x691 => 'Sigma 50-150mm F2.8 EX DC APO HSM II',
     0x692 => 'Sigma APO 50-150mm F2.8 EX DC OS HSM',
+    0x693 => 'Sigma 50-100mm F1.8 DC HSM | A', #JR (NC; based on product number) (016)
     0x709 => 'Sigma 28-135mm F3.8-5.6 IF ASP Macro',
     0x723 => 'Sigma 135-400mm F4.5-5.6 ASP APO',
     0x725 => 'Sigma 80-400mm F4.5-5.6 EX OS',
     0x726 => 'Sigma 80-400mm F4.5-5.6 EX DG OS APO',
     0x727 => 'Sigma 135-400mm F4.5-5.6 DG ASP APO',
     0x728 => 'Sigma 120-400mm F4.5-5.6 DG APO OS HSM',
+    0x729 => 'Sigma 100-400mm F5-6.3 DG OS HSM | C', #JR (017)
+    0x730 => 'Sigma 60-600mm F4.5-6.3 DG OS HSM | S', #IB (S018)
     0x733 => 'Sigma 170-500mm F5-6.3 ASP APO',
     0x734 => 'Sigma 170-500mm F5-6.3 DG ASP APO',
     0x735 => 'Sigma 50-500mm F4-6.3 EX RF HSM APO',
@@ -177,8 +192,10 @@ $VERSION = '1.22';
     0x745 => 'Sigma 150-600mm F5-6.3 DG OS HSM | C',
     0x777 => 'Sigma 18-200mm F3.5-6.3 DC',
     0x77D => 'Sigma 18-200mm F3.5-6.3 DC (Motorized)',
+    0x785 => 'Sigma 28-200mm F3.5-5.6 DL ASP IF HZM Macro', #IB
     0x787 => 'Sigma 28-200mm F3.5-5.6 Compact ASP HZ Macro',
     0x789 => 'Sigma 18-125mm F3.5-5.6 DC',
+    0x790 => 'Sigma 28-300mm F3.5-6.3 DL ASP IF HZM', #IB
     0x793 => 'Sigma 28-300mm F3.5-6.3 Macro',
     0x794 => 'Sigma 28-200mm F3.5-5.6 DG Compact ASP HZ Macro',
     0x795 => 'Sigma 28-300mm F3.5-6.3 DG Macro',
@@ -208,6 +225,8 @@ $VERSION = '1.22';
     0x1007 => 'Sigma 30mm F2.8', #PH (DP2 Quattro kit)
     0x1008 => 'Sigma 50mm F2.8 Macro', #NJ (DP3 Quattro kit)
     0x1009 => 'Sigma 14mm F4', #NJ (DP0 Quattro kit)
+    0x8005 => 'Sigma 35mm F1.4 DG HSM | A', #PH (012)
+    0x8009 => 'Sigma 18-35mm F1.8 DC HSM | A', #PH
     0x8900 => 'Sigma 70-300mm F4-5.6 DG OS', #PH (SD15)
     0xA100 => 'Sigma 24-70mm F2.8 DG Macro', #PH (SD15)
     # 'FFFF' - seen this for a 28-70mm F2.8 lens - PH
@@ -377,6 +396,7 @@ $VERSION = '1.22';
             OffsetPair => 0x001b,
             DataTag => 'PreviewImage',
             Writable => 'int32u',
+            WriteGroup => 'MakerNotes',
             Protected => 2,
         },{ # (written by Sigma Photo Pro)
             Name => 'ChrominanceNoiseReduction',
@@ -398,6 +418,7 @@ $VERSION = '1.22';
             OffsetPair => 0x001a,
             DataTag => 'PreviewImage',
             Writable => 'int32u',
+            WriteGroup => 'MakerNotes',
             Protected => 2,
         },{ # (written by Sigma Photo Pro)
             Name => 'LuminanceNoiseReduction',
@@ -410,13 +431,15 @@ $VERSION = '1.22';
     0x001c => [ #PH
         {
             Name => 'PreviewImageSize',
-            Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+            Condition => 'not $$self{MakerNoteSigma3}',
             Notes => q{
                 PreviewImageStart for the SD1 and Merrill/Quattro models, and
                 PreviewImageSize for others
             },
             Writable => 'int16u',
             Count => 2,
+            PrintConv => '$val =~ tr/ /x/; $val',
+            PrintConvInv => '$val =~ tr/x/ /; $val',
         },{
             Name => 'PreviewImageStart',
             Condition => '$format eq "int32u"',
@@ -424,13 +447,14 @@ $VERSION = '1.22';
             OffsetPair => 0x001d,
             DataTag => 'PreviewImage',
             Writable => 'int32u',
+            WriteGroup => 'MakerNotes',
             Protected => 2,
         },
     ],
     0x001d => [ #PH
         {
             Name => 'MakerNoteVersion',
-            Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+            Condition => 'not $$self{MakerNoteSigma3}',
             Notes => q{
                 PreviewImageLength for the SD1 and Merrill/Quattro models, and
                 MakerNoteVersion for others
@@ -442,21 +466,24 @@ $VERSION = '1.22';
             OffsetPair => 0x001c,
             DataTag => 'PreviewImage',
             Writable => 'int32u',
+            WriteGroup => 'MakerNotes',
             Protected => 2,
         },
     ],
     # 0x001e - int16u: 0, 4, 13 - flash mode for other models?
     0x001e => { #PH
         Name => 'PreviewImageSize',
-        Condition => '$$self{Model} =~ /^(SIGMA (DP\d (Merrill|Quattro))|sd Quattro)$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'only valid for some models',
         Writable => 'int16u',
         Count => 2,
+        PrintConv => '$val =~ tr/ /x/; $val',
+        PrintConvInv => '$val =~ tr/x/ /; $val',
     },
     0x001f => [ #PH
         {
             Name => 'AFPoint', # (NC -- invalid for SD9,SD14?)
-            Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+            Condition => 'not $$self{MakerNoteSigma3}',
             Notes => q{
                 MakerNoteVersion for the SD1 and Merrill/Quattro models, and AFPoint for
                 others
@@ -471,26 +498,26 @@ $VERSION = '1.22';
     # 0x0021 - string: " " for most models, or int8u[2]: '3 3' for the DP3 Merrill
     0x0022 => { #PH (NC)
         Name => 'FileFormat',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         # values: "JPG", "JPG-S", "JPG-P", "X3F", "X3F-S"
     },
     # 0x0023 - string: "", 10, 83, 131, 145, 150, 152, 169
     0x0024 => { # (invalid for SD9,SD14?)
         Name => 'Calibration',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
     },
     # 0x0025 - string: "", "0.70", "0.90"
     # 0x0026-2b - int32u: 0
     0x0026 => { #PH (NC)
         Name => 'FileFormat',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
     },
     0x0027 => { #PH
         Name => 'LensType',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         ValueConv => '$val =~ /^[0-9a-f]+$/i ? hex($val) : $val',
         # (truncate decimal part and convert hex)
@@ -501,7 +528,7 @@ $VERSION = '1.22';
     },
     0x002a => { #PH
         Name => 'LensFocalRange',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Writable => 'rational64u',
         Count => 2,
@@ -512,7 +539,7 @@ $VERSION = '1.22';
         Name => 'LensMaxApertureRange',
         # for most models this gives the max aperture at the long/short focal lengths,
         # but for some models this gives the min/max aperture
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Writable => 'rational64u',
         Count => 2,
@@ -543,7 +570,7 @@ $VERSION = '1.22';
     0x0030 => [ #PH
         {
             Name => 'LensApertureRange',
-            Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+            Condition => 'not $$self{MakerNoteSigma3}',
             Notes => q{
                 Calibration for the SD1 and Merrill/Quattro models, and LensApertureRange
                 for others. Note that LensApertureRange changes with focal length, and some
@@ -555,7 +582,7 @@ $VERSION = '1.22';
     ],
     0x0031 => { #PH
         Name => 'FNumber',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Writable => 'rational64u',
         PrintConv => 'sprintf("%.1f",$val)',
@@ -564,7 +591,7 @@ $VERSION = '1.22';
     },
     0x0032 => { #PH
         Name => 'ExposureTime',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Writable => 'rational64u',
         PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
@@ -583,14 +610,14 @@ $VERSION = '1.22';
     },
     0x0034 => { #PH
         Name => 'BurstShot',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Writable => 'int32u',
     },
     # 0x0034 - int32u: 0,1,2,3 or 4
     0x0035 => { #PH
         Name => 'ExposureCompensation',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Writable => 'rational64s',
         # add a '+' sign to positive values
@@ -601,7 +628,7 @@ $VERSION = '1.22';
     # 0x0037-38 - string: ""
     0x0039 => { #PH (invalid for SD9, SD14?)
         Name => 'SensorTemperature',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         # (string format)
         PrintConv => 'IsInt($val) ? "$val C" : $val',
@@ -609,19 +636,19 @@ $VERSION = '1.22';
     },
     0x003a => { #PH
         Name => 'FlashExposureComp',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Writable => 'rational64s',
     },
     0x003b => { #PH (how is this different from other Firmware?)
         Name => 'Firmware',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Priority => 0,
     },
     0x003c => { #PH
         Name => 'WhiteBalance',
-        Condition => '$$self{Model} !~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => 'not $$self{MakerNoteSigma3}',
         Notes => 'models other than the SD1 and Merrill/Quattro models',
         Priority => 0,
     },
@@ -631,12 +658,12 @@ $VERSION = '1.22';
     },
     0x0048 => { #PH
         Name => 'LensApertureRange',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
     },
     0x0049 => { #PH
         Name => 'FNumber',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Writable => 'rational64u',
         PrintConv => 'sprintf("%.1f",$val)',
@@ -645,7 +672,7 @@ $VERSION = '1.22';
     },
     0x004a => { #PH
         Name => 'ExposureTime',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Writable => 'rational64u',
         PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
@@ -671,7 +698,7 @@ $VERSION = '1.22';
     }],
     0x004d => { #PH
         Name => 'ExposureCompensation',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Writable => 'rational64s',
         # add a '+' sign to positive values
@@ -681,7 +708,7 @@ $VERSION = '1.22';
     # 0x0054 - string: "F20","F23"
     0x0055 => { #PH
         Name => 'SensorTemperature',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         # (string format)
         PrintConv => 'IsInt($val) ? "$val C" : $val',
@@ -689,25 +716,25 @@ $VERSION = '1.22';
     },
     0x0056 => { #PH (NC)
         Name => 'FlashExposureComp',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Writable => 'rational64s',
     },
     0x0057 => { #PH (how is this different from other Firmware?)
         Name => 'Firmware',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Priority => 0,
     },
     0x0058 => { #PH
         Name => 'WhiteBalance',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         Priority => 0,
     },
     0x0059 => { #PH
         Name => 'DigitalFilter',
-        Condition => '$$self{Model} =~ /^SIGMA (SD1( Merrill)?|DP\d (Merrill|Quattro))$/i',
+        Condition => '$$self{MakerNoteSigma3}',
         Notes => 'SD1 and Merrill/Quattro models only',
         # seen: Standard, Landscape,Monochrome,Neutral,Portrait,Sepia,Vivid
     },
@@ -739,7 +766,7 @@ Sigma and Foveon maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

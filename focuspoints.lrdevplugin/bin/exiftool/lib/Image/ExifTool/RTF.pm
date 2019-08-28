@@ -15,7 +15,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.02';
+$VERSION = '1.03';
 
 sub ProcessUserProps($$$);
 
@@ -154,9 +154,11 @@ sub UnescapeRTF($$$)
         return $val;
     }
     # CR/LF is signficant if it terminates a control sequence (so change these to a space)
-    $val =~ s/(^|[^\\])((?:\\\\)*)(\\[a-zA-Z]+(?:-?\d+)?)[\n\r]/$1$2$3 /g;
+    # (was $val =~ s/(^|[^\\])((?:\\\\)*)(\\[a-zA-Z]+(?:-?\d+)?)[\n\r]/$1$2$3 /g;)
+    $val =~ s/\\(?:([a-zA-Z]+(?:-?\d+)?)[\n\r]|(.))/'\\'.($1 ? "$1 " : $2)/sge;
     # protect the newline control sequence by converting to a \par command
-    $val =~ s/(^|[^\\])((?:\\\\)*)(\\[\n\r])/$1$2\\par /g;
+    # (was $val =~ s/(^|[^\\])((?:\\\\)*)(\\[\n\r])/$1$2\\par /g;)
+    $val =~ s/(\\[\n\r])|(\\.)/$2 || '\\par '/sge;
     # all other CR/LF's are ignored (so delete them)
     $val =~ tr/\n\r//d;
 
@@ -359,7 +361,7 @@ information from RTF (Rich Text Format) documents.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

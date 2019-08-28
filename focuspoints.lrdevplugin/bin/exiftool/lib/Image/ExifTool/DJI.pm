@@ -4,6 +4,7 @@
 # Description:  DJI Phantom maker notes tags
 #
 # Revisions:    2016-07-25 - P. Harvey Created
+#               2017-06-23 - PH Added XMP tags
 #------------------------------------------------------------------------------
 
 package Image::ExifTool::DJI;
@@ -11,8 +12,10 @@ package Image::ExifTool::DJI;
 use strict;
 use vars qw($VERSION);
 use Image::ExifTool::Exif;
+use Image::ExifTool::XMP;
+use Image::ExifTool::GPS;
 
-$VERSION = '1.00';
+$VERSION = '1.02';
 
 my %convFloat2 = (
     PrintConv => 'sprintf("%+.2f", $val)',
@@ -41,6 +44,70 @@ my %convFloat2 = (
     0x0b => { Name => 'CameraRoll', Writable => 'float', %convFloat2 },
 );
 
+%Image::ExifTool::DJI::XMP = (
+    %Image::ExifTool::XMP::xmpTableDefaults,
+    GROUPS => { 0 => 'XMP', 1 => 'XMP-drone-dji', 2 => 'Location' },
+    NAMESPACE => 'drone-dji',
+    TABLE_DESC => 'XMP DJI',
+    VARS => { NO_ID => 1 },
+    NOTES => 'XMP tags used by DJI for images from drones.',
+    AbsoluteAltitude  => { Writable => 'real' },
+    RelativeAltitude  => { Writable => 'real' },
+    GimbalRollDegree  => { Writable => 'real' },
+    GimbalYawDegree   => { Writable => 'real' },
+    GimbalPitchDegree => { Writable => 'real' },
+    FlightRollDegree  => { Writable => 'real' },
+    FlightYawDegree   => { Writable => 'real' },
+    FlightPitchDegree => { Writable => 'real' },
+    GpsLatitude => {
+        Name => 'GPSLatitude',
+        Writable => 'real',
+        Avoid => 1,
+        PrintConv    => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")',
+        PrintConvInv => 'Image::ExifTool::GPS::ToDegrees($val, 1)',
+    },
+    GpsLongtitude => { # (sic)
+        Name => 'GPSLongtitude',
+        Writable => 'real',
+        PrintConv    => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
+        PrintConvInv => 'Image::ExifTool::GPS::ToDegrees($val, 1)',
+    },
+    GpsLongitude => { #PH (NC)
+        Name => 'GPSLongitude',
+        Writable => 'real',
+        Avoid => 1,
+        PrintConv    => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
+        PrintConvInv => 'Image::ExifTool::GPS::ToDegrees($val, 1)',
+    },
+    FlightXSpeed  => { Writable => 'real' },
+    FlightYSpeed  => { Writable => 'real' },
+    FlightZSpeed  => { Writable => 'real' },
+    CamReverse    => { }, # integer?
+    GimbalReverse => { }, # integer?
+    SelfData      => { Groups => { 2 => 'Image' } },
+    CalibratedFocalLength    => { Writable => 'real', Groups => { 2 => 'Image' } },
+    CalibratedOpticalCenterX => { Writable => 'real', Groups => { 2 => 'Image' } },
+    CalibratedOpticalCenterY => { Writable => 'real', Groups => { 2 => 'Image' } },
+    RtkFlag       => { }, # integer?
+    RtkStdLon     => { Writable => 'real' },
+    RtkStdLat     => { Writable => 'real' },
+    RtkStdHgt     => { Writable => 'real' },
+    DewarpData    => { Groups => { 2 => 'Image' } },
+    DewarpFlag    => { Groups => { 2 => 'Image' } }, # integer?
+    Latitude => {
+        Name => 'Latitude',
+        Writable => 'real',
+        PrintConv    => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")',
+        PrintConvInv => 'Image::ExifTool::GPS::ToDegrees($val, 1)',
+    },
+    Longitude => {
+        Name => 'Longitude',
+        Writable => 'real',
+        PrintConv    => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
+        PrintConvInv => 'Image::ExifTool::GPS::ToDegrees($val, 1)',
+    },
+);
+
 __END__
 
 =head1 NAME
@@ -58,7 +125,7 @@ the maker notes in images from some DJI Phantom drones.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
