@@ -21,13 +21,14 @@ use vars qw($VERSION $AUTOLOAD $lastFetched);
 use Image::ExifTool qw(:DataAccess :Utils);
 require Exporter;
 
-$VERSION = '1.41';
+$VERSION = '1.48';
 
 sub FetchObject($$$$);
 sub ExtractObject($$;$$);
 sub ReadToNested($;$);
 sub ProcessDict($$$$;$$);
 sub ProcessAcroForm($$$$;$$);
+sub ExpandArray($);
 sub ReadPDFValue($);
 sub CheckPDF($$$);
 
@@ -302,7 +303,7 @@ my %supportedFilter = (
     EXTRACT_UNKNOWN => 0,   # extract known but numbered tags (Im1, Im2, etc)
     Im => {
         Notes => q{
-            the ExtractEmbedded option enables information to be extracted from these
+            the L<ExtractEmbedded|../ExifTool.html#ExtractEmbedded> option enables information to be extracted from these
             embedded images
         },
         SubDirectory => { TagTable => 'Image::ExifTool::PDF::Im' },
@@ -312,7 +313,7 @@ my %supportedFilter = (
 # tags in PDF Im# dictionary
 %Image::ExifTool::PDF::Im = (
     NOTES => q{
-        Information extracted from embedded images with the ExtractEmbedded option.
+        Information extracted from embedded images with the L<ExtractEmbedded|../ExifTool.html#ExtractEmbedded> option.
         The EmbeddedImage and its metadata are extracted only for JPEG and Jpeg2000
         image formats.
     },
@@ -336,7 +337,7 @@ my %supportedFilter = (
     EXTRACT_UNKNOWN => 0,   # extract known but numbered tags (MC0, MC1, etc)
     MC => {
         Notes => q{
-            the ExtractEmbedded option enables information to be extracted from these
+            the L<ExtractEmbedded|../ExifTool.html#ExtractEmbedded> option enables information to be extracted from these
             embedded metadata dictionaries
         },
         SubDirectory => { TagTable => 'Image::ExifTool::PDF::MC' },
@@ -396,7 +397,7 @@ my %supportedFilter = (
     },
     AIPrivateData => {
         Notes => q{
-            the ExtractEmbedded option enables information to be extracted from embedded
+            the L<ExtractEmbedded|../ExifTool.html#ExtractEmbedded> option enables information to be extracted from embedded
             PostScript documents in the AIPrivateData# and AIPDFPrivateData# streams
         },
         JoinStreams => 1,   # join streams from numbered tags and process as one
@@ -684,6 +685,41 @@ sub LocateObject($$)
 }
 
 #------------------------------------------------------------------------------
+# Check that the correct object is located at the specified file offset
+# Inputs: 0) ExifTool ref, 1) object name, 2) object reference string, 3) file offset
+# Returns: first non-blank line at start of object, or undef on error
+sub CheckObject($$$$)
+{
+    my ($et, $tag, $ref, $offset) = @_;
+    my ($data, $obj, $dat, $pat);
+
+    my $raf = $$et{RAF};
+    $raf->Seek($offset+$$et{PDFBase}, 0) or $et->Warn("Bad $tag offset"), return undef;
+    # verify that we are reading the expected object
+    $raf->ReadLine($data) or $et->Warn("Error reading $tag data"), return undef;
+    ($obj = $ref) =~ s/R/obj/;
+    unless ($data =~ s/^$obj//) {
+        # handle cases where other whitespace characters are used in the object ID string
+        while ($data =~ /^\d+(\s+\d+)?\s*$/) {
+            $raf->ReadLine($dat);
+            $data .= $dat;
+        }
+        ($pat = $obj) =~ s/ /\\s+/g;
+        unless ($data =~ s/$pat//) {
+            $tag = ucfirst $tag;
+            $et->Warn("$tag object ($obj) not found at offset $offset");
+            return undef;
+        }
+    }
+    # read the first line of data from the object (ignoring blank lines and comments)
+    for (;;) {
+        last if $data =~ /\S/ and $data !~ /^\s*%/;
+        $raf->ReadLine($data) or $et->Warn("Error reading $tag data"), return undef;
+    }
+    return $data;
+}
+
+#------------------------------------------------------------------------------
 # Fetch indirect object from file (from inside a stream if required)
 # Inputs: 0) ExifTool object reference, 1) object reference string,
 #         2) xref lookup, 3) object name (for warning messages)
@@ -745,21 +781,11 @@ sub FetchObject($$$$)
         undef $lastFetched if $cryptStream;
         return ExtractObject($et, \$data);
     }
-    my $raf = $$et{RAF};
-    $raf->Seek($offset, 0) or $et->Warn("Bad $tag offset"), return undef;
-    # verify that we are reading the expected object
-    $raf->ReadLine($data) or $et->Warn("Error reading $tag data"), return undef;
-    ($obj = $ref) =~ s/R/obj/;
-    unless ($data =~ s/^$obj//) {
-        $et->Warn("$tag object ($obj) not found at $offset");
-        return undef;
-    }
-    # read the first line of data for the object (skipping comments if necessary)
-    for (;;) {
-        last if $data =~ /\S/ and $data !~ /^\s*%/;
-        $raf->ReadLine($data) or $et->Warn("Error reading $tag data"), return undef;
-    }
-    return ExtractObject($et, \$data, $raf, $xref);
+    # load the start of the object
+    $data = CheckObject($et, $tag, $ref, $offset);
+    return undef unless defined $data;
+
+    return ExtractObject($et, \$data, $$et{RAF}, $xref);
 }
 
 #------------------------------------------------------------------------------
@@ -926,7 +952,7 @@ sub ExtractObject($$;$$)
         }
         if ($$dict{$tag}) {
             # duplicate dictionary entries are not allowed
-            $et->Warn("Duplicate '$tag' entry in dictionary (ignored)");
+            $et->Warn("Duplicate '${tag}' entry in dictionary (ignored)");
         } else {
             # save the entry
             push @tags, $tag;
@@ -947,22 +973,11 @@ sub ExtractObject($$;$$)
         # get the location of the object specifying the length
         # (compressed objects are not allowed)
         my $offset = LocateObject($xref, $length) or return $dict;
-        $offset or $et->Warn('Bad Length object'), return $dict;
-        $raf->Seek($offset, 0) or $et->Warn('Bad Length offset'), return $dict;
-        # verify that we are reading the expected object
-        $raf->ReadLine($data) or $et->Warn('Error reading Length data'), return $dict;
-        $length =~ s/R/obj/;
-        unless ($data =~ /^$length\s+(\d+)?/) {
-            $et->Warn("Length object ($length) not found at $offset");
-            return $dict;
-        }
-        if (defined $1) {
-            $length = $1;
-        } else {
-            $raf->ReadLine($data) or $et->Warn('Error reading stream Length'), return $dict;
-            $data =~ /^\s*(\d+)/ or $et->Warn('Stream length not found'), return $dict;
-            $length = $1;
-        }
+        $offset or $et->Warn('Bad stream Length object'), return $dict;
+        $data = CheckObject($et, 'stream Length', $length, $offset);
+        defined $data or return $dict;
+        $data =~ /^\s*(\d+)/ or $et->Warn('Stream Length not found'), return $dict;
+        $length = $1;
         $raf->Seek($oldpos, 0); # restore position to start of stream
     }
     # extract the trailing stream data
@@ -1450,7 +1465,7 @@ sub DecryptInit($$$)
     }
     if ("$ver.$rev" >= 5.6) {
         # apologize for poor performance (AES is a pure Perl implementation)
-        $et->Warn('Decryption is very slow for encryption V5.6 or higher', 1);
+        $et->Warn('Decryption is very slow for encryption V5.6 or higher', 3);
     }
     $et->HandleTag($tagTablePtr, 'P', $$encrypt{P});
 
@@ -1704,6 +1719,22 @@ sub ProcessAcroForm($$$$;$$)
 }
 
 #------------------------------------------------------------------------------
+# Expand array into a string
+# Inputs: 0) array ref
+# Return: string
+sub ExpandArray($)
+{
+    my $val = shift;
+    my @list = @$val;
+    foreach (@list) {
+        ref $_ eq 'SCALAR' and $_ = "ref($$_)", next;
+        ref $_ eq 'ARRAY' and $_ = ExpandArray($_), next;
+        defined $_ or $_ = '<undef>', next;
+    }
+    return '[' . join(',',@list) . ']';
+}
+
+#------------------------------------------------------------------------------
 # Process PDF dictionary extract tag values
 # Inputs: 0) ExifTool object reference, 1) tag table reference
 #         2) dictionary reference, 3) cross-reference table reference,
@@ -1823,14 +1854,7 @@ sub ProcessDict($$$$;$$)
                     SubDirectory => { TagTable => 'Image::ExifTool::PDF::Unknown' },
                 };
             } else {
-                if (ref $val eq 'ARRAY') {
-                    my @list = @$val;
-                    foreach (@list) {
-                        $_ = "ref($$_)" if ref $_ eq 'SCALAR';
-                        $_ = '<undef>' unless defined $_;
-                    }
-                    $val2 = '[' . join(',',@list) . ']';
-                }
+                $val2 = ExpandArray($val) if ref $val eq 'ARRAY';
                 # generate tag info if we will use it later
                 if (not $tagInfo and defined $val and $unknown) {
                     $tagInfo = NewPDFTag($tagTablePtr, $tag);
@@ -2042,9 +2066,7 @@ sub ProcessDict($$$$;$$)
         DecodeStream($et, $dict) or last;
         if ($verbose > 2) {
             $et->VPrint(2,"$$et{INDENT}$$et{DIR_NAME} stream data\n");
-            my %parms = ( Prefix => $$et{INDENT} );
-            $parms{MaxLen} = $verbose > 3 ? 1024 : 96 if $verbose < 5;
-            HexDump(\$$dict{_stream}, undef, %parms);
+            $et->VerboseDump(\$$dict{_stream});
         }
         # extract information from stream
         my %dirInfo = (
@@ -2077,8 +2099,9 @@ sub ReadPDF($$)
 #
     # (linearization dictionary must be in the first 1024 bytes of the file)
     $raf->Read($buff, 1024) >= 8 or return 0;
-    $buff =~ /^%PDF-(\d+\.\d+)/ or return 0;
-    $pdfVer = $1;
+    $buff =~ /^(\s*)%PDF-(\d+\.\d+)/ or return 0;
+    $$et{PDFBase} = length $1 and $et->Warn('PDF header is not at start of file',1);
+    $pdfVer = $2;
     $et->SetFileType();   # set the FileType tag
     $et->Warn("May not be able to read a PDF version $pdfVer file") if $pdfVer >= 2.0;
     # store PDFVersion tag
@@ -2097,7 +2120,7 @@ sub ReadPDF($$)
             if (ref $dict eq 'HASH' and $$dict{Linearized} and $$dict{L}) {
                 if (not $$et{VALUE}{FileSize}) {
                     undef $lin; # can't determine if it is linearized
-                } elsif ($$dict{L} == $$et{VALUE}{FileSize}) {
+                } elsif ($$dict{L} == $$et{VALUE}{FileSize} - $$et{PDFBase}) {
                     $lin = 'true';
                 }
             }
@@ -2114,8 +2137,9 @@ sub ReadPDF($$)
     $len = 1024 if $len > 1024;
     $raf->Seek(-$len, 2) or return -2;
     $raf->Read($buff, $len) == $len or return -3;
-    # find the LAST xref table in the file (may be multiple %%EOF marks)
-    $buff =~ /^.*startxref(\s+)(\d+)(\s+)%%EOF/s or return -4;
+    # find the LAST xref table in the file (may be multiple %%EOF marks,
+    # and comments between "startxref" and "%%EOF")
+    $buff =~ /^.*startxref(\s+)(\d+)(\s+)(%[^\x0d\x0a]*\s+)*%%EOF/s or return -4;
     my $ws = $1 . $3;
     my $xr = $2;
     push @xrefOffsets, $xr, 'Main';
@@ -2134,7 +2158,7 @@ XRef:
         my $offset = shift @xrefOffsets;
         my $type = shift @xrefOffsets;
         next if $loaded{$offset};   # avoid infinite recursion
-        unless ($raf->Seek($offset, 0)) {
+        unless ($raf->Seek($offset+$$et{PDFBase}, 0)) {
             %loaded or return -5;
             $et->Warn('Bad offset for secondary xref table');
             next;
@@ -2164,6 +2188,9 @@ XRef:
                     $raf->Read($buff, 20) == 20 or return -6;
                     $buff =~ /^\s*(\d{10}) (\d{5}) (f|n)/s or return -4;
                     my $num = $start + $i;
+                    # locate object to generate entry from stream if necessary
+                    # (must do this before we test $xref{$num})
+                    LocateAnyObject(\%xref, $num) if $xref{dicts};
                     # save offset for newest copy of all objects
                     # (or next object number for free objects)
                     unless (defined $xref{$num}) {
@@ -2336,7 +2363,7 @@ including AESV2 (AES-128) and AESV3 (AES-256).
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

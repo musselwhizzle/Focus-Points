@@ -15,7 +15,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.03';
+$VERSION = '1.06';
 
 sub WritePhaseOne($$$);
 sub ProcessPhaseOne($$$);
@@ -85,6 +85,7 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
         Binary => 1,
         PutFirst => 1,
         Writable => 0,
+        Drop => 1, # don't copy to other file types
     },
     0x0110 => { #1
         Name => 'SensorCalibration',
@@ -165,6 +166,10 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
     # 0x0227 - int32u: 0,1
     # 0x0228 - int32u: 1,2
     # 0x0229 - int32s: -2,0
+    0x0267 => { #PH
+        Name => 'AFAdjustment',
+        Format => 'float',
+    },
     0x022b => { #PH
         Name => 'PhaseOne_0x022b',
         Format => 'float',
@@ -242,6 +247,10 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
     },
     # 0x0416 - float: (min focal length? ref LR, Credo50) (but looks more like an int32u date for the 645DF - PH)
     # 0x0417 - float: 80 (max focal length? ref LR)
+    0x0455 => { #PH
+        Name => 'Viewfinder',
+        Format => 'string',
+    },
 );
 
 # Phase One metadata (ref 1)
@@ -251,6 +260,7 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
     CHECK_PROC => \&Image::ExifTool::Exif::CheckExif,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     TAG_PREFIX => 'SensorCalibration',
+    WRITE_GROUP => 'PhaseOne',
     VARS => { ENTRY_SIZE => 12 }, # (entries do not contain a format field)
     0x0400 => {
         Name => 'SensorDefects',
@@ -315,6 +325,15 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
         Name => 'SensorCalibration_0x0414',
         Format => 'undef',
         Flags => ['Unknown','Hidden'],
+        ValueConv => q{
+            my $order = GetByteOrder();
+            if (length $val >= 8 and SetByteOrder(substr($val,0,2))) {
+                $val = ReadValue(\$val, 2, 'int16u', 1, length($val)-2) . ' ' .
+                       ReadValue(\$val, 4, 'float', undef, length($val)-4);
+                SetByteOrder($order);
+            }
+            return $val;
+        },
     },
     0x0416 => {
         Name => 'AllColorFlatField3',
@@ -348,7 +367,8 @@ my @formatName = ( undef, 'string', 'int16s', undef, 'int32s' );
         ValueConv => q{
             my $order = GetByteOrder();
             if (length $val >= 8 and SetByteOrder(substr($val,0,2))) {
-                $val = ReadValue(\$val, 4, 'float', undef, length($val)-4);
+                $val = ReadValue(\$val, 2, 'int16u', 1, length($val)-2) . ' ' .
+                       ReadValue(\$val, 4, 'float', undef, length($val)-4);
                 SetByteOrder($order);
             }
             return $val;
@@ -416,7 +436,7 @@ sub WritePhaseOne($$$)
 
     # nothing to do if we aren't changing any PhaseOne tags
     my $newTags = $et->GetNewTagInfoHash($tagTablePtr);
-    return undef unless %$newTags;
+    return undef unless %$newTags or $$et{DropTags} or $$et{EDIT_DIRS}{PhaseOne};
 
     my $dataPt = $$dirInfo{DataPt};
     my $dataPos = $$dirInfo{DataPos} || 0;
@@ -484,7 +504,8 @@ sub WritePhaseOne($$$)
             $valuePtr += $dirStart;
         }
         my $value = substr($$dataPt, $valuePtr, $size);
-        my $tagInfo = $$newTags{$tagID} || $et->GetTagInfo($tagTablePtr, $tagID);
+        my $tagInfo = $$newTags{$tagID} || $$tagTablePtr{$tagID};
+        $tagInfo = $et->GetTagInfo($tagTablePtr, $tagID) if $tagInfo and ref($tagInfo) ne 'HASH';
         if ($$newTags{$tagID}) {
             $formatStr = $$tagInfo{Format} if $$tagInfo{Format};
             my $count = int($size / Image::ExifTool::FormatSize($formatStr));
@@ -515,6 +536,10 @@ sub WritePhaseOne($$$)
                 $value = $newValue;
                 $size = length $newValue;
             }
+        } elsif ($$et{DropTags} and (($tagInfo and $$tagInfo{Drop}) or $size > 8192)) {
+            # decrease the number of entries in the directory
+            Set32u(Get32u(\$dirBuff, 0) - 1, \$dirBuff, 0);
+            next;   # drop this tag
         }
         # add the tagID, possibly format size, and size to this directory entry
         $dirBuff .= substr($$dataPt, $entry, $entrySize - 8) . Set32u($size);
@@ -553,7 +578,7 @@ sub ProcessPhaseOne($$$)
 {
     my ($et, $dirInfo, $tagTablePtr) = @_;
     my $dataPt = $$dirInfo{DataPt};
-    my $dataPos = $$dirInfo{DataPos} || 0;
+    my $dataPos = ($$dirInfo{DataPos} || 0) + ($$dirInfo{Base} || 0);
     my $dirStart = $$dirInfo{DirStart} || 0;
     my $dirLen = $$dirInfo{DirLen} || $$dirInfo{DataLen} - $dirStart;
     my $binary = $et->Options('Binary');
@@ -686,7 +711,7 @@ One maker notes.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

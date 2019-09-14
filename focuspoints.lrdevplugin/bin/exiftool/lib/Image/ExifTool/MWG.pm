@@ -16,7 +16,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::XMP;
 
-$VERSION = '1.18';
+$VERSION = '1.22';
 
 sub RecoverTruncatedIPTC($$$);
 sub ListToString($);
@@ -59,7 +59,7 @@ my $mwgLoaded;  # flag set if we alreaded Load()ed the MWG tags
         string values be stored as UTF-8.  To honour this, the exiftool application
         sets the default internal EXIF string encoding to "UTF8" when the MWG module
         is loaded, but via the API this must be done manually by setting the
-        CharsetEXIF option.
+        L<CharsetEXIF|../ExifTool.html#CharsetEXIF> option.
 
         A complication of the MWG specification is that although the MWG:Creator
         property may consist of multiple values, the associated EXIF tag
@@ -116,25 +116,31 @@ my $mwgLoaded;  # flag set if we alreaded Load()ed the MWG tags
     DateTimeOriginal => {
         Description => 'Date/Time Original',
         Groups => { 2 => 'Time' },
-        Notes => '"creation date of the intellectual content being shown" - MWG',
+        Notes => '"specifies when a photo was taken" - MWG',
         Writable => 1,
         Shift => 0, # don't shift this tag
         Desire => {
             0 => 'Composite:SubSecDateTimeOriginal',
-            1 => 'IPTC:DateCreated',
-            2 => 'IPTC:TimeCreated',
-            3 => 'XMP-photoshop:DateCreated',
-            4 => 'CurrentIPTCDigest',
-            5 => 'IPTCDigest',
+            1 => 'EXIF:DateTimeOriginal',
+            2 => 'IPTC:DateCreated',
+            3 => 'IPTC:TimeCreated',
+            4 => 'XMP-photoshop:DateCreated',
+            5 => 'CurrentIPTCDigest',
+            6 => 'IPTCDigest',
         },
         # must check for validity in RawConv to avoid hiding a same-named tag,
         # but IPTC dates use a ValueConv so we need to derive the value there
-        RawConv => '(defined $val[0] or defined $val[1] or defined $val[3]) ? $val : undef',
+        RawConv => q{
+            (defined $val[0] or defined $val[1] or $val[2] or
+            (defined $val[4] and (not defined $val[5] or not defined $val[6]
+            or $val[5] eq $val[6]))) ? $val : undef
+        },
         ValueConv => q{
             return $val[0] if defined $val[0] and $val[0] !~ /^[: ]*$/;
-            return $val[3] if not defined $val[4] or (defined $val[3] and
-                             (not defined $val[5] or $val[4] eq $val[5]));
-            return $val[2] ? "$val[1] $val[2]" : $val[1] if $val[1];
+            return $val[1] if defined $val[1] and $val[1] !~ /^[: ]*$/;
+            return $val[4] if not defined $val[5] or (defined $val[4] and
+                             (not defined $val[6] or $val[5] eq $val[6]));
+            return $val[3] ? "$val[2] $val[3]" : $val[2] if $val[2];
             return undef;
         },
         PrintConv => '$self->ConvertDateTime($val)',
@@ -152,23 +158,29 @@ my $mwgLoaded;  # flag set if we alreaded Load()ed the MWG tags
     },
     CreateDate => {
         Groups => { 2 => 'Time' },
-        Notes => '"creation date of the digital representation" - MWG',
+        Notes => '"specifies when an image was digitized" - MWG',
         Writable => 1,
         Shift => 0, # don't shift this tag
         Desire => {
             0 => 'Composite:SubSecCreateDate',
-            1 => 'IPTC:DigitalCreationDate',
-            2 => 'IPTC:DigitalCreationTime',
-            3 => 'XMP-xmp:CreateDate',
-            4 => 'CurrentIPTCDigest',
-            5 => 'IPTCDigest',
+            1 => 'EXIF:CreateDate',
+            2 => 'IPTC:DigitalCreationDate',
+            3 => 'IPTC:DigitalCreationTime',
+            4 => 'XMP-xmp:CreateDate',
+            5 => 'CurrentIPTCDigest',
+            6 => 'IPTCDigest',
         },
-        RawConv => '(defined $val[0] or defined $val[1] or defined $val[3]) ? $val : undef',
+        RawConv => q{
+            (defined $val[0] or defined $val[1] or $val[2] or
+            (defined $val[4] and (not defined $val[5] or not defined $val[6]
+            or $val[5] eq $val[6]))) ? $val : undef
+        },
         ValueConv => q{
             return $val[0] if defined $val[0] and $val[0] !~ /^[: ]*$/;
-            return $val[3] if not defined $val[4] or (defined $val[3] and
-                             (not defined $val[5] or $val[4] eq $val[5]));
-            return $val[2] ? "$val[1] $val[2]" : $val[1] if $val[1];
+            return $val[1] if defined $val[1] and $val[1] !~ /^[: ]*$/;
+            return $val[4] if not defined $val[5] or (defined $val[4] and
+                             (not defined $val[6] or $val[5] eq $val[6]));
+            return $val[3] ? "$val[2] $val[3]" : $val[2] if $val[2];
             return undef;
         },
         PrintConv => '$self->ConvertDateTime($val)',
@@ -184,18 +196,20 @@ my $mwgLoaded;  # flag set if we alreaded Load()ed the MWG tags
     },
     ModifyDate => {
         Groups => { 2 => 'Time' },
-        Notes => '"modification date of the digital image file" - MWG',
+        Notes => '"specifies when a file was modified by the user" - MWG',
         Writable => 1,
         Shift => 0, # don't shift this tag
         Desire => {
             0 => 'Composite:SubSecModifyDate',
-            1 => 'XMP-xmp:ModifyDate',
-            2 => 'CurrentIPTCDigest',
-            3 => 'IPTCDigest',
+            1 => 'EXIF:ModifyDate',
+            2 => 'XMP-xmp:ModifyDate',
+            3 => 'CurrentIPTCDigest',
+            4 => 'IPTCDigest',
         },
         RawConv => q{
             return $val[0] if defined $val[0] and $val[0] !~ /^[: ]*$/;
-            return $val[1] if not defined $val[2] or not defined $val[3] or $val[2] eq $val[3];
+            return $val[1] if defined $val[1] and $val[1] !~ /^[: ]*$/;
+            return $val[2] if not defined $val[3] or not defined $val[4] or $val[3] eq $val[4];
             return undef;
         },
         PrintConv => '$self->ConvertDateTime($val)',
@@ -424,7 +438,7 @@ my %sRegionStruct = (
     Extensions  => { Struct => \%sExtensions },
     Rotation    => { # (observed in LR6 XMP)
         Writable => 'real',
-        Notes => 'RegionsRegionListRotation, not part of MWG 2.0 spec',
+        Notes => 'not part of MWG 2.0 spec',
     },
     seeAlso => { Namespace => 'rdfs', Resource => 1 },
 );
@@ -730,7 +744,7 @@ must be loaded explicitly as described above.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

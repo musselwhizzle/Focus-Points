@@ -83,7 +83,7 @@ sub InflateStruct($;$)
                 ($part = $$obj) =~ s/^\s*//s;
                 $part =~ s/[\x0d\x0a].*//s;
                 $part = substr($part,0,27) . '...' if length($part) > 30;
-                $warn = "Invalid structure field at '$part'";
+                $warn = "Invalid structure field at '${part}'";
             } else {
                 $warn = 'Missing closing brace for structure';
             }
@@ -107,7 +107,8 @@ sub InflateStruct($;$)
         $val = '';
         $delim = $delim ? "\\$delim|,|\\||\$" : ',|\\||$';
         for (;;) {
-            $$obj =~ s/^(.*?)($delim)//s and $val .= $1;
+            $$obj =~ s/^(.*?)($delim)//s or last;
+            $val .= $1;
             last unless $2;
             $2 eq '|' or $$obj = $2 . $$obj, last;
             $$obj =~ s/^(.)//s and $val .= $1;  # add escaped character
@@ -223,7 +224,7 @@ Key:
                     $tagInfo = $ti;
                     $g1 = $grps[1];
                 }
-                $tagInfo or $warn =  "'$tag' is not a writable XMP tag", next Key;
+                $tagInfo or $warn =  "'${tag}' is not a writable XMP tag", next Key;
                 GetPropertyPath($tagInfo);  # make sure property path is generated for this tag
                 $tag = $$tagInfo{Name};
                 $tag = "$g1:$tag" if $grp;
@@ -264,7 +265,7 @@ Key:
                     last; # write this lang-alt field
                 }
             }
-            $warn = "'$tag' is not a field of $strName";
+            $warn = "'${tag}' is not a field of $strName";
             next Key;
         }
         if (ref $$struct{$key} eq 'HASH') {
@@ -618,7 +619,7 @@ sub RestoreStruct($;$)
 {
     local $_;
     my ($et, $keepFlat) = @_;
-    my ($key, %structs, %var, %lists, $si, %listKeys);
+    my ($key, %structs, %var, %lists, $si, %listKeys, @siList);
     my $ex = $$et{TAG_EXTRA};
     my $valueHash = $$et{VALUE};
     my $tagExtra = $$et{TAG_EXTRA};
@@ -757,14 +758,16 @@ sub RestoreStruct($;$)
             }
             delete $structs{$strInfo} unless $oldStruct;
         } elsif ($tagInfo eq $strInfo) {
-            # just a regular list tag
+            # just a regular list tag (or an empty structure)
             if ($oldStruct) {
                 # keep tag with lowest numbered key (well, not exactly, since
                 # "Tag (10)" is lt "Tag (2)", but at least "Tag" is lt
                 # everything else, and this is really what we care about)
                 my $k = $listKeys{$oldStruct};
-                $k lt $key and $et->DeleteTag($key), next;
-                $et->DeleteTag($k);   # remove tag with greater copy number
+                if ($k) {   # ($k will be undef for an empty structure)
+                    $k lt $key and $et->DeleteTag($key), next;
+                    $et->DeleteTag($k);   # remove tag with greater copy number
+                }
             }
             # replace existing value with new list
             $$valueHash{$key} = $structs{$strInfo};
@@ -801,9 +804,10 @@ sub RestoreStruct($;$)
     foreach $si (keys %lists) {
         defined $_ or $_ = '' foreach @{$lists{$si}};
     }
-    # save new structure tags
-    foreach $si (keys %structs) {
-        next unless $var{$si};  # already handled regular lists
+    # make a list of all new structures we generated
+    $var{$_} and push @siList, $_ foreach keys %structs;
+    # save new structures in the same order they were read from file
+    foreach $si (sort { $var{$a}[1] <=> $var{$b}[1] } @siList) {
         $key = $et->FoundTag($var{$si}[0], '');
         $$valueHash{$key} = $structs{$si};
         $$et{FILE_ORDER}{$key} = $var{$si}[1];
@@ -830,7 +834,7 @@ information.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

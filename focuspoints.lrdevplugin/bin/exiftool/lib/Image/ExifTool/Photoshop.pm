@@ -28,7 +28,7 @@ use strict;
 use vars qw($VERSION $AUTOLOAD $iptcDigestInfo);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.50';
+$VERSION = '1.63';
 
 sub ProcessPhotoshop($$$);
 sub WritePhotoshop($$$);
@@ -485,12 +485,27 @@ my %unicodeString = (
     NOTES => 'Tags extracted from Photoshop layer information.',
     # tags extracted from layer information
     # (tag ID's are for convenience only)
-    _xcnt => { Name => 'LayerCount' },
-    _xrct => { Name => 'LayerRectangles', List => 1 },
-    _xnam => { Name => 'LayerNames',      List => 1 },
+    _xcnt => { Name => 'LayerCount', Format => 'int16u' },
+    _xrct => {
+        Name => 'LayerRectangles',
+        Format => 'int32u',
+        Count => 4,
+        List => 1,
+        Notes => 'top left bottom right',
+    },
+    _xnam => { Name => 'LayerNames',
+        Format => 'string',
+        List => 1,
+        ValueConv => q{
+            my $charset = $self->Options('CharsetPhotoshop') || 'Latin';
+            return $self->Decode($val, $charset);
+        },
+    },
     _xbnd => {
         Name => 'LayerBlendModes',
+        Format => 'undef',
         List => 1,
+        RawConv => 'GetByteOrder() eq "II" ? pack "N*", unpack "V*", $val : $val',
         PrintConv => {
             pass => 'Pass Through',
             norm => 'Normal',
@@ -522,8 +537,9 @@ my %unicodeString = (
            'lum '=> 'Luminosity',
         },
     },
-    _xopc  => { 
+    _xopc  => {
         Name => 'LayerOpacities',
+        Format => 'int8u',
         List => 1,
         ValueConv => '100 * $val / 255',
         PrintConv => 'sprintf("%d%%",$val)',
@@ -534,10 +550,45 @@ my %unicodeString = (
         Name => 'LayerUnicodeNames',
         List => 1,
         RawConv => q{
-            return "" if length($val) < 4;
+            return '' if length($val) < 4;
             my $len = Get32u(\$val, 0);
             return $self->Decode(substr($val, 4, $len * 2), 'UCS2');
         },
+    },
+    lyid => {
+        Name => 'LayerIDs',
+        Description => 'Layer IDs',
+        Format => 'int32u',
+        List => 1,
+        Unknown => 1,
+    },
+    shmd => { # layer metadata (undocumented structure)
+        # (for now, only extract layerTime.  May also contain "layerXMP" --
+        #  it would be nice to decode this but I need a sample)
+        Name => 'LayerModifyDates',
+        Groups => { 2 => 'Time' },
+        List => 1,
+        RawConv => q{
+            return '' unless $val =~ /layerTime(doub|buod)(.{8})/s;
+            my $tmp = $2;
+            return GetDouble(\$tmp, 0);
+        },
+        ValueConv => 'length $val ? ConvertUnixTime($val,1) : ""',
+        PrintConv => 'length $val ? $self->ConvertDateTime($val) : ""',
+    },
+);
+
+# tags extracted from ImageSourceData found in TIFF images (ref PH)
+%Image::ExifTool::Photoshop::DocumentData = (
+    PROCESS_PROC => \&ProcessDocumentData,
+    GROUPS => { 2 => 'Image' },
+    Layr => {
+        Name => 'Layers',
+        SubDirectory => { TagTable => 'Image::ExifTool::Photoshop::Layers' },
+    },
+    Lr16 => { # (NC)
+        Name => 'Layers',
+        SubDirectory => { TagTable => 'Image::ExifTool::Photoshop::Layers' },
     },
 );
 
@@ -596,16 +647,16 @@ sub ConvertPascalString($$)
 }
 
 #------------------------------------------------------------------------------
-# Process Photoshop layers and mask information
+# Process Photoshop layers and mask information section of PSD/PSB file
 # Inputs: 0) ExifTool ref, 1) DirInfo ref, 2) tag table ref
 # Returns: 1 on success (and seeks to the end of this section)
-sub ProcessLayers($$$)
+sub ProcessLayersAndMask($$$)
 {
     local $_;
     my ($et, $dirInfo, $tagTablePtr) = @_;
     my $raf = $$dirInfo{RAF};
     my $fileType = $$et{VALUE}{FileType};
-    my ($i, $data, %count);
+    my $data;
 
     return 0 unless $fileType eq 'PSD' or $fileType eq 'PSB';   # (no layer section in CS1 files)
 
@@ -616,74 +667,219 @@ sub ProcessLayers($$$)
     my $n = $psiz * 2 + 2;
     $raf->Read($data, $n) == $n or return 0;
     my $tot = $psb ? Get64u(\$data, 0) : Get32u(\$data, 0); # length of layer and mask info
-    my $len = $psb ? Get64u(\$data, $psiz) : Get32u(\$data, $psiz); # length of layer info section
-    $et->VerboseDir('Layers', 0, $len);
-    my $num = Get16u(\$data, $psiz * 2);
-    $num = -$num if $num < 0;       # (first channel is transparency data if negative)
-    $et->HandleTag($tagTablePtr, _xcnt => $num); # LayerCount
-    return 0 if $len > 100000000;   # set a reasonable limit on maximum size
-    my $dataPos = $raf->Tell();
-    # read the layer information data
-    $raf->Read($data, $len) == $len or return 0;
+    return 1 if $tot == 0;
+    my $end = $raf->Tell() - $psiz - 2 + $tot;
+    $data = substr $data, $psiz;
+    my $len = $psb ? Get64u(\$data, 0) : Get32u(\$data, 0); # length of layer info section
+    my $num = Get16s(\$data, $psiz);
+    # check for Lr16 block if layers length is 0 (ref https://forums.adobe.com/thread/1540914)
+    if ($len == 0 and $num == 0) {
+        $raf->Read($data,10) == 10 or return 0;
+        if ($data =~/^..8BIMLr16/s) {
+            $raf->Read($data, $psiz+2) == $psiz+2 or return 0;
+            $len = $psb ? Get64u(\$data, 0) : Get32u(\$data, 0);
+        } else {
+            $raf->Seek(-10, 1) or return 0;
+        }
+    }
+    $len += 2;  # include layer count with layer info section
+    $raf->Seek(-2, 1) or return 0;
+    my %dinfo = (
+        RAF => $raf,
+        DirLen => $len,
+    );
+    $$et{IsPSB} = $psb; # set PSB flag
+    ProcessLayers($et, \%dinfo, $tagTablePtr);
 
+    # seek to the end of this section and return success flag
+    return $raf->Seek($end, 0) ? 1 : 0;
+}
+
+#------------------------------------------------------------------------------
+# Process Photoshop layers (beginning with layer count)
+# Inputs: 0) ExifTool ref, 1) DirInfo ref, 2) tag table ref
+# Returns: 1 on success
+# Notes: Uses ExifTool IsPSB member to determine whether file is PSB format
+sub ProcessLayers($$$)
+{
+    local $_;
+    my ($et, $dirInfo, $tagTablePtr) = @_;
+    my ($i, $n, %count, $buff, $buf2);
+    my $raf = $$dirInfo{RAF};
+    my $dirLen = $$dirInfo{DirLen};
+    my $verbose = $$et{OPTIONS}{Verbose};
+    my %dinfo = ( DataPt => \$buff, Base => $raf->Tell() );
     my $pos = 0;
+    return 0 if $dirLen < 2;
+    $raf->Read($buff, 2) == 2 or return 0;
+    my $num = Get16s(\$buff, 0);
+    $num = -$num if $num < 0;       # (first channel is transparency data if negative)
+    $et->VerboseDir('Layers', $num, $dirLen);
+    $et->HandleTag($tagTablePtr, '_xcnt', $num, Start => $pos, Size => 2, %dinfo); # LayerCount
+    my $oldIndent = $$et{INDENT};
+    $$et{INDENT} .= '| ';
+
+    $pos += 2;
+    my $psb = $$et{IsPSB};  # is PSB format?
+    my $psiz = $psb ? 8 : 4;
     for ($i=0; $i<$num; ++$i) {
-        last if $pos + 18 > $len;
+        $et->VPrint(0, $oldIndent.'+ [Layer '.($i+1)." of $num]\n");
+        last if $pos + 18 > $dirLen;
+        $raf->Read($buff, 18) == 18 or last;
+        $dinfo{DataPos} = $pos;
         # save the layer rectangle
-        $et->HandleTag($tagTablePtr, _xrct => join(' ',ReadValue(\$data, $pos, 'int32u', 4, 16)));
-        my $numChannels = Get16u(\$data, $pos + 16);
-        $pos += 18 + (2 + $psiz) * $numChannels;    # skip the channel information
-        last if $pos + 20 > $len or substr($data, $pos, 4) ne '8BIM'; # verify signature
-        $et->HandleTag($tagTablePtr, _xbnd => substr($data, $pos+4, 4)); # blend mode
-        $et->HandleTag($tagTablePtr, _xopc => Get8u(\$data, $pos+8));    # opacity
-        my $nxt = $pos + 16 + Get32u(\$data, $pos + 12);
-        $n = Get32u(\$data, $pos+16);   # get size of layer mask data
+        $et->HandleTag($tagTablePtr, '_xrct', undef, Start => 0, Size => 16, %dinfo);
+        my $numChannels = Get16u(\$buff, 16);
+        $n = (2 + $psiz) * $numChannels;    # size of channel information
+        $raf->Seek($n, 1) or last;
+        $pos += 18 + $n;
+        last if $pos + 20 > $dirLen;
+        $raf->Read($buff, 20) == 20 or last;
+        $dinfo{DataPos} = $pos;
+        my $sig = substr($buff, 0, 4);
+        $sig =~ /^(8BIM|MIB8)$/ or last;    # verify signature
+        $et->HandleTag($tagTablePtr, '_xbnd', undef, Start => 4, Size => 4, %dinfo);
+        $et->HandleTag($tagTablePtr, '_xopc', undef, Start => 8, Size => 1, %dinfo);
+        my $nxt = $pos + 16 + Get32u(\$buff, 12);
+        $n = Get32u(\$buff, 16);        # get size of layer mask data
         $pos += 20 + $n;                # skip layer mask data
-        last if $pos + 4 > $len;
-        $n = Get32u(\$data, $pos);      # get size of layer blending ranges
-        $pos += 4 + $n;                 # skip layer blanding ranges data
-        last if $pos + 1 > $len;
-        $n = Get8u(\$data, $pos);       # get length of layer name
-        last if $pos + 1 + $n > $len;
-        $et->HandleTag($tagTablePtr, _xnam => substr($data, $pos+1, $n)); # layer name
-        $n = ($n + 3) & 0xfffffffc;
+        last if $pos + 4 > $dirLen;
+        $raf->Seek($n, 1) and $raf->Read($buff, 4) == 4 or last;
+        $n = Get32u(\$buff, 0);         # get size of layer blending ranges
+        $pos += 4 + $n;                 # skip layer blending ranges data
+        last if $pos + 1 > $dirLen;
+        $raf->Seek($n, 1) and $raf->Read($buff, 1) == 1 or last;
+        $n = Get8u(\$buff, 0);          # get length of layer name
+        last if $pos + 1 + $n > $dirLen;
+        $raf->Read($buff, $n) == $n or last;
+        $dinfo{DataPos} = $pos + 1;
+        $et->HandleTag($tagTablePtr, '_xnam', undef, Start => 0, Size => $n, %dinfo);
+        my $frag = ($n + 1) & 0x3;
+        $raf->Seek(4 - $frag, 1) or last if $frag;
+        $n = ($n + 4) & 0xfffffffc;     # +1 for length byte then pad to multiple of 4 bytes
         $pos += $n;
         # process additional layer info
         while ($pos + 12 <= $nxt) {
-            my $sig = substr($data, $pos, 4);
+            $raf->Read($buff, 12) == 12 or last;
+            my $dat = substr($buff, 0, 8);
+            $dat = pack 'N*', unpack 'V*', $dat if GetByteOrder() eq 'II';
+            my $sig = substr($dat, 0, 4);
             last unless $sig eq '8BIM' or $sig eq '8B64';   # verify signature
-            my $tag = substr($data, $pos+4, 4);
+            my $tag = substr($dat, 4, 4);
             # (some structures have an 8-byte size word [augh!]
             # --> it would be great if '8B64' indicated a 64-bit version, and this may well
             # be the case, but it is not mentioned in the Photoshop file format specification)
             if ($psb and $tag =~ /^(LMsk|Lr16|Lr32|Layr|Mt16|Mt32|Mtrn|Alph|FMsk|lnk2|FEid|FXid|PxSD)$/) {
                 last if $pos + 16 > $nxt;
-                $n = Get64u(\$data, $pos+8);
+                $raf->Read($buf2, 4) == 4 or last;
+                $buff .= $buf2;
+                $n = Get64u(\$buff, 8);
                 $pos += 4;
             } else {
-                $n = Get32u(\$data, $pos+8);
+                $n = Get32u(\$buff, 8);
             }
             $pos += 12;
             last if $pos + $n > $nxt;
-            my $val = substr($data, $pos, $n);
-            # pad with empty entries if necessary to keep the same index for each item in the layer
-            $count{$tag} = 0 unless defined $count{$tag};
-            while ($count{$tag} < $i) {
-                $et->HandleTag($tagTablePtr, $tag, '');
+            $frag = $n & 0x3;
+            if ($$tagTablePtr{$tag} or $verbose) {
+                # pad with empty entries if necessary to keep the same index for each item in the layer
+                $count{$tag} = 0 unless defined $count{$tag};
+                $raf->Read($buff, $n) == $n or last;
+                $dinfo{DataPos} = $pos;
+                while ($count{$tag} < $i) {
+                    $et->HandleTag($tagTablePtr, $tag, '');
+                    ++$count{$tag};
+                }
+                $et->HandleTag($tagTablePtr, $tag, undef, Start => 0, Size => $n, %dinfo);
                 ++$count{$tag};
+                if ($frag) {
+                    $raf->Seek(4 - $frag, 1) or last;
+                    $n += 4 - $frag;    # pad to multiple of 4 bytes (PH NC)
+                }
+            } else {
+                $n += 4 - $frag if $frag;
+                $raf->Seek($n, 1) or last;
             }
-            $et->HandleTag($tagTablePtr, $tag, $val,
-                DataPt => \$val,
-                DataPos => $dataPos + $pos,
-            );
-            ++$count{$tag};
             $pos += $n; # step to start of next structure
         }
         $pos = $nxt;
     }
-    # seek to the end of this section
-    return 0 unless $raf->Seek($dataPos - 2 - $psiz + $tot, 0);
-    return 1;   # success!
+    $$et{INDENT} = $oldIndent;
+    return 1;
+}
+
+#------------------------------------------------------------------------------
+# Process Photoshop ImageSourceData
+# Inputs: 0) ExifTool ref, 1) dirInfo ref, 2) tag table ref
+# Returns: 1 on success
+sub ProcessDocumentData($$$)
+{
+    my ($et, $dirInfo, $tagTablePtr) = @_;
+    my $verbose = $$et{OPTIONS}{Verbose};
+    my $raf = $$dirInfo{RAF};
+    my $dirLen = $$dirInfo{DirLen};
+    my $pos = 36;   # length of header
+    my ($buff, $n);
+
+    $et->VerboseDir('Photoshop Document Data', undef, $dirLen);
+    unless ($raf) {
+        my $dataPt = $$dirInfo{DataPt};
+        my $start = $$dirInfo{DirStart} || 0;
+        $raf = new File::RandomAccess($dataPt);
+        $raf->Seek($start, 0) if $start;
+        $dirLen = length $$dataPt - $start unless defined $dirLen;
+        $et->VerboseDump($dataPt, Start => $start, Len => $dirLen, Base => $$dirInfo{Base});
+    }
+    unless ($raf->Read($buff, $pos) == $pos and
+            $buff =~ /^Adobe Photoshop Document Data (Block|V0002)\0/)
+    {
+        $et->Warn('Invalid Photoshop Document Data');
+        return 0;
+    }
+    my $psb = ($1 eq 'V0002');
+    my %dinfo = ( DataPt => \$buff );
+    $$et{IsPSB} = $psb; # set PSB flag (needed when handling Layers directory)
+    while ($pos + 12 <= $dirLen) {
+        $raf->Read($buff, 8) == 8 or last;
+        # set byte order according to byte order of first signature
+        SetByteOrder($buff =~ /^(8BIM|8B64)/ ? 'MM' : 'II') if $pos == 36;
+        $buff = pack 'N*', unpack 'V*', $buff if GetByteOrder() eq 'II';
+        my $sig = substr($buff, 0, 4);
+        last unless $sig eq '8BIM' or $sig eq '8B64';   # verify signature
+        my $tag = substr($buff, 4, 4);
+        if ($psb and $tag =~ /^(LMsk|Lr16|Lr32|Layr|Mt16|Mt32|Mtrn|Alph|FMsk|lnk2|FEid|FXid|PxSD)$/) {
+            last if $pos + 16 > $dirLen;
+            $raf->Read($buff, 8) == 8 or last;
+            $n = Get64u(\$buff, 0);
+            $pos += 4;
+        } else {
+            $raf->Read($buff, 4) == 4 or last;
+            $n = Get32u(\$buff, 0);
+        }
+        $pos += 12;
+        last if $pos + $n > $dirLen;
+        my $pad = (4 - ($n & 3)) & 3;   # number of padding bytes
+        my $tagInfo = $$tagTablePtr{$tag};
+        if ($tagInfo or $verbose) {
+            if ($tagInfo and $$tagInfo{SubDirectory}) {
+                my $fpos = $raf->Tell() + $n + $pad;
+                my $subTable = GetTagTable($$tagInfo{SubDirectory}{TagTable});
+                $et->ProcessDirectory({ RAF => $raf, DirLen => $n }, $subTable);
+                $raf->Seek($fpos, 0) or last;
+            } else {
+                $dinfo{DataPos} = $raf->Tell();
+                $dinfo{Start} = 0;
+                $dinfo{Size} = $n;
+                $raf->Read($buff, $n) == $n or last;
+                $et->HandleTag($tagTablePtr, $tag, undef, %dinfo);
+                $raf->Seek($pad, 1) or last;
+            }
+        } else {
+            $raf->Seek($n + $pad, 1) or last;
+        }
+        $pos += $n + $pad;              # step to start of next structure
+    }
+    return 1;
 }
 
 #------------------------------------------------------------------------------
@@ -700,11 +896,28 @@ sub ProcessPhotoshop($$$)
     my $verbose = $et->Options('Verbose');
     my $success = 0;
 
+    # ignore non-standard XMP while in strict MWG compatibility mode
+    if (($Image::ExifTool::MWG::strict or $et->Options('Validate')) and
+        $$et{FILE_TYPE} =~ /^(JPEG|TIFF|PSD)$/)
+    {
+        my $path = $et->MetadataPath();
+        unless ($path =~ /^(JPEG-APP13-Photoshop|TIFF-IFD0-Photoshop|PSD)$/) {
+            if ($Image::ExifTool::MWG::strict) {
+                $et->Warn("Ignored non-standard Photoshop at $path");
+                return 1;
+            } else {
+                $et->Warn("Non-standard Photoshop at $path", 1);
+            }
+        }
+    }
+    if ($$et{FILE_TYPE} eq 'JPEG' and $$dirInfo{Parent} ne 'APP13') {
+        $$et{LOW_PRIORITY_DIR}{'*'} = 1;    # lower priority of all these tags
+    }
     SetByteOrder('MM');     # Photoshop is always big-endian
     $verbose and $et->VerboseDir('Photoshop', 0, $$dirInfo{DirLen});
 
     # scan through resource blocks:
-    # Format: 0) Type, 4 bytes - '8BIM' (or the rare 'PHUT', 'DCSR' or 'AgHg')
+    # Format: 0) Type, 4 bytes - '8BIM' (or the rare 'PHUT', 'DCSR', 'AgHg' or 'MeSa')
     #         1) TagID,2 bytes
     #         2) Name, pascal string padded to even no. bytes
     #         3) Size, 4 bytes - N
@@ -714,7 +927,7 @@ sub ProcessPhotoshop($$$)
         my ($ttPtr, $extra, $val, $name);
         if ($type eq '8BIM') {
             $ttPtr = $tagTablePtr;
-        } elsif ($type =~ /^(PHUT|DCSR|AgHg)$/) {
+        } elsif ($type =~ /^(PHUT|DCSR|AgHg|MeSa)$/) { # (PHUT~ImageReady, MeSa~PhotoDeluxe)
             $ttPtr = GetTagTable('Image::ExifTool::Photoshop::Unknown');
         } else {
             $type =~ s/([^\w])/sprintf("\\x%.2x",ord($1))/ge;
@@ -764,6 +977,7 @@ sub ProcessPhotoshop($$$)
         $size += 1 if $size & 0x01; # size is padded to an even # bytes
         $pos += $size;
     }
+    delete $$et{LOW_PRIORITY_DIR}{'*'};
     return $success;
 }
 
@@ -858,7 +1072,9 @@ sub ProcessPSD($$)
         # read layer and mask information section
         $dirInfo{RAF} = $raf;
         $tagTablePtr = GetTagTable('Image::ExifTool::Photoshop::Layers');
-        if (ProcessLayers($et, \%dirInfo, $tagTablePtr) and
+        my $oldIndent = $$et{INDENT};
+        $$et{INDENT} .= '| ';
+        if (ProcessLayersAndMask($et, \%dirInfo, $tagTablePtr) and
             # read compression mode from image data section
             $raf->Read($data,2) == 2)
         {
@@ -869,6 +1085,7 @@ sub ProcessPSD($$)
             $tagTablePtr = GetTagTable('Image::ExifTool::Photoshop::ImageData');
             $et->ProcessDirectory(\%dirInfo, $tagTablePtr);
         }
+        $$et{INDENT} = $oldIndent;
         # process trailers if they exist
         my $trailInfo = Image::ExifTool::IdentifyTrailer($raf);
         $et->ProcessTrailers($trailInfo) if $trailInfo;
@@ -909,7 +1126,7 @@ be preserved when copying Photoshop information via user-defined tags.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

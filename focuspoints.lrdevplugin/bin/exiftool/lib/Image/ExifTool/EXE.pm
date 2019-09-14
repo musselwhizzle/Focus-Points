@@ -21,7 +21,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.13';
+$VERSION = '1.15';
 
 sub ProcessPEResources($$);
 sub ProcessPEVersion($$);
@@ -218,10 +218,32 @@ my %languageCode = (
         ValueConv => 'ConvertUnixTime($val,1)',
         PrintConv => '$self->ConvertDateTime($val)',
     },
+    9 => {
+        Name => 'ImageFileCharacteristics',
+        # ref https://docs.microsoft.com/en-us/windows/desktop/api/winnt/ns-winnt-_image_file_header
+        PrintConv => { BITMASK => {
+            0 => 'No relocs',
+            1 => 'Executable',
+            2 => 'No line numbers',
+            3 => 'No symbols',
+            4 => 'Aggressive working-set trim',
+            5 => 'Large address aware',
+            7 => 'Bytes reversed lo',
+            8 => '32-bit',
+            9 => 'No debug',
+            10 => 'Removable run from swap',
+            11 => 'Net run from swap',
+            12 => 'System file',
+            13 => 'DLL',
+            14 => 'Uniprocessor only',
+            15 => 'Bytes reversed hi',
+        }},
+    },
     10 => {
         Name => 'PEType',
         PrintHex => 1,
         PrintConv => {
+            0x107 => 'ROM Image',
             0x10b => 'PE32',
             0x20b => 'PE32+',
         },
@@ -1141,9 +1163,10 @@ sub ProcessEXE($$)
                 #  20 int16u SizeOfOptionalHeader
                 #  22 int16u Characteristics
                 if ($size >= 24) {  # PE header is 24 bytes (plus optional header)
-                    my $machine = $Image::ExifTool::EXE::Main{0}{PrintConv}{Get16u(\$buff, 4)} || '';
+                    my $mach = Get16u(\$buff, 4);   # MachineType
+                    my $flags = Get16u(\$buff, 22); # ImageFileCharacteristics
+                    my $machine = $Image::ExifTool::EXE::Main{0}{PrintConv}{$mach} || '';
                     my $winType = $machine =~ /64/ ? 'Win64' : 'Win32';
-                    my $flags = Get16u(\$buff, 22);
                     $ext = $flags & 0x2000 ? 'DLL' : 'EXE';
                     $et->SetFileType("$winType $ext", undef, $ext);
                     return 1 if $fast3;
@@ -1155,11 +1178,12 @@ sub ProcessEXE($$)
                             $buff .= $buf2;
                             $size += $more;
                             my $magic = Get16u(\$buff, 24);
-                            # verify PE32/PE32+ magic number
-                            unless ($magic == 0x10b or $magic == 0x20b) {
+                            # verify PE magic number
+                            unless ($magic == 0x107 or $magic == 0x10b or $magic == 0x20b) {
                                 $et->Warn('Unknown PE magic number');
                                 return 1;
                             }
+                            # --> 64-bit if $magic is 0x20b ????
                         } else {
                             $et->Warn('Error reading optional header');
                         }
@@ -1171,7 +1195,7 @@ sub ProcessEXE($$)
                         DataPos => $raf->Tell() - $size,
                         DataLen => $size,
                         DirStart => 4,
-                        DirLen => $size,
+                        DirLen => $size - 4,
                     );
                     $et->ProcessDirectory(\%dirInfo, $tagTablePtr);
                     # process data dictionary
@@ -1338,7 +1362,7 @@ sub ProcessEXE($$)
             python => 'py',
             ruby   => 'rb',
             php    => 'php',
-        }->{$1};
+        }->{$prog};
         # use '.sh' for extension of all shell scripts
         $ext = $prog =~ /sh$/ ? 'sh' : '' unless defined $ext;
     }
@@ -1367,7 +1391,7 @@ library files.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

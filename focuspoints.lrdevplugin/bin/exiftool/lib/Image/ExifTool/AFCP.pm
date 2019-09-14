@@ -14,7 +14,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.07';
+$VERSION = '1.08';
 
 sub ProcessAFCP($$);
 
@@ -149,12 +149,7 @@ NoAFCP: for (;;) {
         if ($verbose > 2 and not $outfile) {
             my $dat = $buff . $dir;
             print $out "  AFCP Directory:\n";
-            HexDump(\$dat, undef,
-                Addr   => $$dirInfo{DataPos},
-                Width  => 12,
-                Prefix => $$et{INDENT},
-                Out => $out,
-            );
+            $et->VerboseDump(\$dat, Addr => $$dirInfo{DataPos}, Width  => 12);
         }
         $fix and $et->Warn("Adjusted AFCP offsets by $fix", 1);
 #
@@ -264,7 +259,7 @@ scanning for AFCP information.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

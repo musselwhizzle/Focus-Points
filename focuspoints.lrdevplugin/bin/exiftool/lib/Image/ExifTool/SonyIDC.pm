@@ -13,7 +13,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.05';
+$VERSION = '1.08';
 
 # Sony IDC tags (ref PH)
 %Image::ExifTool::SonyIDC::Main = (
@@ -92,7 +92,12 @@ $VERSION = '1.05';
     0x8015 => { Name => 'ColorCorrection',      Writable => 'int32s' },
     0x8016 => { Name => 'SaturationAdj',        Writable => 'int32s' },
     0x8017 => { Name => 'ContrastAdj',          Writable => 'int32s' },
-    0x8018 => { Name => 'BrightnessAdj',        Writable => 'int32s' },
+    0x8018 => {
+        Name => 'BrightnessAdj',
+        Writable => 'int32s',
+        PrintConv => 'sprintf("%.2f", $val/300)', #JR
+        PrintConvInv => '$val * 300',
+    },
     0x8019 => { Name => 'HueAdj',               Writable => 'int32s' },
     0x801a => { Name => 'SharpnessAdj',         Writable => 'int32s' },
     0x801b => { Name => 'SharpnessOvershoot',   Writable => 'int32s' },
@@ -152,6 +157,15 @@ $VERSION = '1.05';
     0x8030 => { Name => 'PeripheralIllumCentralRadius', Writable => 'int32s' },
     0x8031 => { Name => 'PeripheralIllumCentralValue',  Writable => 'int32s' },
     0x8032 => { Name => 'PeripheralIllumPeriphValue',   Writable => 'int32s' },
+    0x8040 => { #JR
+        Name => 'DistortionCompensation',
+        Writable => 'int32s',
+        PrintConv => {
+            -1 => 'n/a', # (fixed by lens)
+            1 => 'On',
+            2 => 'Off',
+        },
+    },
     0x9000 => {
         Name => 'ToneCurveBrightnessX',
         Writable => 'int16u',
@@ -192,6 +206,52 @@ $VERSION = '1.05';
         Writable => 'int16u',
         Count => -1,
     },
+    0x900d => { #JR
+        Name => 'ChromaticAberrationCorrection', # "Magnification Chromatic Aberration"
+        Writable => 'int32s',
+        PrintConv => { 1 => 'On', 2 => 'Off' },
+    },
+    0x900e => { #JR
+        Name => 'InclinationCorrection',
+        Writable => 'int32u',
+        PrintConv => { 0 => 'Off', 1 => 'On' },
+    },
+    0x900f => { #JR
+        Name => 'InclinationAngle',
+        Writable => 'int32s',
+        PrintConv => 'sprintf("%.1f deg", $val/1000)',
+        PrintConvInv => 'ToFloat($val) * 1000',
+    },
+    0x9010 => { #JR
+        Name => 'Cropping',
+        Writable => 'int32u',
+        PrintConv => { 0 => 'Off', 1 => 'On' },
+    },
+    0x9011 => { #JR
+        Name => 'CropArea',
+        Writable => 'int32u',
+        Count => 4,
+    },
+    0x9012 => { #JR
+        Name => 'PreviewImageSize',
+        Writable => 'int32u',
+        Count => 2,
+    },
+    0x9013 => { #JR (ARQ images)
+        Name => 'PxShiftPeriphEdgeNR',
+        Writable => 'int32s',
+        PrintConv => { 0 => 'Off', 1 => 'On' },
+    },
+    0x9014 => { #JR (ARQ images)
+        Name => 'PxShiftPeriphEdgeNRValue',
+        Writable => 'int32s',
+        PrintConv => 'sprintf("%.1f", $val/10)',
+        PrintConvInv => '$val * 10',
+    },
+    0x9017 => { Name => 'WhitesAdj',        Writable => 'int32s' }, #JR
+    0x9018 => { Name => 'BlacksAdj',        Writable => 'int32s' }, #JR
+    0x9019 => { Name => 'HighlightsAdj',    Writable => 'int32s' }, #JR
+    0x901a => { Name => 'ShadowsAdj',       Writable => 'int32s' }, #JR
     0xd000 => { Name => 'CurrentVersion',   Writable => 'int32u' },
     0xd001 => {
         Name => 'VersionIFD',
@@ -237,6 +297,7 @@ $VERSION = '1.05';
         },
         # extract all preview images (not just one)
         RawConv => q{
+            @grps = $self->GetGroup($$val{0});
             require Image::ExifTool::SonyIDC;
             Image::ExifTool::SonyIDC::ExtractPreviews($self);
         },
@@ -287,7 +348,7 @@ sub ExtractPreviews($)
                 });
             }
             my $val = Image::ExifTool::Exif::ExtractImage($et, $off, $len, $tag);
-            $et->FoundTag($tag, $val);
+            $et->FoundTag($tag, $val, $et->GetGroup($key));
         } else {
             $preview = Image::ExifTool::Exif::ExtractImage($et, $off, $len, 'IDCPreviewImage');
         }
@@ -318,7 +379,7 @@ write Sony Image Data Converter version 3.0 metadata in ARW images.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

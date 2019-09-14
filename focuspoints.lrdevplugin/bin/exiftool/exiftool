@@ -6,19 +6,24 @@
 #
 # Revisions:    Nov. 12/03 - P. Harvey Created
 #               (See html/history.html for revision history)
-#
-# References:   ATV - Alexander Vonk, private communication
 #------------------------------------------------------------------------------
 use strict;
 require 5.004;
 
-my $version = '10.36';
+my $version = '11.63';
 
 # add our 'lib' directory to the include list BEFORE 'use Image::ExifTool'
 my $exeDir;
 BEGIN {
     # get exe directory
     $exeDir = ($0 =~ /(.*)[\\\/]/) ? $1 : '.';
+    if (-l $0) {
+        my $lnk = eval { readlink $0 };
+        if (defined $lnk) {
+            my $lnkDir = ($lnk =~ /(.*)[\\\/]/) ? $1 : '.';
+            $exeDir = (($lnk =~ m(^/)) ? '' : $exeDir . '/') . $lnkDir;
+        }
+    }
     # add lib directory at start of include path
     unshift @INC, "$exeDir/lib";
     # load or disable config file if specified
@@ -35,7 +40,7 @@ sub SigCont();
 sub Cleanup();
 sub GetImageInfo($$);
 sub SetImageInfo($$$);
-sub DoHardLink($$$$);
+sub DoHardLink($$$$$);
 sub CleanXML($);
 sub EncodeXML($);
 sub FormatXML($$$);
@@ -65,6 +70,7 @@ sub CreateDirectory($);
 sub OpenOutputFile($;@);
 sub AcceptFile($);
 sub SlurpFile($$);
+sub FilterArgfileLine($);
 sub ReadStayOpen($);
 sub PrintTagList($@);
 sub PrintErrors($$$);
@@ -77,6 +83,7 @@ END {
 
 # declare all static file-scope variables
 my @commonArgs;     # arguments common to all commands
+my @condition;      # conditional processing of files
 my @csvFiles;       # list of files when reading with CSV option (in ExifTool Charset)
 my @csvTags;        # order of tags for first file with CSV option (lower case)
 my @delFiles;       # list of files to delete
@@ -90,6 +97,7 @@ my @requestTags;    # tags to request (for -p or -if option arguments)
 my @srcFmt;         # source file name format strings
 my @tags;           # list of tags to extract
 my %appended;       # list of files appended to
+my %countLink;      # count hard and symbolic links made
 my %created;        # list of files we created
 my %csvTags;        # lookup for all found tags with CSV option (lower case keys)
 my %database;       # lookup for database information based on file name (in ExifTool Charset)
@@ -104,22 +112,22 @@ my %utf8FileName;   # lookup for file names that are UTF-8 encoded
 my %warnedOnce;     # lookup for once-only warnings
 my %wext;           # -W extensions to write
 my $allGroup;       # show group name for all tags
+my $altEnc;         # alternate character encoding if not UTF-8
 my $argFormat;      # use exiftool argument-format output
 my $binaryOutput;   # flag for binary output (undef or 1, or 0 for binary XML/PHP)
 my $binaryStdout;   # flag set if we output binary to stdout
+my $binSep;         # separator used for list items in binary output
+my $binTerm;        # terminator used for binary output
 my $comma;          # flag set if we need a comma in JSON output
-my $condition;      # conditional processing of files
-my $count;          # count of files scanned
+my $count;          # count of files scanned when reading or deleting originals
 my $countBad;       # count of files with errors
 my $countBadCr;     # count files not created due to errors
-my $countBadLink;   # count bad links
 my $countBadWr;     # count write errors
 my $countCopyWr;    # count of files copied without being changed
 my $countDir;       # count of directories scanned
 my $countFailed;    # count files that failed condition
 my $countGoodCr;    # count files created OK
 my $countGoodWr;    # count files written OK
-my $countLink;      # count number of links created
 my $countNewDir;    # count of directories created
 my $countSameWr;    # count files written OK but not changed
 my $critical;       # flag for critical operations (disable CTRL-C)
@@ -130,13 +138,16 @@ my $deleteOrig;     # 0=restore original files, 1=delete originals, 2=delete w/o
 my $disableOutput;  # flag to disable normal output
 my $doSetFileName;  # flag set if FileName may be written
 my $doUnzip;        # flag to extract info from .gz and .bz2 files
+my $escapeC;        # C-style escape
 my $escapeHTML;     # flag to escape printed values for html
 my $evalWarning;    # warning from eval
 my $executeID;      # -execute ID number
+my $failCondition;  # flag to fail -if condition
+my $fastCondition;  # flag for fast -if condition
 my $fileHeader;     # header to print to output file (or console, once)
 my $fileTrailer;    # trailer for output file
 my $filtered;       # flag indicating file was filtered by name
-my $filterFlag;     # file filter flag (0x01=deny extensions, 0x02=allow extensions)
+my $filterFlag;     # file filter flag (0x01=deny extensions, 0x02=allow extensions, 0x04=add ext)
 my $fixLen;         # flag to fix description lengths when writing alternate languages
 my $forcePrint;     # string to use for missing tag values (undef to not print them)
 my $helped;         # flag to avoid printing help if no tags specified
@@ -163,9 +174,14 @@ my $quiet;          # flag to disable printing of informational messages / warni
 my $rafStdin;       # File::RandomAccess for stdin (if necessary to rewind)
 my $recurse;        # recurse into subdirectories (2=also hidden directories)
 my $rtnVal;         # command return value (0=success)
+my $rtnValPrev;     # previous command return value (0=success)
 my $saveCount;      # count the number of times we will/did call SaveNewValues()
 my $scanWritable;   # flag to process only writable file types
+my $sectHeader;     # current section header for -p option
+my $sectTrailer;    # section trailer for -p option
+my $seqFileBase;    # sequential file number at start of directory
 my $seqFileNum;     # sequential file number used for %C
+my $setCharset;     # character set setting ('default' if not set and -csv -b used)
 my $showGroup;      # number of group to show (may be zero or '')
 my $showTagID;      # non-zero to show tag ID's
 my $stayOpenBuff='';# buffer for -stay_open file
@@ -177,7 +193,6 @@ my $textOut;        # extension for text output file (or undef for no output)
 my $textOverwrite;  # flag to overwrite existing text output file (2=append, 3=over+append)
 my $tmpFile;        # temporary file to delete on exit
 my $tmpText;        # temporary text file
-my $utf8;           # flag set if we are using UTF-8 encoding
 my $validFile;      # flag indicating we processed a valid file
 my $verbose;        # verbose setting
 my $vout;           # verbose output file reference (\*STDOUT or \*STDERR)
@@ -191,6 +206,7 @@ my $xml;            # flag for XML-formatted output
 # 3 = waiting for -@ to switch to a new STAYOPEN argfile
 my $stayOpen = 0;
 
+my $rtnValApp = 0;  # app return value (0=success)
 my $curTitle = '';  # current window title
 
 # lookup for O/S names which may use a backslash as a directory separator
@@ -203,8 +219,14 @@ my $isCRLF = { MSWin32 => 1, os2 => 1, dos => 1 }->{$^O};
 # lookup for JSON characters that we escape specially
 my %jsonChar = ( '"'=>'"', '\\'=>'\\', "\t"=>'t', "\n"=>'n', "\r"=>'r' );
 
+# lookup for C-style escape sequences
+my %escC = ( "\n" => '\n', "\r" => '\r', "\t" => '\t', '\\' => '\\\\');
+my %unescC = ( a => "\a", b => "\b", f => "\f", n => "\n", r => "\r",
+               t => "\t", 0 => "\0", '\\' => '\\' );
+
 # options requiring additional arguments
 # (used only to skip over these arguments when reading -stay_open ARGFILE)
+# (arg is converted to lower case then tested again unless an entry was found with the same case)
 my %optArgs = (
     '-tagsfromfile' => 1, '-addtagsfromfile' => 1, '-alltagsfromfile' => 1,
     '-@' => 1,
@@ -215,12 +237,13 @@ my %optArgs = (
     '-d' => 1, '-dateformat' => 1,
     '-D' => 0, # necessary to avoid matching lower-case equivalent
     '-echo' => 1, '-echo1' => 1, '-echo2' => 1, '-echo3' => 1, '-echo4' => 1,
-    '-ext' => 1, '--ext' => 1, '-extension' => 1, '--extension' => 1,
+    '-ext' => 1, '--ext' => 1, '-ext+' => 1, '--ext+' => 1,
+        '-extension' => 1, '--extension' => 1, '-extension+' => 1, '--extension+' => 1,
     '-fileorder' => 1,
     '-geotag' => 1,
     '-globaltimeshift' => 1,
     '-i' => 1, '-ignore' => 1,
-    '-if' => 1,
+    '-if' => 1, '-if0' => 1, '-if1' => 1, '-if2' => 1, '-if3' => 1, '-if4' => 1,
     '-lang' => 0, # (optional arg; cannot begin with "-")
     '-listitem' => 1,
     '-o' => 1, '-out' => 1,
@@ -237,7 +260,7 @@ my %optArgs = (
         '-textout' => 1, '-textout!' => 1, '-textout+' => 1, '-textout+!' => 1, '-textout!+' => 1,
          '-tagout' => 1,  '-tagout!' => 1,  '-tagout+' => 1,  '-tagout+!' => 1,  '-tagout!+' => 1,
     '-wext' => 1,
-    '-wm' => 1,
+    '-wm' => 1, '-writemode' => 1,
     '-x' => 1, '-exclude' => 1,
     '-X' => 0,
 );
@@ -260,6 +283,8 @@ my @recommends = qw(
 my %altRecommends = (
    'POSIX::strptime' => 'Time::Piece', # (can use Time::Piece instead of POSIX::strptime)
 );
+
+my %unescapeChar = ( 't'=>"\t", 'n'=>"\n", 'r'=>"\r" );
 
 # exit routine
 sub Exit {
@@ -336,6 +361,10 @@ Command: for (;;) {
 $rafStdin->Close() if $rafStdin;
 undef $rafStdin;
 
+# save or previous return codes
+$rtnValPrev = $rtnVal;
+$rtnValApp = $rtnVal if $rtnVal;
+
 # exit Command loop now if we are all done processing commands
 last unless @ARGV or not defined $rtnVal or $stayOpen >= 2 or @commonArgs;
 
@@ -360,11 +389,10 @@ if ($stayOpen >= 2) {
     }
 }
 
-$rtnVal = 0 unless defined $rtnVal;
-
 # initialize necessary static file-scope variables
 # (not done: @commonArgs, @moreArgs, $critical, $binaryStdout, $helped,
-#  $interrupted, $mt, $pause, $rtnVal, $stayOpen, $stayOpenBuff, $stayOpenFile)
+#  $interrupted, $mt, $pause, $rtnValApp, $rtnValPrev, $stayOpen, $stayOpenBuff, $stayOpenFile)
+undef @condition;
 undef @csvFiles;
 undef @csvTags;
 undef @delFiles;
@@ -377,6 +405,7 @@ undef @newValues;
 undef @srcFmt;
 undef @tags;
 undef %appended;
+undef %countLink;
 undef %created;
 undef %csvTags;
 undef %database;
@@ -391,10 +420,12 @@ undef %utf8FileName;
 undef %warnedOnce;
 undef %wext;
 undef $allGroup;
+undef $altEnc;
 undef $argFormat;
 undef $binaryOutput;
+undef $binSep;
+undef $binTerm;
 undef $comma;
-undef $condition;
 undef $csv;
 undef $csvAdd;
 undef $deleteOrig;
@@ -402,10 +433,12 @@ undef $disableOutput;
 undef $doSetFileName;
 undef $doUnzip;
 undef $escapeHTML;
+undef $escapeC;
 undef $evalWarning;
 undef $executeID;
+undef $failCondition;
+undef $fastCondition;
 undef $fileHeader;
-undef $fileTrailer;
 undef $filtered;
 undef $fixLen;
 undef $forcePrint;
@@ -420,6 +453,8 @@ undef $progressCount;
 undef $progressMax;
 undef $recurse;
 undef $scanWritable;
+undef $sectHeader;
+undef $setCharset;
 undef $showGroup;
 undef $showTagID;
 undef $structOpt;
@@ -435,17 +470,16 @@ undef $windowTitle;
 $count = 0;
 $countBad = 0;
 $countBadCr = 0;
-$countBadLink = 0;
 $countBadWr = 0;
 $countCopyWr = 0;
 $countDir = 0;
 $countFailed = 0;
 $countGoodCr = 0;
 $countGoodWr = 0;
-$countLink = 0;
 $countNewDir = 0;
 $countSameWr = 0;
 $csvSaveCount = 0;
+$fileTrailer = '';
 $filterFlag = 0;
 $html = 0;
 $isWriting = 0;
@@ -455,18 +489,18 @@ $outFormat = 0;
 $overwriteOrig = 0;
 $progStr = '';
 $quiet = 0;
+$rtnVal = 0;
 $saveCount = 0;
+$sectTrailer = '';
+$seqFileBase = 0;
 $seqFileNum = 0;
 $tabFormat = 0;
-$utf8 = 1;
 $vout = \*STDOUT;
 $xml = 0;
 
 # define local variables used only in this command loop
 my @fileOrder;      # tags to use for ordering of input files
-my %excludeGrp;     # hash of tags excluded by group
 my $addGeotime;     # automatically added geotime argument
-my $allInGroup;     # flag to show all tags in a group
 my $doGlob;         # flag set to do filename wildcard expansion
 my $escapeXML;      # flag to escape printed values for xml
 my $setTagsFile;    # filename for last TagsFromFile option
@@ -490,7 +524,7 @@ $mt = new Image::ExifTool;      # create ExifTool object
 $mt->Options(Duplicates => 0) unless %Image::ExifTool::UserDefined::Options
     and defined $Image::ExifTool::UserDefined::Options{Duplicates};
 
-# default is to join lists if the List option was set in the config file
+# default is to join lists if the List option was set to zero in the config file
 $joinLists = 1 if defined $mt->Options('List') and not $mt->Options('List');
 
 # preserve FileCreateDate if possible
@@ -504,15 +538,17 @@ if (not $preserveTime and $^O eq 'MSWin32') {
 for (;;) {
 
   # execute the command now if no more arguments or -execute is used
-  if (not @ARGV or $ARGV[0] =~ /^-execute(\d*)$/i) {
+  if (not @ARGV or $ARGV[0] =~ /^(-|\xe2\x88\x92)execute(\d*)$/i) {
     if (@ARGV) {
-        $executeID = $1;        # save -execute number for "{ready}" response
+        $executeID = $2;        # save -execute number for "{ready}" response
         $helped = 1;            # don't show help if we used -execute
-        $badCmd and shift, next Command;
+        $badCmd and shift, $rtnVal=1, next Command;
     } elsif ($stayOpen >= 2) {
         ReadStayOpen(\@ARGV);   # read more arguments from -stay_open file
         next;
     } elsif ($badCmd) {
+        undef @commonArgs;      # all done.  Flush common arguments
+        $rtnVal = 1;
         next Command;
     }
     if ($pass == 0) {
@@ -540,6 +576,13 @@ for (;;) {
         if ($useMWG) {
             require Image::ExifTool::MWG;
             Image::ExifTool::MWG::Load();
+        }
+        # update necessary variables for 2nd pass
+        if (defined $forcePrint) {
+            unless (defined $mt->Options('MissingTagValue')) {
+                $mt->Options(MissingTagValue => '-');
+            }
+            $forcePrint = $mt->Options('MissingTagValue');
         }
     }
     if (@nextPass) {
@@ -620,6 +663,7 @@ for (;;) {
         my $str = $libVer eq $version ? '' : " [Warning: Library version is $libVer]";
         if ($verbose) {
             print "ExifTool version $version$str$Image::ExifTool::RELEASE\n";
+            printf "Perl version %s%s\n", $], (defined ${^UNICODE} ? " (-C${^UNICODE})" : '');
             print "Platform: $^O\n";
             print "Optional libraries:\n";
             foreach (@recommends) {
@@ -629,6 +673,10 @@ for (;;) {
                 # check for alternative if primary not available
                 $ver = eval "require $alt and \$${alt}::VERSION" and $_ = $alt if not $ver and $alt;
                 printf "  %-28s %s\n", $_, $ver || '(not installed)';
+            }
+            if ($verbose > 1) {
+                print "Include directories:\n";
+                print "  $_\n" foreach @INC;
             }
         } else {
             print "$version$str$Image::ExifTool::RELEASE\n";
@@ -688,11 +736,8 @@ for (;;) {
                 s/^\xef\xbb\xbf//;
                 $didBOM = 1;
             }
-            next if /^#/;   # ignore lines beginning with '#'
-            s/^\s+//; s/[\x0d\x0a]+$//s; # remove leading white space and trailing newline
-            # remove white space before, and single space after '=', '+=', '-=' or '<='
-            s/^(-[-:\w]+#?)\s*([-+<]?=) ?/$1$2/;
-            push @newArgs, $_ unless $_ eq '';
+            $_ = FilterArgfileLine($_);
+            push @newArgs, $_ if defined $_;
         }
         close ARGFILE;
         unshift @ARGV, @newArgs;
@@ -703,9 +748,9 @@ for (;;) {
         my $opt = shift;
         defined $opt or Error("Expected OPT[=VAL] argument for -api option\n"), $badCmd=1, next;
         my $val = ($opt =~ s/=(.*)//s) ? $1 : 1;
-        $mt->Options($opt => (length($val) ? $val : undef));
-        # update $forcePrint in case MissingTagValue was changed
-        $forcePrint = $mt->Options('MissingTagValue') if defined $forcePrint;
+        # empty string means an undefined value unless ^= is used
+        $val = undef unless $opt =~ s/\^$// or length $val;
+        $mt->Options($opt => $val);
         next;
     }
     /^arg(s|format)$/i and $argFormat = 1, next;
@@ -725,8 +770,16 @@ for (;;) {
             PrintTagList('Available character sets', sort keys %charsets);
             $helped = 1;
         } elsif ($charset !~ s/^(\w+)=// or lc($1) eq 'exiftool') {
-            $mt->Options(Charset => $charset);
-            $utf8 = ($mt->Options('Charset') eq 'UTF8');
+            {
+                local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };
+                undef $evalWarning;
+                $mt->Options(Charset => $charset);
+            }
+            if ($evalWarning) {
+                warn $evalWarning;
+            } else {
+                $setCharset = $mt->Options('Charset');
+            }
         } else {
             # set internal encoding of specified metadata type
             my $type = { id3 => 'ID3', iptc => 'IPTC', exif => 'EXIF', filename => 'FileName',
@@ -760,7 +813,7 @@ for (;;) {
                 $msg = Image::ExifTool::Import::ReadCSV(\*CSVFILE, \%database, $forcePrint);
                 close(CSVFILE);
             } else {
-                $msg = "Error opening CSV file '$csvFile'";
+                $msg = "Error opening CSV file '${csvFile}'";
             }
             $msg and Warn("$msg\n");
             $isWriting = 1;
@@ -779,6 +832,7 @@ for (;;) {
     (/^e$/ or $a eq '-composite') and $mt->Options(Composite => 0), next;
     (/^-e$/ or $a eq 'composite') and $mt->Options(Composite => 1), next;
     (/^E$/ or $a eq 'escapehtml') and require Image::ExifTool::HTML and $escapeHTML = 1, next;
+    ($a eq 'ec' or $a eq 'escapec') and $escapeC = 1, next; # (undocumented) added in 11.54
     ($a eq 'ex' or $a eq 'escapexml') and $escapeXML = 1, next;
     if (/^echo(\d)?$/i) {
         my $n = $1 || 1;
@@ -799,21 +853,17 @@ for (;;) {
         next;
     }
     # (-execute handled at top of loop)
-    if (/^-?ext(ension)?$/i) {
+    if (/^-?ext(ension)?(\+)?$/i) {
         my $ext = shift;
         defined $ext or Error("Expecting extension for -ext option\n"), $badCmd=1, next;
-        $ext =~ s/^\.//;    # remove leading '.' if it exists
-        my $flag = /^-/ ? 0 : 1;
+        my $flag = /^-/ ? 0 : ($2 ? 2 : 1);
         $filterFlag |= (0x01 << $flag);
-        $filterExt{uc($ext)} = $flag;
+        $ext =~ s/^\.//;    # remove leading '.' if it exists
+        $filterExt{uc($ext)} = $flag ? 1 : 0;
         next;
     }
     if (/^f$/ or $a eq 'forceprint') {
-        $forcePrint = $mt->Options('MissingTagValue');
-        unless (defined $forcePrint) {
-            $forcePrint = '-';
-            $mt->Options(MissingTagValue => '-');
-        }
+        $forcePrint = 1;
         next;
     }
     if (/^F([-+]?\d*)$/ or /^fixbase([-+]?\d*)$/i) {
@@ -833,6 +883,7 @@ for (;;) {
         $showGroup = $3 || 0;
         $allGroup = ($2 ? lc($2) eq 'roupnames' : $1 eq 'G');
         $mt->Options(SavePath => 1) if $showGroup =~ /\b5\b/;
+        $mt->Options(SaveFormat => 1) if $showGroup =~ /\b6\b/;
         next;
     }
     if ($a eq 'geotag') {
@@ -881,16 +932,15 @@ for (;;) {
         $ignore{$dir} = 1;
         next;
     }
-    if ($a eq 'if') {
+    if (/^if(\d*)$/i) {
         my $cond = shift;
+        $fastCondition = $1 if length $1;
         defined $cond or Error("Expecting expression for -if option\n"), $badCmd=1, next;
+        # prevent processing file unnecessarily for simple case of failed '$ok' or 'not $ok'
+        $cond =~ /^\s*(not\s*)\$ok\s*$/i and ($1 xor $rtnValPrev) and $failCondition=1;
         # add to list of requested tags
         push @requestTags, $cond =~ /\$\{?((?:[-\w]+:)*[-\w?*]+)/g;
-        if (defined $condition) {
-            $condition .= " and ($cond)";
-        } else {
-            $condition = "($cond)";
-        }
+        push @condition, $cond;
         next;
     }
     if (/^j(son)?(\+?=.*)?$/i) {
@@ -915,7 +965,7 @@ for (;;) {
                 $msg = Image::ExifTool::Import::ReadJSON(\*JSONFILE, \%database, $forcePrint, $chset);
                 close(JSONFILE);
             } else {
-                $msg = "Error opening JSON file '$jsonFile'";
+                $msg = "Error opening JSON file '${jsonFile}'";
             }
             $msg and Warn("$msg\n");
             $isWriting = 1;
@@ -930,9 +980,9 @@ for (;;) {
     }
     /^(k|pause)$/i and $pause = 1, next;
     (/^l$/ or $a eq 'long') and --$outFormat, next;
-    (/^L$/ or $a eq 'latin') and $utf8 = 0, $mt->Options(Charset => 'Latin'), next;
+    (/^L$/ or $a eq 'latin') and $mt->Options(Charset => 'Latin'), next;
     if ($a eq 'lang') {
-        $langOpt = (@ARGV and $ARGV[0] !~ /^-/) ? shift : undef;
+        $langOpt = (@ARGV and $ARGV[0] !~ /^(-|\xe2\x88\x92)/) ? shift : undef;
         if ($langOpt) {
             # make lower case and use underline as a separator (eg. 'en_ca')
             $langOpt =~ tr/-A-Z/_a-z/;
@@ -944,9 +994,9 @@ for (;;) {
         my $langs = "Available languages:\n";
         $langs .= "  $_ - $Image::ExifTool::langName{$_}\n" foreach @Image::ExifTool::langs;
         $langs =~ tr/_/-/;  # display dashes instead of underlines in language codes
-        $langs = $mt->Decode($langs, 'UTF8');
         $langs = Image::ExifTool::HTML::EscapeHTML($langs) if $escapeHTML;
-        $langOpt and Error("Invalid or unsupported language '$langOpt'.\n$langs"), $badCmd=1, next;
+        $langs = $mt->Decode($langs, 'UTF8');
+        $langOpt and Error("Invalid or unsupported language '${langOpt}'.\n$langs"), $badCmd=1, next;
         print $langs;
         $helped = 1;
         next;
@@ -961,6 +1011,7 @@ for (;;) {
     /^(m|ignoreminorerrors)$/i and $mt->Options(IgnoreMinorErrors => 1), next;
     /^(n|-printconv)$/i and $mt->Options(PrintConv => 0), next;
     /^(-n|printconv)$/i and $mt->Options(PrintConv => 1), next;
+    $a eq 'nop' and $helped=1, next; # (undocumented) no operation, added in 11.25
     if (/^o(ut)?$/i) {
         $outOpt = shift;
         defined $outOpt or Error("Expected output file or directory name for -o option\n"), $badCmd=1, next;
@@ -989,7 +1040,7 @@ for (;;) {
     }
     (/^P$/ or $a eq 'preserve') and $preserveTime = 1, next;
     /^password$/i and $mt->Options(Password => shift), next;
-    if (/^progress(:.*)?/i) {
+    if (/^progress(:.*)?$/i) {
         if ($1) {
             $windowTitle = substr $1, 1;
             $windowTitle = 'ExifTool %p%%' unless length $windowTitle;
@@ -1003,7 +1054,7 @@ for (;;) {
     }
     /^q(uiet)?$/i and ++$quiet, next;
     /^r(ecurse)?(\.?)$/i and $recurse = ($2 ? 2 : 1), next;
-    if ($a eq 'require') { # undocumented, added in version 8.65
+    if ($a eq 'require') { # (undocumented) added in version 8.65
         my $ver = shift;
         unless (defined $ver and Image::ExifTool::IsFloat($ver)) {
             Error("Expecting version number for -require option\n");
@@ -1021,8 +1072,10 @@ for (;;) {
     /^s(hort)?(\d*)$/i and $outFormat = $2 eq '' ? $outFormat + 1 : $2, next;
     /^scanforxmp$/i and $mt->Options(ScanForXMP => 1), next;
     if (/^sep(arator)?$/i) {
-        $listSep = shift;
+        my $sep = $listSep = shift;
         defined $listSep or Error("Expecting list item separator for -sep option\n"), $badCmd=1, next;
+        $sep =~ s/\\(.)/$unescapeChar{$1}||$1/sge;   # translate escape sequences
+        (defined $binSep ? $binTerm : $binSep) = $sep;
         $mt->Options(ListSep => $listSep);
         $joinLists = 1;
         # also split when writing values
@@ -1067,20 +1120,12 @@ for (;;) {
         next;
     }
     if (/^(-)?struct$/i) {
-        $structOpt = $1 ? 0 : 1;
-        $mt->Options(Struct => $structOpt);
-        # require XMPStruct in case we need to serialize a structure
-        require 'Image/ExifTool/XMPStruct.pl' if $structOpt;
+        $mt->Options(Struct => $1 ? 0 : 1);
         next;
     }
     /^t(ab)?$/  and $tabFormat = 1, next;
     if (/^T$/ or $a eq 'table') {
-        $tabFormat = 1; $outFormat+=2; ++$quiet;
-        $forcePrint = $mt->Options('MissingTagValue');
-        unless (defined $forcePrint) {
-            $forcePrint = '-';
-            $mt->Options(MissingTagValue => '-');
-        }
+        $tabFormat = $forcePrint = 1; $outFormat+=2; ++$quiet;
         next;
     }
     if (/^(u)(nknown(2)?)?$/i) {
@@ -1096,7 +1141,7 @@ for (;;) {
         local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };
         unless (eval "require Image::ExifTool::$module" or
                 eval "require $module" or
-                eval "require '$module'")
+                eval "require '${module}'")
         {
             Error("Error using module $module\n");
             $badCmd = 1;
@@ -1163,7 +1208,12 @@ for (;;) {
         $mt->Options(Duplicates=>1);
         next;
     }
-    /^z(ip)?$/i and $doUnzip = 1, $mt->Options(Compress => 1, Compact => 1), next;
+    if (/^z(ip)?$/i) {
+        $doUnzip = 1;
+        $mt->Options(Compress => 1, XMPShorthand => 1);
+        $mt->Options(Compact => 1) unless $mt->Options('Compact');
+        next;
+    }
     $_ eq '' and push(@files, '-'), $srcStdin = 1, next;   # read STDIN
     length $_ eq 1 and $_ ne '*' and Error("Unknown option -$_\n"), $badCmd=1, next;
     if (/^[^<]+(<?)=(.*)/s) {
@@ -1175,15 +1225,17 @@ for (;;) {
         push @newValues, $_;
         if (/^mwg:/i) {
             $useMWG = 1;
-        } elsif (/^([-\w]+:)*(filename|directory)\b/i) {
+        } elsif (/^([-\w]+:)*(filename|directory|testname)\b/i) {
             $doSetFileName = 1;
-        } elsif (/^([-\w]+:)*(geotag|geotime)\b/i) {
-            if (lc $2 eq 'geotag') {
-                if ((not defined $addGeotime or $addGeotime) and length $val) {
-                    $addGeotime = ($1 || '') . 'Geotime<DateTimeOriginal';
-                }
-            } else {
+        } elsif (/^([-\w]+:)*(geotag|geotime|geosync)\b/i) {
+            if (lc $2 eq 'geotime') {
                 $addGeotime = '';
+            } else {
+                # add geotag/geosync commands first
+                unshift @newValues, pop @newValues;
+                if (lc $2 eq 'geotag' and (not defined $addGeotime or $addGeotime) and length $val) {
+                    $addGeotime = ($1 || '') . 'Geotime<DateTimeOriginal#';
+                }
             }
         }
     } else {
@@ -1194,23 +1246,25 @@ for (;;) {
             push @{$setTags{$setTagsFile}}, $_;
             if (/>/) {
                 $useMWG = 1 if /^(.*>\s*)?mwg:/si;
-                if (/\b(filename|directory)#?$/i) {
+                if (/\b(filename|directory|testname)#?$/i) {
                     $doSetFileName = 1;
                 } elsif (/\bgeotime#?$/i) {
                     $addGeotime = '';
                 }
             } else {
                 $useMWG = 1 if /^([^<]+<\s*(.*\$\{?)?)?mwg:/si;
-                if (/^([-\w]+:)*(filename|directory)\b/i) {
+                if (/^([-\w]+:)*(filename|directory|testname)\b/i) {
                     $doSetFileName = 1;
                 } elsif (/^([-\w]+:)*geotime\b/i) {
                     $addGeotime = '';
                 }
             }
-        } elsif (/^-(.*)/) {
-            push @exclude, $1;
         } else {
-            push @tags, $_;
+            my $lst = s/^-// ? \@exclude : \@tags;
+            unless (/^([-\w*]+:)*([-\w*?]+)#?$/) {
+                Warn(qq(Invalid TAG name: "$_"\n));
+            }
+            push @$lst, $_; # (push everything for backward compatibility)
         }
     }
   } else {
@@ -1233,6 +1287,9 @@ for (;;) {
     }
   }
 }
+
+# set "OK" UserParam based on result of last command
+$mt->Options(UserParam => 'OK=' . (not $rtnValPrev));
 
 # set verbose output to STDERR if output could be to console
 $vout = \*STDERR if $srcStdin and ($isWriting or @newValues);
@@ -1302,15 +1359,22 @@ if ($tagOut and ($csv or %printFmt or $tabFormat or $xml or ($verbose and $html)
     next;
 }
 
-if ($textOut and $csv and $csv eq 'CSV' and not $isWriting) {
-    Warn "Sorry, -w may not be combined with -csv\n";
-    $rtnVal = 1;
-    next;
+if ($csv and $csv eq 'CSV' and not $isWriting) {
+    if ($textOut) {
+        Warn "Sorry, -w may not be combined with -csv\n";
+        $rtnVal = 1;
+        next;
+    }
+    if ($binaryOutput) {
+        $binaryOutput = 0;
+        $setCharset = 'default' unless defined $setCharset;
+    }
+    require Image::ExifTool::XMP if $setCharset;
 }
 
 if ($escapeHTML or $json) {
     # must be UTF8 for HTML conversion and JSON output
-    $mt->Options(Charset => 'UTF8');
+    $mt->Options(Charset => 'UTF8') if $json;
     # use Escape option to do our HTML escaping unless XML output
     $mt->Options(Escape => 'HTML') if $escapeHTML and not $xml;
 } elsif ($escapeXML and not $xml) {
@@ -1322,6 +1386,12 @@ if ($sortOpt) {
     # (note that -csv sorts alphabetically by default anyway if more than 1 file)
     my $sort = ($outFormat > 0 or $xml or $json or $csv) ? 'Tag' : 'Descr';
     $mt->Options(Sort => $sort, Sort2 => $sort);
+}
+
+# set $structOpt in case set by API option
+if ($mt->Options('Struct') and not $structOpt) {
+    $structOpt = $mt->Options('Struct');
+    require 'Image/ExifTool/XMPStruct.pl';
 }
 
 # set up for RDF/XML, JSON and PHP output formats
@@ -1377,6 +1447,7 @@ if ($xml) {
     }
     $mt->Options(List => 1) unless $joinLists;
     $mt->Options(Duplicates => 0) unless defined $showGroup;
+    $showTagID = 'D' if $tabFormat and not $showTagID;
 } elsif ($structOpt) {
     $mt->Options(List => 1);
 } else {
@@ -1451,7 +1522,7 @@ if (@newValues) {
         /(.*?)=(.*)/s or next;
         my ($tag, $newVal) = ($1, $2);
         $tag =~ s/\ball\b/\*/ig;    # replace 'all' with '*' in tag names
-        $newVal eq '' and undef $newVal;    # undefined to delete tag
+        $newVal eq '' and undef $newVal unless $tag =~ s/\^([-+]*)$/$1/;  # undefined to delete tag
         if ($tag =~ /^(All)?TagsFromFile$/i) {
             defined $newVal or Error("Need file name for -tagsFromFile\n"), next Command;
             ++$isWriting;
@@ -1460,7 +1531,7 @@ if (@newValues) {
                 next;   # set tags from dynamic file later
             }
             unless ($mt->Exists($newVal) or $newVal eq '-') {
-                Warn "File '$newVal' does not exist for -tagsFromFile option\n";
+                Warn "File '${newVal}' does not exist for -tagsFromFile option\n";
                 $rtnVal = 1;
                 next Command;
             }
@@ -1486,7 +1557,7 @@ if (@newValues) {
 
         if ($tag =~ s/<// and defined $newVal) {
             if (defined FilenameSPrintf($newVal)) {
-                SlurpFile($newVal, \$newVal) or next;
+                SlurpFile($newVal, \$newVal) or next;   # read file data into $newVal
             } else {
                 $tag =~ s/([-+]|\xe2\x88\x92)$// and $opts{$addDelOpt{$1}} = 1;
                 # verify that this tag can be written
@@ -1497,9 +1568,9 @@ if (@newValues) {
                     push @dynamicFiles, [ $tag, $newVal, \%opts ];
                     ++$isWriting;
                 } elsif (defined $result) {
-                    Warn "Tag '$tag' is not writable\n";
+                    Warn "Tag '${tag}' is not writable\n";
                 } else {
-                    Warn "Tag '$tag' does not exist\n";
+                    Warn "Tag '${tag}' does not exist\n";
                 }
                 next;
             }
@@ -1508,6 +1579,9 @@ if (@newValues) {
             $opts{$addDelOpt{$1}} = 1;  # set AddValue or DelValue option
             # set $newVal to '' if deleting nothing
             $newVal = '' if $1 eq '-' and not defined $newVal;
+        }
+        if ($escapeC and defined $newVal) {
+            $newVal =~ s/\\(x([0-9a-fA-F]{2})|.)/$2 ? chr(hex($2)) : $unescC{$1} || $1/seg;
         }
         my ($rtn, $wrn) = $mt->SetNewValue($tag, $newVal, %opts);
         $needSave = 1;
@@ -1583,8 +1657,12 @@ if ($outOpt) {
     $scanWritable = 1;
 }
 
+# initialize alternate encoding flag
+$altEnc = $mt->Options('Charset');
+undef $altEnc if $altEnc eq 'UTF8';
+
 # set flag to fix description lengths if necessary
-if ($utf8 and $mt->Options('Lang') ne 'en' and eval { require Encode }) {
+if (not $altEnc and $mt->Options('Lang') ne 'en' and eval { require Encode }) {
     # (note that Unicode::GCString is part of the Unicode::LineBreak package)
     $fixLen = eval { require Unicode::GCString } ? 2 : 1;
 }
@@ -1650,7 +1728,7 @@ if (@dbKeys) {
             if (defined $absPath) {
                 $database{$absPath} = $database{$_} unless $database{$absPath};
                 if ($verbose and $verbose > 1) {
-                    print $vout "Imported entry for '$_' (full path: '$absPath')\n";
+                    print $vout "Imported entry for '${_}' (full path: '${absPath}')\n";
                 }
             }
         }
@@ -1668,8 +1746,12 @@ if ($filtered and not $validFile) {
 # print CSV information if necessary
 PrintCSV() if $csv and not $isWriting;
 
-# print file trailer if necessary
+# print folder/file trailer if necessary
+print $sectTrailer if $sectTrailer and not $textOut;
 print $fileTrailer if $fileTrailer and not $textOut and not $fileHeader;
+
+my $totWr = $countGoodWr + $countBadWr + $countSameWr + $countCopyWr +
+            $countGoodCr + $countBadCr;
 
 if (defined $deleteOrig) {
 
@@ -1696,7 +1778,7 @@ if (defined $deleteOrig) {
     if ($quiet) {
         # no more messages
     } elsif ($count and not $countGoodWr and not $countBad) {
-        printf "%5d original files found\n", $countGoodWr;
+        printf "%5d original files found\n", $countGoodWr; # (this will be 0)
     } elsif ($deleteOrig) {
         printf "%5d original files deleted\n", $countGoodWr if $count;
         printf "%5d originals not deleted due to errors\n", $countBad if $countBad;
@@ -1709,9 +1791,7 @@ if (defined $deleteOrig) {
 
     # print summary
     my $tot = $count + $countBad;
-    my $totWr = $countGoodWr + $countBadWr + $countSameWr + $countCopyWr +
-                $countGoodCr + $countBadCr;
-    if ($countDir or $totWr or $countFailed or $tot > 1 or $textOut or $countLink or $countBadLink) {
+    if ($countDir or $totWr or $countFailed or $tot > 1 or $textOut or %countLink) {
         my $o = (($html or $json or $xml or %printFmt or $csv) and not $textOut) ? \*STDERR : $vout;
         printf($o "%5d directories scanned\n", $countDir) if $countDir;
         printf($o "%5d directories created\n", $countNewDir) if $countNewDir;
@@ -1726,13 +1806,19 @@ if (defined $deleteOrig) {
         printf($o "%5d files could not be read\n", $countBad) if $countBad;
         printf($o "%5d output files created\n", scalar(keys %created)) if $textOut;
         printf($o "%5d output files appended\n", scalar(keys %appended)) if %appended;
-        printf($o "%5d hard links created\n", $countLink) if $countLink or $countBadLink;
-        printf($o "%5d hard links could not be created\n", $countBadLink) if $countBadLink;
+        printf($o "%5d hard links created\n", $countLink{Hard} || 0) if $countLink{Hard} or $countLink{BadHard};
+        printf($o "%5d hard links could not be created\n", $countLink{BadHard}) if $countLink{BadHard};
+        printf($o "%5d symbolic links created\n", $countLink{Sym} || 0) if $countLink{Sym} or $countLink{BadSym};
+        printf($o "%5d symbolic links could not be created\n", $countLink{BadSym}) if $countLink{BadSym};
     }
 }
 
 # set error status if we had any errors or if all files failed the "-if" condition
-$rtnVal = 1 if $countBadWr or $countBadCr or $countBad or ($countFailed and not $count);
+if ($countBadWr or $countBadCr or $countBad) {
+    $rtnVal = 1;
+} elsif ($countFailed and not ($count or $totWr) and not $rtnVal) {
+    $rtnVal = 2;
+}
 
 # clean up after each command
 Cleanup();
@@ -1741,7 +1827,7 @@ Cleanup();
 
 close STAYOPEN if $stayOpen >= 2;
 
-Exit $rtnVal;   # all done
+Exit $rtnValApp;    # all done
 
 
 #------------------------------------------------------------------------------
@@ -1770,6 +1856,11 @@ sub GetImageInfo($$)
         $title =~ s/%([%bfpr])/$lkup{$1}/eg;
         SetWindowTitle($title);
     }
+    unless (length $orig or $outOpt) {
+        Warn qq(Error: Zero-length file name - ""\n);
+        ++$countBad;
+        return;
+    }
     # determine the name of the source file based on the original input file name
     if (@srcFmt) {
         my ($fmt, $first);
@@ -1795,37 +1886,49 @@ sub GetImageInfo($$)
         }
     }
     # evaluate -if expression for conditional processing
-    if (defined $condition) {
+    if (@condition) {
         unless ($file eq '-' or $et->Exists($file)) {
-            Warn "File not found: $file\n";
+            Warn "Error: File not found - $file\n";
             FileNotFound($file);
             ++$countBad;
             return;
         }
-        # catch run time errors as well as compile errors
-        undef $evalWarning;
-        local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };
+        my $result;
 
-        my %info;
-        # extract information and build expression for evaluation
-        my $opts = { Duplicates => 1, RequestTags => \@requestTags, Verbose => 0, HtmlDump => 0 };
-        # return all tags but explicitly mention tags on command line so
-        # requested images will generate the appropriate warnings
-        @foundTags = ('*', @tags) if @tags;
-        $info = $et->ImageInfo(Infile($pipe,$isWriting), \@foundTags, $opts);
-        my $cond = $et->InsertTagValues(\@foundTags, $condition, \%info);
+        unless ($failCondition) {
+            # catch run time errors as well as compile errors
+            undef $evalWarning;
+            local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };
 
-        #### eval "-if" condition (%info)
-        my $result = eval $cond;
-
-        $@ and $evalWarning = $@;
-        if ($evalWarning) {
-            # fail condition if warning is issued
-            undef $result;
-            if ($verbose) {
-                chomp $evalWarning;
-                $evalWarning =~ s/ at \(eval .*//s;
-                Warn "Condition: $evalWarning - $file\n";
+            my (%info, $condition);
+            # extract information and build expression for evaluation
+            my $opts = { Duplicates => 1, RequestTags => \@requestTags, Verbose => 0, HtmlDump => 0 };
+            $$opts{FastScan} = $fastCondition if defined $fastCondition;
+            # return all tags but explicitly mention tags on command line so
+            # requested images will generate the appropriate warnings
+            @foundTags = ('*', @tags) if @tags;
+            $info = $et->ImageInfo(Infile($pipe,$isWriting), \@foundTags, $opts);
+            foreach $condition (@condition) {
+                my $cond = $et->InsertTagValues(\@foundTags, $condition, \%info);
+                {
+                    # set package so eval'd functions are in Image::ExifTool namespace
+                    package Image::ExifTool;
+    
+                    #### eval "-if" condition (%info)
+                    $result = eval $cond;
+    
+                    $@ and $evalWarning = $@;
+                }
+                if ($evalWarning) {
+                    # fail condition if warning is issued
+                    undef $result;
+                    if ($verbose) {
+                        chomp $evalWarning;
+                        $evalWarning =~ s/ at \(eval .*//s;
+                        Warn "Condition: $evalWarning - $file\n";
+                    }
+                }
+                last unless $result;
             }
         }
         unless ($result) {
@@ -1835,7 +1938,7 @@ sub GetImageInfo($$)
         }
         # can't make use of $info if verbose because we must reprocess
         # the file anyway to generate the verbose output
-        undef $info if $verbose;
+        undef $info if $verbose or defined $fastCondition;
     }
     if (defined $deleteOrig) {
         print $vout "======== $file$progStr\n" if defined $verbose;
@@ -1889,7 +1992,7 @@ sub GetImageInfo($$)
 
     # extract information from this file
     unless ($file eq '-' or $et->Exists($file)) {
-        Warn "File not found: $file\n";
+        Warn "Error: File not found - $file\n";
         FileNotFound($file);
         $outfile and close($fp), undef($tmpText), $et->Unlink($outfile);
         ++$countBad;
@@ -1952,7 +2055,7 @@ sub GetImageInfo($$)
     if ($binaryOutput or not %$info) {
         my $errs = $et->GetInfo('Warning', 'Error');
         PrintErrors($et, $errs, $file) and $rtnVal = 1;
-    } elsif ($et->GetValue('Error')) {
+    } elsif ($et->GetValue('Error') or ($$et{Validate} and $et->GetValue('Warning'))) {
         $rtnVal = 1;
     }
 
@@ -1966,33 +2069,50 @@ sub GetImageInfo($$)
     # print the results for this file
     if (%printFmt) {
         # output using print format file (-p) option
-        my ($type, $doc, $grp);
-        undef $fileTrailer;
+        my ($type, $doc, $grp, $lastDoc, $cache);
+        $fileTrailer = '';
         # repeat for each embedded document if necessary
-        my $lastDoc = $et->Options('ExtractEmbedded') ? $$et{DOC_COUNT} : 0;
-        foreach $type ('HEAD', 'BODY', 'TAIL') {
-            my $prf = $printFmt{$type} or next;
-            for ($doc=0; $doc<=$lastDoc; ++$doc) {
+        if ($et->Options('ExtractEmbedded')) {
+            # (cache tag keys if there are sub-documents)
+            $lastDoc = $$et{DOC_COUNT} and $cache = { };
+        } else {
+            $lastDoc = 0;
+        }
+        for ($doc=0; $doc<=$lastDoc; ++$doc) {
+            my $skipBody;
+            foreach $type (qw(HEAD SECT IF BODY ENDS TAIL)) {
+                my $prf = $printFmt{$type} or next;
+                next if $type eq 'BODY' and $skipBody;
                 if ($lastDoc) {
                     if ($doc) {
-                        last unless $type eq 'BODY'; # only repeat BODY lines
-                        $grp = "Doc$doc:";
+                        next if $type eq 'HEAD' or $type eq 'TAIL'; # only repeat SECT/IF/BODY/ENDS
+                        $grp = "Doc$doc";
                     } else {
-                        $grp = 'Main:';
+                        $grp = 'Main';
                     }
-                    # change tag groups to print next document by adding "Main:" or "Doc#:"
-                    # to all tags which don't already start with a family 3 group name
-                    $prf = [ @{$printFmt{$type}} ];
-                    s/((^|[^\$])(\$\$)*\$\{?)((?!(Main|Doc\d+):)[\w])/$1$grp$4/ig foreach @$prf;
                 }
                 my @lines;
+                my $opt = $type eq 'IF' ? 'Silent' : 'Warn'; # silence "IF" warnings
                 foreach (@$prf) {
-                    my $line = $et->InsertTagValues(\@foundTags, $_, 'Warn');
-                    push @lines, $line if defined $line;
+                    my $line = $et->InsertTagValues(\@foundTags, $_, $opt, $grp, $cache);
+                    if ($type eq 'IF') {
+                        $skipBody = 1 unless defined $line;
+                    } elsif (defined $line) {
+                        push @lines, $line;
+                    }
                 }
                 $lineCount += scalar @lines;
-                if ($type eq 'TAIL') {
-                    $fileTrailer = '' unless defined $fileTrailer;
+                if ($type eq 'SECT') {
+                    my $thisHeader = join '', @lines;
+                    if ($sectHeader and $sectHeader ne $thisHeader) {
+                        print $fp $sectTrailer if $sectTrailer;
+                        undef $sectHeader;
+                    }
+                    $sectTrailer = '';
+                    print $fp $sectHeader = $thisHeader unless $sectHeader;
+                } elsif ($type eq 'ENDS') {
+                    $sectTrailer .= join '', @lines if defined $sectHeader;
+                } elsif ($type eq 'TAIL') {
                     $fileTrailer .= join '', @lines;
                 } elsif (@lines) {
                     print $fp @lines;
@@ -2015,7 +2135,7 @@ sub GetImageInfo($$)
             } elsif ($xml) {
                 my $f = $file;
                 CleanXML(\$f);
-                print $fp "\n<rdf:Description rdf:about='$f'";
+                print $fp "\n<rdf:Description rdf:about='${f}'";
                 print $fp "\n  xmlns:et='http://ns.exiftool.ca/1.0/'";
                 print $fp " et:toolkit='Image::ExifTool $Image::ExifTool::VERSION'";
                 # define namespaces for all tag groups
@@ -2065,9 +2185,12 @@ TAG:    foreach $tag (@foundTags) {
             # make sure this tag has a value
             my $val = $$info{$tag};
             if (ref $val) {
-                if (defined $binaryOutput and not $binaryOutput) { # happens with -X -b or -php -b
+                # happens with -X, -j or -php when combined with -b:
+                if (defined $binaryOutput and not $binaryOutput and $$et{TAG_INFO}{$tag}{Protected}) {
                     # avoid extracting Protected binary tags (eg. data blocks) [insider information]
-                    next if $$et{TAG_INFO}{$tag}{Protected} and not $$et{REQ_TAG_LOOKUP}{lc $tag};
+                    my $lcTag = lc $tag;
+                    $lcTag =~ s/ .*//;
+                    next unless $$et{REQ_TAG_LOOKUP}{$lcTag};
                 }
                 $val = ConvertBinary($val); # convert SCALAR references
                 if ($structOpt) {
@@ -2083,7 +2206,7 @@ TAG:    foreach $tag (@foundTags) {
                             $valList = $val;
                             $val = shift @$valList;
                         } else {
-                            $val = join "\n", @$val;
+                            $val = join defined $binSep ? $binSep : "\n", @$val;
                         }
                     } elsif ($joinLists) {
                         $val = join $listSep, @$val;
@@ -2150,6 +2273,7 @@ TAG:    foreach $tag (@foundTags) {
                 # write binary output
                 if ($binaryOutput) {
                     print $fp $val;
+                    print $fp $binTerm if defined $binTerm;
                     if ($tagOut) {
                         if ($append) {
                             $appended{$outfile} = 1 unless $created{$outfile};
@@ -2201,22 +2325,22 @@ TAG:    foreach $tag (@foundTags) {
             if ($xml) {
                 # RDF/XML output format
                 my $tok = "$group:$tagName";
-                # manually un-do CR/LF conversion in Windows because output
-                # is in text mode, which will re-convert newlines to CR/LF
-                $isCRLF and $val =~ s/\x0d\x0a/\x0a/g;
                 if ($outFormat > 0) {
                     if ($structOpt and ref $val) {
                         $val = Image::ExifTool::XMP::SerializeStruct($val);
                     }
                     if ($escapeHTML) {
                         $val =~ tr/\0-\x08\x0b\x0c\x0e-\x1f/./;
-                        Image::ExifTool::XMP::FixUTF8(\$val) if $utf8;
-                        $val = Image::ExifTool::HTML::EscapeHTML($val);
+                        Image::ExifTool::XMP::FixUTF8(\$val) unless $altEnc;
+                        $val = Image::ExifTool::HTML::EscapeHTML($val, $altEnc);
                     } else {
                         CleanXML(\$val);
                     }
                     unless ($noDups{$tok}) {
-                        print $fp "\n $tok='$val'";
+                        # manually un-do CR/LF conversion in Windows because output
+                        # is in text mode, which will re-convert newlines to CR/LF
+                        $isCRLF and $val =~ s/\x0d\x0a/\x0a/g;
+                        print $fp "\n $tok='${val}'";
                         # XML does not allow duplicate attributes
                         $noDups{$tok} = 1;
                     }
@@ -2230,20 +2354,23 @@ TAG:    foreach $tag (@foundTags) {
                     } else {
                         $id = Image::ExifTool::XMP::FullEscapeXML($id);
                     }
-                    $xtra = " et:id='$id'";
-                    $xtra .= " xml:lang='$lang'" if $lang;
+                    $xtra = " et:id='${id}'";
+                    $xtra .= " xml:lang='${lang}'" if $lang;
                 } else {
                     $xtra = '';
                 }
                 if ($tabFormat) {
                     my $table = $et->GetTableName($tag);
                     my $index = $et->GetTagIndex($tag);
-                    $xtra .= " et:table='$table'";
-                    $xtra .= " et:index='$index'" if defined $index;
+                    $xtra .= " et:table='${table}'";
+                    $xtra .= " et:index='${index}'" if defined $index;
                 }
                 my $lastVal = $val;
                 for ($valNum=0; $valNum<2; ++$valNum) {
                     $val = FormatXML($val, $ind, $group);
+                    # manually un-do CR/LF conversion in Windows because output
+                    # is in text mode, which will re-convert newlines to CR/LF
+                    $isCRLF and $val =~ s/\x0d\x0a/\x0a/g;
                     if ($outFormat >= 0) {
                         # normal output format (note: this will give
                         # non-standard RDF/XML if there are any attributes)
@@ -2294,6 +2421,11 @@ TAG:    foreach $tag (@foundTags) {
                         $id = sprintf('0x%.4x', $id) if $showTagID eq 'H' and $id =~ /^\d+$/;
                         $$val{id} = $id;
                     }
+                    if ($tabFormat) {
+                        $$val{table} = $et->GetTableName($tag);
+                        my $index = $et->GetTagIndex($tag);
+                        $$val{index} = $index if defined $index;
+                    }
                     if ($outFormat < 0) {
                         $$val{desc} = $desc;
                         if ($printConv) {
@@ -2316,10 +2448,14 @@ TAG:    foreach $tag (@foundTags) {
                 }
             }
 
-            # translate unprintable chars in value and remove trailing spaces
-            $val =~ tr/\x01-\x1f\x7f/./;
-            $val =~ s/\x00//g;
-            $val =~ s/\s+$//;
+            if ($escapeC) {
+                $val =~ s/([\0-\x1f\\\x7f])/$escC{$1} || sprintf('\x%.2x', ord $1)/eg;
+            } else {
+                # translate unprintable chars in value and remove trailing spaces
+                $val =~ tr/\x01-\x1f\x7f/./;
+                $val =~ s/\x00//g;
+                $val =~ s/\s+$//;
+            }
 
             if ($html) {
                 print $fp "<tr>";
@@ -2422,7 +2558,9 @@ TAG:    foreach $tag (@foundTags) {
         }
     }
     if ($outfile) {
-        print $fp $fileTrailer if $fileTrailer; # write file trailer
+        # write section and file trailers before closing the file
+        print $fp $sectTrailer and $sectTrailer = '' if $sectTrailer;
+        print $fp $fileTrailer if $fileTrailer;
         close($fp);
         undef $tmpText;
         if ($lineCount) {
@@ -2447,7 +2585,8 @@ TAG:    foreach $tag (@foundTags) {
 sub SetImageInfo($$$)
 {
     my ($et, $file, $orig) = @_;
-    my ($outfile, $restored, $isTemporary, $isStdout, $outType, $tagsFromSrc, $hardLink, $testName);
+    my ($outfile, $restored, $isTemporary, $isStdout, $outType, $tagsFromSrc);
+    my ($hardLink, $symLink, $testName, $sameFile);
     my $infile = $file;    # save infile in case we change it again
 
     # clean up old temporary file if necessary
@@ -2471,7 +2610,7 @@ sub SetImageInfo($$$)
         } else {
             $outfile = FilenameSPrintf($outOpt, $orig);
             if ($outfile eq '') {
-                Warn "Can't create file with zero-length name from $orig\n";
+                Warn "Error: Can't create file with zero-length name from $orig\n";
                 ++$countBadCr;
                 return 0;
             }
@@ -2524,7 +2663,7 @@ sub SetImageInfo($$$)
         unless ($isStdout) {
             $outfile = NextUnusedFilename($outfile);
             if ($et->Exists($outfile) and not $doSetFileName) {
-                Warn "Error: '$outfile' already exists - $infile\n";
+                Warn "Error: '${outfile}' already exists - $infile\n";
                 ++$countBadWr;
                 return 0;
             }
@@ -2601,9 +2740,9 @@ sub SetImageInfo($$$)
                 }
                 $et->Options(Charset => $old) if $csv eq 'JSON';
                 unless ($found) {
-                    Warn("No SourceFile '$file' in imported $csv database\n");
+                    Warn("No SourceFile '${file}' in imported $csv database\n");
                     my $absPath = AbsPath($file);
-                    Warn("(full path: '$absPath')\n") if defined $absPath and $absPath ne $file;
+                    Warn("(full path: '${absPath}')\n") if defined $absPath and $absPath ne $file;
                     return 0;
                 }
             }
@@ -2619,15 +2758,21 @@ sub SetImageInfo($$$)
     } else {
         # get name of hard link if we are creating one
         $hardLink = $et->GetNewValues('HardLink');
+        $symLink = $et->GetNewValues('SymLink');
         $testName = $et->GetNewValues('TestName');
         $hardLink = FilenameSPrintf($hardLink, $orig) if defined $hardLink;
-        if (defined $testName) {
-            $testName = FilenameSPrintf($testName, $orig);
-            $testName = Image::ExifTool::GetNewFileName($file, $testName) if $file ne '';
-        }
+        $symLink = FilenameSPrintf($symLink, $orig) if defined $symLink;
         # determine what our output file name should be
         my $newFileName = $et->GetNewValues('FileName');
         my $newDir = $et->GetNewValues('Directory');
+        if (defined $testName) {
+            my $err;
+            $err = "You shouldn't write FileName or Directory with TestFile" if defined $newFileName or defined $newDir;
+            $err = "The -o option shouldn't be used with TestFile" if defined $outfile;
+            $err and Warn("Error: $err - $infile\n"), ++$countBadWr, return 0;
+            $testName = FilenameSPrintf($testName, $orig);
+            $testName = Image::ExifTool::GetNewFileName($file, $testName) if $file ne '';
+        }
         if (defined $newFileName or defined $newDir or ($doSetFileName and defined $outfile)) {
             if ($newFileName) {
                 $newFileName = FilenameSPrintf($newFileName, $orig);
@@ -2644,16 +2789,20 @@ sub SetImageInfo($$$)
             }
             $outfile = NextUnusedFilename($outfile, $infile);
             if ($et->Exists($outfile)) {
-                if ($infile ne $outfile) {
-                    Warn "Error: '$outfile' already exists - $infile\n";
+                if ($infile eq $outfile) {
+                    undef $outfile;     # not changing the file name after all
+                # (allow for case-insensitive filesystems)
+                } elsif ($et->IsSameFile($infile, $outfile)) {
+                    $sameFile = $outfile;   # same file, but the name has a different case
+                } else {
+                    Warn "Error: '${outfile}' already exists - $infile\n";
                     ++$countBadWr;
                     return 0;
                 }
-                undef $outfile; # not changing the file name after all
             }
         }
         if (defined $outfile) {
-            $verbose and print $vout "'$infile' --> '$outfile'\n";
+            $verbose and print $vout "'${infile}' --> '${outfile}'\n";
             # create output directory if necessary
             CreateDirectory($outfile);
             # set temporary file (automatically erased on abnormal exit)
@@ -2683,7 +2832,7 @@ sub SetImageInfo($$$)
                 }
             } else {
                 # file doesn't exist, and we can't create it
-                Warn("Error: File not found - $file\n");
+                Warn "Error: File not found - $file\n";
                 FileNotFound($file);
                 ++$countBadWr;
                 return 0;
@@ -2692,7 +2841,7 @@ sub SetImageInfo($$$)
             if ($numSet == $numPseudo) {
                 my $r1 = $et->SetFileModifyDate($file,undef,'FileCreateDate');
                 my $r2 = $et->SetFileModifyDate($file);
-                my $r3 = $et->SetFilePermissions($file);
+                my $r3 = $et->SetSystemTags($file);
                 my $r4 = 0;
                 $r4 = $et->SetFileName($file, $outfile) if defined $outfile;
                 if ($r1 > 0 or $r2 > 0 or $r3 > 0 or $r4 > 0) {
@@ -2703,13 +2852,13 @@ sub SetImageInfo($$$)
                 } else {
                     ++$countSameWr;
                 }
-                if (defined $hardLink or defined $testName) {
+                if (defined $hardLink or defined $symLink or defined $testName) {
                     my $src = (defined $outfile and $r4 > 0) ? $outfile : $file;
-                    DoHardLink($et, $src, $hardLink, $testName);
+                    DoHardLink($et, $src, $hardLink, $symLink, $testName);
                 }
                 return 1;
             }
-            unless (defined $outfile) {
+            if (not defined $outfile or defined $sameFile) {
                 # write to a truly temporary file
                 $outfile = "${file}_exiftool_tmp";
                 if ($et->Exists($outfile)) {
@@ -2727,9 +2876,9 @@ sub SetImageInfo($$$)
     my $success = $et->WriteInfo(Infile($file), $outfile, $outType);
 
     # create hard link if specified
-    if ($success and (defined $hardLink or defined $testName)) {
+    if ($success and (defined $hardLink or defined $symLink or defined $testName)) {
         my $src = defined $outfile ? $outfile : $file;
-        DoHardLink($et, $src, $hardLink, $testName);
+        DoHardLink($et, $src, $hardLink, $symLink, $testName);
     }
 
     # get file time if preserving it
@@ -2767,6 +2916,7 @@ sub SetImageInfo($$$)
                             return 0;
                         }
                     }
+                    my $dstFile = defined $sameFile ? $sameFile : $file;
                     if ($overwriteOrig > 1) {
                         # copy temporary file over top of original to preserve attributes
                         my ($err, $buff);
@@ -2790,7 +2940,10 @@ sub SetImageInfo($$$)
                                 unless ($et->Rename($newFile, $file) or
                                     ($et->Unlink($file) and $et->Rename($newFile, $file)))
                                 {
-                                    Error("Error renaming $newFile to $file\n"), return 0;
+                                    Error("Error renaming $newFile to $file\n");
+                                    undef $critical;
+                                    SigInt() if $interrupted;
+                                    return 0;
                                 }
                             } else {
                                 $et->SetFileModifyDate($file, $cTime, 'FileCreateDate', 1);
@@ -2815,19 +2968,19 @@ sub SetImageInfo($$$)
 
                     # simply rename temporary file to replace original
                     # (if we didn't already rename it to add "_original")
-                    } elsif ($et->Rename($tmpFile, $file)) {
+                    } elsif ($et->Rename($tmpFile, $dstFile)) {
                         ++$countGoodWr;
                     } else {
                         my $newFile = $tmpFile;
                         undef $tmpFile; # (avoid deleting file if we get interrupted)
                         # unlink may fail if already renamed or no permission
                         if (not $et->Unlink($file)) {
-                            Warn "Error renaming temporary file to $file\n";
+                            Warn "Error renaming temporary file to $dstFile\n";
                             $et->Unlink($newFile);
                             ++$countBadWr;
                         # try renaming again now that the target has been deleted
-                        } elsif (not $et->Rename($newFile, $file)) {
-                            Warn "Error renaming temporary file to $file\n";
+                        } elsif (not $et->Rename($newFile, $dstFile)) {
+                            Warn "Error renaming temporary file to $dstFile\n";
                             # (don't delete tmp file now because it is all we have left)
                             ++$countBadWr;
                         } else {
@@ -2871,24 +3024,34 @@ sub SetImageInfo($$$)
 
 #------------------------------------------------------------------------------
 # Make hard link and handle TestName if specified
-# Inputs: 0) ExifTool ref, 1) source file name, 2) HardLink name, 3) TestFile name
-sub DoHardLink($$$$)
+# Inputs: 0) ExifTool ref, 1) source file name, 2) HardLink name,
+#         3) SymLink name, 4) TestFile name
+sub DoHardLink($$$$$)
 {
-    my ($et, $src, $hardLink, $testName) = @_;
+    my ($et, $src, $hardLink, $symLink, $testName) = @_;
     if (defined $hardLink) {
         $hardLink = NextUnusedFilename($hardLink);
         if ($et->SetFileName($src, $hardLink, 'Link') > 0) {
-            ++$countLink;
+            $countLink{Hard} = ($countLink{Hard} || 0) + 1;
         } else {
-            ++$countBadLink;
+            $countLink{BadHard} = ($countLink{BadHard} || 0) + 1;
+        }
+    }
+    if (defined $symLink) {
+        $symLink = NextUnusedFilename($symLink);
+        if ($et->SetFileName($src, $symLink, 'SymLink') > 0) {
+            $countLink{Sym} = ($countLink{Sym} || 0) + 1;
+        } else {
+            $countLink{BadSym} = ($countLink{BadSym} || 0) + 1;
         }
     }
     if (defined $testName) {
-        $testName = NextUnusedFilename($testName, undef, 1);
+        $testName = NextUnusedFilename($testName, $src, 1);
         if ($usedFileName{$testName}) {
-            $et->Warn("File '$testName' would exist");
-        } elsif ($et->SetFileName($src, $testName, 'Test') == 1) {
+            $et->Warn("File '${testName}' would exist");
+        } elsif ($et->SetFileName($src, $testName, 'Test', $usedFileName{$testName}) == 1) {
             $usedFileName{$testName} = 1;
+            $usedFileName{$src} = 0;
         }
     }
 }
@@ -2903,7 +3066,7 @@ sub CleanXML($)
     # translate control characters that are invalid in XML
     $$strPt =~ tr/\0-\x08\x0b\x0c\x0e-\x1f/./;
     # fix malformed UTF-8 characters
-    Image::ExifTool::XMP::FixUTF8($strPt) if $utf8;
+    Image::ExifTool::XMP::FixUTF8($strPt) unless $altEnc;
     # escape necessary characters for XML
     $$strPt = Image::ExifTool::XMP::EscapeXML($$strPt);
 }
@@ -2916,13 +3079,14 @@ sub EncodeXML($)
 {
     my $strPt = shift;
     if ($$strPt =~ /[\0-\x08\x0b\x0c\x0e-\x1f]/ or
-        ($utf8 and Image::ExifTool::XMP::IsUTF8($strPt) < 0))
+        (not $altEnc and Image::ExifTool::XMP::IsUTF8($strPt) < 0))
     {
         # encode binary data and non-UTF8 with special characters as base64
         $$strPt = Image::ExifTool::XMP::EncodeBase64($$strPt);
+        # #ATV = Alexander Vonk, private communication
         return 'http://www.w3.org/2001/XMLSchema#base64Binary'; #ATV
     } elsif ($escapeHTML) {
-        $$strPt = Image::ExifTool::HTML::EscapeHTML($$strPt);
+        $$strPt = Image::ExifTool::HTML::EscapeHTML($$strPt, $altEnc);
     } else {
         $$strPt = Image::ExifTool::XMP::EscapeXML($$strPt);
     }
@@ -2957,7 +3121,7 @@ sub FormatXML($$$)
     } else {
         # (note: SCALAR reference should have already been converted)
         my $enc = EncodeXML(\$val);
-        $gt = " rdf:datatype='$enc'>\n" if $enc; #ATV
+        $gt = " rdf:datatype='${enc}'>\n" if $enc; #ATV
     }
     return $gt . $val;
 }
@@ -2977,17 +3141,19 @@ sub EscapeJSON($;$)
         # (these big numbers caused problems for some JSON parsers, so be more conservative)
         return $str if $str =~ /^-?(\d|[1-9]\d{1,14})(\.\d{1,16})?(e[-+]?\d{1,3})?$/i;
     }
-    # encode JSON string as Base64 if necessary
+    # encode JSON string in base64 if necessary
     if ($json < 2 and defined $binaryOutput and Image::ExifTool::XMP::IsUTF8(\$str) < 0) {
         return '"base64:' . Image::ExifTool::XMP::EncodeBase64($str, 1) . '"';
     }
+    $str =~ s/\0+$//;   # remove trailing nulls
     # escape special characters
     $str =~ s/(["\t\n\r\\])/\\$jsonChar{$1}/sg;
     if ($json < 2) { # JSON
+        $str =~ tr/\0//d;   # remove all nulls
         # escape other control characters with \u
         $str =~ s/([\0-\x1f])/sprintf("\\u%.4X",ord $1)/sge;
         # JSON strings must be valid UTF8
-        Image::ExifTool::XMP::FixUTF8(\$str) if $utf8;
+        Image::ExifTool::XMP::FixUTF8(\$str) unless $altEnc;
     } else { # PHP
         # must escape "$" too for PHP
         $str =~ s/\$/\\\$/sg;
@@ -3048,6 +3214,12 @@ sub FormatJSON($$$)
 sub FormatCSV($)
 {
     my $val = shift;
+    # check for valid encoding if the Charset option was used
+    if ($setCharset and ($val =~ /[^\x09\x0a\x0d\x20-\x7e\x80-\xff]/ or
+        ($setCharset eq 'UTF8' and Image::ExifTool::XMP::IsUTF8(\$val) < 0)))
+    {
+        $val = 'base64:' . Image::ExifTool::XMP::EncodeBase64($val, 1);
+    }
     # currently, the value may contain NULL characters.  It is unclear
     # whether or not this is valid CSV, but some readers may not like it.
     # (if this becomes a problem, in the future values may need to be truncated at
@@ -3124,7 +3296,7 @@ sub ConvertBinary($)
         # (binaryOutput flag is set to 0 for binary mode of XML/PHP/JSON output formats)
         if (defined $binaryOutput) {
             $obj = $$obj;
-            # encode in base64 if necessary
+            # encode in base64 if necessary (0xf7 allows for up to 21-bit UTF-8 code space)
             if ($json == 1 and ($obj =~ /[^\x09\x0a\x0d\x20-\x7e\x80-\xf7]/ or
                                 Image::ExifTool::XMP::IsUTF8(\$obj) < 0))
             {
@@ -3257,7 +3429,7 @@ sub CheckUTF8($$)
         if ($isUTF8 < 0) {
             if ($enc) {
                 Warn("Invalid filename encoding for $file\n");
-            } else {
+            } elsif (not defined $enc) {
                 WarnOnce(qq{FileName encoding not specified.  Use "-charset FileName=CHARSET"\n});
             }
         }
@@ -3305,7 +3477,7 @@ sub ProcessFiles($;$)
                 $filtered = 1;
                 $verbose and print $vout "-------- $file (wrong extension)$progStr\n";
             } else {
-                Warn "File not found: $file\n";
+                Warn "Error: File not found - $file\n";
                 FileNotFound($file);
                 $rtnVal = 1;
             }
@@ -3328,7 +3500,7 @@ sub ScanDir($$;$)
 {
     local $_;
     my ($et, $dir, $list) = @_;
-    my (@fileList, $done, $file, $utf8Name);
+    my (@fileList, $done, $file, $utf8Name, $winSurrogate);
     my $enc = $et->Options('CharsetFileName');
     # recode as UTF-8 if necessary
     if ($enc) {
@@ -3339,17 +3511,30 @@ sub ScanDir($$;$)
         $utf8Name = 1;
     }
     return if $ignore{$dir};
+    my $oldBase = $seqFileBase;
+    $seqFileBase = $seqFileNum;
     # use Win32::FindFile on Windows if available
     # (ReadDir will croak if there is a wildcard, so check for this)
     if ($^O eq 'MSWin32' and $dir !~ /[*?]/) {
+        undef $evalWarning;
         local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };;
         if (CheckUTF8($dir, $enc) >= 0) {
             if (eval { require Win32::FindFile }) {
-                @fileList = Win32::FindFile::ReadDir($dir);
-                $_ = $_->cFileName foreach @fileList;
-                $et->Options(CharsetFileName => 'UTF8');    # now using UTF8
-                $utf8Name = 1;  # ReadDir returns UTF-8 file names
-                $done = 1;
+                eval {
+                    @fileList = Win32::FindFile::ReadDir($dir);
+                    $_ = $_->cFileName foreach @fileList;
+                };
+                $@ and $evalWarning = $@;
+                if ($evalWarning) {
+                    chomp $evalWarning;
+                    $evalWarning =~ s/ at .*//s;
+                    Warn "Warning: [Win32::FindFile] $evalWarning - $dir\n";
+                    $winSurrogate = 1 if $evalWarning =~ /surrogate/;
+                } else {
+                    $et->Options(CharsetFileName => 'UTF8');    # now using UTF8
+                    $utf8Name = 1;  # ReadDir returns UTF-8 file names
+                    $done = 1;
+                }
             } else {
                 $done = 0;
             }
@@ -3357,7 +3542,11 @@ sub ScanDir($$;$)
     }
     unless ($done) {
         # use standard perl library routines to read directory
-        opendir(DIR_HANDLE, $dir) or Warn("Error opening directory $dir\n"), return;
+        unless (opendir(DIR_HANDLE, $dir)) {
+            Warn("Error opening directory $dir\n");
+            $seqFileBase = $oldBase + ($seqFileNum - $seqFileBase);
+            return;
+        }
         @fileList = readdir(DIR_HANDLE);
         closedir(DIR_HANDLE);
         if (defined $done) {
@@ -3401,6 +3590,16 @@ sub ScanDir($$;$)
                 next unless $file =~ /\.(gz|bz2)$/i;
             }
         }
+        # Windows patch to avoid replacing filename containing Unicode surrogate with 8.3 name
+        if ($winSurrogate and $isWriting and
+            (not $overwriteOrig or $overwriteOrig != 2) and
+            not $doSetFileName and $file =~ /~/)   # (8.3 name will contain a tilde)
+        {
+            Warn("Not writing $path\n");
+            WarnOnce("Use -overwrite_original_in_place to write files with Unicode surrogate characters\n");
+            ++$countBad;
+            next;
+        }
         $utf8FileName{$path} = 1 if $utf8Name;
         if ($list) {
             push(@$list, $path);
@@ -3410,6 +3609,8 @@ sub ScanDir($$;$)
     }
     ++$countDir;
     $et->Options(CharsetFileName => $enc);  # restore original setting
+    # update sequential file base for parent directory
+    $seqFileBase = $oldBase + ($seqFileNum - $seqFileBase);
 }
 
 #------------------------------------------------------------------------------
@@ -3433,23 +3634,35 @@ sub FindFileWindows($$)
         return ();
     }
     CheckUTF8($wildfile, $enc) >= 0 or return ();
-    local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };;
-    my @names = Win32::FindFile::FindFile($wildfile) or return ();
-    # (apparently this isn't always sorted, so do a case-insensitive sort here)
-    @names = sort { uc($a) cmp uc($b) } @names;
-    my ($rname, $nm, @files);
-    # replace "\?" with ".", and "\*" with ".*" for regular expression
-    ($rname = quotemeta $wildname) =~ s/\\\?/./g;
-    $rname =~ s/\\\*/.*/g;
-    foreach $nm (@names) {
-        $nm = $nm->cFileName;
-        # make sure that FindFile behaves
-        # (otherwise "*.jpg" matches things like "a.jpg_original"!)
-        next unless $nm =~ /^$rname$/i;
-        next if $nm eq '.' or $nm eq '..';  # don't match "." and ".."
-        my $file = "$dir$nm";       # add back directory name
-        push @files, $file;
-        $utf8FileName{$file} = 1;   # flag this file name as UTF-8 encoded
+    undef $evalWarning;
+    local $SIG{'__WARN__'} = sub { $evalWarning = $_[0] };
+    my @files;
+    eval {
+        my @names = Win32::FindFile::FindFile($wildfile) or return;
+        # (apparently this isn't always sorted, so do a case-insensitive sort here)
+        @names = sort { uc($a) cmp uc($b) } @names;
+        my ($rname, $nm);
+        # replace "\?" with ".", and "\*" with ".*" for regular expression
+        ($rname = quotemeta $wildname) =~ s/\\\?/./g;
+        $rname =~ s/\\\*/.*/g;
+        foreach $nm (@names) {
+            $nm = $nm->cFileName;
+            # make sure that FindFile behaves
+            # (otherwise "*.jpg" matches things like "a.jpg_original"!)
+            next unless $nm =~ /^$rname$/i;
+            next if $nm eq '.' or $nm eq '..';  # don't match "." and ".."
+            my $file = "$dir$nm";       # add back directory name
+            push @files, $file;
+            $utf8FileName{$file} = 1;   # flag this file name as UTF-8 encoded
+        }
+    };
+    $@ and $evalWarning = $@;
+    if ($evalWarning) {
+        chomp $evalWarning;
+        $evalWarning =~ s/ at .*//s;
+        Warn "Error: [Win32::FindFile] $evalWarning - $wildfile\n";
+        undef @files;
+        ++$countBad;
     }
     return @files;
 }
@@ -3519,7 +3732,7 @@ sub AddPrintFormat($)
     my $expr = shift;
     my $type;
     if ($expr =~ /^#/) {
-        $expr =~ s/^#\[(HEAD|BODY|TAIL)\]// or return; # ignore comments
+        $expr =~ s/^#\[(HEAD|SECT|IF|BODY|ENDS|TAIL)\]// or return; # ignore comments
         $type = $1;
     } else {
         $type = 'BODY';
@@ -3532,7 +3745,7 @@ sub AddPrintFormat($)
 
 #------------------------------------------------------------------------------
 # Get suggested file extension based on tag value for binary output
-# Inputs: 0) data ref
+# Inputs: 0) ExifTool ref, 1) data ref, 2) tag name
 # Returns: file extension (lower case), or 'dat' if unknown
 sub SuggestedExtension($$$)
 {
@@ -3554,19 +3767,26 @@ sub SuggestedExtension($$$)
         $ext = 'xml';
     } elsif ($$valPt =~ /^RIFF....WAVE/s) {
         $ext = 'wav';
-    } elsif ($tag eq 'OriginalRawFileData' and
-        defined($ext = $et->GetValue('OriginalRawFileName')))
-    {
+    } elsif ($tag eq 'OriginalRawFileData' and defined($ext = $et->GetValue('OriginalRawFileName'))) {
         $ext =~ s/^.*\.//s;
         $ext = $ext ? lc($ext) : 'raw';
     } elsif ($tag eq 'EXIF') {
         $ext = 'exif';
+    } elsif ($tag eq 'ICC_Profile') {
+        $ext = 'icc';
     } elsif ($$valPt =~ /^(MM\0\x2a|II\x2a\0)/) {
         $ext = 'tiff';
+    } elsif ($$valPt =~ /^.{4}ftyp(3gp|mp4|f4v|qt  )/s) {
+        my %movType = ( 'qt  ' => 'mov' );
+        $ext = $movType{$1} || $1;
     } elsif ($$valPt !~ /^.{0,4096}\0/s) {
         $ext = 'txt';
-    } elsif ($$valPt =~ /^BM/) {
+    } elsif ($$valPt =~ /^BM.{15}\0/s) {
         $ext = 'bmp';
+    } elsif ($$valPt =~ /^CANON OPTIONAL DATA\0/) {
+        $ext = 'vrd';
+    } elsif ($$valPt =~ /^IIII\x04\0\x04\0/) {
+        $ext = 'dr4';
     } else {
         $ext = 'dat';
     }
@@ -3683,40 +3903,46 @@ sub NextUnusedFilename($;$$)
     return $fmt unless $fmt =~ /%[-+]?\d*\.?\d*[lun]?[cC]/;
     my %sep = ( '-' => '-', '+' => '_' );
     my ($copy, $alpha) = (0, 'a');
+    my $seq = $seqFileNum - 1;
     for (;;) {
         my ($filename, $pos) = ('', 0);
         while ($fmt =~ /(%([-+]?)(\d*)(\.?)(\d*)([lun]?)([cC]))/g) {
             $filename .= substr($fmt, $pos, pos($fmt) - $pos - length($1));
             $pos = pos($fmt);
             my ($sign, $wid, $dec, $wid2, $mod, $tok) = ($2, $3 || 0, $4, $5 || 0, $6, $7);
-            my $seq = $seqFileNum - 1;
+            my $diff;
             if ($tok eq 'C') {
-                $seq += $wid if $wid;
+                $diff = $wid - ($sign eq '-' ? $seqFileBase : 0);
                 $wid = $wid2;
             } else {
                 next unless $dec or $copy;
                 $wid = $wid2 if $wid < $wid2;
+                # add dash or underline separator if '-' or '+' specified
+                $filename .= $sep{$sign} if $sign;
             }
-            # add dash or underline separator if '-' or '+' specified
-            $filename .= $sep{$sign} if $sign;
             if ($mod and $mod ne 'n') {
-                my $a = $tok eq 'C' ? Num2Alpha($seq) : $alpha;
+                my $a = $tok eq 'C' ? Num2Alpha($diff + $seq) : $alpha;
                 my $str = ($wid and $wid > length $a) ? 'a' x ($wid - length($a)) : '';
                 $str .= $a;
                 $str = uc $str if $mod eq 'u';
                 $filename .= $str;
             } else {
-                my $c = $tok eq 'C' ? $seq : $copy;
+                my $c = $tok eq 'C' ? ($diff + $seq) : $copy;
                 my $num = $c + ($mod ? 1 : 0);
                 $filename .= $wid ? sprintf("%.${wid}d",$num) : $num;
             }
         }
         $filename .= substr($fmt, $pos); # add rest of file name
         # return now with filename unless file exists
-        return $filename unless $mt->Exists($filename) or $usedFileName{$filename};
-        return $filename if defined $okfile and $filename eq $okfile;
+        return $filename unless ($mt->Exists($filename) and not defined $usedFileName{$filename}) or $usedFileName{$filename};
+        if (defined $okfile) {
+            return $filename if $filename eq $okfile;
+            my ($fn, $ok) = (AbsPath($filename), AbsPath($okfile));
+            return $okfile if defined $fn and defined $ok and $fn eq $ok;
+        }
         ++$copy;
         ++$alpha;
+        ++$seq;
     }
 }
 
@@ -3836,6 +4062,9 @@ sub SlurpFile($$)
     my ($file, $buffPt) = @_;
     $mt->Open(\*INFILE, $file) or Warn("Error opening file $file\n"), return 0;
     binmode(INFILE);
+    # (CAREFUL!:  must clear buffer first to reset possible utf8 flag because the data
+    #  would be corrupted if it was read into a buffer which had the utf8 flag set!)
+    undef $$buffPt;
     my $bsize = 1024 * 1024;
     my $num = read(INFILE, $$buffPt, $bsize);
     unless (defined $num) {
@@ -3853,6 +4082,32 @@ sub SlurpFile($$)
     }
     close(INFILE);
     return 1;
+}
+
+
+#------------------------------------------------------------------------------
+# Filter argfile line
+# Inputs: 0) line of argfile
+# Returns: filtered line or undef to ignore
+sub FilterArgfileLine($)
+{
+    my $arg = shift;
+    if ($arg =~ /^#/) {             # comment lines begin with '#'
+        return undef unless $arg =~ s/^#\[CSTR\]//;
+        $arg =~ s/[\x0d\x0a]+$//s;  # remove trailing newline
+        # escape double quotes, dollar signs and ampersands if they aren't already
+        # escaped by an odd number of backslashes, and escape a single backslash
+        # if it occurs at the end of the string
+        $arg =~ s{\\(.)|(["\$\@]|\\$)}{'\\'.($2 || $1)}sge;
+        $arg = eval qq{"$arg"};     # un-escape characters in C string
+    } else {
+        $arg =~ s/^\s+//;           # remove leading white space
+        $arg =~ s/[\x0d\x0a]+$//s;  # remove trailing newline
+        # remove white space before, and single space after '=', '+=', '-=' or '<='
+        $arg =~ s/^(-[-:\w]+#?)\s*([-+<]?=) ?/$1$2/;
+        return undef if $arg eq '';
+    }
+    return $arg;
 }
 
 #------------------------------------------------------------------------------
@@ -3882,11 +4137,8 @@ sub ReadStayOpen($)
                 my $len = pos($stayOpenBuff) - $pos;
                 my $arg = substr($stayOpenBuff, $pos, $len);
                 $pos += $len;
-                $arg =~ s/^\s+//;           # remove leading white space
-                $arg =~ s/[\x0d\x0a]+$//s;  # remove trailing newline
-                # remove white space before, and single space after '=', '+=', '-=' or '<='
-                $arg =~ s/^(-[-:\w]+#?)\s*([-+<]?=) ?/$1$2/;
-                next if $arg eq '' or $arg =~ /^#/; # ignore empty/comment lines
+                $arg = FilterArgfileLine($arg);
+                next unless defined $arg;
                 push @newArgs, $arg;
                 if ($optArgs) {
                     # this is an argument for the last option
@@ -4007,15 +4259,15 @@ when one is expected.
 A command-line interface to L<Image::ExifTool|Image::ExifTool>, used for
 reading and writing meta information in a variety of file types.  I<FILE> is
 one or more source file names, directory names, or C<-> for the standard
-input.  Metadata is read from source files and printed in readable form
-to the console (or written to output text files with B<-w>).
+input.  Metadata is read from source files and printed in readable form to
+the console (or written to output text files with B<-w>).
 
-To write or delete metadata, tag values are assigned using the
--I<TAG>=[I<VALUE>] syntax, or the B<-geotag> option.  To copy or move
-metadata, the B<-tagsFromFile> feature is used.  By default the original
-files are preserved with C<_original> appended to their names -- be sure to
-verify that the new files are OK before erasing the originals.  Once in
-write mode, exiftool will ignore any read-specific options.
+To write or delete metadata, tag values are assigned using
+-I<TAG>=[I<VALUE>], and/or the B<-geotag>, B<-csv=> or B<-json=> options. 
+To copy or move metadata, the B<-tagsFromFile> feature is used.  By default
+the original files are preserved with C<_original> appended to their names
+-- be sure to verify that the new files are OK before erasing the originals.
+Once in write mode, exiftool will ignore any read-specific options.
 
 Note:  If I<FILE> is a directory name then only supported file types in the
 directory are processed (in write mode only writable types are processed).
@@ -4030,42 +4282,45 @@ supported by ExifTool (r = read, w = write, c = create):
 
   File Types
   ------------+-------------+-------------+-------------+------------
-  3FR   r     | DV    r     | K25   r     | OFR   r     | RSRC  r
-  3G2   r/w   | DVB   r/w   | KDC   r     | OGG   r     | RTF   r
-  3GP   r/w   | DYLIB r     | KEY   r     | OGV   r     | RW2   r/w
-  A     r     | EIP   r     | LA    r     | OPUS  r     | RWL   r/w
-  AA    r     | EPS   r/w   | LFP   r     | ORF   r/w   | RWZ   r
-  AAX   r/w   | EPUB  r     | LNK   r     | OTF   r     | RM    r
-  ACR   r     | ERF   r/w   | M2TS  r     | PAC   r     | SEQ   r
-  AFM   r     | EXE   r     | M4A/V r/w   | PAGES r     | SO    r
-  AI    r/w   | EXIF  r/w/c | MAX   r     | PBM   r/w   | SR2   r/w
-  AIFF  r     | EXR   r     | MEF   r/w   | PCD   r     | SRF   r
-  APE   r     | EXV   r/w/c | MIE   r/w/c | PDB   r     | SRW   r/w
-  ARW   r/w   | F4A/V r/w   | MIFF  r     | PDF   r/w   | SVG   r
-  ASF   r     | FFF   r/w   | MKA   r     | PEF   r/w   | SWF   r
-  AVI   r     | FLA   r     | MKS   r     | PFA   r     | THM   r/w
-  AZW   r     | FLAC  r     | MKV   r     | PFB   r     | TIFF  r/w
-  BMP   r     | FLIF  r/w   | MNG   r/w   | PFM   r     | TORRENT r
-  BPG   r     | FLV   r     | MOBI  r     | PGF   r     | TTC   r
-  BTF   r     | FPF   r     | MODD  r     | PGM   r/w   | TTF   r
-  CHM   r     | FPX   r     | MOI   r     | PLIST r     | VCF   r
-  COS   r     | GIF   r/w   | MOS   r/w   | PICT  r     | VRD   r/w/c
-  CR2   r/w   | GZ    r     | MOV   r/w   | PMP   r     | VSD   r
-  CRW   r/w   | HDP   r/w   | MP3   r     | PNG   r/w   | WAV   r
-  CS1   r/w   | HDR   r     | MP4   r/w   | PPM   r/w   | WDP   r/w
-  DCM   r     | HTML  r     | MPC   r     | PPT   r     | WEBP  r
-  DCP   r/w   | ICC   r/w/c | MPG   r     | PPTX  r     | WEBM  r
-  DCR   r     | ICS   r     | MPO   r/w   | PS    r/w   | WMA   r
-  DFONT r     | IDML  r     | MQV   r/w   | PSB   r/w   | WMV   r
-  DIVX  r     | IIQ   r/w   | MRW   r/w   | PSD   r/w   | WV    r
-  DJVU  r     | IND   r/w   | MXF   r     | PSP   r     | X3F   r/w
-  DLL   r     | INX   r     | NEF   r/w   | QTIF  r/w   | XCF   r
-  DNG   r/w   | ISO   r     | NRW   r/w   | RA    r     | XLS   r
-  DOC   r     | ITC   r     | NUMBERS r   | RAF   r/w   | XLSX  r
-  DOCX  r     | J2C   r     | O     r     | RAM   r     | XMP   r/w/c
-  DPX   r     | JNG   r/w   | ODP   r     | RAR   r     | ZIP   r
-  DR4   r/w/c | JP2   r/w   | ODS   r     | RAW   r/w   |
-  DSS   r     | JPEG  r/w   | ODT   r     | RIFF  r     |
+  3FR   r     | DSS   r     | J2C   r     | ODP   r     | RAW   r/w
+  3G2   r/w   | DV    r     | JNG   r/w   | ODS   r     | RIFF  r
+  3GP   r/w   | DVB   r/w   | JP2   r/w   | ODT   r     | RSRC  r
+  A     r     | DVR-MS r    | JPEG  r/w   | OFR   r     | RTF   r
+  AA    r     | DYLIB r     | JSON  r     | OGG   r     | RW2   r/w
+  AAE   r     | EIP   r     | K25   r     | OGV   r     | RWL   r/w
+  AAX   r/w   | EPS   r/w   | KDC   r     | OPUS  r     | RWZ   r
+  ACR   r     | EPUB  r     | KEY   r     | ORF   r/w   | RM    r
+  AFM   r     | ERF   r/w   | LA    r     | OTF   r     | SEQ   r
+  AI    r/w   | EXE   r     | LFP   r     | PAC   r     | SKETCH r
+  AIFF  r     | EXIF  r/w/c | LNK   r     | PAGES r     | SO    r
+  APE   r     | EXR   r     | LRV   r/w   | PBM   r/w   | SR2   r/w
+  ARQ   r/w   | EXV   r/w/c | M2TS  r     | PCD   r     | SRF   r
+  ARW   r/w   | F4A/V r/w   | M4A/V r/w   | PCX   r     | SRW   r/w
+  ASF   r     | FFF   r/w   | MAX   r     | PDB   r     | SVG   r
+  AVI   r     | FITS  r     | MEF   r/w   | PDF   r/w   | SWF   r
+  AZW   r     | FLA   r     | MIE   r/w/c | PEF   r/w   | THM   r/w
+  BMP   r     | FLAC  r     | MIFF  r     | PFA   r     | TIFF  r/w
+  BPG   r     | FLIF  r/w   | MKA   r     | PFB   r     | TORRENT r
+  BTF   r     | FLV   r     | MKS   r     | PFM   r     | TTC   r
+  CHM   r     | FPF   r     | MKV   r     | PGF   r     | TTF   r
+  COS   r     | FPX   r     | MNG   r/w   | PGM   r/w   | VCF   r
+  CR2   r/w   | GIF   r/w   | MOBI  r     | PLIST r     | VRD   r/w/c
+  CR3   r/w   | GPR   r/w   | MODD  r     | PICT  r     | VSD   r
+  CRM   r/w   | GZ    r     | MOI   r     | PMP   r     | WAV   r
+  CRW   r/w   | HDP   r/w   | MOS   r/w   | PNG   r/w   | WDP   r/w
+  CS1   r/w   | HDR   r     | MOV   r/w   | PPM   r/w   | WEBP  r
+  DCM   r     | HEIC  r/w   | MP3   r     | PPT   r     | WEBM  r
+  DCP   r/w   | HEIF  r/w   | MP4   r/w   | PPTX  r     | WMA   r
+  DCR   r     | HTML  r     | MPC   r     | PS    r/w   | WMV   r
+  DFONT r     | ICC   r/w/c | MPG   r     | PSB   r/w   | WTV   r
+  DIVX  r     | ICS   r     | MPO   r/w   | PSD   r/w   | WV    r
+  DJVU  r     | IDML  r     | MQV   r/w   | PSP   r     | X3F   r/w
+  DLL   r     | IIQ   r/w   | MRW   r/w   | QTIF  r/w   | XCF   r
+  DNG   r/w   | IND   r/w   | MXF   r     | R3D   r     | XLS   r
+  DOC   r     | INSV  r     | NEF   r/w   | RA    r     | XLSX  r
+  DOCX  r     | INX   r     | NRW   r/w   | RAF   r/w   | XMP   r/w/c
+  DPX   r     | ISO   r     | NUMBERS r   | RAM   r     | ZIP   r
+  DR4   r/w/c | ITC   r     | O     r     | RAR   r     |
 
   Meta Information
   ----------------------+----------------------+---------------------
@@ -4101,7 +4356,7 @@ options may appear after source file names on the exiftool command line.
 L<Tag operations|/Tag operations>
 
   -TAG or --TAG                    Extract or exclude specified tag
-  -TAG[+-]=[VALUE]                 Write new value for tag
+  -TAG[+-^]=[VALUE]                Write new value for tag
   -TAG[+-]<=DATFILE                Write tag value from contents of file
   -TAG[+-]<SRCTAG                  Copy tag value (see -tagsFromFile)
 
@@ -4114,7 +4369,7 @@ L<Input-output text formatting|/Input-output text formatting>
   -b          (-binary)            Output metadata in binary format
   -c FMT      (-coordFormat)       Set format for GPS coordinates
   -charset [[TYPE=]CHARSET]        Specify encoding for special characters
-  -csv[=CSVFILE]                   Export/import tags in CSV format
+  -csv[[+]=CSVFILE]                Export/import tags in CSV format
   -d FMT      (-dateFormat)        Set format for date/time values
   -D          (-decimal)           Show tag ID numbers in decimal
   -E, -ex     (-escape(HTML|XML))  Escape values for HTML (-E) or XML (-ex)
@@ -4122,9 +4377,9 @@ L<Input-output text formatting|/Input-output text formatting>
   -g[NUM...]  (-groupHeadings)     Organize output by tag group
   -G[NUM...]  (-groupNames)        Print group name for each tag
   -h          (-htmlFormat)        Use HMTL formatting for output
-  -H          (-hex)               Show tag ID number in hexadecimal
+  -H          (-hex)               Show tag ID numbers in hexadecimal
   -htmlDump[OFFSET]                Generate HTML-format binary dump
-  -j[=JSONFILE] (-json)            Export/import tags in JSON format
+  -j[[+]=JSONFILE] (-json)         Export/import tags in JSON format
   -l          (-long)              Use long 2-line output format
   -L          (-latin)             Use Windows Latin1 encoding
   -lang [LANG]                     Set current language
@@ -4150,17 +4405,17 @@ L<Processing control|/Processing control>
   -a          (-duplicates)        Allow duplicate tags to be extracted
   -e          (--composite)        Do not calculate composite tags
   -ee         (-extractEmbedded)   Extract information from embedded files
-  -ext EXT    (-extension)         Process files with specified extension
+  -ext[+] EXT (-extension)         Process files with specified extension
   -F[OFFSET]  (-fixBase)           Fix the base for maker notes offsets
   -fast[NUM]                       Increase speed for slow devices
   -fileOrder [-]TAG                Set file processing order
   -i DIR      (-ignore)            Ignore specified directory name
-  -if EXPR                         Conditionally process files
+  -if[NUM] EXPR                    Conditionally process files
   -m          (-ignoreMinorErrors) Ignore minor errors and warnings
   -o OUTFILE  (-out)               Set output file or directory name
   -overwrite_original              Overwrite original by renaming tmp file
   -overwrite_original_in_place     Overwrite original by copying tmp file
-  -P          (-preserve)          Preserve date/time of original file
+  -P          (-preserve)          Preserve file modification date/time
   -password PASSWD                 Password for processing protected files
   -progress[:[TITLE]]              Show file progress count
   -q          (-quiet)             Quiet processing
@@ -4191,15 +4446,14 @@ L<Utilities|/Utilities>
 
 L<Advanced options|/Advanced options>
 
-  -api OPT[=VAL]                   Set ExifTool API option
+  -api OPT[[^]=[VAL]]              Set ExifTool API option
   -common_args                     Define common arguments
   -config CFGFILE                  Specify configuration file name
   -echo[NUM] TEXT                  Echo text to stdout or stderr
   -execute[NUM]                    Execute multiple commands on one line
   -srcfile FMT                     Process a different source file
   -stay_open FLAG                  Keep reading -@ argfile even after EOF
-  -userParam PARAM[=VAL]           Set user parameter (API UserParam opt)
-  -windowTitle TITLE               Set console window title for each file
+  -userParam PARAM[[^]=[VAL]]      Set user parameter (API UserParam opt)
 
 =head2 Option Details
 
@@ -4219,16 +4473,16 @@ name may be prefixed by a digit to specify family number (eg.
 C<-1IPTC:City>).  Use the B<-listg> option to list available group names by
 family.
 
-A special tag name of C<All> may be used to indicate all meta information.
-This is particularly useful when a group name is specified to extract all
-information in a group (but beware that unless the B<-a> option is also
-used, some tags in the group may be suppressed by same-named tags in other
-groups).  The wildcard characters C<?> and C<*> may be used in a tag name to
-match any single character and zero or more characters respectively.  These
-may not be used in a group name, with the exception that a group name of
-C<*> (or C<All>) may be used to extract all instances of a tag (as if B<-a>
-was used).  Note that arguments containing wildcards must be quoted on the
-command line of most systems to prevent shell globbing.
+A special tag name of C<All> may be used to indicate all meta information
+(ie. B<-All>). This is particularly useful when a group name is specified to
+extract all information in a group (but beware that unless the B<-a> option
+is also used, some tags in the group may be suppressed by same-named tags in
+other groups).  The wildcard characters C<?> and C<*> may be used in a tag
+name to match any single character and zero or more characters respectively.
+ These may not be used in a group name, with the exception that a group name
+of C<*> (or C<All>) may be used to extract all instances of a tag (as if
+B<-a> was used). Note that arguments containing wildcards must be quoted on
+the command line of most systems to prevent shell globbing.
 
 A C<#> may be appended to the tag name to disable the print conversion on a
 per-tag basis (see the B<-n> option).  This may also be used when writing or
@@ -4254,7 +4508,7 @@ group delete (unless a family 2 group is specified, see note 4 below).
 Instead, individual tags may be recovered using the B<-tagsFromFile> option
 (eg. C<-all= -tagsfromfile @ -artist>).
 
-=item B<->I<TAG>[+-]B<=>[I<VALUE>]
+=item B<->I<TAG>[+-^]B<=>[I<VALUE>]
 
 Write a new value for the specified tag (eg. C<-comment=wow>), or delete the
 tag if no I<VALUE> is given (eg. C<-comment=>).  C<+=> and C<-=> are used to
@@ -4262,7 +4516,9 @@ add or remove existing entries from a list, or to shift date/time values
 (see L<Image::ExifTool::Shift.pl|Image::ExifTool::Shift.pl> and note 6 below
 for more details).  C<+=> may also be used to increment numerical values (or
 decrement if I<VALUE> is negative), and C<-=> may be used to conditionally
-delete or replace a tag (see L</WRITING EXAMPLES> for examples).
+delete or replace a tag (see L</WRITING EXAMPLES> for examples).  C<^=> is
+used to write an empty string instead of deleting the tag when no I<VALUE>
+is given, but otherwise it is equivalent to C<=>.
 
 I<TAG> may contain one or more leading family 0, 1 or 2 group names,
 prefixed by optional family numbers, and separated colons.  If no group name
@@ -4276,11 +4532,11 @@ value to multiple tags.  When specified with wildcards, "unsafe" tags are
 not written.  A tag name of C<All> is equivalent to C<*> (except that it
 doesn't require quoting, while arguments with wildcards do on systems with
 shell globbing), and is often used when deleting all metadata (ie. C<-All=>)
-or an entire group (eg. C<-GROUP:All=>, see note 4 below).  Note that not
+or an entire group (eg. C<-XMP-dc:All=>, see note 4 below).  Note that not
 all groups are deletable, and that the JPEG APP14 "Adobe" group is not
 removed by default with C<-All=> because it may affect the appearance of the
-image.  However, this will remove color space information, so the colors may
-be affected (but this may be avoided by copying back the tags defined by the
+image.  However, color space information is removed, so the colors may be
+affected (but this may be avoided by copying back the tags defined by the
 ColorSpaceTags shortcut).  Use the B<-listd> option for a complete list of
 deletable groups, and see note 5 below regarding the "APP" groups.  Also,
 within an image some groups may be contained within others, and these groups
@@ -4376,39 +4632,42 @@ single file.  In this case, C<@> may be used to represent the source file
 processing multiple files.  Specified tags are then copied from each file in
 turn as it is rewritten.  For advanced batch use, the source file name may
 also be specified using a I<FMT> string in which %d, %f and %e represent the
-directory, file name and extension of I<FILE>. See B<-w> option for I<FMT>
-string examples.
+directory, file name and extension of I<FILE>.  (eg. the current I<FILE>
+would be represented by C<%d%f.%e>, with the same effect as C<@>).  See the
+B<-w> option for I<FMT> string examples.
 
 A powerful redirection feature allows a destination tag to be specified for
 each copied tag.  With this feature, information may be written to a tag
 with a different name or group.  This is done using
-E<quot>'-I<DSTTAG>E<lt>I<SRCTAG>'E<quot> or 
+E<quot>'-I<DSTTAG>E<lt>I<SRCTAG>'E<quot> or
 E<quot>'-I<SRCTAG>E<gt>I<DSTTAG>'E<quot> on the command line after
 B<-tagsFromFile>, and causes the value of I<SRCTAG> to be copied from
-I<SRCFILE> and written to I<DSTTAG> in I<FILE>.  Note that this argument
-must be quoted to prevent shell redirection, and there is no C<=> sign as
-when assigning new values.  Source and/or destination tags may be prefixed
-by a group name and/or suffixed by C<#>.  Wildcards are allowed in both the
-source and destination tag names.  A destination group and/or tag name of
-C<All> or C<*> writes to the same family 1 group and/or tag name as the
-source.  If no destination group is specified, the information is written to
-the preferred group.  Whitespace around the C<E<gt>> or C<E<lt>> is ignored.
-As a convenience, C<-tagsFromFile @> is assumed for any redirected tags
-which are specified without a prior B<-tagsFromFile> option.  Copied tags
-may also be added or deleted from a list with arguments of the form
+I<SRCFILE> and written to I<DSTTAG> in I<FILE>.  Has no effect unless
+I<SRCTAG> exists in I<SRCFILE>.  Note that this argument must be quoted to
+prevent shell redirection, and there is no C<=> sign as when assigning new
+values.  Source and/or destination tags may be prefixed by a group name
+and/or suffixed by C<#>.  Wildcards are allowed in both the source and
+destination tag names.  A destination group and/or tag name of C<All> or
+C<*> writes to the same family 1 group and/or tag name as the source.  If no
+destination group is specified, the information is written to the preferred
+group.  Whitespace around the C<E<gt>> or C<E<lt>> is ignored. As a
+convenience, C<-tagsFromFile @> is assumed for any redirected tags which are
+specified without a prior B<-tagsFromFile> option.  Copied tags may also be
+added or deleted from a list with arguments of the form
 E<quot>'-I<SRCTAG>+E<lt>I<DSTTAG>'E<quot> or
-E<quot>'-I<SRCTAG>-E<lt>I<DSTTAG>'E<quot>.
+E<quot>'-I<SRCTAG>-E<lt>I<DSTTAG>'E<quot> (but see Note 5 below).
 
 An extension of the redirection feature allows strings involving tag names
 to be used on the right hand side of the C<E<lt>> symbol with the syntax
 E<quot>'-I<DSTTAG>E<lt>I<STR>'E<quot>, where tag names in I<STR> are
-prefixed with a C<$> symbol.  See the B<-p> option for more details about
-this syntax.  Strings starting with a C<=> sign must insert a single space
-after the C<E<lt>> to avoid confusion with the C<E<lt>=> operator which sets
-the tag value from the contents of a file.  A single space at the start of
-the string is removed if it exists, but all other whitespace in the string
-is preserved.  See note 8 below about using shortcuts or wildcards with the
-redirection feature.
+prefixed with a C<$> symbol.  See the B<-p> option and the
+L</Advanced formatting feature> section for more details about this syntax. 
+Strings starting with a C<=> sign must insert a single space after the
+C<E<lt>> to avoid confusion with the C<E<lt>=> operator which sets the tag
+value from the contents of a file.  A single space at the start of the
+string is removed if it exists, but all other whitespace in the string is
+preserved.  See note 8 below about using the redirection feature with
+list-type stags, shortcuts or when using wildcards in tag names.
 
 See L</COPYING EXAMPLES> for examples using B<-tagsFromFile>.
 
@@ -4442,13 +4701,13 @@ this command:
 This is significant in the case where an overlap exists between the copied
 and assigned tags because later operations may override earlier ones.
 
-5) The normal behaviour of copied tags differs subtly from that of assigned
-tags for list-type tags.  When copying to a list, each copied tag overrides
-any previous operations on the list.  While this avoids duplicate list items
-when copying groups of tags from a file containing redundant information, it
-also prevents values of different tags from being copied into the same list
-when this is the intent.  So a B<-addTagsFromFile> option is provided which
-allows copying of multiple tags into the same list.  eg)
+5) The normal behaviour of copied tags differs from that of assigned tags
+for list-type tags and conditional replacements because each copy operation
+on a tag overrides any previous operations.  While this avoids duplicate
+list items when copying groups of tags from a file containing redundant
+information, it also prevents values of different tags from being copied
+into the same list when this is the intent.  So a B<-addTagsFromFile> option
+is provided which allows copying of multiple tags into the same list.  eg)
 
     exiftool -addtagsfromfile @ '-subject<make' '-subject<model' ...
 
@@ -4467,11 +4726,14 @@ B<-struct> option for details.
 8) With the redirection feature, copying a tag directly (ie.
 E<quot>'-I<DSTTAG>E<lt>I<SRCTAG>'E<quot>) is not the same as interpolating
 its value inside a string (ie. E<quot>'-I<DSTTAG>E<lt>$I<SRCTAG>'E<quot>)
-for L<shortcut tags|Image::ExifTool::Shortcuts> or tag names containing
-wildcards.  When copying directly, the values of each matching source tag
-are copied individually to the destination tag (as if multiple redirection
-arguments were used).  However, when interpolated inside a string, the
-values of shortcut tags are concatenated, and wildcards are not allowed.
+for list-type tags, L<shortcut tags|Image::ExifTool::Shortcuts>, tag names
+containing wildcards, or UserParam variables.  When copying directly, the
+values of each matching source tag are copied individually to the
+destination tag (as if they were separate assignments).  However, when
+interpolated inside a string, list items and the values of shortcut tags are
+concatenated (with a separator set by the B<-sep> option), and wildcards are
+not allowed.  Also, UserParam variables are available only when interpolated
+in a string.
 
 =item B<-x> I<TAG> (B<-exclude>)
 
@@ -4497,7 +4759,7 @@ between images, but allows the metadata to be altered by editing the
 intermediate file (C<out.args> in this example):
 
     exiftool -args -G1 --filename --directory src.jpg > out.args
-    exiftool -@ out.args dst.jpg
+    exiftool -@ out.args -sep ", " dst.jpg
 
 Note:  Be careful when copying information with this technique since it is
 easy to write tags which are normally considered "unsafe".  For instance,
@@ -4505,9 +4767,10 @@ the FileName and Directory tags are excluded in the example above to avoid
 renaming and moving the destination file.  Also note that the second command
 above will produce warning messages for any tags which are not writable.
 
-As well, the B<-sep> option should be used when reading back to maintain
-separate list items, and the B<-struct> option may be used when extracting
-to preserve structured XMP information.
+As well, the B<-sep> option should be used as in the second command above to
+maintain separate list items when writing metadata back to image files, and
+the B<-struct> option may be used when extracting to preserve structured XMP
+information.
 
 =item B<-b> (B<-binary>)
 
@@ -4515,14 +4778,16 @@ Output requested metadata in binary format without tag names or
 descriptions.  This option is mainly used for extracting embedded images or
 other binary data, but it may also be useful for some text strings since
 control characters (such as newlines) are not replaced by '.' as they are in
-the default output.  List items are separated by a newline when extracted
-with the B<-b> option.  May be combined with C<-j>, C<-php> or C<-X> to
-extract binary data in JSON, PHP or XML format.
+the default output.  By default, list items are separated by a newline when
+extracted with the B<-b> option, but this may be changed (see the B<-sep>
+option for details).  May be combined with C<-j>, C<-php> or C<-X> to
+extract binary data in JSON, PHP or XML format, but note that "unsafe" tags
+must be specified explicitly to be extracted as binary in these formats.
 
 =item B<-c> I<FMT> (B<-coordFormat>)
 
 Set the print format for GPS coordinates.  I<FMT> uses the same syntax as
-the C<printf> format string.  The specifiers correspond to degrees, minutes
+a C<printf> format string.  The specifiers correspond to degrees, minutes
 and seconds in that order, but minutes and seconds are optional.  For
 example, the following table gives the output for the same coordinate using
 various formats:
@@ -4550,9 +4815,8 @@ coordinates as signed decimal degrees.
 
 If I<TYPE> is C<ExifTool> or not specified, this option sets the ExifTool
 character encoding for output tag values when reading and input values when
-writing.  The default ExifTool encoding is C<UTF8>.  If no I<CHARSET> is
-given, a list of available character sets is returned.  Valid I<CHARSET>
-values are:
+writing, with a default of C<UTF8>.  If no I<CHARSET> is given, a list of
+available character sets is returned.  Valid I<CHARSET> values are:
 
     CHARSET     Alias(es)        Description
     ----------  ---------------  ----------------------------------
@@ -4567,6 +4831,8 @@ values are:
     Baltic      cp1257           Windows Baltic
     Vietnam     cp1258           Windows Vietnamese
     Thai        cp874            Windows Thai
+    DOSLatinUS  cp437            DOS Latin US
+    DOSLatin1   cp850            DOS Latin1
     MacRoman    cp10000, Roman   Macintosh Roman
     MacLatin2   cp10029          Macintosh Latin2 (Central Europe)
     MacCyrillic cp10007          Macintosh Cyrillic
@@ -4578,7 +4844,7 @@ values are:
 
 I<TYPE> may be C<FileName> to specify the encoding of file names on the
 command line (ie. I<FILE> arguments).  In Windows, this triggers use of
-wide-character i/o routines, thus providing support for Unicode file names. 
+wide-character i/o routines, thus providing support for Unicode file names.
 See the L</WINDOWS UNICODE FILE NAMES> section below for details.
 
 Other values of I<TYPE> listed below are used to specify the internal
@@ -4599,7 +4865,7 @@ information about coded character sets, and the
 L<Image::ExifTool Options|Image::ExifTool/Options> for more details about
 the B<-charset> settings.
 
-=item B<-csv>[=I<CSVFILE>]
+=item B<-csv>[[+]=I<CSVFILE>]
 
 Export information in CSV format, or import information if I<CSVFILE> is
 specified.  When importing, the CSV file must be in exactly the same format
@@ -4607,8 +4873,9 @@ as the exported file.  The first row of the I<CSVFILE> must be the ExifTool
 tag names (with optional group names) for each column of the file, and
 values must be separated by commas.  A special "SourceFile" column specifies
 the files associated with each row of information (and a SourceFile of "*"
-may be used to define default tags to be imported for all files).  The
-following examples demonstrate basic use of this option:
+may be used to define default tags to be imported for all files which are
+combined with any tags specified for the specific SourceFile processed).
+The following examples demonstrate basic use of this option:
 
     # generate CSV file with common tags from all images in a directory
     exiftool -common -csv dir > out.csv
@@ -4616,21 +4883,26 @@ following examples demonstrate basic use of this option:
     # update metadata for all images in a directory from CSV file
     exiftool -csv=a.csv dir
 
-Empty values are ignored when importing.  Also, FileName and Directory
-columns are ignored if they exist (ie. ExifTool will not attempt to write
-these tags with a CSV import).  To force a tag to be deleted, use the B<-f>
-option and set the value to "-" in the CSV file (or to the MissingTagValue
-if this API option was used).  Multiple databases may be imported in a
-single command.
+Empty values are ignored when importing (unless the B<-f> option is used and
+the API MissingTagValue is set to an empty string, in which case the tag is
+deleted).  Also, FileName and Directory columns are ignored if they exist
+(ie. ExifTool will not attempt to write these tags with a CSV import).  To
+force a tag to be deleted, use the B<-f> option and set the value to "-" in
+the CSV file (or to the MissingTagValue if this API option was used).
+Multiple databases may be imported in a single command.
 
-When exporting a CSV file, the B<-g> or B<-G> option to add group names to
-the tag headings.  If the B<-a> option is used to allow duplicate tag names,
-the duplicate tags are only included in the CSV output if the column
-headings are unique.  Adding the B<-G4> option ensures a unique column
-heading for each tag.  When exporting specific tags, the CSV columns are
-arranged in the same order as the specified tags provided the column
-headings exactly match the specified tag names, otherwise the columns are
-sorted in alphabetical order.
+When exporting a CSV file, the B<-g> or B<-G> option adds group names to the
+tag headings.  If the B<-a> option is used to allow duplicate tag names, the
+duplicate tags are only included in the CSV output if the column headings
+are unique.  Adding the B<-G4> option ensures a unique column heading for
+each tag.  The B<-b> option may be added to output binary data, encoded in
+base64 if necessary (indicated by ASCII "base64:" as the first 7 bytes of
+the value).  Values may also be encoded in base64 if the B<-charset> option
+is used and the value contains invalid characters.
+
+When exporting specific tags, the CSV columns are arranged in the same order
+as the specified tags provided the column headings exactly match the
+specified tag names, otherwise the columns are sorted in alphabetical order.
 
 When importing from a CSV file, only files specified on the command line are
 processed.  Any extra entries in the CSV file are ignored.
@@ -4646,15 +4918,19 @@ format options because it requires information from all input files to be
 buffered in memory before the output is written.  This may result in
 excessive memory usage when processing a very large number of files with a
 single command.  Also, it makes this option incompatible with the B<-w>
-option.
+option.  When processing a large number of files, it is recommended to
+either use the JSON (B<-j>) or XML (B<-X>) output format, or use B<-p> to
+generate a fixed-column CSV file instead of using the B<-csv> option.
 
 =item B<-d> I<FMT> (B<-dateFormat>)
 
-Set the format for date/time tag values.  The specifics of the I<FMT> syntax
+Set the format for date/time tag values.  The I<FMT> string may contain
+formatting codes beginning with a percent character (C<%>) to represent the
+various components of a date/time value.  The specifics of the I<FMT> syntax
 are system dependent -- consult the C<strftime> man page on your system for
 details.  The default format is equivalent to "%Y:%m:%d %H:%M:%S".  This
 option has no effect on date-only or time-only tags and ignores timezone
-information if present.  Only one B<-d> option may be used per command. 
+information if present.  Only one B<-d> option may be used per command.
 Requires POSIX::strptime or Time::Piece for the inversion conversion when
 writing.
 
@@ -4723,7 +4999,7 @@ B<-htmlDump0> for absolute offsets.  Currently only EXIF/TIFF and JPEG
 information is dumped, but the -u option can be used to give a raw hex dump
 of other file formats.
 
-=item B<-j>[=I<JSONFILE>] (B<-json>)
+=item B<-j>[[+]=I<JSONFILE>] (B<-json>)
 
 Use JSON (JavaScript Object Notation) formatting for console output, or
 import JSON file if I<JSONFILE> is specified.  This option may be combined
@@ -4732,26 +5008,30 @@ group names to each tag.  List-type tags with multiple items are output as
 JSON arrays unless B<-sep> is used.  By default XMP structures are flattened
 into individual tags in the JSON output, but the original structure may be
 preserved with the B<-struct> option (this also causes all list-type XMP
-tags to be output as JSON arrays, otherwise single-item lists are output as
-simple strings).  The B<-a> option is implied if the B<-g> or B<-G> options
-are used, otherwise it is ignored and duplicate tags are suppressed.  Adding
-the B<-D> or B<-H> option changes tag values to JSON objects with "val" and
-"id" fields, and adding B<-l> adds a "desc" field, and a "num" field if the
-numerical value is different from the converted "val".  The B<-b> option may
-be added to output binary data, encoded in base64 if necessary (indicated by
-"base64:" as the first 7 bytes of the value).  The JSON output is UTF-8
-regardless of any B<-L> or B<-charset> option setting, but the UTF-8
-validation is disabled if a character set other than UTF-8 is specified.
+tags to be output as JSON arrays, otherwise single-item lists would be
+output as simple strings).  The B<-a> option is implied if the B<-g> or
+B<-G> options are used, otherwise it is ignored and tags with identical
+JSON names are suppressed. (B<-g4> may be used to ensure that all tags have
+unique JSON names.)  Adding the B<-D> or B<-H> option changes tag values to
+JSON objects with "val" and "id" fields, and adding B<-l> adds a "desc"
+field, and a "num" field if the numerical value is different from the
+converted "val".  The B<-b> option may be added to output binary data,
+encoded in base64 if necessary (indicated by ASCII "base64:" as the first 7
+bytes of the value), and B<-t> may be added to include tag table information
+(see B<-t> for details).  The JSON output is UTF-8 regardless of any B<-L>
+or B<-charset> option setting, but the UTF-8 validation is disabled if a
+character set other than UTF-8 is specified.
 
 If I<JSONFILE> is specified, the file is imported and the tag definitions
 from the file are used to set tag values on a per-file basis.  The special
 "SourceFile" entry in each JSON object associates the information with a
 specific target file.  An object with a missing SourceFile or a SourceFile
-of "*" defines default tags for all target files.  The imported JSON file
-must have the same format as the exported JSON files with the exception that
-the B<-g> option is not compatible with the import file format (use B<-G>
-instead). Additionally, tag names in the input JSON file may be suffixed
-with a C<#> to disable print conversion.
+of "*" defines default tags for all target files which are combined with any
+tags specified for the specific SourceFile processed.  The imported JSON
+file must have the same format as the exported JSON files with the exception
+that the B<-g> option is not compatible with the import file format (use
+B<-G> instead).  Additionally, tag names in the input JSON file may be
+suffixed with a C<#> to disable print conversion.
 
 Unlike CSV import, empty values are not ignored, and will cause an empty
 value to be written if supported by the specific metadata type.  Tags are
@@ -4784,26 +5064,50 @@ been implemented.  May also be combined with B<-listx> to output
 descriptions in one language only.
 
 By default, ExifTool uses UTF-8 encoding for special characters, but the
-the B<-L> or B<-charset> option may be used to invoke other encodings.
-
-Currently, the language support is not complete, but users are welcome to
-help improve this by submitting their own translations.  To submit a set of
-translations, first use the B<-listx> option and redirect the output to a
-file to generate an XML tag database, then add entries for other languages,
-zip this file, and email it to phil at owl.phy.queensu.ca for inclusion in
-ExifTool.
-
-Note:  ExifTool uses Unicode::LineBreak if available to help preserve the
+the B<-L> or B<-charset> option may be used to invoke other encodings.  Note
+that ExifTool uses Unicode::LineBreak if available to help preserve the
 column alignment of the plain text output for languages with a
 variable-width character set.
+
+Currently, the language support is not complete, but users are welcome to
+help improve this by submitting their own translations.  To submit a
+translation, follow these steps (you must have Perl installed for this):
+
+1. Download and unpack the latest Image-ExifTool full distribution.
+
+2. 'cd' into the Image-ExifTool directory.
+
+3. Run this command to make an XML file of the desired tags (eg. EXIF):
+
+   ./exiftool -listx -exif:all > out.xml
+
+4. Copy this text into a file called 'import.pl' in the exiftool directory:
+
+    push @INC, 'lib';
+    require Image::ExifTool::TagInfoXML;
+    my $file = shift or die "Expected XML file name\n";
+    $Image::ExifTool::TagInfoXML::makeMissing = shift;
+    Image::ExifTool::TagInfoXML::BuildLangModules($file,8);
+
+5. Run the 'import.pl' script to Import the XML file, generating the
+'MISSING' entries for your language (eg. Russian):
+
+   perl import.pl out.xml ru
+
+6. Edit the generated language module lib/Image/ExifTool/Lang/ru.pm, and
+search and replace all 'MISSING' strings in the file with your translations.
+
+7. Email the module ('ru.pm' in this example) to phil at owl.phy.queensu.ca
+
+8. Thank you!!
 
 =item B<-listItem> I<INDEX>
 
 For list-type tags, this causes only the item with the specified index to be
 extracted.  I<INDEX> is 0 for the first item in the list.  Negative indices
 may also be used to reference items from the end of the list.  Has no effect
-on single-valued tags.  Also applies to tag values when copying, and in
-B<-if> conditions.
+on single-valued tags.  Also applies to tag values when copying from a tag,
+and in B<-if> conditions.
 
 =item B<-n> (B<--printConv>)
 
@@ -4832,17 +5136,25 @@ when writing.  For example, the following commands all have the same effect:
 
 =item B<-p> I<FMTFILE> or I<STR> (B<-printFormat>)
 
-Print output in the format specified by the given file or string (and ignore
-other format options).  Tag names in the format file or string begin with a
-C<$> symbol and may contain a leading group names and/or a trailing C<#>. 
-Case is not significant.  Braces C<{}> may be used around the tag name to
-separate it from subsequent text.  Use C<$$> to represent a C<$> symbol, and
-C<$/> for a newline.  Multiple B<-p> options may be used, each contributing
-a line of text to the output.  Lines beginning with C<#[HEAD]> and
-C<#[TAIL]> are output only for the first and last processed files
-respectively.  Lines beginning with C<#[BODY]> and lines not beginning with
-C<#> are output for each processed file.  Other lines beginning with C<#>
-are ignored.  For example, this format file:
+Print output in the format specified by the given file or string.  The
+argument is interpreted as a string unless a file of that name exists, in
+which case the string is loaded from the contents of the file.  Tag names in
+the format file or string begin with a C<$> symbol and may contain a leading
+group names and/or a trailing C<#>.  Case is not significant.  Braces C<{}>
+may be used around the tag name to separate it from subsequent text.  Use
+C<$$> to represent a C<$> symbol, and C<$/> for a newline.
+
+Multiple B<-p> options may be used, each contributing a line (or more) of
+text to the output.  Lines beginning with C<#[HEAD]> and C<#[TAIL]> are
+output before the first processed file and after the last processed file
+respectively.  Lines beginning with C<#[SECT]> and C<#[ENDS]> are output
+around each section of files.  A section is defined as a group of
+consecutive files with the same section header (eg. files are grouped by
+directory if C<#[SECT]> contains C<$directory>).  Lines beginning with
+C<#[BODY]> and lines not beginning with C<#> are output for each processed
+file.  Lines beginning with C<#[IF]> are not output, but all BODY lines are
+skipped if any tag on an IF line doesn't exist.  Other lines beginning with
+C<#> are ignored.  For example, this format file:
 
     # this is a comment line
     #[HEAD]-- Generated by ExifTool $exifToolVersion --
@@ -4856,12 +5168,16 @@ with this command:
 
 produces output like this:
 
-    -- Generated by ExifTool 10.36 --
+    -- Generated by ExifTool 11.63 --
     File: a.jpg - 2003:10:31 15:44:19
     (f/5.6, 1/60s, ISO 100)
     File: b.jpg - 2006:05:23 11:57:38
     (f/8.0, 1/13s, ISO 100)
     -- end --
+
+The values of List-type tags with multiple items and Shortcut tags
+representing multiple tags are joined according the the B<-sep> option
+setting when interpolated in the string.
 
 When B<-ee> (B<-extractEmbedded>) is combined with B<-p>, embedded documents
 are effectively processed as separate input files.
@@ -4870,33 +5186,20 @@ If a specified tag does not exist, a minor warning is issued and the line
 with the missing tag is not printed.  However, the B<-f> option may be used
 to set the value of missing tags to '-' (but this may be configured via the
 MissingTagValue API option), or the B<-m> option may be used to ignore minor
-warnings and leave the missing values empty.
+warnings and leave the missing values empty.  Alternatively, B<-q -q> may be
+used to simply suppress the warning messages.
 
-An advanced formatting feature allows an arbitrary Perl expression to be
-applied to the value of any tag by placing it inside the braces after the
-tag name, separated by a semicolon.  The expression acts on the value of the
-tag through the default input variable (C<$_>), and has access to the full
-ExifTool API through the current ExifTool object (C<$self>).  It may contain
-any valid Perl code, including translation (C<tr///>) and substitution
-(C<s///>) operations, but note that braces within the expression must be
-balanced. The example below prints the camera Make with spaces translated to
-underlines, and multiple consecutive underlines replaced by a single
-underline:
-
-    exiftool -p '${make;tr/ /_/;s/__+/_/g}' image.jpg
-
-A default expression of C<tr(/\\?*:|"E<lt>E<gt>\0)()d> is assumed if the
-expression is empty.  This removes the characters / \ ? * : | E<lt> E<gt>
-and null from the printed value.  (These characters are illegal in Windows
-file names, so this feature is useful if tag values are used in file names.)
+The L</Advanced formatting feature> may be used to modify the values of
+individual tags with the B<-p> option.
 
 =item B<-php>
 
 Format output as a PHP Array.  The B<-g>, B<-G>, B<-D>, B<-H>, B<-l>,
 B<-sep> and B<-struct> options combine with B<-php>, and duplicate tags are
 handled in the same way as with the B<-json> option.  As well, the B<-b>
-option may be added to output binary data.  Here is a simple example showing
-how this could be used in a PHP script:
+option may be added to output binary data, and B<-t> may be added to include
+tag table information (see B<-t> for details).  Here is a simple example
+showing how this could be used in a PHP script:
 
     <?php
     eval('$array=' . `exiftool -php -q image.jpg`);
@@ -4932,6 +5235,13 @@ Note that an empty separator ("") is allowed, and will join items with no
 separator when reading, or split the value into individual characters when
 writing.
 
+For pure binary output (B<-b> used without B<-j>, B<-php> or B<-X>), the
+first B<-sep> option specifies a list-item separator, and a second B<-sep>
+option specifies a terminator for the end of the list (or after each value
+if not a list).  In these strings, C<\n>, C<\r> and C<\t> may be used to
+represent a newline, carriage return and tab respectively.  By default,
+binary list items are separated by a newline, and no terminator is added.
+
 =item B<-sort>, B<--sort>
 
 Sort output by tag description, or by tag name if the B<-s> option is used.
@@ -4946,8 +5256,8 @@ with B<--sort>.
 
 Output structured XMP information instead of flattening to individual tags.
 This option works well when combined with the XML (B<-X>) and JSON (B<-j>)
-output formats.  For other output formats, the structures are serialized
-into the same format as when writing structured information (see
+output formats.  For other output formats, XMP structures and lists are
+serialized into the same format as when writing structured information (see
 L<http://owl.phy.queensu.ca/~phil/exiftool/struct.html> for details).  When
 copying, structured tags are copied by default unless B<--struct> is used to
 disable this feature (although flattened tags may still be copied by
@@ -4960,8 +5270,9 @@ may always be used when writing.
 Output a tab-delimited list of description/values (useful for database
 import).  May be combined with B<-s> to print tag names instead of
 descriptions, or B<-S> to print tag values only, tab-delimited on a single
-line.  The B<-t> option may also be used to add tag table information to the
-B<-X> option output.
+line.  The B<-t> option may be combined with B<-j>, B<-php> or B<-X> to add
+tag table information (C<table>, tag C<id>, and C<index> for cases where
+multiple conditional tags exist with the same ID).
 
 =item B<-T> (B<-table>)
 
@@ -4996,12 +5307,13 @@ include the leading '.'.  For example:
     -w dir2/%d%f.txt  # write to "dir2", keeping dir structure
     -w a%c.txt        # write to "a.txt" or "a1.txt" or "a2.txt"...
 
-Existing files will not be overwritten unless an exclamation point is added
-to the option name (ie. B<-w!> or B<-textOut!>), or a plus sign to append to
-the existing file (ie. B<-w+> or B<-textOut+>).  Both may be used (ie.
-B<-w+!> or B<-textOut+!>) to overwrite output files that didn't exist before
-the command was run, and append the output from multiple source files.  For
-example, to write one output file for all source files in each directory:
+Existing files will not be changed unless an exclamation point is added to
+the option name (ie. B<-w!> or B<-textOut!>) to overwrite the file, or a
+plus sign (ie. B<-w+> or B<-textOut+>) to append to the existing file.  Both
+may be used (ie. B<-w+!> or B<-textOut+!>) to overwrite output files that
+didn't exist before the command was run, and append the output from multiple
+source files.  For example, to write one output file for all source files in
+each directory:
 
     exiftool -filename -createdate -T -w+! %d/out.txt -r DIR
 
@@ -5043,6 +5355,8 @@ given by a second optional value after a decimal point.  For example:
     Picture-123.jpg     %7f.%-3f            Picture.123
     Picture-123a.jpg    Meta%-3.1f.txt      Meta123.txt
 
+(Note that special characters may have a width of greater than one.)
+
 For %d and %D, the field width/position specifiers may be applied to the
 directory levels instead of substring position by using a colon instead of a
 decimal point in the format specifier.  For example:
@@ -5080,10 +5394,11 @@ A special feature allows the copy number to be incremented for each
 processed file by using %C (upper case) instead of %c.  This allows a
 sequential number to be added to output file names, even if the names are
 different.  For %C, a copy number of zero is not omitted as it is with %c. 
-The number before the decimal place gives the starting index, the number
-after the decimal place gives the field width.  The following examples show
-the output filenames when used with the command
-C<exiftool rose.jpg star.jpg jet.jpg ...>:
+A leading '-' causes the number to be reset at the start of each new
+directory, and '+' has no effect.  The number before the decimal place gives
+the starting index, the number after the decimal place gives the field
+width.  The following examples show the output filenames when used with the
+command C<exiftool rose.jpg star.jpg jet.jpg ...>:
 
     -w %C%f.txt       # 0rose.txt, 1star.txt, 2jet.txt
     -w %f-%10C.txt    # rose-10.txt, star-11.txt, jet-12.txt
@@ -5099,11 +5414,12 @@ natural numbers starting from 1, instead of 0 (see example F above).
 This same I<FMT> syntax is used with the B<-o> and B<-tagsFromFile> options,
 although %c and %C are only valid for output file names.
 
-=item B<-W>[!|+] I<FMT> (B<-tagOut>)
+=item B<-W>[+|!] I<FMT> (B<-tagOut>)
 
 This enhanced version of the B<-w> option allows a separate output file to
-be created for each extracted tag.  The differences between B<-W> and B<-w>
-are as follows:
+be created for each extracted tag.  See the B<-w> option documentation above
+for details of the basic functionality.  Listed here are the differences
+between B<-W> and B<-w>:
 
 1) With B<-W>, a new output file is created for each extracted tag.
 
@@ -5118,12 +5434,21 @@ codes in exactly the same way as with %f and %e.
 format codes.  (For B<-w>, this would be a file extension.)  This change
 allows a simple file name to be specified, which, when combined with the
 append feature, provides a method to write metadata from multiple source
-files to a single output file without the need for shell redirection.
+files to a single output file without the need for shell redirection.  For
+example, the following pairs of commands give the same result:
 
-4) Adding the B<-v> option to B<-W> generates a list of the tags and output
-file names instead of giving a verbose dump of the entire file.  (Unless
-appending all output to one file for each source file by using B<-W+> with
-an output file I<FMT> that does not contain %t, $g or %s.)
+    # overwriting existing text file
+    exiftool test.jpg > out.txt     # shell redirection
+    exiftool test.jpg -W+! out.txt  # equivalent -W option
+
+    # append to existing text file
+    exiftool test.jpg >> out.txt    # shell redirection
+    exiftool test.jpg -W+ out.txt   # equivalent -W option
+
+4) Adding the B<-v> option to B<-W> sends a list of the tags and output file
+names to the console instead of giving a verbose dump of the entire file. 
+(Unless appending all output to one file for each source file by using
+B<-W+> with an output file I<FMT> that does not contain %t, $g or %s.)
 
 5) Individual list items are stored in separate files when B<-W> is combined
 with B<-b>, but note that for separate files to be created %c or %C must be
@@ -5155,9 +5480,8 @@ B<-s> or B<-sep> is used.  Using B<-L> changes the XML encoding from "UTF-8"
 to "windows-1252".  Other B<-charset> settings change the encoding only if
 there is a corresponding standard XML character set.  The B<-b> option
 causes binary data values to be written, encoded in base64 if necessary. 
-The B<-t> option adds tag table information to the output (table C<name>,
-decimal tag C<id>, and C<index> for cases where multiple conditional tags
-exist with the same ID).
+The B<-t> option adds tag table information to the output (see B<-t> for
+details).
 
 Note:  This output is NOT the same as XMP because it uses
 dynamically-generated property names corresponding to the ExifTool tag
@@ -5173,10 +5497,11 @@ B<-o> option with an XMP extension for the output file.
 =item B<-a>, B<--a> (B<-duplicates>, B<--duplicates>)
 
 Allow (B<-a>) or suppress (B<--a>) duplicate tag names to be extracted.  By
-default, duplicate tags are suppressed unless the B<-ee> or B<-X> options
-are used or the Duplicates option is enabled in the configuration file. 
-This option also has an affect when writing to allow duplicate Warning
-messages to be shown.
+default, duplicate tags are suppressed when reading unless the B<-ee> or
+B<-X> options are used or the Duplicates option is enabled in the
+configuration file. This option has an affect when writing only to allow
+duplicate Warning messages to be shown.  Duplicate tags are always extracted
+when copying.
 
 =item B<-e> (B<--composite>)
 
@@ -5192,18 +5517,27 @@ identify the originating document for extracted information.  Embedded
 documents containing sub-documents are indicated with dashes in the family 3
 group name.  (eg. C<Doc2-3> is the 3rd sub-document of the 2nd embedded
 document.) Note that this option may increase processing time substantially,
-especially for PDF files with many embedded images.
+especially for PDF files with many embedded images or videos with streaming
+metadata.
 
-=item B<-ext> I<EXT>, B<--ext> I<EXT> (B<-extension>)
+When used with B<-ee>, the B<-p> option is evaluated for each embedded
+document as if it were a separate input file.  This allows, for example,
+generation of GPS track logs from timed metadata in videos.  See
+L<http://owl.phy.queensu.ca/~phil/exiftool/geotag.html#Inverse> for
+examples.
+
+=item B<-ext>[+] I<EXT>, B<--ext> I<EXT> (B<-extension>)
 
 Process only files with (B<-ext>) or without (B<--ext>) a specified
-extension.  There may be multiple B<-ext> and B<--ext> options.  EXT may
-begin with a leading '.', and case is not significant.  C<"*"> may be used
-to process files with any extension (or none at all), as in the last three
-examples:
+extension.  There may be multiple B<-ext> and B<--ext> options.  A plus sign
+may be added (ie. B<-ext+>) to add the specified extension to the normally
+processed files.  EXT may begin with a leading '.', which is ignored.  Case
+is not significant.  C<"*"> may be used to process files with any extension
+(or none at all), as in the last three examples:
 
-    exiftool -ext .JPG DIR            # process only JPG files
+    exiftool -ext JPG DIR             # process only JPG files
     exiftool --ext cr2 --ext dng DIR  # supported files but CR2/DNG
+    exiftool -ext+ txt DIR            # supported files plus TXT
     exiftool -ext "*" DIR             # process all files
     exiftool -ext "*" --ext xml DIR   # process all but XML files
     exiftool -ext "*" --ext . DIR     # all but those with no ext
@@ -5212,6 +5546,9 @@ Using this option has two main advantages over specifying C<*.I<EXT>> on the
 command line:  1) It applies to files in subdirectories when combined with
 the B<-r> option.  2) The B<-ext> option is case-insensitive, which is
 useful when processing files on case-sensitive filesystems.
+
+Note that all files specified on the command line will be processed
+regardless of extension unless the B<-ext> option is used.
 
 =item B<-F>[I<OFFSET>] (B<-fixBase>)
 
@@ -5236,8 +5573,11 @@ WAV/AVI files to search for additional metadata.  These speed benefits are
 small when reading images directly from disk, but can be substantial if
 piping images through a network connection.  For more substantial speed
 benefits, B<-fast2> also causes exiftool to avoid extracting any EXIF
-MakerNote information.  B<-fast3> avoids processing the file entirely, and
-returns only an initial guess at FileType and the pseudo System tags.
+MakerNote information.  B<-fast3> avoids extracting metadata from the file,
+and returns only pseudo System tags, but still reads the file header to
+obtain an educated guess at FileType.  B<-fast4> doesn't even read the file
+header, and determines FileType based only on the file extension.  Has no
+effect when writing.
 
 =item B<-fileOrder> [-]I<TAG>
 
@@ -5264,7 +5604,7 @@ more than one directory name.  A special I<DIR> value of C<SYMLINKS> (case
 sensitive) may be specified to ignore symbolic links when the B<-r> option
 is used.
 
-=item B<-if> I<EXPR>
+=item B<-if>[I<NUM>] I<EXPR>
 
 Specify a condition to be evaluated before processing each I<FILE>.  I<EXPR>
 is a Perl-like logic expression containing tag names prefixed by C<$>
@@ -5276,7 +5616,7 @@ trailing C<#> character to disable print conversion.  The expression
 C<$GROUP:all> evaluates to 1 if any tag exists in the specified C<GROUP>, or
 0 otherwise (see note 2 below).  When multiple B<-if> options are used, all
 conditions must be satisfied to process the file.  Returns an exit status of
-1 if all files fail the condition.  Below are a few examples:
+2 if all files fail the condition.  Below are a few examples:
 
     # extract shutterspeed from all Canon images in a directory
     exiftool -shutterspeed -if '$make eq "Canon"' dir
@@ -5289,6 +5629,13 @@ conditions must be satisfied to process the file.  Returns an exit status of
 
     # find images containing a specific keyword (case insensitive)
     exiftool -if '$keywords =~ /harvey/i' -filename dir
+
+Adding I<NUM> to the B<-if> option causes a separate processing pass to be
+executed for evaluating I<EXPR> at a B<-fast> level given by I<NUM> (see the
+B<-fast> option documentation for details).  Without I<NUM>, only one
+processing pass is done at the level specified by the B<-fast> option.  For
+example, using B<-if4> is possible if I<EXPR> uses only pseudo System tags,
+and may significantly speed processing if enough files fail the condition.
 
 Notes:
 
@@ -5317,6 +5664,10 @@ the associated NEF:
 the values of duplicate tags are accessible only by specifying a group name
 (such as a family 4 instance number, eg. C<$Copy1:TAG>, C<$Copy2:TAG>, etc).
 
+6) A special "OK" UserParam is available to test the success of the previous
+command when B<-execute> was used, and may be used like any other tag in the
+condition (ie. "$OK").
+
 =item B<-m> (B<-ignoreMinorErrors>)
 
 Ignore minor errors and warnings.  This enables writing to files with minor
@@ -5324,9 +5675,11 @@ errors and disables some validation checks which could result in minor
 warnings.  Generally, minor errors/warnings indicate a problem which usually
 won't result in loss of metadata if ignored.  However, there are exceptions,
 so ExifTool leaves it up to you to make the final decision.  Minor errors
-and warnings are indicated by "[minor]" at the start of the message. 
+and warnings are indicated by "[minor]" at the start of the message.
 Warnings which affect processing when ignored are indicated by "[Minor]"
-(with a capital "M").
+(with a capital "M").  Note that this causes missing values in
+B<-tagsFromFile>, B<-p> and B<-if> strings to be set to an empty string
+rather than an undefined value.
 
 =item B<-o> I<OUTFILE> or I<FMT> (B<-out>)
 
@@ -5377,23 +5730,24 @@ file was successfully written (ie. the file is moved instead of copied).
 Similar to B<-overwrite_original> except that an extra step is added to
 allow the original file attributes to be preserved.  For example, on a Mac
 this causes the original file creation date, type, creator, label color,
-icon, Finder tags and hard links to the file to be preserved (but note that
-the Mac OS resource fork is always preserved unless specifically deleted
-with C<-rsrc:all=>).  This is implemented by opening the original file in
-update mode and replacing its data with a copy of a temporary file before
-deleting the temporary.  The extra step results in slower performance, so
-the B<-overwrite_original> option should be used instead unless necessary.
+icon, Finder tags, other extended attributes and hard links to the file to
+be preserved (but note that the Mac OS resource fork is always preserved
+unless specifically deleted with C<-rsrc:all=>).  This is implemented by
+opening the original file in update mode and replacing its data with a copy
+of a temporary file before deleting the temporary.  The extra step results
+in slower performance, so the B<-overwrite_original> option should be used
+instead unless necessary.
 
 =item B<-P> (B<-preserve>)
 
-Preserve the filesystem modification date/time of the original file
-(C<FileModifyDate>) when writing.  Note that some filesystems store a
-creation date  (C<FileCreateDate>) which is not affected by this option. 
-This creation date is preserved only on Windows systems where Win32API::File
-and Win32::API are available.  For other systems, the
-B<-overwrite_original_in_place> option may be used if necessary to preserve
-the creation date.  This option is superseded by writing the FileModifyDate
-tag (and FileCreateDate in Windows).
+Preserve the filesystem modification date/time (C<FileModifyDate>) of the
+original file when writing.  Note that some filesystems store a creation
+date (Windows C<FileCreateDate> or Mac C<MDItemFSCreationDate>)
+which is not affected by this option.  The creation date is preserved on
+Windows systems where Win32API::File and Win32::API are available regardless
+of this setting.  For other systems, the B<-overwrite_original_in_place>
+option may be used if necessary to preserve the creation date.  This option
+is superseded by any value written to the FileModifyDate tag.
 
 =item B<-password> I<PASSWD>
 
@@ -5404,22 +5758,23 @@ required.
 
 =item B<-progress>[:[I<TITLE>]]
 
-Show file progress count in messages.  The progress count appears in
-brackets after the name of each processed file, and gives the current file
-number and the total number of files to be processed.  Implies the B<-v0>
-option if I<TITLE> is not used, printing the name of each processed file
-when writing.  When combined with the B<-if> option, the total count
-includes all files before the condition is applied, but files that fail the
-condition will not have their names printed.
+Show the progress when processing files.  Without a colon, the B<-progress>
+option adds a progress count in brackets after the name of each processed
+file, giving the current file number and the total number of files to be
+processed.  Implies the B<-v0> option, causing the names of processed files
+to also be printed when writing.  When combined with the B<-if> option, the
+total count includes all files before the condition is applied, but files
+that fail the condition will not have their names printed.
 
 If followed by a colon (ie. B<-progress:>), the console window title is set
 according to the specified I<TITLE> string.  If no I<TITLE> is given, a
 default I<TITLE> string of "ExifTool %p%%" is assumed.  In the string, %f
 represents the file name, %p is the progress as a percent, %r is the
-progress as a ratio, and %% is a % character.  May be combined with the
-normal B<-progress> option to also show the progress count in console
-messages.  (Note:  This feature works on Mac/Linux only if stderr goes to
-the console.)
+progress as a ratio, %##b is a progress bar of width "##" (20 characters if
+"##" is omitted), and %% is a % character.  May be combined with the normal
+B<-progress> option to also show the progress count in console messages. 
+(Note: For this feature to function correctly on Mac/Linux, stderr must go
+to the console.)
 
 =item B<-q> (B<-quiet>)
 
@@ -5434,8 +5789,9 @@ Recursively process files in subdirectories.  Only meaningful if I<FILE> is
 a directory name.  Subdirectories with names beginning with "." are not
 processed unless "." is added to the option name (ie. B<-r.> or
 B<-recurse.>).  By default, exiftool will also follow symbolic links to
-directories if supported by the system, but this may be disabled with C<-i
-SYMLINKS> (see the B<-i> option for details).
+directories if supported by the system, but this may be disabled with
+C<-i SYMLINKS> (see the B<-i> option for details).  Combine this with
+B<-ext> options to control the types of files processed.
 
 =item B<-scanForXMP>
 
@@ -5460,8 +5816,7 @@ binary data blocks.  This is the same as two B<-u> options.
 =item B<-wm> I<MODE> (B<-writeMode>)
 
 Set mode for writing/creating tags.  I<MODE> is a string of one or more
-characters from the list below.  Write mode is C<wcg> unless otherwise
-specified.
+characters from the list below.  The default write mode is C<wcg>.
 
     w - Write existing tags
     c - Create new tags
@@ -5477,11 +5832,12 @@ for EXIF this is the individual IFD (the family 1 group).
 =item B<-z> (B<-zip>)
 
 When reading, causes information to be extracted from .gz and .bz2
-compressed images.  (Only one image per archive.  Requires gzip and bzip2 to
-be installed on the system.)  When writing, causes compressed information to
-be written if supported by the metadata format.  (eg. PNG supports
-compressed textual metadata.)  This option also disables the recommended
-padding in embedded XMP, saving 2424 bytes when writing XMP in a file.
+compressed images (only one image per archive; requires gzip and bzip2 to be
+available).  When writing, causes compressed information to be written if
+supported by the metadata format (eg. compressed textual metadata in PNG),
+disables the recommended padding in embedded XMP (saving 2424 bytes when
+writing XMP in a file), and writes XMP in shorthand format -- the equivalent
+of setting the API Compress and Compact="Padding,Shorthand".
 
 =back
 
@@ -5494,12 +5850,14 @@ padding in embedded XMP, saving 2424 bytes when writing XMP in a file.
 Read command-line arguments from the specified file.  The file contains one
 argument per line (NOT one option per line -- some options require
 additional arguments, and all arguments must be placed on separate lines).
-Blank lines and lines beginning with C<#> are ignored.  White space at the
-start of a line is removed.  Normal shell processing of arguments is not
-performed, which among other things means that arguments should not be
-quoted and spaces are treated as any other character.  I<ARGFILE> may exist
-relative to either the current directory or the exiftool directory unless an
-absolute pathname is given.
+Blank lines and lines beginning with C<#> are ignored (unless they start
+with C<#[CSTR]>, in which case the rest of the line is treated as a C
+string, allowing standard C escape sequences such as "\n" for a newline). 
+White space at the start of a line is removed.  Normal shell processing of
+arguments is not performed, which among other things means that arguments
+should not be quoted and spaces are treated as any other character.
+I<ARGFILE> may exist relative to either the current directory or the
+exiftool directory unless an absolute pathname is given.
 
 For example, the following I<ARGFILE> will set the value of Copyright to
 "Copyright YYYY, Phil Harvey", where "YYYY" is the year of CreateDate:
@@ -5507,6 +5865,11 @@ For example, the following I<ARGFILE> will set the value of Copyright to
     -d
     %Y
     -copyright<Copyright $createdate, Phil Harvey
+
+Arguments in I<ARGFILE> behave exactly the same as if they were entered at
+the location of the B<-@> option on the command line, with the exception
+that the B<-config> and B<-common_args> options may not be used in an
+I<ARGFILE>.
 
 =item B<-k> (B<-pause>)
 
@@ -5560,7 +5923,8 @@ Note that none of the B<-list> options require an input I<FILE>.
 
 Print exiftool version number.  The B<-v> option may be added to print
 addition system information (see the README file of the full distribution
-for more details about optional libraries).
+for more details about optional libraries), or B<-v2> to also list the Perl
+include directories.
 
 =back
 
@@ -5574,11 +5938,12 @@ Geotag images from the specified GPS track log file.  Using the B<-geotag>
 option is equivalent to writing a value to the C<Geotag> tag.  After the
 B<-geotag> option has been specified, the value of the C<Geotime> tag is
 written to define a date/time for the position interpolation.  If C<Geotime>
-is not specified, the value is copied from C<DateTimeOriginal>.  For
-example, the following two commands are equivalent:
+is not specified, the value is copied from C<DateTimeOriginal#> (the C<#> is
+added to copy the unformatted value, avoiding potential conflicts with the
+B<-d> option).  For example, the following two commands are equivalent:
 
-    exiftool -geotag track.log image.jpg
-    exiftool -geotag "-Geotime<DateTimeOriginal" image.jpg
+    exiftool -geotag trk.log image.jpg
+    exiftool -geotag trk.log "-Geotime<DateTimeOriginal#" image.jpg
 
 When the C<Geotime> value is converted to UTC, the local system timezone is
 assumed unless the date/time value contains a timezone.  Writing C<Geotime>
@@ -5691,12 +6056,11 @@ load exiftool for each invocation.
 
 =over 5
 
-=item B<-api> I<OPT[=VAL]>
+=item B<-api> I<OPT[[^]=[VAL]]>
 
 Set ExifTool API option.  I<OPT> is an API option name.  The option value is
-set to 1 if I<=VAL> is omitted, or undef if just I<VAL> is omitted.  An
-option may not be set to an empty string ("") via the command line, but the
-config file may be used to accomplish this if necessary.  See
+set to 1 if I<=VAL> is omitted.  If I<VAL> is omitted, the option value is
+set to undef if C<=> is used, or an empty string with C<^=>.  See
 L<Image::ExifTool Options|Image::ExifTool/Options> for a list of available
 API options.  This overrides API options set via the config file.
 
@@ -5712,11 +6076,13 @@ options on the command line.
 
 Load specified configuration file instead of the default ".ExifTool_config".
 If used, this option must come before all other arguments on the command
-line.  The I<CFGFILE> name may contain a directory specification (otherwise
-the file must exist in the current directory), or may be set to an empty
-string ("") to disable loading of the config file.  See the sample
-configuration file and "config.html" in the full ExifTool distribution for
-more information about the ExifTool configuration file.
+line and applies to all B<-execute>'d commands.  The I<CFGFILE> must exist
+relative to the current working directory or the exiftool application
+directory unless an absolute path is specified.  Loading of the default
+config file may be disabled by setting I<CFGFILE> to an empty string (ie.
+"").  See L<http://owl.phy.queensu.ca/~phil/exiftool/config.html> and
+config_files/example.config in the full ExifTool distribution for details
+about the configuration file syntax.
 
 =item B<-echo>[I<NUM>] I<TEXT>
 
@@ -5728,9 +6094,12 @@ respectively) after processing is complete.
 =item B<-execute>[I<NUM>]
 
 Execute command for all arguments up to this point on the command line (plus
-any arguments specified by B<-common_args>).  Allows multiple commands to be
-executed from a single command line.  I<NUM> is an optional number that is
-echoed in the "{ready}" message when using the B<-stay_open> feature.
+any arguments specified by B<-common_args>).  The result is as if the
+commands were executed as separate command lines (with the exception of the
+B<-config> and B<-use> options which remain in effect for subsequent
+commands).  Allows multiple commands to be executed from a single command
+line.  I<NUM> is an optional number that is echoed in the "{ready}" message
+when using the B<-stay_open> feature.
 
 =item B<-srcfile> I<FMT>
 
@@ -5746,9 +6115,10 @@ previews in a directory where other JPG images may exist:
 
     exiftool -ext nef -tagsfromfile @ -srcfile %d%f.jpg dir
 
-If than one B<-srcfile> option is specified, the files are tested in order
-and the first existing source file is processed.  If none of the source
-files already exist, then exiftool uses the first B<-srcfile> specified.
+If more than one B<-srcfile> option is specified, the files are tested in
+order and the first existing source file is processed.  If none of the
+source files already exist, then exiftool uses the first B<-srcfile>
+specified.
 
 A I<FMT> of C<@> may be used to represent the original I<FILE>, which may be
 useful when specifying multiple B<-srcfile> options (eg. to fall back to
@@ -5801,7 +6171,7 @@ process immediately after writing C<-execute\n>.  (There is no associated
 delay when writing arguments via a pipe with C<-@ ->, so the signal is not
 necessary when using this technique.)
 
-=item B<-userParam> I<PARAM[=VAL]>
+=item B<-userParam> I<PARAM[[^]=[VAL]]>
 
 Set user parameter.  I<PARAM> is an arbitrary user parameter name.  This
 is an interface to the API UserParam option (see the
@@ -5810,28 +6180,109 @@ provides a method to access user-defined parameters from inside tag name
 expressions (as if it were any other tag, see example below), and from
 PrintConv/ValueConv logic (via the ExifTool Options function).  Similar to
 the B<-api> option, the parameter value is set to 1 if I<=VAL> is omitted,
-or undef if just I<VAL> is omitted.
+undef if just I<VAL> is omitted with C<=>, or an empty string if
+I<VAL> is omitted with C<^=>.
 
     exiftool -p '$test from $filename' -userparam test=Hello FILE
 
 =back
 
+=head3 Advanced formatting feature
+
+An advanced formatting feature allows modification of the value of any tag
+interpolated within a B<-if> or B<-p> option argument, or a B<-tagsFromFile>
+redirection string.  Tag names within these strings are prefixed by a C<$>
+symbol, and an arbitrary Perl expression may be applied to the tag value by
+placing braces around the tag name and inserting the expression after the
+name, separated by a semicolon (ie. C<${TAG;EXPR}>).  The expression acts on
+the value of the tag through the default input variable (C<$_>), and has
+access to the full ExifTool API through the current ExifTool object
+(C<$self>) and the tag key (C<$tag>).  It may contain any valid Perl code,
+including translation (C<tr///>) and substitution (C<s///>) operations, but
+note that braces within the expression must be balanced.  The example below
+prints the camera Make with spaces translated to underlines, and multiple
+consecutive underlines replaced by a single underline:
+
+    exiftool -p '${make;tr/ /_/;s/__+/_/g}' image.jpg
+
+An C<@> may be added after the tag name to make the expression act on
+individual list items for list-type tags, simplifying list processing.  Set
+C<$_> to undef to remove an item from the list.  As an example, the
+following command returns all subjects not containing the string "xxx":
+
+    exiftool -p '${subject@;$_=undef if /xxx/}' image.jpg
+
+A default expression of C<tr(/\\?*:|"E<lt>E<gt>\0)()d> is assumed if the
+expression is empty (ie. C<${TAG;}>).  This removes the characters / \ ? * :
+| E<lt> E<gt> and null from the printed value.  (These characters are
+illegal in Windows file names, so this feature is useful if tag values are
+used in file names.)
+
+=head4 Helper functions
+
+C<DateFmt>
+
+Simplifies reformatting of individual date/time values.  This function acts
+on a standard EXIF-formatted date/time value in C<$_> and formats it
+according to the specified format string (see the B<-d> option).  To avoid
+trying to reformat an already-formatted date/time value, a C<#> must be
+added to the tag name (as in the example below) if the B<-d> option is also
+used.  For example:
+
+    exiftool -p '${createdate#;DateFmt("%Y-%m-%d_%H%M%S")}' a.jpg
+
+C<ShiftTime>
+
+Shifts EXIF-formatted date/time string by a specified amount.  Start with a
+leading minus sign to shift backwards in time.  See
+L<Image::ExifTool::Shift.pl|Image::ExifTool::Shift.pl> for details about
+shift syntax.  For example, to shift a date/time value back by one year:
+
+    exiftool -p '${createdate;ShiftTime("-1:0:0 0")}' a.jpg
+
+C<NoDups>
+
+Removes duplicate items from a list with a separator specified by the
+B<-sep> option.  This function is most useful when copying list-type tags. 
+For example, the following command may be used to remove duplicate Keywords:
+
+    exiftool -sep '##' '-keywords<${keywords;NoDups}' a.jpg
+
+The B<-sep> option is necessary to split the string back into individual
+list items when writing to a list-type tag.
+
+An optional flag argument may be set to 1 to cause C<NoDups> to return undef
+if no duplicates existed, thus preventing the file from being rewritten
+unnecessarily:
+
+    exiftool -sep '##' '-keywords<${keywords;NoDups(1)}' a.jpg
+
+Note that function names are case sensitive.
+
 =head1 WINDOWS UNICODE FILE NAMES
 
-In Windows, by default, file and directory names are specified on the
-command line (or in arg files) using the system code page, which varies with
-the system settings.  Unfortunately, these code pages are not complete
-character sets, so not all file names may be represented.
+In Windows, command-line arguments are specified using the current code page
+and are recoded automatically to the system code page.  This recoding is not
+done for arguments in ExifTool arg files, so by default filenames in arg
+files use the system code page.  Unfortunately, these code pages are not
+complete character sets, so not all file names may be represented.
 
 ExifTool 9.79 and later allow the file name encoding to be specified with
 C<-charset filename=CHARSET>, where C<CHARSET> is the name of a valid
 ExifTool character set, preferably C<UTF8> (see the B<-charset> option for a
 complete list).  Setting this triggers the use of Windows wide-character i/o
-routines, thus providing support for all Unicode file names.  But note that
-it is not trivial to pass properly encoded file names on the Windows command
-line (see L<http://owl.phy.queensu.ca/~phil/exiftool/faq.html#Q18> for
-details), so placing them in a UTF-8 encoded B<-@> argfile is recommended if
-possible.
+routines, thus providing support for most Unicode file names (see note 4). 
+But note that it is not trivial to pass properly encoded file names on the
+Windows command line (see
+L<http://owl.phy.queensu.ca/~phil/exiftool/faq.html#Q18> for details), so
+placing them in a UTF-8 encoded B<-@> argfile and using
+C<-charset filename=utf8> is recommended if possible.
+
+A warning is issued if a specified filename contains special characters and
+the filename character set was not provided.  However, the warning may be
+disabled by setting C<-charset filename="">, and ExifTool may still function
+correctly if the system code page matches the character set used for the
+file names.
 
 When a directory name is provided, the file name encoding need not be
 specified (unless the directory name contains special characters), and
@@ -5856,6 +6307,9 @@ like Cygwin.
 
 3) See L</WRITING READ-ONLY FILES> below for a note about editing read-only
 files with Unicode names.
+
+4) Unicode file names with surrogate pairs (code points over U+FFFF) still
+cause problems.
 
 =head1 WRITING READ-ONLY FILES
 
@@ -5885,7 +6339,11 @@ arguments containing special characters.
 =item exiftool -a -u -g1 a.jpg
 
 Print all meta information in an image, including duplicate and unknown
-tags, sorted by group (for family 1).
+tags, sorted by group (for family 1).  For performance reasons, this command
+may not extract all available metadata.  (Metadata in embedded documents,
+metadata extracted by external utilities, and metadata requiring excessive
+processing time may not be extracted).  Add C<-ee> and C<-api RequestAll=3>
+to the command to extract absolutely everything available.
 
 =item exiftool -common dir
 
@@ -6153,10 +6611,11 @@ about unsafe tags.
 =item exiftool -Tagsfromfile a.jpg out.xmp
 
 Copy meta information from C<a.jpg> to an XMP data file.  If the XMP data
-file C<out.xmp> already exists, it will be updated with the new information.
-Otherwise the XMP data file will be created.  Only XMP, ICC and MIE files
-may be created like this (other file types may be edited but not created).
-See L</WRITING EXAMPLES> above for another technique to generate XMP files.
+file C<out.xmp> already exists, it will be updated with the new information. 
+Otherwise the XMP data file will be created.  Only metadata-only files may
+be created like this (files containing images may be edited but not
+created).  See L</WRITING EXAMPLES> above for another technique to generate
+XMP files.
 
 =item exiftool -tagsFromFile a.jpg -XMP:All= -ThumbnailImage= -m b.jpg
 
@@ -6189,6 +6648,13 @@ redirecting information as in this example.)
 
 Copy all possible information from C<src.jpg> and write in XMP format to
 C<dst.jpg>.
+
+=item exiftool '-Description<${FileName;s/\.[^.]*$//}' dir
+
+Set the image Description from the file name after removing the extension. 
+This example uses the L</Advanced formatting feature> to perform a
+substitution operation to remove the last dot and subsequent characters from
+the file name.
 
 =item exiftool -@ iptc2xmp.args -iptc:all= a.jpg
 
@@ -6231,10 +6697,9 @@ the image (with the inverse command) later in a workflow.
 This command performs exactly the same task as the command above, except
 that the B<-o> option will not write to an output file that already exists.
 
-=item exiftool -if '$jpgfromraw' -b -jpgfromraw -w %d%f_%ue.jpg -execute
--if '$previewimage' -b -previewimage -w %d%f_%ue.jpg -execute
--tagsfromfile @ -srcfile %d%f_%ue.jpg -overwrite_original
--common_args --ext jpg DIR
+=item exiftool -b -jpgfromraw -w %d%f_%ue.jpg -execute -b -previewimage -w
+%d%f_%ue.jpg -execute -tagsfromfile @ -srcfile %d%f_%ue.jpg
+-overwrite_original -common_args --ext jpg DIR
 
 [Advanced] Extract JpgFromRaw or PreviewImage from all but JPG files in DIR,
 saving them with file names like C<image_EXT.jpg>, then add all meta
@@ -6292,7 +6757,7 @@ Same effect as above except files are copied instead of moved.
 Rename all files in C<dir> by adding the camera model name to the file name.
 The semicolon after the tag name inside the braces causes characters which
 are invalid in Windows file names to be deleted from the tag value (see the
-B<-p> option documentation for an explanation).
+L</Advanced formatting feature> for an explanation).
 
 =item exiftool '-FileName<CreateDate' -d %Y%m%d_%H%M%S%%-c.%%e dir
 
@@ -6336,16 +6801,12 @@ unless DateTimeOriginal contains a timezone.
 
 =item exiftool -geotag t.log -geotime='2009:04:02 13:41:12-05:00' a.jpg
 
-Geotag an image with the GPS position for a specific time.  (Note that the
-C<Geotag> tag must be assigned before C<Geotime> for the GPS data to be
-available when C<Geotime> is set.)
+Geotag an image with the GPS position for a specific time.
 
 =item exiftool -geotag log.gpx '-xmp:geotimeE<lt>createdate' dir
 
 Geotag all images in directory C<dir> with XMP tags instead of EXIF tags,
-based on the image CreateDate.  (In this case, the order of the arguments
-doesn't matter because tags with values copied from other tags are always
-set after constant values.)
+based on the image CreateDate.
 
 =item exiftool -geotag a.log -geosync=-20 dir
 
@@ -6424,15 +6885,15 @@ flexibility of ExifTool.)
 
 =back
 
-=head1 DIAGNOSTICS
+=head1 EXIT STATUS
 
 The exiftool application exits with a status of 0 on success, or 1 if an
-error occurred or if all files failed the B<-if> condition (for any of the
-commands if B<-execute> was used).
+error occurred, or 2 if all files failed the B<-if> condition (for any of
+the commands if B<-execute> was used).
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey
+Copyright 2003-2019, Phil Harvey
 
 This is free software; you can redistribute it and/or modify it under the
 same terms as Perl itself.

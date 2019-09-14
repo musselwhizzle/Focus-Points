@@ -11,7 +11,7 @@ package Image::ExifTool::Lang::es;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.14';
+$VERSION = '1.16';
 
 %Image::ExifTool::Lang::es::Translate = (
    'AEAperture' => 'Aperture AE',
@@ -176,6 +176,7 @@ $VERSION = '1.14';
    'ActionAdvised' => {
       Description => 'Acción Aconsejada',
       PrintConv => {
+        'Object Append' => 'Añadir Objeto',
         'Object Kill' => 'Destruir Objecto',
         'Object Reference' => 'Referencia Objecto',
         'Object Replace' => 'Reemplazar Objecto',
@@ -870,6 +871,7 @@ $VERSION = '1.14';
       },
     },
    'ContrastSetting' => 'Ajustes de Contraste',
+   'Copyright' => 'Copyright Perfil',
    'CopyrightNotice' => 'Aviso Copyright',
    'Country' => 'País',
    'Country-PrimaryLocationCode' => 'Código País ISO',
@@ -979,6 +981,7 @@ $VERSION = '1.14';
         'Off' => 'Desactivado',
       },
     },
+   'DateTimeDigitized' => 'Fecha y Hora Digital',
    'DateTimeOriginal' => 'Fecha y Hora de Datos Original',
    'DaylightSavings' => {
       PrintConv => {
@@ -1402,8 +1405,8 @@ $VERSION = '1.14';
    'FaxRecvParams' => 'Parámetros Recepción Fax',
    'FaxRecvTime' => 'Hora Recepción Fax',
    'FaxSubAddress' => 'Subdirección Fax',
-   'FileAccessDate' => 'Fecha y hora de Acceso',
-   'FileCreateDate' => 'Fecha y hora de Creación',
+   'FileAccessDate' => 'Fecha y Hora de Acceso',
+   'FileCreateDate' => 'Fecha y Hora de Creación',
    'FileFormat' => 'Formato Archivo',
    'FileLength' => 'Tamaño Archivo',
    'FileModifyDate' => 'Fecha Actualización',
@@ -1738,6 +1741,7 @@ $VERSION = '1.14';
    'GPSAreaInformation' => 'Nombre de Zona GPS',
    'GPSDOP' => 'Precisión Medición',
    'GPSDateStamp' => 'Fecha GPS',
+   'GPSDateTime' => 'Fecha y Hora GPS',
    'GPSDestBearing' => 'Orientación de Destino',
    'GPSDestBearingRef' => {
       Description => 'Referencia para Orientación de Destino',
@@ -4001,7 +4005,7 @@ and values.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

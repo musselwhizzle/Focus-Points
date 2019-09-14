@@ -20,7 +20,7 @@ use Image::ExifTool::PostScript;
 use Image::ExifTool::XMP qw(EscapeXML UnescapeXML);
 require Exporter;
 
-$VERSION = '1.15';
+$VERSION = '1.16';
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(EscapeHTML UnescapeHTML);
 
@@ -363,11 +363,11 @@ sub EscapeChar($)
 
 #------------------------------------------------------------------------------
 # Escape any special characters for HTML
-# Inputs: 0) UTF-8 string to be escaped
+# Inputs: 0) string to be escaped, 1) optional string encoding (default 'UTF8')
 # Returns: escaped string
-sub EscapeHTML($)
+sub EscapeHTML($;$)
 {
-    my $str = shift;
+    my ($str, $enc) = @_;
     # escape XML characters
     $str = EscapeXML($str);
     # escape other special characters if they exist
@@ -382,19 +382,26 @@ sub EscapeHTML($)
         }
         # suppress warnings
         local $SIG{'__WARN__'} = sub { 1 };
-        # escape any non-ascii characters for HTML
-        $str =~ s/([\xc2-\xf7][\x80-\xbf]+)/EscapeChar($1)/sge;
+        if ($enc and $enc ne 'UTF8') {
+            $str = Image::ExifTool::Decode(undef, $str, $enc, undef, 'UTF8');
+            $str =~ s/([\xc2-\xf7][\x80-\xbf]+)/EscapeChar($1)/sge;
+            $str = Image::ExifTool::Decode(undef, $str, 'UTF8', undef, $enc);
+        } else {
+            # escape any non-ascii characters for HTML
+            $str =~ s/([\xc2-\xf7][\x80-\xbf]+)/EscapeChar($1)/sge;
+        }
     }
     return $str;
 }
 
 #------------------------------------------------------------------------------
 # Unescape all HTML character references
-# Inputs: 0) string to be unescaped
+# Inputs: 0) string to be unescaped, 1) optional string encoding (default 'UTF8')
 # Returns: unescaped string
-sub UnescapeHTML($)
+sub UnescapeHTML($;$)
 {
-    return UnescapeXML(shift, \%entityNum);
+    my ($str, $enc) = @_;
+    return UnescapeXML($str, \%entityNum, $enc);
 }
 
 #------------------------------------------------------------------------------
@@ -502,7 +509,7 @@ sub ProcessHTML($$)
                     $name =~ s/\s(.)/\U$1/g;     # capitalize all words in tag name
                     $name =~ tr/-_a-zA-Z0-9//dc; # remove illegal characters (also hex code wide chars)
                     AddTagToTable($table, $tag, { Name => $name });
-                    $et->VPrint(0, "  [adding $tag '$name']\n");
+                    $et->VPrint(0, "  [adding $tag '${name}']\n");
                 }
                 $val = $et->Decode($val, $$et{HTMLCharset}) if $$et{HTMLCharset};
                 $et->HandleTag($table, $tag, UnescapeXML($val));
@@ -518,7 +525,7 @@ sub ProcessHTML($$)
             my $info = { Name => $name, Groups => { 0 => 'HTML' } };
             $info->{Groups}->{1} = ($grp eq 'http-equiv' ? 'HTTP-equiv' : "HTML-$grp") if $grp;
             AddTagToTable($table, $tag, $info);
-            $et->VPrint(0, "  [adding $tag '$tagName']\n");
+            $et->VPrint(0, "  [adding $tag '${tagName}']\n");
         }
         # recode if necessary
         $val = $et->Decode($val, $$et{HTMLCharset}) if $$et{HTMLCharset};
@@ -548,7 +555,7 @@ meta information from HTML documents.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

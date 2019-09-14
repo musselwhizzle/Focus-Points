@@ -14,7 +14,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::XMP;
 use Image::ExifTool::ZIP;
 
-$VERSION = '1.04';
+$VERSION = '1.06';
 
 # test for recognized iWork document extensions and outer XML elements
 my %iWorkType = (
@@ -70,7 +70,7 @@ sub GetTagID($)
 {
     my $props = shift;
     return 0 if $$props[-1] =~ /^\w+:ID$/;  # ignore ID tags
-    return ($$props[0] =~ /^.*?:(.*)/) ? $1 : $$props[0];
+    return $$props[0] =~ /^.*?:(.*)/ ? $1 : $$props[0];
 }
 
 #------------------------------------------------------------------------------
@@ -131,6 +131,12 @@ sub Process_iWork($$)
                     $type = $iWorkType{$1} if $iWorkType{$1};
                 }
             }
+        } else {
+            @members = $zip->membersMatching('(?i)^.*\.(pages|numbers|key)/Index.*');
+            if (@members) {
+                my $tmp = $members[0]->fileName();
+                $type = $iWorkType{uc $1} if $tmp =~ /\.(pages|numbers|key)/i;
+            }
         }
         $type or $type = 'ZIP';     # assume ZIP by default
     }
@@ -148,8 +154,8 @@ sub Process_iWork($$)
         $$et{DOC_NUM} = ++$docNum;
         Image::ExifTool::ZIP::HandleMember($et, $member);
 
-        # process only the index XML and JPEG thumbnail files
-        next unless $file =~ m{^(index\.(xml|apxl)|QuickLook/Thumbnail\.jpg)$}i;
+        # process only the index XML and JPEG thumbnail/preview files
+        next unless $file =~ m{^(index\.(xml|apxl)|QuickLook/Thumbnail\.jpg|[^/]+/preview(-micro|-web)?.jpg)$}i;
         # get the file contents if necessary
         # (CAREFUL! $buff MUST be local since we hand off a value ref to PreviewImage)
         my ($buff, $buffPt);
@@ -163,7 +169,8 @@ sub Process_iWork($$)
         }
         # extract JPEG as PreviewImage (should only be QuickLook/Thumbnail.jpg)
         if ($file =~ /\.jpg$/) {
-            $et->FoundTag('PreviewImage', $buffPt);
+            my $type = ($file =~ /preview-(\w+)/) ? ($1 eq 'web' ? 'Other' : 'Thumbnail') : 'Preview';
+            $et->FoundTag($type . 'Image', $buffPt);
             next;
         }
         # process "metadata" section of XML index file
@@ -208,7 +215,7 @@ information from Apple iWork '09 XML+ZIP files.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

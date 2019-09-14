@@ -22,7 +22,7 @@ use vars qw($VERSION %samsungLensTypes);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.37';
+$VERSION = '1.46';
 
 sub WriteSTMN($$$);
 sub ProcessINFO($$$);
@@ -86,12 +86,14 @@ my %formatMinMax = (
         DataTag => 'PreviewImage',
         IsOffset => 3,
         Protected => 2,
+        WriteGroup => 'MakerNotes',
     },
     3 => {
         Name => 'PreviewImageLength',
         OffsetPair => 2,   # point to associated offset
         DataTag => 'PreviewImage',
         Protected => 2,
+        WriteGroup => 'MakerNotes',
     },
     11 => {
         Name => 'SamsungIFD',
@@ -109,7 +111,7 @@ my %formatMinMax = (
         This is a standard-format IFD found in the maker notes of some Samsung
         models, except that the entry count is a 4-byte integer and the offsets are
         relative to the end of the IFD.  Currently, no tags in this IFD are known,
-        so the Unknown (-u) or Verbose (-v) option must be used to see this
+        so the L<Unknown|../ExifTool.html#Unknown> (-u) or L<Verbose|../ExifTool.html#Verbose> (-v) option must be used to see this
         information.
     },
     GROUPS => { 0 => 'MakerNotes', 2 => 'Image' },
@@ -232,6 +234,7 @@ my %formatMinMax = (
             0x500103c => 'WB600 / VLUU WB600 / WB610',
             0x500133e => 'WB150 / WB150F / WB152 / WB152F / WB151',
             0x5a0000f => 'WB5000 / HZ25W',
+            0x5a0001e => 'WB5500 / VLUU WB5500 / HZ50W',
             0x6001036 => 'EX1',
             0x700131c => 'VLUU SH100, SH100',
             0x27127002 => 'SMX-C20N',
@@ -298,9 +301,9 @@ my %formatMinMax = (
     # 0x0032 - string (GPSInfo03)
     # 0x0033 - string (GPSInfo04)
     # 0x0034 - string (GPSInfo05)
-    0x0035 => {
+    0x0035 => [{
         Name => 'PreviewIFD',
-        Condition => '$$self{TIFF_TYPE} eq "SRW"', # (not an IFD in JPEG images)
+        Condition => '$$self{TIFF_TYPE} eq "SRW" and $$self{Model} ne "EK-GN120"', # (not an IFD in JPEG images)
         Groups => { 1 => 'PreviewIFD' },
         Flags => 'SubIFD',
         SubDirectory => {
@@ -308,7 +311,17 @@ my %formatMinMax = (
             ByteOrder => 'Unknown',
             Start => '$val',
         },
-    },
+    },{
+        Name => 'PreviewIFD',
+        Condition => '$$self{TIFF_TYPE} eq "SRW"', # (not an IFD in JPEG images)
+        Groups => { 1 => 'PreviewIFD' },
+        Flags => 'SubIFD',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::Nikon::PreviewIFD',
+            ByteOrder => 'Unknown',
+            Start => '$val - 36',
+        },
+    }],
     # 0x003a - int16u[2] (SmartLensInfo?)
     # 0x003b - int16u[2] (PhotoStyleSelectInfo?)
     # 0x003c - int16u (SmartRange?)
@@ -385,7 +398,12 @@ my %formatMinMax = (
         Groups => { 2 => 'Camera' },
         Writable => 'string',
     },
-    # 0xa002 - string[30]: '0' or 'DY049P000000' (ref PH) (BodySerialNumber?)
+    0xa002 => { #PH/IB
+        Name => 'SerialNumber',
+        Condition => '$$valPt =~ /^\w{5}/', # should be at least 5 characters long
+        Groups => { 2 => 'Camera' },
+        Writable => 'string',
+    },
     0xa003 => { #1 (SRW images only)
         Name => 'LensType',
         Groups => { 2 => 'Camera' },
@@ -495,13 +513,12 @@ my %formatMinMax = (
         RawConv    => 'Image::ExifTool::Samsung::Crypt($self,$val,$tagInfo,-1)',
         RawConvInv => 'Image::ExifTool::Samsung::Crypt($self,$val,$tagInfo,1)',
     },
-    #this doesn't seem correct
-    #0xa025 => { #PH/1 (PostAEGain?)
-    #    Name => 'ColorTemperatureAuto',
-    #    Writable => 'int32u',
-    #    RawConv    => 'Image::ExifTool::Samsung::Crypt($self,$val,$tagInfo,6)',
-    #    RawConvInv => 'Image::ExifTool::Samsung::Crypt($self,$val,$tagInfo,-6)',
-    #},
+    0xa025 => { # (PostAEGain?)
+        Name => 'DigitalGain', #IB
+        Writable => 'int32u',
+        RawConv    => 'Image::ExifTool::Samsung::Crypt($self,$val,$tagInfo,6)',
+        RawConvInv => 'Image::ExifTool::Samsung::Crypt($self,$val,$tagInfo,-6)',
+    },
     0xa025 => { #IB
         Name => 'HighlightLinearityLimit',
         Writable => 'int32u',
@@ -908,33 +925,97 @@ my %formatMinMax = (
     4 => { Name => 'ThumbnailOffset', IsOffset => 1 },
 );
 
-# information extracted from Samsung trailer (ie. Samsung SM-T805 "Sound & Shot" JPEG)
+# information extracted from "ssuniqueid\0" APP5 (ref PH)
+%Image::ExifTool::Samsung::APP5 = (
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    ssuniqueid => {
+        Name => 'UniqueID',
+        # 32 bytes - some sort of serial number?
+        ValueConv => 'unpack("H*",$val)',
+    },
+);
+
+# information extracted from Samsung trailer (ie. Samsung SM-T805 "Sound & Shot" JPEG) (ref PH)
 %Image::ExifTool::Samsung::Trailer = (
     GROUPS => { 0 => 'MakerNotes', 2 => 'Other' },
-    VARS => { NO_ID => 1 },
+    VARS => { NO_ID => 1, HEX_ID => 0 },
     NOTES => q{
         Tags extracted from the trailer of JPEG images written when using certain
         features (such as "Sound & Shot" or "Shot & More") from Samsung models such
         as the Galaxy S4 and Tab S.
     },
-    # stuff written with "Shot & More" feature
+    '0x0001-name' => 'EmbeddedImageName', # ("DualShot_1","DualShot_2")
     '0x0001' => { Name => 'EmbeddedImage', Groups => { 2 => 'Preview' }, Binary => 1 },
-    '0x0001-name' => 'EmbeddedImageName',
-    # 0x0830 - unknown (164004 bytes, name like "1165724808.pre")
-
-    # stuff written with "Sound & Shot" feature
-    '0x0100' => { Name => 'EmbeddedAudioFile', Binary => 1 },
-    '0x0100-name' => 'EmbeddedAudioFileName',
-    # 0x0800 - SoundShot_Meta_Info (contains only already-extracted sound shot name)
+    '0x0100-name' => 'EmbeddedAudioFileName', # ("SoundShot_000")
+    '0x0100' => { Name => 'EmbeddedAudioFile', Groups => { 2 => 'Audio' }, Binary => 1 },
+    '0x0201-name' => 'SurroundShotVideoName', # ("Interactive_Panorama_000")
+    '0x0201' => { Name => 'SurroundShotVideo', Groups => { 2 => 'Video' }, Binary => 1 },
+   # 0x0800-name - seen 'SoundShot_Meta_Info'
+   # 0x0800 - unknown (29 bytes) (contains already-extracted EmbeddedAudioFileName)
+   # 0x0830-name - seen '1165724808.pre'
+   # 0x0830 - unknown (164004 bytes)
+   # 0x08d0-name - seen 'Interactive_Panorama_Info'
+   # 0x08d0 - unknown (7984 bytes)
+   # 0x08e0-name - seen 'Panorama_Shot_Info'
+   # 0x08e0 - string, seen 'PanoramaShot'
+   # 0x08e1-name - seen 'Motion_Panorama_Info'
+   # 0x09e0-name - seen 'Burst_Shot_Info'
+   # 0x09e0 - string, seen '489489125'
+   # 0x0a01-name - seen 'Image_UTC_Data'
     '0x0a01' => { #forum7161
         Name => 'TimeStamp',
         Groups => { 2 => 'Time' },
         ValueConv => 'ConvertUnixTime($val / 1e3, 1)',
         PrintConv => '$self->ConvertDateTime($val)',
     },
-    #'0x0a01-name' = "Image_UTC_Data"
-    '0x0a30' => { Name => 'EmbeddedVideoFile', Binary => 1 }, #forum7161
+    '0x0a20-name' => 'DualCameraImageName', # ("FlipPhoto_002")
+    '0x0a20' => { Name => 'DualCameraImage', Groups => { 2 => 'Preview' }, Binary => 1 },
     '0x0a30-name' => 'EmbeddedVideoType', # ("MotionPhoto_Data")
+    '0x0a30' => { Name => 'EmbeddedVideoFile', Groups => { 2 => 'Video' }, Binary => 1 }, #forum7161
+   # 0x0aa1-name - seen 'MCC_Data'
+   # 0x0aa1 - seen '234','222'
+   # 0x0ab0-name - seen 'DualShot_Meta_Info'
+    '0x0ab1-name' => 'DepthMapName', # seen 'DualShot_DepthMap_1' (SM-N950U)
+    '0x0ab1' => { Name => 'DepthMapData', Binary => 1 },
+   # 0x0ab3-name - seen 'DualShot_Extra_Info' (SM-N950U)
+    '0x0ab3' => { # (SM-N950U)
+        Name => 'DualShotInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::Samsung::DualShotInfo' },
+     },
+   # 0x0ac0-name - seen 'ZoomInOut_Info' (SM-N950U)
+   # 0x0ac0 - 2048 bytes of interesting stuff including firmware version? (SM-N950U)
+   # 0xa050-name - seen 'Jpeg360_2D_Info' (Samsung Gear 360)
+   # 0xa050 - seen 'Jpeg3602D' (Samsung Gear 360)
+);
+
+# DualShot Extra Info (ref PH)
+%Image::ExifTool::Samsung::DualShotInfo = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Image' },
+    FIRST_ENTRY => 0,
+    FORMAT => 'int32u',
+    0 => {
+        Name => 'DualShotInfoVersion', # (NC)
+        Format => 'int16u',
+        RawConv => '$$self{DualShotInfoVersion} = $val; undef',
+        Hidden => 1,
+    },
+    9 => {
+        Name => 'DepthMapWidth',
+        Condition => '$$self{DualShotInfoVersion} < 4', # (tested only with versions: 1,4)
+    },
+    10 => {
+        Name => 'DepthMapHeight',
+        Condition => '$$self{DualShotInfoVersion} < 4', # (tested only with versions: 1,4)
+    },
+    16 => {
+        Name => 'DepthMapWidth',
+        Condition => '$$self{DualShotInfoVersion} >= 4', # (tested only with versions: 1,4)
+    },
+    17 => {
+        Name => 'DepthMapHeight',
+        Condition => '$$self{DualShotInfoVersion} >= 4', # (tested only with versions: 1,4)
+    },
 );
 
 # Samsung composite tags
@@ -952,6 +1033,18 @@ my %formatMinMax = (
             return "@a";
         },
     },
+    DepthMapTiff => {
+        Require => {
+            0 => 'DepthMapData',
+            1 => 'DepthMapWidth',
+            2 => 'DepthMapHeight',
+        },
+        ValueConv => q{
+            return undef unless length ${$val[0]} == $val[1] * $val[2];
+            my $tiff = MakeTiffHeader($val[1],$val[2],1,8) . ${$val[0]};
+            return \$tiff;
+        },
+    }
 );
 
 # add our composite tags
@@ -1157,6 +1250,8 @@ SamBlock:
                     Binary      => 1,
                 );
                 AddTagToTable($tagTablePtr, $tag, \%tagInfo);
+            }
+            unless ($$tagTablePtr{"$tag-name"}) {
                 my %tagInfo2 = (
                     Name        => "SamsungTrailer_${tag}Name",
                     Description => "Samsung Trailer $tag Name",
@@ -1242,7 +1337,7 @@ Samsung maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

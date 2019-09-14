@@ -1,7 +1,7 @@
 #------------------------------------------------------------------------------
 # File:         QuickTime.pm
 #
-# Description:  Read QuickTime, MP4 and M4A meta information
+# Description:  Read QuickTime and MP4 meta information
 #
 # Revisions:    10/04/2005 - P. Harvey Created
 #               12/19/2005 - P. Harvey Added MP4 support
@@ -32,32 +32,55 @@
 #   20) https://developer.apple.com/legacy/library/documentation/quicktime/reference/QT7-1_Update_Reference/QT7-1_Update_Reference.pdf
 #   21) Francois Bonzon private communication
 #   22) https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/Metadata/Metadata.html
+#   23) http://atomicparsley.sourceforge.net/mpeg-4files.html
+#   24) https://github.com/sergiomb2/libmp4v2/wiki/iTunesMetadata
 #------------------------------------------------------------------------------
 
 package Image::ExifTool::QuickTime;
 
 use strict;
-use vars qw($VERSION $AUTOLOAD);
+use vars qw($VERSION $AUTOLOAD %stringEncoding);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 
-$VERSION = '1.98';
+$VERSION = '2.36';
 
-sub FixWrongFormat($);
 sub ProcessMOV($$;$);
 sub ProcessKeys($$$);
+sub ProcessMetaKeys($$$);
 sub ProcessMetaData($$$);
 sub ProcessEncodingParams($$$);
+sub ProcessSampleDesc($$$);
 sub ProcessHybrid($$$);
 sub ProcessRights($$$);
+# ++vvvvvvvvvvvv++ (in QuickTimeStream.pl)
+sub Process_mebx($$$);
+sub Process_3gf($$$);
+sub Process_gps0($$$);
+sub Process_gsen($$$);
+sub ProcessTTAD($$$);
+sub ProcessNMEA($$$);
+sub SaveMetaKeys($$$);
+# ++^^^^^^^^^^^^++
+sub ParseItemLocation($$);
+sub ParseContentDescribes($$);
+sub ParseItemInfoEntry($$);
+sub ParseItemPropAssoc($$);
+sub FixWrongFormat($);
+sub GetMatrixStructure($$);
 sub ConvertISO6709($);
+sub ConvInvISO6709($);
 sub ConvertChapterList($);
 sub PrintChapter($);
 sub PrintGPSCoordinates($);
-sub UnpackLang($);
+sub PrintInvGPSCoordinates($);
+sub UnpackLang($;$);
+sub WriteKeys($$$);
 sub WriteQuickTime($$$);
 sub WriteMOV($$);
+sub GetLangInfo($$);
+sub CheckQTValue($$$);
 
 # MIME types for all entries in the ftypLookup with file extensions
 # (defaults to 'video/mp4' if not found in this lookup)
@@ -77,6 +100,10 @@ my %mimeLookup = (
     M4V  => 'video/x-m4v',
     MOV  => 'video/quicktime',
     MQV  => 'video/quicktime',
+    HEIC => 'image/heic',
+    HEVC => 'image/heic-sequence',
+    HEIF => 'image/heif',
+    CRX  => 'video/x-canon-crx',    # (will get overridden)
 );
 
 # look up file type from ftyp atom type, with MIME type in comment if known
@@ -171,6 +198,11 @@ my %ftypLookup = (
     'ssc1' => 'Samsung stereoscopic, single stream',
     'ssc2' => 'Samsung stereoscopic, dual stream',
     'XAVC' => 'Sony XAVC', #PH
+    'heic' => 'High Efficiency Image Format HEVC still image (.HEIC)', # image/heic
+    'hevc' => 'High Efficiency Image Format HEVC sequence (.HEICS)', # image/heic-sequence
+    'mif1' => 'High Efficiency Image Format still image (.HEIF)', # image/heif
+    'msf1' => 'High Efficiency Image Format sequence (.HEIFS)', # image/heif-sequence
+    'crx ' => 'Canon Raw (.CRX)', #PH (CR3 or CRM; use Canon CompressorVersion to decide)
 );
 
 # information for time/date-based tags (time zero is Jan 1, 1904)
@@ -181,7 +213,9 @@ my %timeInfo = (
     RawConv => q{
         my $offset = (66 * 365 + 17) * 24 * 3600;
         return $val - $offset if $val >= $offset or $$self{OPTIONS}{QuickTimeUTC};
-        $self->WarnOnce('Patched incorrect time zero for QuickTime date/time tag',1) if $val;
+        if ($val and not $$self{IsWriting}) {
+            $self->WarnOnce('Patched incorrect time zero for QuickTime date/time tag',1);
+        }
         return $val;
     },
     Shift => 'Time',
@@ -207,15 +241,9 @@ my %unknownInfo = (
 );
 # parsing for most of the 3gp udta language text boxes
 my %langText = (
-    RawConv => sub {
-        my ($val, $self) = @_;
-        return '<err>' unless length $val >= 6;
-        my $lang = UnpackLang(Get16u(\$val, 4));
-        $lang = $lang ? "($lang) " : '';
-        $val = substr($val, 6); # isolate string
-        $val = $self->Decode($val, 'UCS2') if $val =~ /^\xfe\xff/;
-        return $lang . $val;
-    },
+    Notes => 'used in 3gp videos',
+    IText => 6,
+    Avoid => 1,
 );
 
 # 4-character Vendor ID codes (ref PH)
@@ -242,7 +270,7 @@ my %vendorID = (
 );
 
 # QuickTime data atom encodings for string types (ref 12)
-my %stringEncoding = (
+%stringEncoding = (
     1 => 'UTF8',
     2 => 'UTF16',
     3 => 'ShiftJIS',
@@ -286,33 +314,112 @@ my %graphicsMode = (
     0x110 => 'Component Alpha',
 );
 
+my %channelLabel = (
+    0xFFFFFFFF => 'Unknown',
+    0 => 'Unused',
+    100 => 'UseCoordinates',
+    1 => 'Left',
+    2 => 'Right',
+    3 => 'Center',
+    4 => 'LFEScreen',
+    5 => 'LeftSurround',
+    6 => 'RightSurround',
+    7 => 'LeftCenter',
+    8 => 'RightCenter',
+    9 => 'CenterSurround',
+    10 => 'LeftSurroundDirect',
+    11 => 'RightSurroundDirect',
+    12 => 'TopCenterSurround',
+    13 => 'VerticalHeightLeft',
+    14 => 'VerticalHeightCenter',
+    15 => 'VerticalHeightRight',
+    16 => 'TopBackLeft',
+    17 => 'TopBackCenter',
+    18 => 'TopBackRight',
+    33 => 'RearSurroundLeft',
+    34 => 'RearSurroundRight',
+    35 => 'LeftWide',
+    36 => 'RightWide',
+    37 => 'LFE2',
+    38 => 'LeftTotal',
+    39 => 'RightTotal',
+    40 => 'HearingImpaired',
+    41 => 'Narration',
+    42 => 'Mono',
+    43 => 'DialogCentricMix',
+    44 => 'CenterSurroundDirect',
+    45 => 'Haptic',
+    200 => 'Ambisonic_W',
+    201 => 'Ambisonic_X',
+    202 => 'Ambisonic_Y',
+    203 => 'Ambisonic_Z',
+    204 => 'MS_Mid',
+    205 => 'MS_Side',
+    206 => 'XY_X',
+    207 => 'XY_Y',
+    301 => 'HeadphonesLeft',
+    302 => 'HeadphonesRight',
+    304 => 'ClickTrack',
+    305 => 'ForeignLanguage',
+    400 => 'Discrete',
+    0x10000 => 'Discrete_0',
+    0x10001 => 'Discrete_1',
+    0x10002 => 'Discrete_2',
+    0x10003 => 'Discrete_3',
+    0x10004 => 'Discrete_4',
+    0x10005 => 'Discrete_5',
+    0x10006 => 'Discrete_6',
+    0x10007 => 'Discrete_7',
+    0x10008 => 'Discrete_8',
+    0x10009 => 'Discrete_9',
+    0x1000a => 'Discrete_10',
+    0x1000b => 'Discrete_11',
+    0x1000c => 'Discrete_12',
+    0x1000d => 'Discrete_13',
+    0x1000e => 'Discrete_14',
+    0x1000f => 'Discrete_15',
+    0x1ffff => 'Discrete_65535',
+);
+
+# properties which don't get inherited from the parent
+my %dontInherit = (
+    ispe => 1,  # size of parent may be different
+    hvcC => 1,  # (likely redundant)
+);
+
+# tags that may be duplicated and directories that may contain duplicate tags
+# (used only to avoid warnings when Validate-ing)
+my %dupTagOK = ( mdat => 1, trak => 1, free => 1, infe => 1, sgpd => 1, dimg => 1, CCDT => 1,
+                 sbgp => 1, csgm => 1, uuid => 1, cdsc => 1, maxr => 1, '----' => 1 );
+my %dupDirOK = ( ipco => 1, '----' => 1 );
+
+# the usual atoms required to decode timed metadata with the ExtractEmbedded option
+my %eeStd = ( stco => 'stbl', co64 => 'stbl', stsz => 'stbl', stz2 => 'stbl',
+              stsc => 'stbl', stts => 'stbl' );
+
+# boxes and their containers for the various handler types that we want to save
+# when the ExtractEmbedded is enabled (currently only the 'gps ' container name is
+# used, but others have been checked against all available sample files and may be
+# useful in the future if the names are used for different boxes on other locations)
+my %eeBox = (
+    # (note: vide is only processed if specific atoms exist in the VideoSampleDesc)
+    vide => { %eeStd,
+        JPEG => 'stsd',
+      # avcC => 'stsd', # (uncomment to parse H264 stream)
+    },
+    text => { %eeStd },
+    meta => { %eeStd },
+    sbtl => { %eeStd },
+    data => { %eeStd },
+    camm => { %eeStd }, # (Insta360)
+    ''   => { 'gps ' => 'moov' }, # (no handler -- in top level 'moov' box)
+);
+
 # QuickTime atoms
 %Image::ExifTool::QuickTime::Main = (
     PROCESS_PROC => \&ProcessMOV,
-    WRITE_PROC => \&WriteQuickTime,
+    WRITE_PROC => \&WriteQuickTime, # (only needs to be defined for directories to process when writing)
     GROUPS => { 2 => 'Video' },
-    NOTES => q{
-        The QuickTime format is used for many different types of audio, video and
-        image files (most commonly, MOV and MP4 videos).  Exiftool extracts standard
-        meta information a variety of audio, video and image parameters, as well as
-        proprietary information written by many camera models.  Tags with a question
-        mark after their name are not extracted unless the Unknown option is set.
-
-        ExifTool has the ability to write/create XMP, and edit some date/time tags
-        in QuickTime-format files.
-
-        According to the specification, many QuickTime date/time tags should be
-        stored as UTC.  Unfortunately, digital cameras often store local time values
-        instead (presumably because they don't know the time zone).  For this
-        reason, by default ExifTool does not assume a time zone for these values.
-        However, if the QuickTimeUTC API option is set, then ExifTool will assume
-        these values are properly stored as UTC, and will convert them to local time
-        when extracting.
-
-        See
-        L<http://developer.apple.com/mac/library/documentation/QuickTime/QTFF/QTFFChap1/qtff1.html>
-        for the official specification.
-    },
     meta => { # 'meta' is found here in my Sony ILCE-7S MP4 sample - PH
         Name => 'Meta',
         SubDirectory => {
@@ -320,12 +427,21 @@ my %graphicsMode = (
             Start => 4, # skip 4-byte version number header
         },
     },
+    meco => { #ISO14496-12:2015
+        Name => 'OtherMeta',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::OtherMeta' },
+    },
     free => [
         {
             Name => 'KodakFree',
             # (found in Kodak M5370 MP4 videos)
             Condition => '$$valPt =~ /^\0\0\0.Seri/s',
             SubDirectory => { TagTable => 'Image::ExifTool::Kodak::Free' },
+        },{
+            Name => 'Pittasoft',
+            # (Pittasoft Blackview dashcam MP4 videos)
+            Condition => '$$valPt =~ /^\0\0..(cprt|sttm|ptnm|ptrh|thum|gps |3gf )/s',
+            SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Pittasoft' },
         },{
             Unknown => 1,
             Binary => 1,
@@ -342,6 +458,17 @@ my %graphicsMode = (
             Name => 'CanonSkip',
             Condition => '$$valPt =~ /^\0.{3}(CNDB|CNCV|CNMN|CNFV|CNTH|CNDM)/s',
             SubDirectory => { TagTable => 'Image::ExifTool::Canon::Skip' },
+        },
+        {
+            Name => 'PreviewImage', # (found in  DuDuBell M1 dashcam MOV files)
+            Groups => { 2 => 'Preview' },
+            Condition => '$$valPt =~ /^.{12}\xff\xd8\xff/',
+            Binary => 1,
+            RawConv => q{
+                my $len = Get32u(\$val, 8);
+                return undef unless length($val) >= $len + 12;
+                return substr($val, 12, $len);
+            },
         },
         { Name => 'Skip', Unknown => 1, Binary => 1 },
     ],
@@ -364,10 +491,17 @@ my %graphicsMode = (
         Groups => { 2 => 'Preview' },
         Binary => 1,
     },
+    # (note that moov is present for an HEIF sequence)
     moov => {
         Name => 'Movie',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Movie' },
     },
+    moof => {
+        Name => 'MovieFragment',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::MovieFragment' },
+    },
+    # mfra - movie fragment random access: contains tfra (track fragment random access), and
+    #           mfro (movie fragment random access offset) (ref 5)
     mdat => { Name => 'MovieData', Unknown => 1, Binary => 1 },
     'mdat-size' => {
         Name => 'MovieDataSize',
@@ -383,6 +517,7 @@ my %graphicsMode = (
             Name => 'XMP',
             # *** this is where ExifTool writes XMP in MP4 videos (as per XMP spec) ***
             Condition => '$$valPt=~/^\xbe\x7a\xcf\xcb\x97\xa9\x42\xe8\x9c\x71\x99\x94\x91\xe3\xaf\xac/',
+            WriteGroup => 'XMP',    # (write main XMP tags here)
             SubDirectory => {
                 TagTable => 'Image::ExifTool::XMP::Main',
                 Start => 16,
@@ -405,6 +540,31 @@ my %graphicsMode = (
             },
         },
         # "\x98\x7f\xa3\xdf\x2a\x85\x43\xc0\x8f\x8f\xd9\x7c\x47\x1e\x8e\xea" - unknown data in Flip videos
+        { #PH (Canon CR3)
+            Name => 'UUID-Canon2',
+            WriteLast => 1, # MUST come after mdat or DPP will drop mdat when writing!
+            Condition => '$$valPt=~/^\x21\x0f\x16\x87\x91\x49\x11\xe4\x81\x11\x00\x24\x21\x31\xfc\xe4/',
+            SubDirectory => {
+                TagTable => 'Image::ExifTool::Canon::uuid2',
+                Start => 16,
+            },
+        },
+        { #PH (Canon CR3)
+            Name => 'PreviewImage',
+            Condition => '$$valPt=~/^\xea\xf4\x2b\x5e\x1c\x98\x4b\x88\xb9\xfb\xb7\xdc\x40\x6e\x4d\x16/',
+            Groups => { 2 => 'Preview' },
+            # 0x00 - undef[16]: UUID
+            # 0x10 - int32u[2]: "0 1" (version and/or item count?)
+            # 0x18 - int32u: PRVW atom size
+            # 0x20 - int32u: 'PRVW'
+            # 0x30 - int32u: 0
+            # 0x34 - int16u: 1
+            # 0x36 - int16u: image width
+            # 0x38 - int16u: image height
+            # 0x3a - int16u: 1
+            # 0x3c - int32u: preview length
+            RawConv => '$val = substr($val, 0x30); $self->ValidateImage(\$val, $tag)',
+        },
         { #8
             Name => 'UUID-Unknown',
             %unknownInfo,
@@ -465,7 +625,42 @@ my %graphicsMode = (
             return \$str;
         },
     },
+    udat => { #PH (GPS NMEA-format log written by Datakam Player software)
+        Name => 'GPSLog',
+        Binary => 1,    # (actually ASCII, but very lengthy)
+    },
     # meta - proprietary XML information written by some Flip cameras - PH
+    # beam - 16 bytes found in an iPhone video
+    IDIT => { #PH (written by DuDuBell M1, VSYS M6L dashcams)
+        Name => 'DateTimeOriginal',
+        Description => 'Date/Time Original',
+        Groups => { 2 => 'Time' },
+        Format => 'string', # (removes trailing "\0")
+        Shift => 'Time',
+        Writable => 1,
+        Permanent => 1,
+        DelValue => '0000-00-00T00:00:00+0000',
+        ValueConv => '$val=~tr/-/:/; $val',
+        ValueConvInv => '$val=~s/(\d+):(\d+):/$1-$2-/; $val',
+        PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
+    },
+    gps0 => { #PH (DuDuBell M1, VSYS M6L)
+        Name => 'GPSTrack',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Stream',
+            ProcessProc => \&Process_gps0,
+        },
+    },
+    gsen => { #PH (DuDuBell M1, VSYS M6L)
+        Name => 'GSensor',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Stream',
+            ProcessProc => \&Process_gsen,
+        },
+    },
+    # gpsa - seen hex "01 20 00 00" (DuDuBell M1, VSYS M6L)
+    # gsea - 20 bytes hex "05 00's..." (DuDuBell M1) "05 08 02 01 ..." (VSYS M6L)
 );
 
 # MPEG-4 'ftyp' atom
@@ -560,6 +755,7 @@ my %graphicsMode = (
 #            v216 => "Uncompressed Y'CbCr, 10, 12, 14, or 16-bit 4:2:2",
 #            v410 => "Uncompressed Y'CbCr, 10-bit 4:4:4",
 #            v210 => "Uncompressed Y'CbCr, 10-bit 4:2:2",
+#            hvc1 => 'HEVC', #PH
 #        },
     },
     10 => {
@@ -620,7 +816,18 @@ my %graphicsMode = (
         Name => 'CleanAperture',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::CleanAperture' },
     },
-    # avcC - AVC configuration (ref http://thompsonng.blogspot.ca/2010/11/mp4-file-format-part-2.html)
+    avcC => {
+        # (see http://thompsonng.blogspot.ca/2010/11/mp4-file-format-part-2.html)
+        Name => 'AVCConfiguration',
+        Unknown => 1,
+        Binary => 1,
+    },
+    JPEG => { # (found in CR3 images; used as a flag to identify JpgFromRaw 'vide' stream)
+        Name => 'JPEGInfo',
+        # (4 bytes all zero)
+        Unknown => 1,
+        Binary => 1,
+    },
     # hvcC - HEVC configuration
     # svcC - 7 bytes: 00 00 00 00 ff e0 00
     # esds - elementary stream descriptor
@@ -628,6 +835,20 @@ my %graphicsMode = (
     gama => { Name => 'Gamma', Format => 'fixed32u' },
     # mjqt - default quantization table for MJPEG
     # mjht - default Huffman table for MJPEG
+    # csgm ? (seen in hevc video)
+    CMP1 => { # Canon CR3
+        Name => 'CMP1',
+        SubDirectory => { TagTable => 'Image::ExifTool::Canon::CMP1' },
+    },
+    CDI1 => { # Canon CR3
+        Name => 'CDI1',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::Canon::CDI1',
+            Start => 4,
+        },
+    },
+    # JPEG - 4 bytes all 0 (Canon CR3)
+    # free - (Canon CR3)
 #
 # spherical video v2 stuff (untested)
 #
@@ -639,6 +860,7 @@ my %graphicsMode = (
             0 => 'Monoscopic',
             1 => 'Stereoscopic Top-Bottom',
             2 => 'Stereoscopic Left-Right',
+            3 => 'Stereoscopic Stereo-Custom', # (provisional in spec as of 2017-10-10)
         },
     },
     sv3d => {
@@ -652,8 +874,9 @@ my %graphicsMode = (
     PROCESS_PROC => \&ProcessMOV,
     GROUPS => { 2 => 'Video' },
     NOTES => q{
-        Tags defined by the Spherical Video V2 specification (see
-        https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md).
+        Tags defined by the Spherical Video V2 specification.  See
+        L<https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md>
+        for the specification.
     },
     svhd => {
         Name => 'MetadataSource',
@@ -682,6 +905,7 @@ my %graphicsMode = (
         Name => 'EquirectangularProj',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::equi' },
     },
+    # mshp - MeshProjection (P.I.T.A. to decode, for not much reward, see ref)
 );
 
 # 'prhd' atom information (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
@@ -743,6 +967,7 @@ my %graphicsMode = (
 %Image::ExifTool::QuickTime::Preview = (
     PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
     WRITE_PROC => \&Image::ExifTool::WriteBinaryData,
+    CHECK_PROC => \&Image::ExifTool::CheckBinaryData,
     GROUPS => { 2 => 'Image' },
     FORMAT => 'int16u',
     0 => {
@@ -770,6 +995,7 @@ my %graphicsMode = (
     },
     trak => {
         Name => 'Track',
+        CanCreate => 0, # don't create this atom
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Track' },
     },
     udta => {
@@ -814,16 +1040,65 @@ my %graphicsMode = (
         Name => 'HTCTrack',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Track' },
     },
+   'gps ' => {  # GPS data written by Novatek cameras (parsed in QuickTimeStream.pl)
+        Name => 'GPSDataList',
+        Unknown => 1,
+        Binary => 1,
+    },
+    meco => { #ISO14496-12:2015
+        Name => 'OtherMeta',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::OtherMeta' },
+    },
     # prfl - Profile (ref 12)
     # clip - clipping --> contains crgn (clip region) (ref 12)
     # mvex - movie extends --> contains mehd (movie extends header), trex (track extends) (ref 14)
-    # ICAT - 4 bytes: "6350" (Nikon CoolPix S6900)
+    # ICAT - 4 bytes: "6350" (Nikon CoolPix S6900), "6500" (Panasonic FT7)
+);
+
+# (ref CFFMediaFormat-2_1.pdf)
+%Image::ExifTool::QuickTime::MovieFragment = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 2 => 'Video' },
+    # mfhd - movie fragment header
+    traf => {
+        Name => 'TrackFragment',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::TrackFragment' },
+    },
+    meta => { #ISO14496-12:2015
+        Name => 'Meta',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Meta' },
+    },
+);
+
+# (ref CFFMediaFormat-2_1.pdf)
+%Image::ExifTool::QuickTime::TrackFragment = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 2 => 'Video' },
+    meta => { #ISO14496-12:2015
+        Name => 'Meta',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Meta' },
+    },
+    # tfhd - track fragment header
+    # edts - edits --> contains elst (edit list) (ref PH)
+    # tfdt - track fragment base media decode time
+    # trik - trick play box
+    # trun - track fragment run box
+    # avcn - AVC NAL unit storage box
+    # secn - sample encryption box
+    # saio - sample auxiliary information offsets box
+    # sbgp - sample to group box
+    # sgpd - sample group description box
+    # sdtp - independent and disposable samples (ref 5)
+    # subs - sub-sample information (ref 5)
 );
 
 # movie header data block
 %Image::ExifTool::QuickTime::MovieHeader = (
     PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
     WRITE_PROC => \&Image::ExifTool::WriteBinaryData,
+    CHECK_PROC => \&Image::ExifTool::CheckBinaryData,
     GROUPS => { 2 => 'Video' },
     FORMAT => 'int32u',
     DATAMEMBER => [ 0, 1, 2, 3, 4 ],
@@ -926,10 +1201,12 @@ my %graphicsMode = (
         { #https://github.com/google/spatial-media/blob/master/docs/spherical-video-rfc.md
             Name => 'SphericalVideoXML',
             Condition => '$$valPt=~/^\xff\xcc\x82\x63\xf8\x55\x4a\x93\x88\x14\x58\x7a\x02\x52\x1f\xdd/',
-            Flags => [ 'Binary', 'BlockExtract' ],
+            WriteGroup => 'GSpherical', # write only GSpherical XMP tags here
+            HandlerType => 'vide',      # only write in video tracks
             SubDirectory => {
                 TagTable => 'Image::ExifTool::XMP::Main',
                 Start => 16,
+                WriteProc => 'Image::ExifTool::XMP::WriteGSpherical',
             },
         },
         {
@@ -937,6 +1214,10 @@ my %graphicsMode = (
             %unknownInfo,
         },
     ],
+    meco => { #ISO14492-12:2015 pg 83
+        Name => 'OtherMeta',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::OtherMeta' },
+    },
     # edts - edits --> contains elst (edit list)
     # clip - clipping --> contains crgn (clip region)
     # matt - track matt --> contains kmat (compressed matt)
@@ -949,9 +1230,10 @@ my %graphicsMode = (
 %Image::ExifTool::QuickTime::TrackHeader = (
     PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
     WRITE_PROC => \&Image::ExifTool::WriteBinaryData,
+    CHECK_PROC => \&Image::ExifTool::CheckBinaryData,
     GROUPS => { 1 => 'Track#', 2 => 'Video' },
     FORMAT => 'int32u',
-    DATAMEMBER => [ 0, 1, 2, 5 ],
+    DATAMEMBER => [ 0, 1, 2, 5, 7 ],
     0 => {
         Name => 'TrackHeaderVersion',
         Format => 'int8u',
@@ -985,6 +1267,12 @@ my %graphicsMode = (
         # this is int64u if TrackHeaderVersion == 1 (ref 13)
         Hook => '$$self{TrackHeaderVersion} and $format = "int64u", $varSize += 4',
     },
+    7 => { # (used only for writing MatrixStructure)
+        Name => 'ImageSizeLookahead',
+        Hidden => 1,
+        Format => 'int32u[14]',
+        RawConv => '$$self{ImageSizeLookahead} = $val; undef',
+    },
     8 => {
         Name => 'TrackLayer',
         Format => 'int16u',
@@ -1000,10 +1288,20 @@ my %graphicsMode = (
     10 => {
         Name => 'MatrixStructure',
         Format => 'fixed32s[9]',
+        Notes => 'writable for the video track via the Composite Rotation tag',
+        Writable => 1,
+        Permanent => 1,
+        # only set rotation if image size is non-zero
+        RawConvInv => \&GetMatrixStructure,
         # (the right column is fixed 2.30 instead of 16.16)
         ValueConv => q{
             my @a = split ' ',$val;
             $_ /= 0x4000 foreach @a[2,5,8];
+            return "@a";
+        },
+        ValueConvInv => q{
+            my @a = split ' ',$val;
+            $_ *= 0x4000 foreach @a[2,5,8];
             return "@a";
         },
     },
@@ -1023,17 +1321,30 @@ my %graphicsMode = (
 %Image::ExifTool::QuickTime::UserData = (
     PROCESS_PROC => \&ProcessMOV,
     WRITE_PROC => \&WriteQuickTime,
-    GROUPS => { 2 => 'Video' },
+    CHECK_PROC => \&CheckQTValue,
+    GROUPS => { 1 => 'UserData', 2 => 'Video' },
+    WRITABLE => 1,
+    PREFERRED => 1, # (preferred over Keys tags when writing)
+    FORMAT => 'string',
+    WRITE_GROUP => 'UserData',
+    LANG_INFO => \&GetLangInfo,
     NOTES => q{
         Tag ID's beginning with the copyright symbol (hex 0xa9) are multi-language
-        text.  Alternate language tags are accessed by adding a dash followed by the
-        language/country code to the tag name.  ExifTool will extract any
-        multi-language user data tags found, even if they don't exist in this table.
+        text.  Alternate language tags are accessed by adding a dash followed by a
+        3-character ISO 639-2 language code to the tag name.  ExifTool will extract
+        any multi-language user data tags found, even if they aren't in this table.
+        Note when creating new tags,
+        L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags> tags are
+        preferred over these, so to create the tag when a same-named ItemList tag
+        exists, either "UserData" must be specified (eg. C<-UserData:Artist=Monet>
+        on the command line), or the PREFERRED level must be changed via
+        L<the config file|../config.html#PREF>.
     },
     "\xa9cpy" => { Name => 'Copyright',  Groups => { 2 => 'Author' } },
     "\xa9day" => {
         Name => 'ContentCreateDate',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
         # handle values in the form "2010-02-12T13:27:14-0800" (written by Apple iPhone)
         ValueConv => q{
             require Image::ExifTool::XMP;
@@ -1041,7 +1352,14 @@ my %graphicsMode = (
             $val =~ s/([-+]\d{2})(\d{2})$/$1:$2/; # add colon to timezone if necessary
             return $val;
         },
+        ValueConvInv => q{
+            require Image::ExifTool::XMP;
+            $val =  Image::ExifTool::XMP::FormatXMPDate($val);
+            $val =~ s/([-+]\d{2}):(\d{2})$/$1$2/; # remove time zone colon
+            return $val;
+        },
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
     "\xa9ART" => 'Artist', #PH (iTunes 8.0.2)
     "\xa9alb" => 'Album', #PH (iTunes 8.0.2)
@@ -1078,7 +1396,6 @@ my %graphicsMode = (
     "\xa9prf" => 'Performers',
     "\xa9prk" => 'PerformerKeywords', #12
     "\xa9prl" => 'PerformerURL',
-    "\xa9dir" => 'Director', #12
     "\xa9req" => 'Requirements',
     "\xa9snk" => 'SubtitleKeywords', #12
     "\xa9snm" => 'Subtitle', #12
@@ -1088,12 +1405,14 @@ my %graphicsMode = (
     "\xa9swr" => 'SoftwareVersion', #12
     "\xa9too" => 'Encoder', #PH (NC)
     "\xa9trk" => 'Track', #PH (NC)
-    "\xa9wrt" => 'Composer',
+    "\xa9wrt" => { Name => 'Composer', Avoid => 1 }, # ("\xa9com" is preferred in UserData)
     "\xa9xyz" => { #PH (iPhone 3GS)
         Name => 'GPSCoordinates',
         Groups => { 2 => 'Location' },
         ValueConv => \&ConvertISO6709,
+        ValueConvInv => \&ConvInvISO6709,
         PrintConv => \&PrintGPSCoordinates,
+        PrintConvInv => \&PrintInvGPSCoordinates,
     },
     # \xa9 tags written by DJI Phantom 3: (ref PH)
     "\xa9xsp" => 'SpeedX', #PH (guess)
@@ -1105,11 +1424,17 @@ my %graphicsMode = (
     "\xa9gpt" => 'CameraPitch', #PH
     "\xa9gyw" => 'CameraYaw', #PH
     "\xa9grl" => 'CameraRoll', #PH
+    "\xa9enc" => 'EncoderID', #PH (forum9271)
     # and the following entries don't have the proper 4-byte header for \xa9 tags:
     "\xa9dji" => { Name => 'UserData_dji', Format => 'undef', Binary => 1, Unknown => 1, Hidden => 1 },
     "\xa9res" => { Name => 'UserData_res', Format => 'undef', Binary => 1, Unknown => 1, Hidden => 1 },
     "\xa9uid" => { Name => 'UserData_uid', Format => 'undef', Binary => 1, Unknown => 1, Hidden => 1 },
-    "\xa9mdl" => { Name => 'Model',        Format => 'string', Notes => 'non-standard-format DJI tag' },
+    "\xa9mdl" => {
+        Name => 'Model',
+        Notes => 'non-standard-format DJI tag',
+        Format => 'string',
+        Avoid => 1,
+    },
     # end DJI tags
     name => 'Name',
     WLOC => {
@@ -1154,12 +1479,14 @@ my %graphicsMode = (
     hinv => 'HintVersion', #PH (guess)
     XMP_ => { #PH (Adobe CS3 Bridge)
         Name => 'XMP',
+        WriteGroup => 'XMP',    # (write main tags here)
         # *** this is where ExifTool writes XMP in MOV videos (as per XMP spec) ***
         SubDirectory => { TagTable => 'Image::ExifTool::XMP::Main' },
     },
     # the following are 3gp tags, references:
     # http://atomicparsley.sourceforge.net
     # http://www.3gpp.org/ftp/tsg_sa/WG4_CODEC/TSGS4_25/Docs/
+    # (note that all %langText tags are Avoid => 1)
     cprt => { Name => 'Copyright',  %langText, Groups => { 2 => 'Author' } },
     auth => { Name => 'Author',     %langText, Groups => { 2 => 'Author' } },
     titl => { Name => 'Title',      %langText },
@@ -1281,27 +1608,39 @@ my %graphicsMode = (
     cmnm => { # (NC)
         Name => 'Model',
         Description => 'Camera Model Name',
+        Avoid => 1,
         Format => 'string', # (necessary to remove the trailing NULL)
     },
     date => { # (NC)
         Name => 'DateTimeOriginal',
+        Description => 'Date/Time Original',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
         ValueConv => q{
             require Image::ExifTool::XMP;
             $val =  Image::ExifTool::XMP::ConvertXMPDate($val);
             $val =~ s/([-+]\d{2})(\d{2})$/$1:$2/; # add colon to timezone if necessary
             return $val;
         },
+        ValueConvInv => q{
+            require Image::ExifTool::XMP;
+            $val =  Image::ExifTool::XMP::FormatXMPDate($val);
+            $val =~ s/([-+]\d{2}):(\d{2})$/$1$2/; # remove time zone colon
+            return $val;
+        },
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
     manu => { # (SX280)
         Name => 'Make',
+        Avoid => 1,
         # (with Canon there are 6 unknown bytes before the model: "\0\0\0\0\x15\xc7")
         RawConv => '$val=~s/^\0{4}..//s; $val=~s/\0.*//; $val',
     },
     modl => { # (Samsung GT-S8530, Canon SX280)
         Name => 'Model',
         Description => 'Camera Model Name',
+        Avoid => 1,
         # (with Canon there are 6 unknown bytes before the model: "\0\0\0\0\x15\xc7")
         RawConv => '$val=~s/^\0{4}..//s; $val=~s/\0.*//; $val',
     },
@@ -1315,7 +1654,7 @@ my %graphicsMode = (
         Name => 'TrackType',
         # set flag to process this as international text
         # even though the tag ID doesn't start with 0xa9
-        IText => 1,
+        IText => 4, # IText with 4-byte header
     },
     chpl => { # (Nero chapter list)
         Name => 'ChapterList',
@@ -1453,6 +1792,7 @@ my %graphicsMode = (
     CNMN => {
         Name => 'Model', #PH (EOS 550D)
         Description => 'Camera Model Name',
+        Avoid => 1,
         Format => 'string', # (necessary to remove the trailing NULL)
     },
     CNFV => { Name => 'FirmwareVersion', Format => 'string' }, #PH (EOS 550D)
@@ -1498,17 +1838,28 @@ my %graphicsMode = (
     },
     # ---- GoPro ---- (ref PH)
     GoPr => 'GoProType', # (Hero3+)
-    FIRM => 'FirmwareVersion', # (Hero4)
+    FIRM => { Name => 'FirmwareVersion', Avoid => 1 }, # (Hero4)
     LENS => 'LensSerialNumber', # (Hero4)
     CAME => { # (Hero4)
         Name => 'SerialNumberHash',
         Description => 'Camera Serial Number Hash',
         ValueConv => 'unpack("H*",$val)',
+        ValueConvInv => 'pack("H*",$val)',
     },
     # SETT? 12 bytes (Hero4)
     # MUID? 32 bytes (Hero4, starts with serial number hash)
     # HMMT? 404 bytes (Hero4, all zero)
+    # BCID? 26 bytes (Hero5, all zero)
+    # GUMI? 16 bytes (Hero5)
+   "FOV\0" => 'FieldOfView', #forum8938 (Hero2) seen: "Wide"
+    GPMF => {
+        Name => 'GoProGPMF',
+        SubDirectory => { TagTable => 'Image::ExifTool::GoPro::GPMF' },
+    },
     # free (all zero)
+    "\xa9TSC" => 'StartTimeScale', # (Hero6)
+    "\xa9TSZ" => 'StartTimeSampleSize', # (Hero6)
+    "\xa9TIM" => 'StartTimecode', #PH (NC)
     # --- HTC ----
     htcb => {
         Name => 'HTCBinary',
@@ -1519,19 +1870,35 @@ my %graphicsMode = (
         Name => 'KodakDcMD',
         SubDirectory => { TagTable => 'Image::ExifTool::Kodak::DcMD' },
     },
+    SNum => { Name => 'SerialNumber', Avoid => 1, Groups => { 2 => 'Camera' } },
+    ptch => { Name => 'Pitch', Format => 'rational64s', Avoid => 1 }, # Units??
+    _yaw => { Name => 'Yaw',   Format => 'rational64s', Avoid => 1 }, # Units??
+    roll => { Name => 'Roll',  Format => 'rational64s', Avoid => 1 }, # Units??
+    _cx_ => { Name => 'CX',    Format => 'rational64s', Unknown => 1 },
+    _cy_ => { Name => 'CY',    Format => 'rational64s', Unknown => 1 },
+    rads => { Name => 'Rads',  Format => 'rational64s', Unknown => 1 },
+    lvlm => { Name => 'LevelMeter', Format => 'rational64s', Unknown => 1 }, # (guess)
+    Lvlm => { Name => 'LevelMeter', Format => 'rational64s', Unknown => 1 }, # (guess)
+    pose => { Name => 'pose', SubDirectory => { TagTable => 'Image::ExifTool::Kodak::pose' } },
     # AMBA => Ambarella AVC atom (unknown data written by Kodak Playsport video cam)
-    # tmlp - 1 byte: 0 (PixPro SP360)
+    # tmlp - 1 byte: 0 (PixPro SP360/4KVR360)
     # pivi - 72 bytes (PixPro SP360)
     # pive - 12 bytes (PixPro SP360)
-    # m ev - 2 bytes: 0 0 (PixPro SP360)
-    # m wb - 4 bytes: 0 0 0 0 (PixPro SP360)
-    # mclr - 4 bytes: 0 0 0 0 (PixPro SP360)
-    # mmtr - 4 bytes: 6 0 0 0 (PixPro SP360)
+    # loop - 4 bytes: 0 0 0 0 (PixPro 4KVR360)
+    # m cm - 2 bytes: 0 0 (PixPro 4KVR360)
+    # m ev - 2 bytes: 0 0 (PixPro SP360/4KVR360) (exposure comp?)
+    # m vr - 2 bytes: 0 1 (PixPro 4KVR360) (virtual reality?)
+    # m wb - 4 bytes: 0 0 0 0 (PixPro SP360/4KVR360) (white balance?)
+    # mclr - 4 bytes: 0 0 0 0 (PixPro SP360/4KVR360)
+    # mmtr - 4 bytes: 0,6 0 0 0 (PixPro SP360/4KVR360)
     # mflr - 4 bytes: 0 0 0 0 (PixPro SP360)
     # lvlm - 24 bytes (PixPro SP360)
+    # Lvlm - 24 bytes (PixPro 4KVR360)
     # ufdm - 4 bytes: 0 0 0 1 (PixPro SP360)
-    # mtdt - 1 byte: 0 (PixPro SP360)
+    # mtdt - 1 byte: 0 (PixPro SP360/4KVR360)
     # gdta - 75240 bytes (PixPro SP360)
+    # EIS1 - 4 bytes: 03 07 00 00 (PixPro 4KVR360)
+    # EIS2 - 4 bytes: 04 97 00 00 (PixPro 4KVR360)
     # ---- LG ----
     adzc => { Name => 'Unknown_adzc', Unknown => 1, Hidden => 1, %langText }, # "false\0/","true\0/"
     adze => { Name => 'Unknown_adze', Unknown => 1, Hidden => 1, %langText }, # "false\0/"
@@ -1590,12 +1957,14 @@ my %graphicsMode = (
             Name => 'ThumbnailImage',
             Condition => '$$valPt =~ /^.{8}\xff\xd8\xff\xdb/s',
             Groups => { 2 => 'Preview' },
-            ValueConv => 'substr($val, 8)',
+            RawConv => 'substr($val, 8)',
+            Binary => 1,
         },{ #17 (format is in bytes 3-7)
             Name => 'ThumbnailPNG',
             Condition => '$$valPt =~ /^.{8}\x89PNG\r\n\x1a\n/s',
             Groups => { 2 => 'Preview' },
-            ValueConv => 'substr($val, 8)',
+            RawConv => 'substr($val, 8)',
+            Binary => 1,
         },{
             Name => 'UnknownThumbnail',
             Groups => { 2 => 'Preview' },
@@ -1674,8 +2043,19 @@ my %graphicsMode = (
     # @etc - 4 bytes all zero (Samsung WB30F)
     # saut - 4 bytes all zero (Samsung SM-N900T)
     # smrd - string "TRUEBLUE" (Samsung SM-C101)
+    # ---- TomTom Bandit Action Cam ----
+    TTMD => {
+        Name => 'TomTomMetaData',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::TomTom' },
+    },
     # ---- Unknown ----
     # CDET - 128 bytes (unknown origin)
+    # mtyp - 4 bytes all zero (some drone video)
+    # kgrf - 8 bytes all zero ? (in udta inside trak atom)
+    # kgcg - 128 bytes 0's and 1's
+    # kgsi - 4 bytes "00 00 00 80"
+    # FIEL - 18 bytes "FIEL\0\x01\0\0\0..."
+    
 #
 # other 3rd-party tags
 # (ref http://code.google.com/p/mp4parser/source/browse/trunk/isoparser/src/main/resources/isoparser-default.properties?r=814)
@@ -1708,6 +2088,26 @@ my %graphicsMode = (
     # 4 - values: 12
 );
 
+# TomTom Bandit Action Cam metadata (ref PH)
+%Image::ExifTool::QuickTime::TomTom = (
+    PROCESS_PROC => \&ProcessMOV,
+    GROUPS => { 2 => 'Video' },
+    NOTES => 'Tags found in TomTom Bandit Action Cam MP4 videos.',
+    TTAD => {
+        Name => 'TomTomAD',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Stream',
+            ProcessProc => \&Image::ExifTool::QuickTime::ProcessTTAD,
+        },
+    },
+    TTHL => { Name => 'TomTomHL', Binary => 1, Unknown => 1 }, # (mostly zeros)
+    # (TTID values are different for each video)
+    TTID => { Name => 'TomTomID', ValueConv => 'unpack("x4H*",$val)' },
+    TTVI => { Name => 'TomTomVI', Format => 'int32u', Unknown => 1 }, # seen: "0 1 61 508 508"
+    # TTVD seen: "normal 720p 60fps 60fps 16/9 wide 1x"
+    TTVD => { Name => 'TomTomVD', ValueConv => 'my @a = ($val =~ /[\x20-\x7f]+/g); "@a"' },
+);
+
 # User-specific media data atoms (ref 11)
 %Image::ExifTool::QuickTime::UserMedia = (
     PROCESS_PROC => \&ProcessMOV,
@@ -1720,16 +2120,22 @@ my %graphicsMode = (
 
 # User-specific media data atoms (ref 11)
 %Image::ExifTool::QuickTime::MetaData = (
-    PROCESS_PROC => \&Image::ExifTool::QuickTime::ProcessMetaData,
+    PROCESS_PROC => \&ProcessMetaData,
     GROUPS => { 2 => 'Video' },
     TAG_PREFIX => 'MetaData',
     0x01 => 'Title',
     0x03 => {
         Name => 'ProductionDate',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
+        Writable => 1,
+        Permanent => 1,
+        DelValue => '0000/00/00 00:00:00',
         # translate from format "YYYY/mm/dd HH:MM:SS"
         ValueConv => '$val=~tr{/}{:}; $val',
+        ValueConvInv => '$val=~s[^(\d{4}):(\d{2}):][$1/$2/]; $val',
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
     0x04 => 'Software',
     0x05 => 'Product',
@@ -1745,15 +2151,31 @@ my %graphicsMode = (
     0x0b => {
         Name => 'TimeZone',
         Groups => { 2 => 'Time' },
+        Writable => 1,
+        Permanent => 1,
+        DelValue => 0,
         RawConv => 'Get16s(\$val,0)',
+        RawConvInv => 'Set16s($val)',
         PrintConv => 'TimeZoneString($val)',
+        PrintConvInv => q{
+            return undef unless $val =~ /^([-+])(\d{1,2}):?(\d{2})$/'
+            my $tzmin = $2 * 60 + $3;
+            $tzmin = -$tzmin if $1 eq '-';
+            return $tzmin;
+        }
     },
     0x0c => {
         Name => 'ModifyDate',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
+        Writable => 1,
+        Permanent => 1,
+        DelValue => '0000/00/00 00:00:00',
         # translate from format "YYYY/mm/dd HH:MM:SS"
         ValueConv => '$val=~tr{/}{:}; $val',
+        ValueConvInv => '$val=~s[^(\d{4}):(\d{2}):][$1/$2/]; $val',
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
 );
 
@@ -1905,7 +2327,8 @@ my %graphicsMode = (
 # meta atoms
 %Image::ExifTool::QuickTime::Meta = (
     PROCESS_PROC => \&ProcessMOV,
-    GROUPS => { 2 => 'Video' },
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 1 => 'Meta', 2 => 'Video' },
     ilst => {
         Name => 'ItemList',
         SubDirectory => {
@@ -1919,8 +2342,8 @@ my %graphicsMode = (
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Handler' },
     },
     dinf => {
-        Name => 'DataInformation',
-        Flags => ['Binary','Unknown'],
+        Name => 'DataInfo', # (don't change this name -- used to recognize directory when writing)
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::DataInfo' },
     },
     ipmc => {
         Name => 'IPMPControl',
@@ -1928,19 +2351,31 @@ my %graphicsMode = (
     },
     iloc => {
         Name => 'ItemLocation',
-        Flags => ['Binary','Unknown'],
+        RawConv => \&ParseItemLocation,
+        WriteHook => \&ParseItemLocation,
+        Notes => 'parsed, but not extracted as a tag',
     },
     ipro => {
         Name => 'ItemProtection',
         Flags => ['Binary','Unknown'],
     },
-    iinf => {
+    iinf => [{
         Name => 'ItemInformation',
-        Flags => ['Binary','Unknown'],
-    },
+        Condition => '$$valPt =~ /^\0/', # (check for version 0)
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::ItemInfo',
+            Start => 6, # (4-byte version/flags + 2-byte count)
+        },
+    },{
+        Name => 'ItemInformation',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::ItemInfo',
+            Start => 8, # (4-byte version/flags + 4-byte count)
+        },
+    }],
    'xml ' => {
         Name => 'XML',
-        Flags => [ 'Binary', 'Protected', 'BlockExtract' ],
+        Flags => [ 'Binary', 'Protected' ],
         SubDirectory => {
             TagTable => 'Image::ExifTool::XMP::XML',
             IgnoreProp => { NonRealTimeMeta => 1 }, # ignore container for Sony 'nrtm'
@@ -1954,13 +2389,291 @@ my %graphicsMode = (
         Name => 'BinaryXML',
         Flags => ['Binary','Unknown'],
     },
-    pitm => {
+    pitm => [{
         Name => 'PrimaryItemReference',
-        Flags => ['Binary','Unknown'],
-    },
+        Condition => '$$valPt =~ /^\0/', # (version 0?)
+        RawConv => '$$self{PrimaryItem} = unpack("x4n",$val)',
+        WriteHook => sub { my ($val,$et) = @_; $$et{PrimaryItem} = unpack("x4n",$val); },
+    },{
+        Name => 'PrimaryItemReference',
+        RawConv => '$$self{PrimaryItem} = unpack("x4N",$val)',
+        WriteHook => sub { my ($val,$et) = @_; $$et{PrimaryItem} = unpack("x4N",$val); },
+    }],
     free => { #PH
         Name => 'Free',
         Flags => ['Binary','Unknown'],
+    },
+    iprp => {
+        Name => 'ItemProperties',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ItemProp' },
+    },
+    iref => {
+        Name => 'ItemReference',
+        # the version is needed to parse some of the item references
+        Condition => '$$self{ItemRefVersion} = ord($$valPt); 1',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::ItemRef',
+            Start => 4,
+        },
+    },
+    # idat
+);
+
+# additional metadata container (ref ISO14496-12:2015)
+%Image::ExifTool::QuickTime::OtherMeta = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 2 => 'Video' },
+    mere => {
+        Name => 'MetaRelation',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::MetaRelation' },
+    },
+    meta => {
+        Name => 'Meta',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Meta' },
+    },
+);
+
+# metabox relation (ref ISO14496-12:2015)
+%Image::ExifTool::QuickTime::MetaRelation = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 2 => 'Video' },
+    FORMAT => 'int32u',
+    # 0 => 'MetaRelationVersion',
+    # 1 => 'FirstMetaboxHandlerType',
+    # 2 => 'FirstMetaboxHandlerType',
+    # 3 => { Name => 'MetaboxRelation', Format => 'int8u' },
+);
+
+%Image::ExifTool::QuickTime::ItemProp = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 2 => 'Image' },
+    ipco => {
+        Name => 'ItemPropertyContainer',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ItemPropCont' },
+    },
+    ipma => {
+        Name => 'ItemPropertyAssociation',
+        RawConv => \&ParseItemPropAssoc,
+        WriteHook => \&ParseItemPropAssoc,
+        Notes => 'parsed, but not extracted as a tag',
+    },
+);
+
+%Image::ExifTool::QuickTime::ItemPropCont = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    PERMANENT => 1, # (can't be deleted)
+    GROUPS => { 2 => 'Image' },
+    VARS => { START_INDEX => 1 },   # show verbose indices starting at 1
+    colr => [{
+        Name => 'ICC_Profile',
+        Condition => '$$valPt =~ /^(prof|rICC)/',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::ICC_Profile::Main',
+            Start => 4,
+        },
+    },{
+        Name => 'Unknown_colr',
+        Flags => ['Binary','Unknown','Hidden'],
+    }],
+    irot => {
+        Name => 'Rotation',
+        Format => 'int8u',
+        Writable => 'int8u',
+        ValueConv => '$val * 90',
+        ValueConvInv => 'int($val / 90 + 0.5)',
+    },
+    ispe => {
+        Name => 'ImageSpatialExtent',
+        Condition => '$$valPt =~ /^\0{4}/',     # (version/flags == 0/0)
+        RawConv => q{
+            my @dim = unpack("x4N*", $val);
+            return undef if @dim < 2;
+            unless ($$self{DOC_NUM}) {
+                $self->FoundTag(ImageWidth => $dim[0]);
+                $self->FoundTag(ImageHeight => $dim[1]);
+            }
+            return join ' ', @dim;
+        },
+        PrintConv => '$val =~ tr/ /x/; $val',
+    },
+    pixi => {
+        Name => 'ImagePixelDepth',
+        Condition => '$$valPt =~ /^\0{4}./s',   # (version/flags == 0/0 and count)
+        RawConv => 'join " ", unpack("x5C*", $val)',
+    },
+    auxC => {
+        Name => 'AuxiliaryImageType',
+        Format => 'undef',
+        RawConv => '$val = substr($val, 4); $val =~ s/\0.*//s; $val',
+    },
+    pasp => {
+        Name => 'PixelAspectRatio',
+        Format => 'int32u',
+        Writable => 'int32u',
+    },
+    rloc => {
+        Name => 'RelativeLocation',
+        Format => 'int32u',
+        RawConv => '$val =~ s/^\S+\s+//; $val', # remove version/flags
+    },
+    clap => {
+        Name => 'CleanAperture',
+        Format => 'rational64u',
+        Notes => '4 numbers: width, height, left and top',
+    },
+    hvcC => {
+        Name => 'HEVCConfiguration',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::HEVCConfig' },
+    },
+);
+
+# HEVC configuration (ref https://github.com/MPEGGroup/isobmff/blob/master/IsoLib/libisomediafile/src/HEVCConfigAtom.c)
+%Image::ExifTool::QuickTime::HEVCConfig = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 2 => 'Video' },
+    FIRST_ENTRY => 0,
+    0 => 'HEVCConfigurationVersion',
+    1 => {
+        Name => 'GeneralProfileSpace',
+        Mask => 0xc0,
+        BitShift => 6,
+        PrintConv => { 0 => 'Conforming' },
+    },
+    1.1 => {
+        Name => 'GeneralTierFlag',
+        Mask => 0x20,
+        BitShift => 5,
+        PrintConv => {
+            0 => 'Main Tier',
+            1 => 'High Tier',
+        },
+    },
+    1.2 => {
+        Name => 'GeneralProfileIDC',
+        Mask => 0x1f,
+        PrintConv => {
+            0 => 'No Profile',
+            1 => 'Main Profile',
+            2 => 'Main 10 Profile',
+            3 => 'Main Still Picture Profile',
+        },
+    },
+    2 => {
+        Name => 'GenProfileCompatibilityFlags',
+        Format => 'int32u',
+        PrintConv => { BITMASK => {
+            31 => 'No Profile',         # (bit 0 in stream)
+            30 => 'Main',               # (bit 1 in stream)
+            29 => 'Main 10',            # (bit 2 in stream)
+            28 => 'Main Still Picture', # (bit 3 in stream)
+        }},
+    },
+    6 => {
+        Name => 'ConstraintIndicatorFlags',
+        Format => 'int8u[6]',
+    },
+    12 => {
+        Name => 'GeneralLevelIDC',
+        PrintConv => 'sprintf("%d (level %.1f)", $val, $val/30)',
+    },
+    13 => {
+        Name => 'MinSpatialSegmentationIDC',
+        Format => 'int16u',
+        Mask => 0x0fff,
+    },
+    15 => {
+        Name => 'ParallelismType',
+        Mask => 0x03,
+    },
+    16 => {
+        Name => 'ChromaFormat',
+        Mask => 0x03,
+        PrintConv => {
+            0 => 'Monochrome',
+            1 => '4:2:0',
+            2 => '4:2:2',
+            3 => '4:4:4',
+        },
+    },
+    17 => {
+        Name => 'BitDepthLuma',
+        Mask => 0x07,
+        ValueConv => '$val + 8',
+    },
+    18 => {
+        Name => 'BitDepthChroma',
+        Mask => 0x07,
+        ValueConv => '$val + 8',
+    },
+    19 => {
+        Name => 'AverageFrameRate',
+        Format => 'int16u',
+        ValueConv => '$val / 256',
+    },
+    21 => {
+        Name => 'ConstantFrameRate',
+        Mask => 0xc0,
+        BitShift => 6,
+        PrintConv => {
+            0 => 'Unknown',
+            1 => 'Constant Frame Rate',
+            2 => 'Each Temporal Layer is Constant Frame Rate',
+        },
+    },
+    21.1 => {
+        Name => 'NumTemporalLayers',
+        Mask => 0x38,
+        BitShift => 3,
+    },
+    21.2 => {
+        Name => 'TemporalIDNested',
+        Mask => 0x04,
+        BitShift => 2,
+        PrintConv => { 0 => 'No', 1 => 'Yes' },
+    },
+    #21.3 => {
+    #    Name => 'NALUnitLengthSize',
+    #    Mask => 0x03,
+    #    ValueConv => '$val + 1',
+    #    PrintConv => { 1 => '8-bit', 2 => '16-bit', 4 => '32-bit' },
+    #},
+    #22 => 'NumberOfNALUnitArrays',
+    # (don't decode the NAL unit arrays)
+);
+
+%Image::ExifTool::QuickTime::ItemRef = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 2 => 'Image' },
+    # (Note: ExifTool's ItemRefVersion may be used to test the iref version number)
+    # dimg - DerivedImage
+    # thmb - Thumbnail
+    # auxl - AuxiliaryImage
+    cdsc => {
+        Name => 'ContentDescribes',
+        Notes => 'parsed, but not extracted as a tag',
+        RawConv => \&ParseContentDescribes,
+        WriteHook => \&ParseContentDescribes,
+    },
+);
+
+%Image::ExifTool::QuickTime::ItemInfo = (
+    PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
+    GROUPS => { 2 => 'Image' },
+    # avc1 - AVC image
+    # hvc1 - HEVC image
+    # lhv1 - L-HEVC image
+    # infe - ItemInformationEntry
+    # infe types: avc1,hvc1,lhv1,Exif,xml1,iovl(overlay image),grid,mime,hvt1(tile image)
+    infe => {
+        Name => 'ItemInfoEntry',
+        RawConv => \&ParseItemInfoEntry,
+        WriteHook => \&ParseItemInfoEntry,
+        Notes => 'parsed, but not extracted as a tag',
     },
 );
 
@@ -1976,6 +2689,12 @@ my %graphicsMode = (
         ValueConv => '$val =~ s/^1 //; $val',  # (why 2 numbers? -- ignore the first if "1")
     },
     # also: sync, scpt, ssrc, iTunesInfo
+    cdsc => {
+        Name => 'ContentDescribes',
+        Format => 'int32u',
+        PrintConv => '"Track $val"',
+    },
+    # cdep (Structural Dependency QT tag?)
 );
 
 # track aperture mode dimensions atoms
@@ -2010,20 +2729,37 @@ my %graphicsMode = (
 # -> these atoms are unique, and contain one or more 'data' atoms
 %Image::ExifTool::QuickTime::ItemList = (
     PROCESS_PROC => \&ProcessMOV,
-    GROUPS => { 2 => 'Audio' },
+    WRITE_PROC => \&WriteQuickTime,
+    CHECK_PROC => \&CheckQTValue,
+    WRITABLE => 1,
+    PREFERRED => 2, # (preferred over UserData and Keys tags when writing)
+    FORMAT => 'string',
+    GROUPS => { 1 => 'ItemList', 2 => 'Audio' },
+    WRITE_GROUP => 'ItemList',
+    LANG_INFO => \&GetLangInfo,
     NOTES => q{
-        As well as these tags, the 'mdta' handler uses numerical tag ID's which are
-        added dynamically to this table after processing the Meta Keys information.
+        This is the preferred location for creating new QuickTime tags.  Tags in
+        this table support alternate languages which are accessed by adding a
+        3-character ISO 639-2 language code and an optional ISO 3166-1 alpha 2
+        country code to the tag name (eg. "ItemList:Title-fra" or
+        "ItemList::Title-fra-FR").  When creating a new Meta box to contain the
+        ItemList directory, by default ExifTool does not specify a
+        L<Handler|Image::ExifTool::TagNames/QuickTime Handler Tags>, but the
+        API L<QuickTimeHandler|../ExifTool.html#QuickTimeHandler> option may be used to include an 'mdir' Handler box.
     },
     # in this table, binary 1 and 2-byte "data"-type tags are interpreted as
-    # int8u and int16u.  Multi-byte binary "data" tags are extracted as binary data
+    # int8u and int16u.  Multi-byte binary "data" tags are extracted as binary data.
+    # (Note that the Preferred property is set to 0 for some tags to prevent them
+    #  from being created when a same-named tag already exists in the table)
     "\xa9ART" => 'Artist',
     "\xa9alb" => 'Album',
+    "\xa9aut" => { Name => 'Author', Avoid => 1, Groups => { 2 => 'Author' } }, #forum10091 ('auth' is preferred)
     "\xa9cmt" => 'Comment',
-    "\xa9com" => 'Composer',
+    "\xa9com" => { Name => 'Composer', Avoid => 1, }, # ("\xa9wrt" is preferred in ItemList)
     "\xa9day" => {
         Name => 'ContentCreateDate',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
         # handle values in the form "2010-02-12T13:27:14-0800"
         ValueConv => q{
             require Image::ExifTool::XMP;
@@ -2031,7 +2767,14 @@ my %graphicsMode = (
             $val =~ s/([-+]\d{2})(\d{2})$/$1:$2/; # add colon to timezone if necessary
             return $val;
         },
+        ValueConvInv => q{
+            require Image::ExifTool::XMP;
+            $val =  Image::ExifTool::XMP::FormatXMPDate($val);
+            $val =~ s/([-+]\d{2}):(\d{2})$/$1$2/; # remove time zone colon
+            return $val;
+        },
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
     "\xa9des" => 'Description', #4
     "\xa9enc" => 'EncodedBy', #10
@@ -2051,15 +2794,18 @@ my %graphicsMode = (
     covr => { Name => 'CoverArt',    Groups => { 2 => 'Preview' } },
     cpil => { #10
         Name => 'Compilation',
+        Format => 'int8u', #23
         PrintConv => { 0 => 'No', 1 => 'Yes' },
     },
     disk => {
         Name => 'DiskNumber',
         Format => 'undef',  # (necessary to prevent decoding as string!)
         ValueConv => 'length($val) >= 6 ? join(" of ",unpack("x2nn",$val)) : \$val',
+        ValueConvInv => 'my @a = split / of /, $val; @a==2 ? pack("n3",0,@a) : undef',
     },
     pgap => { #10
         Name => 'PlayGap',
+        Format => 'int8u', #23
         PrintConv => {
             0 => 'Insert Gap',
             1 => 'No Gap',
@@ -2073,6 +2819,7 @@ my %graphicsMode = (
         Name => 'TrackNumber',
         Format => 'undef',  # (necessary to prevent decoding as string!)
         ValueConv => 'length($val) >= 6 ? join(" of ",unpack("x2nn",$val)) : \$val',
+        ValueConvInv => 'my @a = split / of /, $val; @a==2 ? pack("n3",0,@a) : undef',
     },
 #
 # Note: it is possible that the tags below are not being decoded properly
@@ -2080,12 +2827,13 @@ my %graphicsMode = (
 #
     akID => { #10
         Name => 'AppleStoreAccountType',
+        Format => 'int8u', #24
         PrintConv => {
             0 => 'iTunes',
             1 => 'AOL',
         },
     },
-    albm => 'Album', #(ffmpeg source)
+    albm => { Name => 'Album', Avoid => 1 }, #(ffmpeg source)
     apID => 'AppleStoreAccount',
     atID => { #10 (or TV series)
         Name => 'AlbumTitleID',
@@ -2098,14 +2846,21 @@ my %graphicsMode = (
         Format => 'int32u',
     },
     cprt => { Name => 'Copyright', Groups => { 2 => 'Author' } },
-    dscp => 'Description',
-    desc => 'Description', #7
+    dscp => { Name => 'Description', Avoid => 1 },
+    desc => { Name => 'Description', Avoid => 1 }, #7
     gnre => { #10
         Name => 'Genre',
+        Avoid => 1,
+        # (Note: not written as int16u if numerical, although it should be)
         PrintConv => q{
             return $val unless $val =~ /^\d+$/;
             require Image::ExifTool::ID3;
             Image::ExifTool::ID3::PrintGenre($val - 1); # note the "- 1"
+        },
+        PrintConvInv => q{
+            require Image::ExifTool::ID3;
+            my $id = Image::ExifTool::ID3::GetGenreID($val);
+            return defined $id ? $id : $val;
         },
     },
     egid => 'EpisodeGlobalUniqueID', #7
@@ -2113,7 +2868,7 @@ my %graphicsMode = (
         Name => 'GenreID',
         Format => 'int32u',
         SeparateTable => 1,
-        PrintConv => { #21 (based on http://www.apple.com/itunes/affiliates/resources/documentation/genre-mapping.html)
+        PrintConv => { #21/PH (based on https://affiliate.itunes.apple.com/resources/documentation/genre-mapping/)
             2 => 'Music|Blues',
             3 => 'Music|Comedy',
             4 => "Music|Children's Music",
@@ -2272,14 +3027,14 @@ my %graphicsMode = (
             1114 => 'Music|Jazz|Smooth Jazz',
             1115 => 'Music|Latino|Latin Jazz',
             1116 => 'Music|Latino|Contemporary Latin',
-            1117 => 'Music|Latino|Latin Pop',
+            1117 => 'Music|Latino|Pop Latino',
             1118 => 'Music|Latino|Raices', # (Ra&iacute;ces)
-            1119 => 'Music|Latino|Latin Urban',
+            1119 => 'Music|Latino|Urbano latino',
             1120 => 'Music|Latino|Baladas y Boleros',
-            1121 => 'Music|Latino|Latin Alternative & Rock',
+            1121 => 'Music|Latino|Rock y Alternativo',
             1122 => 'Music|Brazilian',
-            1123 => 'Music|Latino|Regional Mexicano',
-            1124 => 'Music|Latino|Salsa y Tropical',
+            1123 => 'Music|Latino|Musica Mexicana', # (M&uacute;sica Mexicana)
+            1124 => 'Music|Latino|Musica tropical', # (M&uacute;sica tropical)
             1125 => 'Music|New Age|Environmental',
             1126 => 'Music|New Age|Healing',
             1127 => 'Music|New Age|Meditation',
@@ -2362,7 +3117,7 @@ my %graphicsMode = (
             1206 => 'Music|World|South Africa',
             1207 => 'Music|Jazz|Hard Bop',
             1208 => 'Music|Jazz|Trad Jazz',
-            1209 => 'Music|Jazz|Cool',
+            1209 => 'Music|Jazz|Cool Jazz',
             1210 => 'Music|Blues|Acoustic Blues',
             1211 => 'Music|Classical|High Classical',
             1220 => 'Music|Brazilian|Axe', # (Ax&eacute;)
@@ -2409,8 +3164,8 @@ my %graphicsMode = (
             1261 => 'Music|Vocal|Trot',
             1262 => 'Music|Indian',
             1263 => 'Music|Indian|Bollywood',
-            1264 => 'Music|Indian|Tamil',
-            1265 => 'Music|Indian|Telugu',
+            1264 => 'Music|Indian|Regional Indian|Tamil',
+            1265 => 'Music|Indian|Regional Indian|Telugu',
             1266 => 'Music|Indian|Regional Indian',
             1267 => 'Music|Indian|Devotional & Spiritual',
             1268 => 'Music|Indian|Sufi',
@@ -2599,8 +3354,8 @@ my %graphicsMode = (
             1689 => 'Music Videos|Spoken Word',
             1690 => 'Music Videos|Indian',
             1691 => 'Music Videos|Indian|Bollywood',
-            1692 => 'Music Videos|Indian|Tamil',
-            1693 => 'Music Videos|Indian|Telugu',
+            1692 => 'Music Videos|Indian|Regional Indian|Tamil',
+            1693 => 'Music Videos|Indian|Regional Indian|Telugu',
             1694 => 'Music Videos|Indian|Regional Indian',
             1695 => 'Music Videos|Indian|Devotional & Spiritual',
             1696 => 'Music Videos|Indian|Sufi',
@@ -2735,7 +3490,7 @@ my %graphicsMode = (
             1826 => 'Music Videos|Jazz|Avant-Garde Jazz',
             1828 => 'Music Videos|Jazz|Bop',
             1829 => 'Music Videos|Jazz|Contemporary Jazz',
-            1830 => 'Music Videos|Jazz|Cool',
+            1830 => 'Music Videos|Jazz|Cool Jazz',
             1831 => 'Music Videos|Jazz|Crossover Jazz',
             1832 => 'Music Videos|Jazz|Dixieland',
             1833 => 'Music Videos|Jazz|Fusion',
@@ -2752,7 +3507,7 @@ my %graphicsMode = (
             1844 => 'Music Videos|Latin|Latin Urban',
             1845 => 'Music Videos|Latin|Pop in Spanish',
             1846 => 'Music Videos|Latin|Raices',
-            1847 => 'Music Videos|Latin|Regional Mexicano',
+            1847 => 'Music Videos|Latin|Musica Mexicana', # (M&uacute;sica Mexicana)
             1848 => 'Music Videos|Latin|Salsa y Tropical',
             1849 => 'Music Videos|New Age|Healing',
             1850 => 'Music Videos|New Age|Meditation',
@@ -2853,6 +3608,32 @@ my %graphicsMode = (
             1947 => 'Music Videos|Alternative|Indie Pop',
             1948 => 'Music Videos|New Age|Yoga',
             1949 => 'Music Videos|Pop|Tribute',
+            1950 => 'Music Videos|Pop|Shows',
+            1951 => 'Music Videos|Cuban',
+            1952 => 'Music Videos|Cuban|Mambo',
+            1953 => 'Music Videos|Cuban|Chachacha',
+            1954 => 'Music Videos|Cuban|Guajira',
+            1955 => 'Music Videos|Cuban|Son',
+            1956 => 'Music Videos|Cuban|Bolero',
+            1957 => 'Music Videos|Cuban|Guaracha',
+            1958 => 'Music Videos|Cuban|Timba',
+            1959 => 'Music Videos|Soundtrack|Video Game',
+            1960 => 'Music Videos|Indian|Regional Indian|Punjabi|Punjabi Pop',
+            1961 => 'Music Videos|Indian|Regional Indian|Bengali|Rabindra Sangeet',
+            1962 => 'Music Videos|Indian|Regional Indian|Malayalam',
+            1963 => 'Music Videos|Indian|Regional Indian|Kannada',
+            1964 => 'Music Videos|Indian|Regional Indian|Marathi',
+            1965 => 'Music Videos|Indian|Regional Indian|Gujarati',
+            1966 => 'Music Videos|Indian|Regional Indian|Assamese',
+            1967 => 'Music Videos|Indian|Regional Indian|Bhojpuri',
+            1968 => 'Music Videos|Indian|Regional Indian|Haryanvi',
+            1969 => 'Music Videos|Indian|Regional Indian|Odia',
+            1970 => 'Music Videos|Indian|Regional Indian|Rajasthani',
+            1971 => 'Music Videos|Indian|Regional Indian|Urdu',
+            1972 => 'Music Videos|Indian|Regional Indian|Punjabi',
+            1973 => 'Music Videos|Indian|Regional Indian|Bengali',
+            1974 => 'Music Videos|Indian|Indian Classical|Carnatic Classical',
+            1975 => 'Music Videos|Indian|Indian Classical|Hindustani Classical',
             4000 => 'TV Shows|Comedy',
             4001 => 'TV Shows|Drama',
             4002 => 'TV Shows|Animation',
@@ -2919,9 +3700,11 @@ my %graphicsMode = (
             6017 => 'App Store|Education',
             6018 => 'App Store|Books',
             6020 => 'App Store|Medical',
-            6021 => 'App Store|Newsstand',
+            6021 => 'App Store|Magazines & Newspapers',
             6022 => 'App Store|Catalogs',
             6023 => 'App Store|Food & Drink',
+            6024 => 'App Store|Shopping',
+            6025 => 'App Store|Stickers',
             7001 => 'App Store|Games|Action',
             7002 => 'App Store|Games|Adventure',
             7003 => 'App Store|Games|Arcade',
@@ -3116,14 +3899,14 @@ my %graphicsMode = (
             8193 => 'Tones|Ringtones|Indian|Indian Pop',
             8194 => 'Tones|Ringtones|Indian|Regional Indian',
             8195 => 'Tones|Ringtones|Indian|Sufi',
-            8196 => 'Tones|Ringtones|Indian|Tamil',
-            8197 => 'Tones|Ringtones|Indian|Telugu',
+            8196 => 'Tones|Ringtones|Indian|Regional Indian|Tamil',
+            8197 => 'Tones|Ringtones|Indian|Regional Indian|Telugu',
             8198 => 'Tones|Ringtones|Instrumental',
             8199 => 'Tones|Ringtones|Jazz|Avant-Garde Jazz',
             8201 => 'Tones|Ringtones|Jazz|Big Band',
             8202 => 'Tones|Ringtones|Jazz|Bop',
             8203 => 'Tones|Ringtones|Jazz|Contemporary Jazz',
-            8204 => 'Tones|Ringtones|Jazz|Cool',
+            8204 => 'Tones|Ringtones|Jazz|Cool Jazz',
             8205 => 'Tones|Ringtones|Jazz|Crossover Jazz',
             8206 => 'Tones|Ringtones|Jazz|Dixieland',
             8207 => 'Tones|Ringtones|Jazz|Fusion',
@@ -3147,7 +3930,7 @@ my %graphicsMode = (
             8225 => 'Tones|Ringtones|Latin|Latin Urban',
             8226 => 'Tones|Ringtones|Latin|Pop in Spanish',
             8227 => 'Tones|Ringtones|Latin|Raices',
-            8228 => 'Tones|Ringtones|Latin|Regional Mexicano',
+            8228 => 'Tones|Ringtones|Latin|Musica Mexicana', # (M&uacute;sica Mexicana)
             8229 => 'Tones|Ringtones|Latin|Salsa y Tropical',
             8230 => 'Tones|Ringtones|Marching Bands',
             8231 => 'Tones|Ringtones|New Age|Healing',
@@ -3285,6 +4068,32 @@ my %graphicsMode = (
             8364 => 'Tones|Ringtones|Alternative|Indie Pop',
             8365 => 'Tones|Ringtones|New Age|Yoga',
             8366 => 'Tones|Ringtones|Pop|Tribute',
+            8367 => 'Tones|Ringtones|Pop|Shows',
+            8368 => 'Tones|Ringtones|Cuban',
+            8369 => 'Tones|Ringtones|Cuban|Mambo',
+            8370 => 'Tones|Ringtones|Cuban|Chachacha',
+            8371 => 'Tones|Ringtones|Cuban|Guajira',
+            8372 => 'Tones|Ringtones|Cuban|Son',
+            8373 => 'Tones|Ringtones|Cuban|Bolero',
+            8374 => 'Tones|Ringtones|Cuban|Guaracha',
+            8375 => 'Tones|Ringtones|Cuban|Timba',
+            8376 => 'Tones|Ringtones|Soundtrack|Video Game',
+            8377 => 'Tones|Ringtones|Indian|Regional Indian|Punjabi|Punjabi Pop',
+            8378 => 'Tones|Ringtones|Indian|Regional Indian|Bengali|Rabindra Sangeet',
+            8379 => 'Tones|Ringtones|Indian|Regional Indian|Malayalam',
+            8380 => 'Tones|Ringtones|Indian|Regional Indian|Kannada',
+            8381 => 'Tones|Ringtones|Indian|Regional Indian|Marathi',
+            8382 => 'Tones|Ringtones|Indian|Regional Indian|Gujarati',
+            8383 => 'Tones|Ringtones|Indian|Regional Indian|Assamese',
+            8384 => 'Tones|Ringtones|Indian|Regional Indian|Bhojpuri',
+            8385 => 'Tones|Ringtones|Indian|Regional Indian|Haryanvi',
+            8386 => 'Tones|Ringtones|Indian|Regional Indian|Odia',
+            8387 => 'Tones|Ringtones|Indian|Regional Indian|Rajasthani',
+            8388 => 'Tones|Ringtones|Indian|Regional Indian|Urdu',
+            8389 => 'Tones|Ringtones|Indian|Regional Indian|Punjabi',
+            8390 => 'Tones|Ringtones|Indian|Regional Indian|Bengali',
+            8391 => 'Tones|Ringtones|Indian|Indian Classical|Carnatic Classical',
+            8392 => 'Tones|Ringtones|Indian|Indian Classical|Hindustani Classical',
             9002 => 'Books|Nonfiction',
             9003 => 'Books|Romance',
             9004 => 'Books|Travel & Adventure',
@@ -3801,34 +4610,34 @@ my %graphicsMode = (
             12217 => 'Mac App Store|Games|Strategy',
             12218 => 'Mac App Store|Games|Trivia',
             12219 => 'Mac App Store|Games|Word',
-            13001 => 'App Store|Newsstand|News & Politics',
-            13002 => 'App Store|Newsstand|Fashion & Style',
-            13003 => 'App Store|Newsstand|Home & Garden',
-            13004 => 'App Store|Newsstand|Outdoors & Nature',
-            13005 => 'App Store|Newsstand|Sports & Leisure',
-            13006 => 'App Store|Newsstand|Automotive',
-            13007 => 'App Store|Newsstand|Arts & Photography',
-            13008 => 'App Store|Newsstand|Brides & Weddings',
-            13009 => 'App Store|Newsstand|Business & Investing',
-            13010 => "App Store|Newsstand|Children's Magazines",
-            13011 => 'App Store|Newsstand|Computers & Internet',
-            13012 => 'App Store|Newsstand|Cooking, Food & Drink',
-            13013 => 'App Store|Newsstand|Crafts & Hobbies',
-            13014 => 'App Store|Newsstand|Electronics & Audio',
-            13015 => 'App Store|Newsstand|Entertainment',
-            13017 => 'App Store|Newsstand|Health, Mind & Body',
-            13018 => 'App Store|Newsstand|History',
-            13019 => 'App Store|Newsstand|Literary Magazines & Journals',
-            13020 => "App Store|Newsstand|Men's Interest",
-            13021 => 'App Store|Newsstand|Movies & Music',
-            13023 => 'App Store|Newsstand|Parenting & Family',
-            13024 => 'App Store|Newsstand|Pets',
-            13025 => 'App Store|Newsstand|Professional & Trade',
-            13026 => 'App Store|Newsstand|Regional News',
-            13027 => 'App Store|Newsstand|Science',
-            13028 => 'App Store|Newsstand|Teens',
-            13029 => 'App Store|Newsstand|Travel & Regional',
-            13030 => "App Store|Newsstand|Women's Interest",
+            13001 => 'App Store|Magazines & Newspapers|News & Politics',
+            13002 => 'App Store|Magazines & Newspapers|Fashion & Style',
+            13003 => 'App Store|Magazines & Newspapers|Home & Garden',
+            13004 => 'App Store|Magazines & Newspapers|Outdoors & Nature',
+            13005 => 'App Store|Magazines & Newspapers|Sports & Leisure',
+            13006 => 'App Store|Magazines & Newspapers|Automotive',
+            13007 => 'App Store|Magazines & Newspapers|Arts & Photography',
+            13008 => 'App Store|Magazines & Newspapers|Brides & Weddings',
+            13009 => 'App Store|Magazines & Newspapers|Business & Investing',
+            13010 => "App Store|Magazines & Newspapers|Children's Magazines",
+            13011 => 'App Store|Magazines & Newspapers|Computers & Internet',
+            13012 => 'App Store|Magazines & Newspapers|Cooking, Food & Drink',
+            13013 => 'App Store|Magazines & Newspapers|Crafts & Hobbies',
+            13014 => 'App Store|Magazines & Newspapers|Electronics & Audio',
+            13015 => 'App Store|Magazines & Newspapers|Entertainment',
+            13017 => 'App Store|Magazines & Newspapers|Health, Mind & Body',
+            13018 => 'App Store|Magazines & Newspapers|History',
+            13019 => 'App Store|Magazines & Newspapers|Literary Magazines & Journals',
+            13020 => "App Store|Magazines & Newspapers|Men's Interest",
+            13021 => 'App Store|Magazines & Newspapers|Movies & Music',
+            13023 => 'App Store|Magazines & Newspapers|Parenting & Family',
+            13024 => 'App Store|Magazines & Newspapers|Pets',
+            13025 => 'App Store|Magazines & Newspapers|Professional & Trade',
+            13026 => 'App Store|Magazines & Newspapers|Regional News',
+            13027 => 'App Store|Magazines & Newspapers|Science',
+            13028 => 'App Store|Magazines & Newspapers|Teens',
+            13029 => 'App Store|Magazines & Newspapers|Travel & Regional',
+            13030 => "App Store|Magazines & Newspapers|Women's Interest",
             15000 => 'Textbooks|Arts & Entertainment',
             15001 => 'Textbooks|Arts & Entertainment|Art & Architecture',
             15002 => 'Textbooks|Arts & Entertainment|Art & Architecture|Urban Planning',
@@ -4142,6 +4951,21 @@ my %graphicsMode = (
             15310 => 'Textbooks|Travel & Adventure|Specialty Travel',
             15311 => 'Textbooks|Comics & Graphic Novels|Comics',
             15312 => 'Textbooks|Reference|Manuals',
+            16001 => 'App Store|Stickers|Emoji & Expressions',
+            16003 => 'App Store|Stickers|Animals & Nature',
+            16005 => 'App Store|Stickers|Art',
+            16006 => 'App Store|Stickers|Celebrations',
+            16007 => 'App Store|Stickers|Celebrities',
+            16008 => 'App Store|Stickers|Comics & Cartoons',
+            16009 => 'App Store|Stickers|Eating & Drinking',
+            16010 => 'App Store|Stickers|Gaming',
+            16014 => 'App Store|Stickers|Movies & TV',
+            16015 => 'App Store|Stickers|Music',
+            16017 => 'App Store|Stickers|People',
+            16019 => 'App Store|Stickers|Places & Objects',
+            16021 => 'App Store|Stickers|Sports & Activities',
+            16025 => 'App Store|Stickers|Kids & Family',
+            16026 => 'App Store|Stickers|Fashion',
             100000 => 'Music|Christian & Gospel',
             100001 => 'Music|Classical|Art Song',
             100002 => 'Music|Classical|Brass & Woodwinds',
@@ -4165,15 +4989,41 @@ my %graphicsMode = (
             100020 => 'Music|Alternative|Indie Pop',
             100021 => 'Music|New Age|Yoga',
             100022 => 'Music|Pop|Tribute',
+            100023 => 'Music|Pop|Shows',
+            100024 => 'Music|Cuban',
+            100025 => 'Music|Cuban|Mambo',
+            100026 => 'Music|Cuban|Chachacha',
+            100027 => 'Music|Cuban|Guajira',
+            100028 => 'Music|Cuban|Son',
+            100029 => 'Music|Cuban|Bolero',
+            100030 => 'Music|Cuban|Guaracha',
+            100031 => 'Music|Cuban|Timba',
+            100032 => 'Music|Soundtrack|Video Game',
+            100033 => 'Music|Indian|Regional Indian|Punjabi|Punjabi Pop',
+            100034 => 'Music|Indian|Regional Indian|Bengali|Rabindra Sangeet',
+            100035 => 'Music|Indian|Regional Indian|Malayalam',
+            100036 => 'Music|Indian|Regional Indian|Kannada',
+            100037 => 'Music|Indian|Regional Indian|Marathi',
+            100038 => 'Music|Indian|Regional Indian|Gujarati',
+            100039 => 'Music|Indian|Regional Indian|Assamese',
+            100040 => 'Music|Indian|Regional Indian|Bhojpuri',
+            100041 => 'Music|Indian|Regional Indian|Haryanvi',
+            100042 => 'Music|Indian|Regional Indian|Odia',
+            100043 => 'Music|Indian|Regional Indian|Rajasthani',
+            100044 => 'Music|Indian|Regional Indian|Urdu',
+            100045 => 'Music|Indian|Regional Indian|Punjabi',
+            100046 => 'Music|Indian|Regional Indian|Bengali',
+            100047 => 'Music|Indian|Indian Classical|Carnatic Classical',
+            100048 => 'Music|Indian|Indian Classical|Hindustani Classical',
             40000000 => 'iTunes U',
-            40000001 => 'iTunes U|Business',
-            40000002 => 'iTunes U|Business|Economics',
-            40000003 => 'iTunes U|Business|Finance',
-            40000004 => 'iTunes U|Business|Hospitality',
-            40000005 => 'iTunes U|Business|Management',
-            40000006 => 'iTunes U|Business|Marketing',
-            40000007 => 'iTunes U|Business|Personal Finance',
-            40000008 => 'iTunes U|Business|Real Estate',
+            40000001 => 'iTunes U|Business & Economics',
+            40000002 => 'iTunes U|Business & Economics|Economics',
+            40000003 => 'iTunes U|Business & Economics|Finance',
+            40000004 => 'iTunes U|Business & Economics|Hospitality',
+            40000005 => 'iTunes U|Business & Economics|Management',
+            40000006 => 'iTunes U|Business & Economics|Marketing',
+            40000007 => 'iTunes U|Business & Economics|Personal Finance',
+            40000008 => 'iTunes U|Business & Economics|Real Estate',
             40000009 => 'iTunes U|Engineering',
             40000010 => 'iTunes U|Engineering|Chemical & Petroleum Engineering',
             40000011 => 'iTunes U|Engineering|Civil Engineering',
@@ -4181,15 +5031,15 @@ my %graphicsMode = (
             40000013 => 'iTunes U|Engineering|Electrical Engineering',
             40000014 => 'iTunes U|Engineering|Environmental Engineering',
             40000015 => 'iTunes U|Engineering|Mechanical Engineering',
-            40000016 => 'iTunes U|Art & Architecture',
-            40000017 => 'iTunes U|Art & Architecture|Architecture',
-            40000019 => 'iTunes U|Art & Architecture|Art History',
-            40000020 => 'iTunes U|Art & Architecture|Dance',
-            40000021 => 'iTunes U|Art & Architecture|Film',
-            40000022 => 'iTunes U|Art & Architecture|Design',
-            40000023 => 'iTunes U|Art & Architecture|Interior Design',
-            40000024 => 'iTunes U|Art & Architecture|Music',
-            40000025 => 'iTunes U|Art & Architecture|Theater',
+            40000016 => 'iTunes U|Music, Art, & Design',
+            40000017 => 'iTunes U|Music, Art, & Design|Architecture',
+            40000019 => 'iTunes U|Music, Art, & Design|Art History',
+            40000020 => 'iTunes U|Music, Art, & Design|Dance',
+            40000021 => 'iTunes U|Music, Art, & Design|Film',
+            40000022 => 'iTunes U|Music, Art, & Design|Design',
+            40000023 => 'iTunes U|Music, Art, & Design|Interior Design',
+            40000024 => 'iTunes U|Music, Art, & Design|Music',
+            40000025 => 'iTunes U|Music, Art, & Design|Theater',
             40000026 => 'iTunes U|Health & Medicine',
             40000027 => 'iTunes U|Health & Medicine|Anatomy & Physiology',
             40000028 => 'iTunes U|Health & Medicine|Behavioral Science',
@@ -4216,26 +5066,26 @@ my %graphicsMode = (
             40000049 => 'iTunes U|History|Middle Eastern History',
             40000050 => 'iTunes U|History|North American History',
             40000051 => 'iTunes U|History|South American History',
-            40000053 => 'iTunes U|Communications & Media',
+            40000053 => 'iTunes U|Communications & Journalism',
             40000054 => 'iTunes U|Philosophy',
             40000055 => 'iTunes U|Religion & Spirituality',
-            40000056 => 'iTunes U|Language',
-            40000057 => 'iTunes U|Language|African Languages',
-            40000058 => 'iTunes U|Language|Ancient Languages',
-            40000061 => 'iTunes U|Language|English',
-            40000063 => 'iTunes U|Language|French',
-            40000064 => 'iTunes U|Language|German',
-            40000065 => 'iTunes U|Language|Italian',
-            40000066 => 'iTunes U|Language|Linguistics',
-            40000068 => 'iTunes U|Language|Spanish',
-            40000069 => 'iTunes U|Language|Speech Pathology',
-            40000070 => 'iTunes U|Literature',
-            40000071 => 'iTunes U|Literature|Anthologies',
-            40000072 => 'iTunes U|Literature|Biography',
-            40000073 => 'iTunes U|Literature|Classics',
-            40000074 => 'iTunes U|Literature|Literary Criticism',
-            40000075 => 'iTunes U|Literature|Fiction',
-            40000076 => 'iTunes U|Literature|Poetry',
+            40000056 => 'iTunes U|Languages',
+            40000057 => 'iTunes U|Languages|African Languages',
+            40000058 => 'iTunes U|Languages|Ancient Languages',
+            40000061 => 'iTunes U|Languages|English',
+            40000063 => 'iTunes U|Languages|French',
+            40000064 => 'iTunes U|Languages|German',
+            40000065 => 'iTunes U|Languages|Italian',
+            40000066 => 'iTunes U|Languages|Linguistics',
+            40000068 => 'iTunes U|Languages|Spanish',
+            40000069 => 'iTunes U|Languages|Speech Pathology',
+            40000070 => 'iTunes U|Writing & Literature',
+            40000071 => 'iTunes U|Writing & Literature|Anthologies',
+            40000072 => 'iTunes U|Writing & Literature|Biography',
+            40000073 => 'iTunes U|Writing & Literature|Classics',
+            40000074 => 'iTunes U|Writing & Literature|Literary Criticism',
+            40000075 => 'iTunes U|Writing & Literature|Fiction',
+            40000076 => 'iTunes U|Writing & Literature|Poetry',
             40000077 => 'iTunes U|Mathematics',
             40000078 => 'iTunes U|Mathematics|Advanced Mathematics',
             40000079 => 'iTunes U|Mathematics|Algebra',
@@ -4253,13 +5103,13 @@ my %graphicsMode = (
             40000091 => 'iTunes U|Science|Geography',
             40000092 => 'iTunes U|Science|Geology',
             40000093 => 'iTunes U|Science|Physics',
-            40000094 => 'iTunes U|Psychology & Social Science',
+            40000094 => 'iTunes U|Social Science',
             40000095 => 'iTunes U|Law & Politics|Law',
             40000096 => 'iTunes U|Law & Politics|Political Science',
             40000097 => 'iTunes U|Law & Politics|Public Administration',
-            40000098 => 'iTunes U|Psychology & Social Science|Psychology',
-            40000099 => 'iTunes U|Psychology & Social Science|Social Welfare',
-            40000100 => 'iTunes U|Psychology & Social Science|Sociology',
+            40000098 => 'iTunes U|Social Science|Psychology',
+            40000099 => 'iTunes U|Social Science|Social Welfare',
+            40000100 => 'iTunes U|Social Science|Sociology',
             40000101 => 'iTunes U|Society',
             40000103 => 'iTunes U|Society|Asia Pacific Studies',
             40000104 => 'iTunes U|Society|European Studies',
@@ -4274,36 +5124,36 @@ my %graphicsMode = (
             40000113 => 'iTunes U|Teaching & Learning|Learning Resources',
             40000114 => 'iTunes U|Teaching & Learning|Psychology & Research',
             40000115 => 'iTunes U|Teaching & Learning|Special Education',
-            40000116 => 'iTunes U|Art & Architecture|Culinary Arts',
-            40000117 => 'iTunes U|Art & Architecture|Fashion',
-            40000118 => 'iTunes U|Art & Architecture|Media Arts',
-            40000119 => 'iTunes U|Art & Architecture|Photography',
-            40000120 => 'iTunes U|Art & Architecture|Visual Art',
-            40000121 => 'iTunes U|Business|Entrepreneurship',
-            40000122 => 'iTunes U|Communications & Media|Broadcasting',
-            40000123 => 'iTunes U|Communications & Media|Digital Media',
-            40000124 => 'iTunes U|Communications & Media|Journalism',
-            40000125 => 'iTunes U|Communications & Media|Photojournalism',
-            40000126 => 'iTunes U|Communications & Media|Print',
-            40000127 => 'iTunes U|Communications & Media|Speech',
-            40000128 => 'iTunes U|Communications & Media|Writing',
+            40000116 => 'iTunes U|Music, Art, & Design|Culinary Arts',
+            40000117 => 'iTunes U|Music, Art, & Design|Fashion',
+            40000118 => 'iTunes U|Music, Art, & Design|Media Arts',
+            40000119 => 'iTunes U|Music, Art, & Design|Photography',
+            40000120 => 'iTunes U|Music, Art, & Design|Visual Art',
+            40000121 => 'iTunes U|Business & Economics|Entrepreneurship',
+            40000122 => 'iTunes U|Communications & Journalism|Broadcasting',
+            40000123 => 'iTunes U|Communications & Journalism|Digital Media',
+            40000124 => 'iTunes U|Communications & Journalism|Journalism',
+            40000125 => 'iTunes U|Communications & Journalism|Photojournalism',
+            40000126 => 'iTunes U|Communications & Journalism|Print',
+            40000127 => 'iTunes U|Communications & Journalism|Speech',
+            40000128 => 'iTunes U|Communications & Journalism|Writing',
             40000129 => 'iTunes U|Health & Medicine|Nursing',
-            40000130 => 'iTunes U|Language|Arabic',
-            40000131 => 'iTunes U|Language|Chinese',
-            40000132 => 'iTunes U|Language|Hebrew',
-            40000133 => 'iTunes U|Language|Hindi',
-            40000134 => 'iTunes U|Language|Indigenous Languages',
-            40000135 => 'iTunes U|Language|Japanese',
-            40000136 => 'iTunes U|Language|Korean',
-            40000137 => 'iTunes U|Language|Other Languages',
-            40000138 => 'iTunes U|Language|Portuguese',
-            40000139 => 'iTunes U|Language|Russian',
+            40000130 => 'iTunes U|Languages|Arabic',
+            40000131 => 'iTunes U|Languages|Chinese',
+            40000132 => 'iTunes U|Languages|Hebrew',
+            40000133 => 'iTunes U|Languages|Hindi',
+            40000134 => 'iTunes U|Languages|Indigenous Languages',
+            40000135 => 'iTunes U|Languages|Japanese',
+            40000136 => 'iTunes U|Languages|Korean',
+            40000137 => 'iTunes U|Languages|Other Languages',
+            40000138 => 'iTunes U|Languages|Portuguese',
+            40000139 => 'iTunes U|Languages|Russian',
             40000140 => 'iTunes U|Law & Politics',
             40000141 => 'iTunes U|Law & Politics|Foreign Policy & International Relations',
             40000142 => 'iTunes U|Law & Politics|Local Governments',
             40000143 => 'iTunes U|Law & Politics|National Governments',
             40000144 => 'iTunes U|Law & Politics|World Affairs',
-            40000145 => 'iTunes U|Literature|Comparative Literature',
+            40000145 => 'iTunes U|Writing & Literature|Comparative Literature',
             40000146 => 'iTunes U|Philosophy|Aesthetics',
             40000147 => 'iTunes U|Philosophy|Epistemology',
             40000148 => 'iTunes U|Philosophy|Ethics',
@@ -4312,8 +5162,8 @@ my %graphicsMode = (
             40000151 => 'iTunes U|Philosophy|Logic',
             40000152 => 'iTunes U|Philosophy|Philosophy of Language',
             40000153 => 'iTunes U|Philosophy|Philosophy of Religion',
-            40000154 => 'iTunes U|Psychology & Social Science|Archaeology',
-            40000155 => 'iTunes U|Psychology & Social Science|Anthropology',
+            40000154 => 'iTunes U|Social Science|Archaeology',
+            40000155 => 'iTunes U|Social Science|Anthropology',
             40000156 => 'iTunes U|Religion & Spirituality|Buddhism',
             40000157 => 'iTunes U|Religion & Spirituality|Christianity',
             40000158 => 'iTunes U|Religion & Spirituality|Comparative Religion',
@@ -4331,20 +5181,20 @@ my %graphicsMode = (
             40000170 => 'iTunes U|Society|Sexuality Studies',
             40000171 => 'iTunes U|Teaching & Learning|Educational Technology',
             40000172 => 'iTunes U|Teaching & Learning|Information/Library Science',
-            40000173 => 'iTunes U|Language|Dutch',
-            40000174 => 'iTunes U|Language|Luxembourgish',
-            40000175 => 'iTunes U|Language|Swedish',
-            40000176 => 'iTunes U|Language|Norwegian',
-            40000177 => 'iTunes U|Language|Finnish',
-            40000178 => 'iTunes U|Language|Danish',
-            40000179 => 'iTunes U|Language|Polish',
-            40000180 => 'iTunes U|Language|Turkish',
-            40000181 => 'iTunes U|Language|Flemish',
+            40000173 => 'iTunes U|Languages|Dutch',
+            40000174 => 'iTunes U|Languages|Luxembourgish',
+            40000175 => 'iTunes U|Languages|Swedish',
+            40000176 => 'iTunes U|Languages|Norwegian',
+            40000177 => 'iTunes U|Languages|Finnish',
+            40000178 => 'iTunes U|Languages|Danish',
+            40000179 => 'iTunes U|Languages|Polish',
+            40000180 => 'iTunes U|Languages|Turkish',
+            40000181 => 'iTunes U|Languages|Flemish',
             50000024 => 'Audiobooks',
             50000040 => 'Audiobooks|Fiction',
             50000041 => 'Audiobooks|Arts & Entertainment',
-            50000042 => 'Audiobooks|Biography & Memoir',
-            50000043 => 'Audiobooks|Business',
+            50000042 => 'Audiobooks|Biographies & Memoirs',
+            50000043 => 'Audiobooks|Business & Personal Finance',
             50000044 => 'Audiobooks|Kids & Young Adults',
             50000045 => 'Audiobooks|Classics',
             50000046 => 'Audiobooks|Comedy',
@@ -4352,13 +5202,13 @@ my %graphicsMode = (
             50000048 => 'Audiobooks|Speakers & Storytellers',
             50000049 => 'Audiobooks|History',
             50000050 => 'Audiobooks|Languages',
-            50000051 => 'Audiobooks|Mystery',
+            50000051 => 'Audiobooks|Mysteries & Thrillers',
             50000052 => 'Audiobooks|Nonfiction',
             50000053 => 'Audiobooks|Religion & Spirituality',
-            50000054 => 'Audiobooks|Science',
+            50000054 => 'Audiobooks|Science & Nature',
             50000055 => 'Audiobooks|Sci Fi & Fantasy',
-            50000056 => 'Audiobooks|Self Development',
-            50000057 => 'Audiobooks|Sports',
+            50000056 => 'Audiobooks|Self-Development',
+            50000057 => 'Audiobooks|Sports & Outdoors',
             50000058 => 'Audiobooks|Technology',
             50000059 => 'Audiobooks|Travel & Adventure',
             50000061 => 'Music|Spoken Word',
@@ -4388,17 +5238,21 @@ my %graphicsMode = (
             50000088 => 'Books|Fiction & Literature|Light Novels',
             50000089 => 'Books|Comics & Graphic Novels|Manga|Horror',
             50000090 => 'Books|Comics & Graphic Novels|Comics',
+            50000091 => 'Books|Romance|Multicultural',
+            50000092 => 'Audiobooks|Erotica',
         },
     },
-    grup => 'Grouping', #10
+    grup => { Name => 'Grouping', Avoid => 1 }, #10
     hdvd => { #10
         Name => 'HDVideo',
+        Format => 'int8u', #24
         PrintConv => { 0 => 'No', 1 => 'Yes' },
     },
     keyw => 'Keyword', #7
     ldes => 'LongDescription', #10
     pcst => { #7
         Name => 'Podcast',
+        Format => 'int8u', #23
         PrintConv => { 0 => 'No', 1 => 'Yes' },
     },
     perf => 'Performer',
@@ -4410,6 +5264,7 @@ my %graphicsMode = (
     purl => 'PodcastURL', #7
     rtng => { #10
         Name => 'Rating',
+        Format => 'int8u', #23
         PrintConv => {
             0 => 'none',
             1 => 'Explicit',
@@ -4422,161 +5277,161 @@ my %graphicsMode = (
         Format => 'int32u',
         SeparateTable => 1,
         PrintConv => { #21
-            143441 => 'United States', # USA
-            143442 => 'France', # FRA
-            143443 => 'Germany', # DEU
-            143444 => 'United Kingdom', # GBR
-            143445 => 'Austria', # AUT
-            143446 => 'Belgium', # BEL
-            143447 => 'Finland', # FIN
-            143448 => 'Greece', # GRC
-            143449 => 'Ireland', # IRL
-            143450 => 'Italy', # ITA
-            143451 => 'Luxembourg', # LUX
-            143452 => 'Netherlands', # NLD
-            143453 => 'Portugal', # PRT
-            143454 => 'Spain', # ESP
-            143455 => 'Canada', # CAN
-            143456 => 'Sweden', # SWE
-            143457 => 'Norway', # NOR
-            143458 => 'Denmark', # DNK
-            143459 => 'Switzerland', # CHE
-            143460 => 'Australia', # AUS
-            143461 => 'New Zealand', # NZL
-            143462 => 'Japan', # JPN
-            143463 => 'Hong Kong', # HKG
-            143464 => 'Singapore', # SGP
-            143465 => 'China', # CHN
-            143466 => 'Republic of Korea', # KOR
-            143467 => 'India', # IND
-            143468 => 'Mexico', # MEX
-            143469 => 'Russia', # RUS
-            143470 => 'Taiwan', # TWN
-            143471 => 'Vietnam', # VNM
-            143472 => 'South Africa', # ZAF
-            143473 => 'Malaysia', # MYS
-            143474 => 'Philippines', # PHL
-            143475 => 'Thailand', # THA
-            143476 => 'Indonesia', # IDN
-            143477 => 'Pakistan', # PAK
-            143478 => 'Poland', # POL
-            143479 => 'Saudi Arabia', # SAU
-            143480 => 'Turkey', # TUR
-            143481 => 'United Arab Emirates', # ARE
-            143482 => 'Hungary', # HUN
-            143483 => 'Chile', # CHL
-            143484 => 'Nepal', # NPL
-            143485 => 'Panama', # PAN
-            143486 => 'Sri Lanka', # LKA
-            143487 => 'Romania', # ROU
-            143489 => 'Czech Republic', # CZE
-            143491 => 'Israel', # ISR
-            143492 => 'Ukraine', # UKR
-            143493 => 'Kuwait', # KWT
-            143494 => 'Croatia', # HRV
-            143495 => 'Costa Rica', # CRI
-            143496 => 'Slovakia', # SVK
-            143497 => 'Lebanon', # LBN
-            143498 => 'Qatar', # QAT
-            143499 => 'Slovenia', # SVN
-            143501 => 'Colombia', # COL
-            143502 => 'Venezuela', # VEN
-            143503 => 'Brazil', # BRA
-            143504 => 'Guatemala', # GTM
-            143505 => 'Argentina', # ARG
-            143506 => 'El Salvador', # SLV
-            143507 => 'Peru', # PER
-            143508 => 'Dominican Republic', # DOM
-            143509 => 'Ecuador', # ECU
-            143510 => 'Honduras', # HND
-            143511 => 'Jamaica', # JAM
-            143512 => 'Nicaragua', # NIC
-            143513 => 'Paraguay', # PRY
-            143514 => 'Uruguay', # URY
-            143515 => 'Macau', # MAC
-            143516 => 'Egypt', # EGY
-            143517 => 'Kazakhstan', # KAZ
-            143518 => 'Estonia', # EST
-            143519 => 'Latvia', # LVA
-            143520 => 'Lithuania', # LTU
-            143521 => 'Malta', # MLT
-            143523 => 'Moldova', # MDA
-            143524 => 'Armenia', # ARM
-            143525 => 'Botswana', # BWA
-            143526 => 'Bulgaria', # BGR
-            143528 => 'Jordan', # JOR
-            143529 => 'Kenya', # KEN
-            143530 => 'Macedonia', # MKD
-            143531 => 'Madagascar', # MDG
-            143532 => 'Mali', # MLI
-            143533 => 'Mauritius', # MUS
-            143534 => 'Niger', # NER
-            143535 => 'Senegal', # SEN
-            143536 => 'Tunisia', # TUN
-            143537 => 'Uganda', # UGA
-            143538 => 'Anguilla', # AIA
-            143539 => 'Bahamas', # BHS
-            143540 => 'Antigua and Barbuda', # ATG
-            143541 => 'Barbados', # BRB
-            143542 => 'Bermuda', # BMU
-            143543 => 'British Virgin Islands', # VGB
-            143544 => 'Cayman Islands', # CYM
-            143545 => 'Dominica', # DMA
-            143546 => 'Grenada', # GRD
-            143547 => 'Montserrat', # MSR
-            143548 => 'St. Kitts and Nevis', # KNA
-            143549 => 'St. Lucia', # LCA
-            143550 => 'St. Vincent and The Grenadines', # VCT
-            143551 => 'Trinidad and Tobago', # TTO
-            143552 => 'Turks and Caicos', # TCA
-            143553 => 'Guyana', # GUY
-            143554 => 'Suriname', # SUR
-            143555 => 'Belize', # BLZ
-            143556 => 'Bolivia', # BOL
-            143557 => 'Cyprus', # CYP
-            143558 => 'Iceland', # ISL
-            143559 => 'Bahrain', # BHR
-            143560 => 'Brunei Darussalam', # BRN
-            143561 => 'Nigeria', # NGA
-            143562 => 'Oman', # OMN
-            143563 => 'Algeria', # DZA
-            143564 => 'Angola', # AGO
-            143565 => 'Belarus', # BLR
-            143566 => 'Uzbekistan', # UZB
-            143568 => 'Azerbaijan', # AZE
-            143571 => 'Yemen', # YEM
-            143572 => 'Tanzania', # TZA
-            143573 => 'Ghana', # GHA
-            143575 => 'Albania', # ALB
-            143576 => 'Benin', # BEN
-            143577 => 'Bhutan', # BTN
-            143578 => 'Burkina Faso', # BFA
-            143579 => 'Cambodia', # KHM
-            143580 => 'Cape Verde', # CPV
-            143581 => 'Chad', # TCD
-            143582 => 'Republic of the Congo', # COG
-            143583 => 'Fiji', # FJI
-            143584 => 'Gambia', # GMB
-            143585 => 'Guinea-Bissau', # GNB
-            143586 => 'Kyrgyzstan', # KGZ
-            143587 => "Lao People's Democratic Republic", # LAO
-            143588 => 'Liberia', # LBR
-            143589 => 'Malawi', # MWI
-            143590 => 'Mauritania', # MRT
-            143591 => 'Federated States of Micronesia', # FSM
-            143592 => 'Mongolia', # MNG
-            143593 => 'Mozambique', # MOZ
-            143594 => 'Namibia', # NAM
-            143595 => 'Palau', # PLW
-            143597 => 'Papua New Guinea', # PNG
-            143598 => 'Sao Tome and Principe', # STP (S&atilde;o Tom&eacute; and Pr&iacute;ncipe)
-            143599 => 'Seychelles', # SYC
-            143600 => 'Sierra Leone', # SLE
-            143601 => 'Solomon Islands', # SLB
-            143602 => 'Swaziland', # SWZ
-            143603 => 'Tajikistan', # TJK
-            143604 => 'Turkmenistan', # TKM
-            143605 => 'Zimbabwe', # ZWE
+            143441 => 'United States', # US
+            143442 => 'France', # FR
+            143443 => 'Germany', # DE
+            143444 => 'United Kingdom', # GB
+            143445 => 'Austria', # AT
+            143446 => 'Belgium', # BE
+            143447 => 'Finland', # FI
+            143448 => 'Greece', # GR
+            143449 => 'Ireland', # IE
+            143450 => 'Italy', # IT
+            143451 => 'Luxembourg', # LU
+            143452 => 'Netherlands', # NL
+            143453 => 'Portugal', # PT
+            143454 => 'Spain', # ES
+            143455 => 'Canada', # CA
+            143456 => 'Sweden', # SE
+            143457 => 'Norway', # NO
+            143458 => 'Denmark', # DK
+            143459 => 'Switzerland', # CH
+            143460 => 'Australia', # AU
+            143461 => 'New Zealand', # NZ
+            143462 => 'Japan', # JP
+            143463 => 'Hong Kong', # HK
+            143464 => 'Singapore', # SG
+            143465 => 'China', # CN
+            143466 => 'Republic of Korea', # KR
+            143467 => 'India', # IN
+            143468 => 'Mexico', # MX
+            143469 => 'Russia', # RU
+            143470 => 'Taiwan', # TW
+            143471 => 'Vietnam', # VN
+            143472 => 'South Africa', # ZA
+            143473 => 'Malaysia', # MY
+            143474 => 'Philippines', # PH
+            143475 => 'Thailand', # TH
+            143476 => 'Indonesia', # ID
+            143477 => 'Pakistan', # PK
+            143478 => 'Poland', # PL
+            143479 => 'Saudi Arabia', # SA
+            143480 => 'Turkey', # TR
+            143481 => 'United Arab Emirates', # AE
+            143482 => 'Hungary', # HU
+            143483 => 'Chile', # CL
+            143484 => 'Nepal', # NP
+            143485 => 'Panama', # PA
+            143486 => 'Sri Lanka', # LK
+            143487 => 'Romania', # RO
+            143489 => 'Czech Republic', # CZ
+            143491 => 'Israel', # IL
+            143492 => 'Ukraine', # UA
+            143493 => 'Kuwait', # KW
+            143494 => 'Croatia', # HR
+            143495 => 'Costa Rica', # CR
+            143496 => 'Slovakia', # SK
+            143497 => 'Lebanon', # LB
+            143498 => 'Qatar', # QA
+            143499 => 'Slovenia', # SI
+            143501 => 'Colombia', # CO
+            143502 => 'Venezuela', # VE
+            143503 => 'Brazil', # BR
+            143504 => 'Guatemala', # GT
+            143505 => 'Argentina', # AR
+            143506 => 'El Salvador', # SV
+            143507 => 'Peru', # PE
+            143508 => 'Dominican Republic', # DO
+            143509 => 'Ecuador', # EC
+            143510 => 'Honduras', # HN
+            143511 => 'Jamaica', # JM
+            143512 => 'Nicaragua', # NI
+            143513 => 'Paraguay', # PY
+            143514 => 'Uruguay', # UY
+            143515 => 'Macau', # MO
+            143516 => 'Egypt', # EG
+            143517 => 'Kazakhstan', # KZ
+            143518 => 'Estonia', # EE
+            143519 => 'Latvia', # LV
+            143520 => 'Lithuania', # LT
+            143521 => 'Malta', # MT
+            143523 => 'Moldova', # MD
+            143524 => 'Armenia', # AM
+            143525 => 'Botswana', # BW
+            143526 => 'Bulgaria', # BG
+            143528 => 'Jordan', # JO
+            143529 => 'Kenya', # KE
+            143530 => 'Macedonia', # MK
+            143531 => 'Madagascar', # MG
+            143532 => 'Mali', # ML
+            143533 => 'Mauritius', # MU
+            143534 => 'Niger', # NE
+            143535 => 'Senegal', # SN
+            143536 => 'Tunisia', # TN
+            143537 => 'Uganda', # UG
+            143538 => 'Anguilla', # AI
+            143539 => 'Bahamas', # BS
+            143540 => 'Antigua and Barbuda', # AG
+            143541 => 'Barbados', # BB
+            143542 => 'Bermuda', # BM
+            143543 => 'British Virgin Islands', # VG
+            143544 => 'Cayman Islands', # KY
+            143545 => 'Dominica', # DM
+            143546 => 'Grenada', # GD
+            143547 => 'Montserrat', # MS
+            143548 => 'St. Kitts and Nevis', # KN
+            143549 => 'St. Lucia', # LC
+            143550 => 'St. Vincent and The Grenadines', # VC
+            143551 => 'Trinidad and Tobago', # TT
+            143552 => 'Turks and Caicos', # TC
+            143553 => 'Guyana', # GY
+            143554 => 'Suriname', # SR
+            143555 => 'Belize', # BZ
+            143556 => 'Bolivia', # BO
+            143557 => 'Cyprus', # CY
+            143558 => 'Iceland', # IS
+            143559 => 'Bahrain', # BH
+            143560 => 'Brunei Darussalam', # BN
+            143561 => 'Nigeria', # NG
+            143562 => 'Oman', # OM
+            143563 => 'Algeria', # DZ
+            143564 => 'Angola', # AO
+            143565 => 'Belarus', # BY
+            143566 => 'Uzbekistan', # UZ
+            143568 => 'Azerbaijan', # AZ
+            143571 => 'Yemen', # YE
+            143572 => 'Tanzania', # TZ
+            143573 => 'Ghana', # GH
+            143575 => 'Albania', # AL
+            143576 => 'Benin', # BJ
+            143577 => 'Bhutan', # BT
+            143578 => 'Burkina Faso', # BF
+            143579 => 'Cambodia', # KH
+            143580 => 'Cape Verde', # CV
+            143581 => 'Chad', # TD
+            143582 => 'Republic of the Congo', # CG
+            143583 => 'Fiji', # FJ
+            143584 => 'Gambia', # GM
+            143585 => 'Guinea-Bissau', # GW
+            143586 => 'Kyrgyzstan', # KG
+            143587 => "Lao People's Democratic Republic", # LA
+            143588 => 'Liberia', # LR
+            143589 => 'Malawi', # MW
+            143590 => 'Mauritania', # MR
+            143591 => 'Federated States of Micronesia', # FM
+            143592 => 'Mongolia', # MN
+            143593 => 'Mozambique', # MZ
+            143594 => 'Namibia', # NA
+            143595 => 'Palau', # PW
+            143597 => 'Papua New Guinea', # PG
+            143598 => 'Sao Tome and Principe', # ST (S&atilde;o Tom&eacute; and Pr&iacute;ncipe)
+            143599 => 'Seychelles', # SC
+            143600 => 'Sierra Leone', # SL
+            143601 => 'Solomon Islands', # SB
+            143602 => 'Swaziland', # SZ
+            143603 => 'Tajikistan', # TJ
+            143604 => 'Turkmenistan', # TM
+            143605 => 'Zimbabwe', # ZW
         },
     },
     soaa => 'SortAlbumArtist', #10
@@ -4587,22 +5442,24 @@ my %graphicsMode = (
     sosn => 'SortShow', #10
     stik => { #10
         Name => 'MediaType',
+        Format => 'int8u', #23
         PrintConvColumns => 2,
         PrintConv => { #(http://weblog.xanga.com/gryphondwb/615474010/iphone-ringtones---what-did-itunes-741-really-do.html)
-            0 => 'Movie',
+            0 => 'Movie (old)', #forum9059 (was Movie)
             1 => 'Normal (Music)',
             2 => 'Audiobook',
             5 => 'Whacked Bookmark',
             6 => 'Music Video',
-            9 => 'Short Film',
+            9 => 'Movie', #forum9059 (was Short Film)
             10 => 'TV Show',
             11 => 'Booklet',
             14 => 'Ringtone',
             21 => 'Podcast', #15
+            23 => 'iTunes U', #forum9059
         },
     },
     rate => 'RatingPercent', #PH
-    titl => 'Title',
+    titl => { Name => 'Title', Avoid => 1 },
     tven => 'TVEpisodeID', #7
     tves => { #7/10
         Name => 'TVEpisode',
@@ -4617,6 +5474,7 @@ my %graphicsMode = (
     yrrc => 'Year', #(ffmpeg source)
     itnu => { #PH (iTunes 10.5)
         Name => 'iTunesU',
+        Format => 'int8s',
         Description => 'iTunes U',
         PrintConv => { 0 => 'No', 1 => 'Yes' },
     },
@@ -4626,10 +5484,24 @@ my %graphicsMode = (
     gspu => { Name => 'GooglePingURL',      Format => 'string' },
     gssd => { Name => 'GoogleSourceData',   Format => 'string' },
     gsst => { Name => 'GoogleStartTime',    Format => 'string' },
-    gstd => { Name => 'GoogleTrackDuration',Format => 'string', ValueConv => '$val / 1000',  PrintConv => 'ConvertDuration($val)' },
+    gstd => {
+        Name => 'GoogleTrackDuration',
+        Format => 'string',
+        ValueConv => '$val / 1000',
+        ValueConvInv => '$val * 1000',
+        PrintConv => 'ConvertDuration($val)',
+        PrintConvInv => q{
+           $val =~ s/ s$//;
+           my @a = split /(:| days )/, $val;
+           my $sign = ($val =~ s/^-//) ? -1 : 1;
+           $a[0] += shift(@a) * 24 if @a == 4;
+           $a[0] += shift(@a) * 60 while @a > 1;
+           return $a[0] * $sign;
+        },
+    },
 
     # atoms observed in AAX audiobooks (ref PH)
-    "\xa9cpy" => { Name => 'Copyright',  Groups => { 2 => 'Author' } },
+    "\xa9cpy" => { Name => 'Copyright', Avoid => 1, Groups => { 2 => 'Author' } },
     "\xa9pub" => 'Publisher',
     "\xa9nrt" => 'Narrator',
     '@pti' => 'ParentTitle', # (guess -- same as "\xa9nam")
@@ -4646,14 +5518,57 @@ my %graphicsMode = (
     # ausr - 30 bytes (User Alias?)
 );
 
+# tag decoded from timed face records
+%Image::ExifTool::QuickTime::FaceInfo = (
+    PROCESS_PROC => \&ProcessMOV,
+    GROUPS => { 2 => 'Video' },
+    crec => {
+        Name => 'FaceRec',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::FaceRec',
+        },
+    },
+);
+
+# tag decoded from timed face records
+%Image::ExifTool::QuickTime::FaceRec = (
+    PROCESS_PROC => \&ProcessMOV,
+    GROUPS => { 2 => 'Video' },
+    cits => {
+        Name => 'FaceItem',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Keys',
+            ProcessProc => \&Process_mebx,
+        },
+    },
+);
+
 # item list keys (ref PH)
 %Image::ExifTool::QuickTime::Keys = (
-    PROCESS_PROC => \&Image::ExifTool::QuickTime::ProcessKeys,
-    VARS => { LONG_TAGS => 1 },
+    PROCESS_PROC => \&ProcessKeys,
+    WRITE_PROC => \&WriteKeys,
+    CHECK_PROC => \&CheckQTValue,
+    VARS => { LONG_TAGS => 3 },
+    WRITABLE => 1,
+    # (not PREFERRED when writing)
+    GROUPS => { 1 => 'Keys' },
+    WRITE_GROUP => 'Keys',
+    LANG_INFO => \&GetLangInfo,
+    FORMAT => 'string',
     NOTES => q{
-        This directory contains a list of key names which are used to decode
-        ItemList tags written by the "mdta" handler.  The prefix of
-        "com.apple.quicktime." has been removed from all TagID's below.
+        This directory contains a list of key names which are used to decode tags
+        written by the "mdta" handler.  Also in this table are a few tags found in
+        timed metadata that are not yet writable by ExifTool.  The prefix of
+        "com.apple.quicktime." has been removed from the TagID's below.  These tags
+        support alternate languages in the same way as the
+        L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags> tags.  Note
+        that by default,
+        L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags> and
+        L<UserData|Image::ExifTool::TagNames/QuickTime UserData Tags> tags are
+        preferred when writing, so to create a tag when a same-named tag exists in
+        either of these tables, either the "Keys" location must be specified (eg.
+        C<-Keys:Author=Phil> on the command line), or the PREFERRED level must be
+        changed via L<the config file|../config.html#PREF>.
     },
     version     => 'Version',
     album       => 'Album',
@@ -4665,16 +5580,25 @@ my %graphicsMode = (
     creationdate=> {
         Name => 'CreationDate',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
         ValueConv => q{
             require Image::ExifTool::XMP;
             $val =  Image::ExifTool::XMP::ConvertXMPDate($val,1);
             $val =~ s/([-+]\d{2})(\d{2})$/$1:$2/; # add colon to timezone if necessary
             return $val;
         },
+        ValueConvInv => q{
+            require Image::ExifTool::XMP;
+            $val =  Image::ExifTool::XMP::FormatXMPDate($val);
+            $val =~ s/([-+]\d{2}):(\d{2})$/$1$2/; # remove time zone colon
+            return $val;
+        },
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
     description => { },
     director    => { },
+    displayname => { Name => 'DisplayName' },
     title       => { }, #22
     genre       => { },
     information => { },
@@ -4689,13 +5613,17 @@ my %graphicsMode = (
     'camera.framereadouttimeinmicroseconds' => { # (iPhone 4)
         Name => 'FrameReadoutTime',
         ValueConv => '$val * 1e-6',
+        ValueConvInv => 'int($val * 1e6 + 0.5)',
         PrintConv => '$val * 1e6 . " microseconds"',
+        PrintConvInv => '$val =~ s/ .*//; $val * 1e-6',
     },
     'location.ISO6709' => {
         Name => 'GPSCoordinates',
         Groups => { 2 => 'Location' },
         ValueConv => \&ConvertISO6709,
+        ValueConvInv => \&ConvInvISO6709,
         PrintConv => \&PrintGPSCoordinates,
+        PrintConvInv => \&PrintInvGPSCoordinates,
     },
     'location.name' => { Name => 'LocationName', Groups => { 2 => 'Location' } },
     'location.body' => { Name => 'LocationBody', Groups => { 2 => 'Location' } },
@@ -4712,17 +5640,25 @@ my %graphicsMode = (
     'location.date' => {
         Name => 'LocationDate',
         Groups => { 2 => 'Time' },
+        Shift => 'Time',
         ValueConv => q{
             require Image::ExifTool::XMP;
             $val =  Image::ExifTool::XMP::ConvertXMPDate($val);
             $val =~ s/([-+]\d{2})(\d{2})$/$1:$2/; # add colon to timezone if necessary
             return $val;
         },
+        ValueConvInv => q{
+            require Image::ExifTool::XMP;
+            $val =  Image::ExifTool::XMP::FormatXMPDate($val);
+            $val =~ s/([-+]\d{2}):(\d{2})$/$1$2/; # remove time zone colon
+            return $val;
+        },
         PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
     'direction.facing' => { Name => 'CameraDirection', Groups => { 2 => 'Location' } },
-    'direction.motion' => { Name => 'CameraMotion', Groups => { 2 => 'Location' } },
-    'location.body' => { Name => 'LocationBody', Groups => { 2 => 'Location' } },
+    'direction.motion' => { Name => 'CameraMotion',    Groups => { 2 => 'Location' } },
+    'location.body'    => { Name => 'LocationBody',    Groups => { 2 => 'Location' } },
     'player.version'                => 'PlayerVersion',
     'player.movie.visual.brightness'=> 'Brightness',
     'player.movie.visual.color'     => 'Color',
@@ -4741,6 +5677,64 @@ my %graphicsMode = (
     'rating.user'  => 'UserRating', # (Canon ELPH 510 HS)
     'collection.user' => 'UserCollection', #22
     'Encoded_With' => 'EncodedWith',
+#
+# the following tags aren't in the com.apple.quicktime namespace:
+#
+    'com.apple.photos.captureMode' => 'CaptureMode',
+    'com.android.version' => 'AndroidVersion',
+#
+# also seen
+#
+    # com.divergentmedia.clipwrap.model            ('NEX-FS700EK')
+    # com.divergentmedia.clipwrap.model1           ('49')
+    # com.divergentmedia.clipwrap.model2           ('0')
+    # com.divergentmedia.clipwrap.manufacturer     ('Sony')
+    # com.divergentmedia.clipwrap.originalDateTime ('2013/2/6 10:30:40+0200')
+#
+# seen in timed metadata (mebx), and added dynamically to the table
+# via SaveMetaKeys().  NOTE: these tags are not writable!
+#
+    # (mdta)com.apple.quicktime.video-orientation (dtyp=66, int16s)
+    'video-orientation' => { Name => 'VideoOrientation', Writable => 0 },
+    # (mdta)com.apple.quicktime.live-photo-info (dtyp=com.apple.quicktime.com.apple.quicktime.live-photo-info)
+    'live-photo-info' => {
+        Name => 'LivePhotoInfo',
+        Writable => 0,
+        # not sure what these values mean, but unpack them anyway - PH
+        # (ignore the fact that the "f" and "l" unpacks won't work on a big-endian machine)
+        ValueConv => 'join " ",unpack "VfVVf6c4lCCcclf4Vvv", $val',
+    },
+    # (mdta)com.apple.quicktime.still-image-time (dtyp=65, int8s)
+    'still-image-time' => { # (found in live photo)
+        Name => 'StillImageTime',
+        Writable => 0,
+        Notes => q{
+            this tag always has a value of -1; the time of the still image is obtained
+            from the associated SampleTime
+        },
+    },
+    # (mdta)com.apple.quicktime.detected-face (dtyp='com.apple.quicktime.detected-face')
+    'detected-face' => {
+        Name => 'FaceInfo',
+        Writable => 0,
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::FaceInfo' },
+    },
+    # ---- detected-face fields ( ----
+    # --> back here after a round trip through FaceInfo -> FaceRec -> FaceItem
+    # (fiel)com.apple.quicktime.detected-face.bounds (dtyp=80, float[8])
+    'detected-face.bounds' => {
+        Name => 'DetectedFaceBounds',
+        Writable => 0,
+        # round to a reasonable number of decimal places
+        PrintConv => 'my @a=split " ",$val;$_=int($_*1e6+.5)/1e6 foreach @a;join " ",@a',
+        PrintConvInv => '$val',
+    },
+    # (fiel)com.apple.quicktime.detected-face.face-id (dtyp=77, int32u)
+    'detected-face.face-id'    => { Name => 'DetectedFaceID',        Writable => 0 },
+    # (fiel)com.apple.quicktime.detected-face.roll-angle (dtyp=23, float)
+    'detected-face.roll-angle' => { Name => 'DetectedFaceRollAngle', Writable => 0 },
+    # (fiel)com.apple.quicktime.detected-face.yaw-angle (dtyp=23, float)
+    'detected-face.yaw-angle'  => { Name => 'DetectedFaceYawAngle',  Writable => 0 },
 );
 
 # iTunes info ('----') atoms
@@ -4821,7 +5815,7 @@ my %graphicsMode = (
     PROCESS_PROC => \&ProcessEncodingParams,
     GROUPS => { 2 => 'Audio' },
     # (I have commented out the ones that don't have integer values because they
-    #  probably don't appear, and definitly wouldn't work with current decoding - PH)
+    #  probably don't appear, and definitely wouldn't work with current decoding - PH)
 
     # global codec properties
     #'lnam' => 'AudioCodecName',
@@ -4989,6 +5983,7 @@ my %graphicsMode = (
 %Image::ExifTool::QuickTime::MediaHeader = (
     PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
     WRITE_PROC => \&Image::ExifTool::WriteBinaryData,
+    CHECK_PROC => \&Image::ExifTool::CheckBinaryData,
     GROUPS => { 1 => 'Track#', 2 => 'Video' },
     FORMAT => 'int32u',
     DATAMEMBER => [ 0, 1, 2, 3, 4 ],
@@ -5038,6 +6033,7 @@ my %graphicsMode = (
 # MP4 media information box (ref 5)
 %Image::ExifTool::QuickTime::MediaInfo = (
     PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
     GROUPS => { 1 => 'Track#', 2 => 'Video' },
     NOTES => 'MP4 media info box.',
     vmhd => {
@@ -5057,7 +6053,7 @@ my %graphicsMode = (
         Flags => ['Binary','Unknown'],
     },
     dinf => {
-        Name => 'DataInfo',
+        Name => 'DataInfo', # (don't change this name -- used to recognize directory when writing)
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::DataInfo' },
     },
     gmhd => {
@@ -5112,6 +6108,7 @@ my %graphicsMode = (
 # MP4 sample table box (ref 5)
 %Image::ExifTool::QuickTime::SampleTable = (
     PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime,
     GROUPS => { 2 => 'Video' },
     NOTES => 'MP4 sample table box.',
     stsd => [
@@ -5120,27 +6117,34 @@ my %graphicsMode = (
             Condition => '$$self{HandlerType} and $$self{HandlerType} eq "soun"',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::QuickTime::AudioSampleDesc',
-                Start => 8, # skip version number and count
+                ProcessProc => \&ProcessSampleDesc,
             },
         },{
             Name => 'VideoSampleDesc',
             Condition => '$$self{HandlerType} and $$self{HandlerType} eq "vide"',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::QuickTime::ImageDesc',
-                Start => 8, # skip version number and count
+                ProcessProc => \&ProcessSampleDesc,
             },
         },{
             Name => 'HintSampleDesc',
             Condition => '$$self{HandlerType} and $$self{HandlerType} eq "hint"',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::QuickTime::HintSampleDesc',
-                Start => 8, # skip version number and count
+                ProcessProc => \&ProcessSampleDesc,
+            },
+        },{
+            Name => 'MetaSampleDesc',
+            Condition => '$$self{HandlerType} and $$self{HandlerType} eq "meta"',
+            SubDirectory => {
+                TagTable => 'Image::ExifTool::QuickTime::MetaSampleDesc',
+                ProcessProc => \&ProcessSampleDesc,
             },
         },{
             Name => 'OtherSampleDesc',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::QuickTime::OtherSampleDesc',
-                Start => 8, # skip version number and count
+                ProcessProc => \&ProcessSampleDesc,
             },
         },
         # (Note: "alis" HandlerType handled by the parent audio or video handler)
@@ -5211,6 +6215,12 @@ my %graphicsMode = (
     sgpd => {
         Name => 'SampleGroupDescription',
         Flags => ['Binary','Unknown'],
+        # bytes 4-7 give grouping type (ref ISO/IEC 14496-15:2014) 
+        #   tsas - temporal sublayer sample
+        #   stsa - step-wise temporal layer access
+        #   avss - AVC sample
+        #   tscl - temporal layer scaleability
+        #   sync - sync sample
     },
     subs => {
         Name => 'Sub-sampleInformation',
@@ -5224,6 +6234,7 @@ my %graphicsMode = (
         Name => 'PartialSyncSamples',
         ValueConv => 'join " ",unpack("x8N*",$val)',
     },
+    # mark - 8 bytes all zero (GoPro)
 );
 
 # MP4 audio sample description box (ref 5/AtomicParsley 0.9.4 parsley.cpp)
@@ -5245,6 +6256,8 @@ my %graphicsMode = (
             $self->OverrideFileType('M4P') if $val eq 'drms' and $$self{VALUE}{FileType} eq 'M4A';
             return $val;
         },
+        # see this link for print conversions (not complete):
+        # https://github.com/yannickcr/brooser/blob/master/php/librairies/getid3/module.audio-video.quicktime.php
     },
     20 => { #PH
         Name => 'AudioVendorID',
@@ -5262,7 +6275,7 @@ my %graphicsMode = (
 #
 #   AudioFormat  Offset  Child atoms
 #   -----------  ------  ----------------
-#   mp4a         52 *    wave, chan, esds
+#   mp4a         52 *    wave, chan, esds, SA3D(Insta360 spherical video params?)
 #   in24         52      wave, chan
 #   "ms\0\x11"   52      wave
 #   sowt         52      chan
@@ -5282,7 +6295,7 @@ my %graphicsMode = (
         Name => 'ProtectionInfo', #3
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ProtectionInfo' },
     },
-    # chan - 16/36 bytes
+    # f - 16/36 bytes
     # esds - 31/40/42/43 bytes - ES descriptor (ref 3)
     damr => { #3
         Name => 'DecodeConfig',
@@ -5292,6 +6305,10 @@ my %graphicsMode = (
         Name => 'Wave',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Wave' },
     },
+    chan => {
+        Name => 'AudioChannelLayout',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ChannelLayout' },
+    }
     # alac - 28 bytes
     # adrm - AAX DRM atom? 148 bytes
     # aabd - AAX unknown 17kB (contains 'aavd' strings)
@@ -5333,6 +6350,298 @@ my %graphicsMode = (
     PROCESS_PROC => \&ProcessMOV,
     frma => 'PurchaseFileFormat',
     # "ms\0\x11" - 20 bytes
+);
+
+# audio channel layout (ref CoreAudioTypes.h)
+%Image::ExifTool::QuickTime::ChannelLayout = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 2 => 'Audio' },
+    DATAMEMBER => [ 0, 8 ],
+    NOTES => 'Audio channel layout.',
+    # 0 - version and flags
+    4 => {
+        Name => 'LayoutFlags',
+        Format => 'int16u',
+        RawConv => '$$self{LayoutFlags} = $val',
+        PrintConvColumns => 2,
+        PrintConv => {
+            0 => 'UseDescriptions',
+            1 => 'UseBitmap',
+            100 => 'Mono',
+            101 => 'Stereo',
+            102 => 'StereoHeadphones',
+            100 => 'Mono',
+            101 => 'Stereo',
+            102 => 'StereoHeadphones',
+            103 => 'MatrixStereo',
+            104 => 'MidSide',
+            105 => 'XY',
+            106 => 'Binaural',
+            107 => 'Ambisonic_B_Format',
+            108 => 'Quadraphonic',
+            109 => 'Pentagonal',
+            110 => 'Hexagonal',
+            111 => 'Octagonal',
+            112 => 'Cube',
+            113 => 'MPEG_3_0_A',
+            114 => 'MPEG_3_0_B',
+            115 => 'MPEG_4_0_A',
+            116 => 'MPEG_4_0_B',
+            117 => 'MPEG_5_0_A',
+            118 => 'MPEG_5_0_B',
+            119 => 'MPEG_5_0_C',
+            120 => 'MPEG_5_0_D',
+            121 => 'MPEG_5_1_A',
+            122 => 'MPEG_5_1_B',
+            123 => 'MPEG_5_1_C',
+            124 => 'MPEG_5_1_D',
+            125 => 'MPEG_6_1_A',
+            126 => 'MPEG_7_1_A',
+            127 => 'MPEG_7_1_B',
+            128 => 'MPEG_7_1_C',
+            129 => 'Emagic_Default_7_1',
+            130 => 'SMPTE_DTV',
+            131 => 'ITU_2_1',
+            132 => 'ITU_2_2',
+            133 => 'DVD_4',
+            134 => 'DVD_5',
+            135 => 'DVD_6',
+            136 => 'DVD_10',
+            137 => 'DVD_11',
+            138 => 'DVD_18',
+            139 => 'AudioUnit_6_0',
+            140 => 'AudioUnit_7_0',
+            141 => 'AAC_6_0',
+            142 => 'AAC_6_1',
+            143 => 'AAC_7_0',
+            144 => 'AAC_Octagonal',
+            145 => 'TMH_10_2_std',
+            146 => 'TMH_10_2_full',
+            147 => 'DiscreteInOrder',
+            148 => 'AudioUnit_7_0_Front',
+            149 => 'AC3_1_0_1',
+            150 => 'AC3_3_0',
+            151 => 'AC3_3_1',
+            152 => 'AC3_3_0_1',
+            153 => 'AC3_2_1_1',
+            154 => 'AC3_3_1_1',
+            155 => 'EAC_6_0_A',
+            156 => 'EAC_7_0_A',
+            157 => 'EAC3_6_1_A',
+            158 => 'EAC3_6_1_B',
+            159 => 'EAC3_6_1_C',
+            160 => 'EAC3_7_1_A',
+            161 => 'EAC3_7_1_B',
+            162 => 'EAC3_7_1_C',
+            163 => 'EAC3_7_1_D',
+            164 => 'EAC3_7_1_E',
+            165 => 'EAC3_7_1_F',
+            166 => 'EAC3_7_1_G',
+            167 => 'EAC3_7_1_H',
+            168 => 'DTS_3_1',
+            169 => 'DTS_4_1',
+            170 => 'DTS_6_0_A',
+            171 => 'DTS_6_0_B',
+            172 => 'DTS_6_0_C',
+            173 => 'DTS_6_1_A',
+            174 => 'DTS_6_1_B',
+            175 => 'DTS_6_1_C',
+            176 => 'DTS_7_0',
+            177 => 'DTS_7_1',
+            178 => 'DTS_8_0_A',
+            179 => 'DTS_8_0_B',
+            180 => 'DTS_8_1_A',
+            181 => 'DTS_8_1_B',
+            182 => 'DTS_6_1_D',
+            183 => 'AAC_7_1_B',
+            0xffff => 'Unknown',
+        },
+    },
+    6  => {
+        Name => 'AudioChannels',
+        Condition => '$$self{LayoutFlags} != 0 and $$self{LayoutFlags} != 1',
+        Format => 'int16u',
+    },
+    8 => {
+        Name => 'AudioChannelTypes',
+        Condition => '$$self{LayoutFlags} == 1',
+        Format => 'int32u',
+        PrintConv => { BITMASK => {
+            0 => 'Left',
+            1 => 'Right',
+            2 => 'Center',
+            3 => 'LFEScreen',
+            4 => 'LeftSurround',
+            5 => 'RightSurround',
+            6 => 'LeftCenter',
+            7 => 'RightCenter',
+            8 => 'CenterSurround',
+            9 => 'LeftSurroundDirect',
+            10 => 'RightSurroundDirect',
+            11 => 'TopCenterSurround',
+            12 => 'VerticalHeightLeft',
+            13 => 'VerticalHeightCenter',
+            14 => 'VerticalHeightRight',
+            15 => 'TopBackLeft',
+            16 => 'TopBackCenter',
+            17 => 'TopBackRight',
+        }},
+    },
+    12  => {
+        Name => 'NumChannelDescriptions',
+        Condition => '$$self{LayoutFlags} == 1',
+        Format => 'int32u',
+        RawConv => '$$self{NumChannelDescriptions} = $val',
+    },
+    16 => {
+        Name => 'Channel1Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 0',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    20 => {
+        Name => 'Channel1Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 0',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    24 => {
+        Name => 'Channel1Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 0',
+        Notes => q{
+            3 numbers:  for rectangular coordinates left/right, back/front, down/up; for
+            spherical coordinates left/right degrees, down/up degrees, distance
+        },
+        Format => 'float[3]',
+    },
+    36 => {
+        Name => 'Channel2Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 1',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    40 => {
+        Name => 'Channel2Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 1',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    44 => {
+        Name => 'Channel2Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 1',
+        Format => 'float[3]',
+    },
+    56 => {
+        Name => 'Channel3Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 2',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    60 => {
+        Name => 'Channel3Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 2',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    64 => {
+        Name => 'Channel3Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 2',
+        Format => 'float[3]',
+    },
+    76 => {
+        Name => 'Channel4Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 3',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    80 => {
+        Name => 'Channel4Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 3',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    84 => {
+        Name => 'Channel4Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 3',
+        Format => 'float[3]',
+    },
+    96 => {
+        Name => 'Channel5Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 4',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    100 => {
+        Name => 'Channel5Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 4',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    104 => {
+        Name => 'Channel5Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 4',
+        Format => 'float[3]',
+    },
+    116 => {
+        Name => 'Channel6Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 5',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    120 => {
+        Name => 'Channel6Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 5',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    124 => {
+        Name => 'Channel6Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 5',
+        Format => 'float[3]',
+    },
+    136 => {
+        Name => 'Channel7Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 6',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    140 => {
+        Name => 'Channel7Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 6',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    144 => {
+        Name => 'Channel7Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 6',
+        Format => 'float[3]',
+    },
+    156 => {
+        Name => 'Channel8Label',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 7',
+        Format => 'int32u',
+        SeparateTable => 'ChannelLabel',
+        PrintConv => \%channelLabel,
+    },
+    160 => {
+        Name => 'Channel8Flags',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 7',
+        Format => 'int32u',
+        PrintConv => { BITMASK => { 0 => 'Rectangular', 1 => 'Spherical', 2 => 'Meters' }},
+    },
+    164 => {
+        Name => 'Channel8Coordinates',
+        Condition => '$$self{LayoutFlags} == 1 and $$self{NumChannelDescriptions} > 7',
+        Format => 'float[3]',
+    },
+    # (arbitrarily decode only first 8 channels)
 );
 
 # scheme type atom
@@ -5420,10 +6729,47 @@ my %graphicsMode = (
     snro => { Name => 'SequenceNumberRandomOffset', Format => 'int32u' },
 );
 
+# MP4 metadata sample description box
+%Image::ExifTool::QuickTime::MetaSampleDesc = (
+    PROCESS_PROC => \&ProcessHybrid,
+    NOTES => 'MP4 metadata sample description.',
+    4 => {
+        Name => 'MetaFormat',
+        Format => 'undef[4]',
+        RawConv => '$$self{MetaFormat} = $val',
+    },
+#
+# Observed offsets for child atoms of various MetaFormat types:
+#
+#   MetaFormat   Offset  Child atoms
+#   -----------  ------  ----------------
+#   mebx         24      keys,btrt,lidp,lidl
+#   fdsc         -       -
+#   gpmd         -       -
+#   rtmd         -       -
+#   CTMD         -       -
+#
+   'keys' => { #PH (iPhone7+ hevc)
+        Name => 'Keys',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Keys',
+            ProcessProc => \&ProcessMetaKeys,
+        },
+    },
+    btrt => {
+        Name => 'BitrateInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Bitrate' },
+    },
+);
+
 # MP4 generic sample description box
 %Image::ExifTool::QuickTime::OtherSampleDesc = (
     PROCESS_PROC => \&ProcessHybrid,
-    4 => { Name => 'OtherFormat', Format => 'undef[4]' },
+    4 => {
+        Name => 'OtherFormat',
+        Format => 'undef[4]',
+        RawConv => '$$self{MetaFormat} = $val', # (yes, use MetaFormat for this too)
+    },
 #
 # Observed offsets for child atoms of various OtherFormat types:
 #
@@ -5433,13 +6779,16 @@ my %graphicsMode = (
 #   mp4a         36      esds
 #   mp4s         16      esds
 #   tmcd         34      name
+#   data         -       -
 #
     ftab => { Name => 'FontTable',  Format => 'undef', ValueConv => 'substr($val, 5)' },
+    name => { Name => 'OtherName',  Format => 'undef', ValueConv => 'substr($val, 4)' },
 );
 
 # MP4 data information box (ref 5)
 %Image::ExifTool::QuickTime::DataInfo = (
     PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime, # (necessary to parse dref even though we don't change it)
     NOTES => 'MP4 data information box.',
     dref => {
         Name => 'DataRef',
@@ -5540,8 +6889,18 @@ my %graphicsMode = (
 # MP4 data reference box (ref 5)
 %Image::ExifTool::QuickTime::DataRef = (
     PROCESS_PROC => \&ProcessMOV,
+    WRITE_PROC => \&WriteQuickTime, # (necessary to parse dref even though we don't change it)
     NOTES => 'MP4 data reference box.',
     'url ' => {
+        Name => 'URL',
+        Format => 'undef',  # (necessary to prevent decoding as string!)
+        RawConv => q{
+            # ignore if self-contained (flags bit 0 set)
+            return undef if unpack("N",$val) & 0x01;
+            $_ = substr($val,4); s/\0.*//s; $_;
+        },
+    },
+    "url\0" => { # (written by GoPro)
         Name => 'URL',
         Format => 'undef',  # (necessary to prevent decoding as string!)
         RawConv => q{
@@ -5555,7 +6914,7 @@ my %graphicsMode = (
         Format => 'undef',  # (necessary to prevent decoding as string!)
         RawConv => q{
             return undef if unpack("N",$val) & 0x01;
-            $_ = substr($val,4); s/\0.*//s; $_;
+            $_ = substr($val,4); s/\0+/; /; s/\0.*//s; $_;
         },
     },
 );
@@ -5599,6 +6958,11 @@ my %graphicsMode = (
             vide => 'Video Track',
             subp => 'Subpicture', #http://www.google.nl/patents/US7778526
             nrtm => 'Non-Real Time Metadata', #PH (Sony ILCE-7S) [how is this different from "meta"?]
+            pict => 'Picture', # (HEIC images)
+            camm => 'Camera Metadata', # (Insta360 MP4)
+            psmd => 'Panasonic Static Metadata', #PH (Leica C-Lux CAM-DC25)
+            data => 'Data', #PH (GPS and G-sensor data from DataKam)
+            sbtl => 'Subtitle', #PH (TomTom Bandit Action Cam)
         },
     },
     12 => { #PH
@@ -5642,15 +7006,84 @@ my %graphicsMode = (
     },
 );
 
+# atoms in Pittasoft "free" atom
+%Image::ExifTool::QuickTime::Pittasoft = (
+    PROCESS_PROC => \&ProcessMOV,
+    NOTES => 'Tags found in Pittasoft Blackvue dashcam "free" data.',
+    cprt => 'Copyright',
+    thum => {
+        Name => 'PreviewImage',
+        Groups => { 2 => 'Preview' },
+        Binary => 1,
+        RawConv => q{
+            return undef unless length $val > 4;
+            my $len = unpack('N', $val);
+            return undef unless length $val >= 4 + $len;
+            return substr($val, 4, $len);
+        },
+    },
+    ptnm => {
+        Name => 'OriginalFileName',
+        ValueConv => 'substr($val, 4, -1)',
+    },
+    ptrh => {
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Pittasoft' },
+        # contains these atoms:
+        # ptvi - 27 bytes: '..avc1...'
+        # ptso - 16 bytes: '..mp4a...'
+    },
+    'gps ' => {
+        Name => 'GPSLog',
+        Binary => 1,    # (ASCII NMEA track log with leading timestamps)
+        Notes => 'parsed to extract GPS separately when ExtractEmbedded is used',
+        RawConv => q{
+            $val =~ s/\0+$//;   # remove trailing nulls
+            if (length $val and $$self{OPTIONS}{ExtractEmbedded}) {
+                my $tagTbl = GetTagTable('Image::ExifTool::QuickTime::Stream');
+                Image::ExifTool::QuickTime::ProcessNMEA($self, { DataPt => \$val }, $tagTbl);
+            }
+            return $val;
+        },
+    },
+    '3gf ' => {
+        Name => 'AccelData',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Stream',
+            ProcessProc => \&Process_3gf,
+        },
+    },
+    sttm => {
+        Name => 'StartTime',
+        Format => 'int64u',
+        Groups => { 2 => 'Time' },
+        RawConv => '$$self{StartTime} = $val',
+        # (ms since Jan 1, 1970, in local time zone - PH)
+        ValueConv => q{
+            my $secs = int($val / 1000);
+            return ConvertUnixTime($secs) . sprintf(".%03d",$val - $secs * 1000);
+        },
+        PrintConv => '$self->ConvertDateTime($val)',
+    },
+);
+
 # QuickTime composite tags
 %Image::ExifTool::QuickTime::Composite = (
     GROUPS => { 2 => 'Video' },
     Rotation => {
+        Notes => q{
+            writing this tag updates QuickTime MatrixStructure for all tracks with a
+            non-zero image size
+        },
         Require => {
             0 => 'QuickTime:MatrixStructure',
             1 => 'QuickTime:HandlerType',
         },
+        Writable => 1,
+        WriteAlso => {
+            MatrixStructure => 'Image::ExifTool::QuickTime::GetRotationMatrix($val)',
+        },
         ValueConv => 'Image::ExifTool::QuickTime::CalcRotation($self)',
+        ValueConvInv => '$val',
     },
     AvgBitrate => {
         Priority => 0,  # let QuickTime::AvgBitrate take priority
@@ -5750,11 +7183,47 @@ Image::ExifTool::AddCompositeTags('Image::ExifTool::QuickTime');
 
 
 #------------------------------------------------------------------------------
-# AutoLoad our writer routines when necessary
+# AutoLoad our routines when necessary
 #
 sub AUTOLOAD
 {
-    return Image::ExifTool::DoAutoLoad($AUTOLOAD, @_);
+    # (Note: no need to autoload routines in QuickTimeStream that use Stream table)
+    if ($AUTOLOAD eq 'Image::ExifTool::QuickTime::Process_mebx') {
+        require 'Image/ExifTool/QuickTimeStream.pl';
+        no strict 'refs';
+        return &$AUTOLOAD(@_);
+    } else {
+        return Image::ExifTool::DoAutoLoad($AUTOLOAD, @_);
+    }
+}
+
+#------------------------------------------------------------------------------
+# Get rotation matrix
+# Inputs: 0) angle in degrees
+# Returns: 9-element rotation matrix as a string (with 0 x/y offsets)
+sub GetRotationMatrix($)
+{
+    my $ang = 3.1415926536 * shift() / 180;
+    my $cos = cos $ang;
+    my $sin = sin $ang;
+    my $msn = -$sin;
+    return "$cos $sin 0 $msn $cos 0 0 0 1";
+}
+
+#------------------------------------------------------------------------------
+# Get rotation angle from a matrix
+# Inputs: 0) rotation matrix as a string
+# Return: positive rotation angle in degrees rounded to 3 decimal points,
+#         or undef on error
+sub GetRotationAngle($)
+{
+    my $rotMatrix = shift;
+    my @a = split ' ', $rotMatrix;
+    return undef if $a[0]==0 and $a[1]==0;
+    # calculate the rotation angle (assume uniform rotation)
+    my $angle = atan2($a[1], $a[0]) * 180 / 3.14159;
+    $angle += 360 if $angle < 0;
+    return int($angle * 1000 + 0.5) / 1000;
 }
 
 #------------------------------------------------------------------------------
@@ -5782,14 +7251,38 @@ sub CalcRotation($)
         my $tag = "MatrixStructure$idx";
         last unless $$value{$tag};
         next unless $et->GetGroup($tag, 1) eq $track;
-        my @a = split ' ', $$value{$tag};
-        return undef unless $a[0] or $a[1];
-        # calculate the rotation angle (assume uniform rotation)
-        my $angle = atan2($a[1], $a[0]) * 180 / 3.14159;
-        $angle += 360 if $angle < 0;
-        return int($angle * 1000 + 0.5) / 1000;
+        return GetRotationAngle($$value{$tag});
     }
     return undef;
+}
+
+#------------------------------------------------------------------------------
+# Get MatrixStructure for a given rotation angle
+# Inputs: 0) rotation angle (deg), 1) ExifTool ref
+# Returns: matrix structure as a string, or undef if it can't be rotated
+# - requires ImageSizeLookahead to determine the video image size, and doesn't
+#   rotate matrix unless image size is valid
+sub GetMatrixStructure($$)
+{
+    my ($val, $et) = @_;
+    my @a = split ' ', $val;
+    # pass straight through if it already has an offset
+    return $val unless $a[6] == 0 and $a[7] == 0;
+    my @s = split ' ', $$et{ImageSizeLookahead};
+    my ($w, $h) = @s[12,13];
+    return undef unless $w and $h;  # don't rotate 0-sized track
+    $_ = Image::ExifTool::QuickTime::FixWrongFormat($_) foreach $w,$h;
+    # apply necessary offsets for the standard rotations
+    my $angle = GetRotationAngle($val);
+    return undef unless defined $angle;
+    if ($angle == 90) {
+        @a[6,7] = ($h, 0);
+    } elsif ($angle == 180) {
+        @a[6,7] = ($w, $h);
+    } elsif ($angle == 270) {
+        @a[6,7] = (0, $w);
+    }
+    return "@a";
 }
 
 #------------------------------------------------------------------------------
@@ -5816,10 +7309,7 @@ sub FixWrongFormat($)
 {
     my $val = shift;
     return undef unless $val;
-    if ($val & 0xffff0000) {
-        $val = unpack('n',pack('N',$val));
-    }
-    return $val;
+    return $val & 0xfff00000 ? unpack('n',pack('N',$val)) : $val;
 }
 
 #------------------------------------------------------------------------------
@@ -5891,7 +7381,12 @@ sub PrintChapter($)
     $dur -= $h * 3600;
     my $m = int($dur / 60);
     my $s = $dur - $m * 60;
-    return sprintf("[%d:%.2d:%06.3f] %s",$h,$m,$s,$title);
+    my $ss = sprintf('%06.3f', $s);
+    if ($ss >= 60) {
+        $ss = '00.000';
+        ++$m >= 60 and $m -= 60, ++$h;
+    }
+    return sprintf("[%d:%.2d:%s] %s",$h,$m,$ss,$title);
 }
 
 #------------------------------------------------------------------------------
@@ -5913,20 +7408,44 @@ sub PrintGPSCoordinates($)
 
 #------------------------------------------------------------------------------
 # Unpack packed ISO 639/T language code
-# Inputs: 0) packed language code (or undef)
-# Returns: language code, or undef for default language, or 'err' for format error
-sub UnpackLang($)
+# Inputs: 0) packed language code (or undef/0), 1) true to not treat 'und' and 'eng' as default
+# Returns: language code, or undef/0 for default language, or 'err' for format error
+sub UnpackLang($;$)
 {
-    my $lang = shift;
+    my ($lang, $noDef) = @_;
     if ($lang) {
         # language code is packed in 5-bit characters
-        $lang = pack "C*", map { (($lang>>$_)&0x1f)+0x60 } 10, 5, 0;
+        $lang = pack 'C*', map { (($lang>>$_)&0x1f)+0x60 } 10, 5, 0;
         # validate language code
         if ($lang =~ /^[a-z]+$/) {
             # treat 'eng' or 'und' as the default language
-            undef $lang if $lang eq 'und' or $lang eq 'eng';
+            undef $lang if ($lang eq 'und' or $lang eq 'eng') and not $noDef;
         } else {
             $lang = 'err';  # invalid language code
+        }
+    }
+    return $lang;
+}
+
+#------------------------------------------------------------------------------
+# Get language code string given QuickTime language and country codes
+# Inputs: 0) numerical language code, 1) numerical country code, 2) no defaults
+# Returns: language code string (ie. "fra-FR") or undef for default language
+sub GetLangCode($;$$)
+{
+    my ($lang, $ctry, $noDef) = @_;
+    # ignore country ('ctry') and language lists ('lang') for now
+    undef $ctry if $ctry and $ctry <= 255;
+    undef $lang if $lang and $lang <= 255;
+    $lang = UnpackLang($lang, $noDef);
+    # add country code if specified
+    if ($ctry) {
+        $ctry = unpack('a2',pack('n',$ctry)); # unpack as ISO 3166-1
+        # treat 'ZZ' like a default country (see ref 12)
+        undef $ctry if $ctry eq 'ZZ';
+        if ($ctry and $ctry =~ /^[A-Z]{2}$/) {
+            $lang or $lang = 'und';
+            $lang .= "-$ctry";
         }
     }
     return $lang;
@@ -5945,6 +7464,448 @@ sub GetLangInfoQT($$$)
         push @{$$et{QTLang}}, $$langInfo{Name};
     }
     return $langInfo;
+}
+
+#------------------------------------------------------------------------------
+# Get variable-length integer from data (used by ParseItemLocation)
+# Inputs: 0) data ref, 1) start position, 2) integer size in bytes (0, 4 or 8),
+#         3) default value
+# Returns: integer value, and updates current position
+sub GetVarInt($$$;$)
+{
+    my ($dataPt, $pos, $n, $default) = @_;
+    my $len = length $$dataPt;
+    $_[1] = $pos + $n;  # update current position
+    return undef if $pos + $n > $len;
+    if ($n == 0) {
+        return $default || 0;
+    } elsif ($n == 4) {
+        return Get32u($dataPt, $pos);
+    } elsif ($n == 8) {
+        return Get64u($dataPt, $pos);
+    }
+    return undef;
+}
+
+#------------------------------------------------------------------------------
+# Get null-terminated string from binary data (used by ParseItemInfoEntry)
+# Inputs: 0) data ref, 1) start position
+# Returns: string, and updates current position
+sub GetString($$)
+{
+    my ($dataPt, $pos) = @_;
+    my $len = length $$dataPt;
+    my $str = '';
+    while ($pos < $len) {
+        my $ch = substr($$dataPt, $pos, 1);
+        ++$pos;
+        last if ord($ch) == 0;
+        $str .= $ch;
+    }
+    $_[1] = $pos;   # update current position
+    return $str;
+}
+
+#------------------------------------------------------------------------------
+# Get a printable version of the tag ID
+# Inputs: 0) tag ID, 1) Flag: 0x01 - print as 4- or 8-digit hex value if necessary
+#                             0x02 - put leading backslash before escaped character
+# Returns: Printable tag ID
+sub PrintableTagID($;$)
+{
+    my $tag = $_[0];
+    my $n = ($tag =~ s/([\x00-\x1f\x7f-\xff])/'x'.unpack('H*',$1)/eg);
+    if ($n and $_[1]) {
+        if ($n > 2 and $_[1] & 0x01) {
+            $tag = '0x' . unpack('H8', $_[0]);
+            $tag =~ s/^0x0000/0x/;
+        } elsif ($_[1] & 0x02) {
+            ($tag = $_[0]) =~ s/([\x00-\x1f\x7f-\xff])/'\\x'.unpack('H*',$1)/eg;
+        }
+    }
+    return $tag;
+}
+
+#==============================================================================
+# The following ParseXxx routines parse various boxes to extract this
+# information about embedded items in a $$et{ItemInfo} hash, keyed by item ID:
+#
+# iloc:
+#  ConstructionMethod - offset type: 0=file, 1=idat, 2=item
+#  DataReferenceIndex - 0 for "this file", otherwise index in dref box
+#  BaseOffset         - base for file offsets
+#  Extents            - list of index,offset,length,nlen,lenPt details for data in file
+# infe:
+#  ProtectionIndex    - index if item is protected (0 for unprotected)
+#  Name               - item name
+#  ContentType        - mime type of item
+#  ContentEncoding    - item encoding
+#  URI                - URI of a 'uri '-type item
+# ipma:
+#  Association        - list of associated properties in the ipco container
+#  Essential          - list of "essential" flags for the associated properties
+# cdsc:
+#  RefersTo           - hash lookup of flags based on referred item ID
+# other:
+#  DocNum             - exiftool document number for this item
+#
+#------------------------------------------------------------------------------
+# Parse item location (iloc) box (ref ISO 14496-12:2015 pg.79)
+# Inputs: 0) iloc data, 1) ExifTool ref
+# Returns: undef, and fills in ExifTool ItemInfo hash
+# Notes: see also Handle_iloc() in WriteQuickTime.pl
+sub ParseItemLocation($$)
+{
+    my ($val, $et) = @_;
+    my ($i, $j, $num, $pos, $id);
+    my ($extent_index, $extent_offset, $extent_length);
+
+    my $verbose = $$et{IsWriting} ? 0 : $et->Options('Verbose');
+    my $items = $$et{ItemInfo} || ($$et{ItemInfo} = { });
+    my $len = length $val;
+    return undef if $len < 8;
+    my $ver = Get8u(\$val, 0);
+    my $siz = Get16u(\$val, 4);
+    my $noff = ($siz >> 12);
+    my $nlen = ($siz >> 8) & 0x0f;
+    my $nbas = ($siz >> 4) & 0x0f;
+    my $nind = $siz & 0x0f;
+    if ($ver < 2) {
+        $num = Get16u(\$val, 6);
+        $pos = 8;
+    } else {
+        return undef if $len < 10;
+        $num = Get32u(\$val, 6);
+        $pos = 10;
+    }
+    for ($i=0; $i<$num; ++$i) {
+        if ($ver < 2) {
+            return undef if $pos + 2 > $len;
+            $id = Get16u(\$val, $pos);
+            $pos += 2;
+        } else {
+            return undef if $pos + 4 > $len;
+            $id = Get32u(\$val, $pos);
+            $pos += 4;
+        }
+        if ($ver == 1 or $ver == 2) {
+            return undef if $pos + 2 > $len;
+            $$items{$id}{ConstructionMethod} = Get16u(\$val, $pos) & 0x0f;
+            $pos += 2;
+        }
+        return undef if $pos + 2 > $len;
+        $$items{$id}{DataReferenceIndex} = Get16u(\$val, $pos);
+        $pos += 2;
+        $$items{$id}{BaseOffset} = GetVarInt(\$val, $pos, $nbas);
+        return undef if $pos + 2 > $len;
+        my $ext_num = Get16u(\$val, $pos);
+        $pos += 2;
+        my @extents;
+        for ($j=0; $j<$ext_num; ++$j) {
+            if ($ver == 1 or $ver == 2) {
+                $extent_index = GetVarInt(\$val, $pos, $nind, 1);
+            }
+            $extent_offset = GetVarInt(\$val, $pos, $noff);
+            $extent_length = GetVarInt(\$val, $pos, $nlen);
+            return undef unless defined $extent_length;
+            $et->VPrint(1, "$$et{INDENT}  Item $id: const_meth=",
+                defined $$items{$id}{ConstructionMethod} ? $$items{$id}{ConstructionMethod} : '',
+                sprintf(" base=0x%x offset=0x%x len=0x%x\n", $$items{$id}{BaseOffset},
+                    $extent_offset, $extent_length)) if $verbose;
+            push @extents, [ $extent_index, $extent_offset, $extent_length, $nlen, $pos-$nlen ];
+        }
+        # save item location information keyed on 1-based item ID:
+        $$items{$id}{Extents} = \@extents;
+    }
+    return undef;
+}
+
+#------------------------------------------------------------------------------
+# Parse content describes entry (cdsc) box
+# Inputs: 0) cdsc data, 1) ExifTool ref
+# Returns: undef, and fills in ExifTool ItemInfo hash
+sub ParseContentDescribes($$)
+{
+    my ($val, $et) = @_;
+    my ($id, $count, @to);
+    if ($$et{ItemRefVersion}) {
+        return undef if length $val < 10;
+        ($id, $count, @to) = unpack('NnN*', $val);
+    } else {
+        return undef if length $val < 6;
+        ($id, $count, @to) = unpack('nnn*', $val);
+    }
+    if ($count > @to) {
+        my $str = 'Missing values in ContentDescribes box';
+        $$et{IsWriting} ? $et->Error($str) : $et->Warn($str);
+    } elsif ($count < @to) {
+        $et->Warn('Ignored extra values in ContentDescribes box', 1);
+        @to = $count;
+    }
+    # add all referenced item ID's to a "RefersTo" lookup
+    $$et{ItemInfo}{$id}{RefersTo}{$_} = 1 foreach @to;
+    $et->VPrint(1, "$$et{INDENT}  Item $id describes: @to\n") unless $$et{IsWriting};
+    return undef;
+}
+
+#------------------------------------------------------------------------------
+# Parse item information entry (infe) box (ref ISO 14496-12:2015 pg.82)
+# Inputs: 0) infe data, 1) ExifTool ref
+# Returns: undef, and fills in ExifTool ItemInfo hash
+sub ParseItemInfoEntry($$)
+{
+    my ($val, $et) = @_;
+    my $id;
+
+    my $verbose = $$et{IsWriting} ? 0 : $et->Options('Verbose');
+    my $items = $$et{ItemInfo} || ($$et{ItemInfo} = { });
+    my $len = length $val;
+    return undef if $len < 4;
+    my $ver = Get8u(\$val, 0);
+    my $pos = 4;
+    return undef if $pos + 4 > $len;
+    if ($ver == 0 or $ver == 1) {
+        $id = Get16u(\$val, $pos);
+        $$items{$id}{ProtectionIndex} = Get16u(\$val, $pos + 2);
+        $pos += 4;
+        $$items{$id}{Name} = GetString(\$val, $pos);
+        $$items{$id}{ContentType} = GetString(\$val, $pos);
+        $$items{$id}{ContentEncoding} = GetString(\$val, $pos);
+    } else {
+        if ($ver == 2) {
+            $id = Get16u(\$val, $pos);
+            $pos += 2;
+        } elsif ($ver == 3) {
+            $id = Get32u(\$val, $pos);
+            $pos += 4;
+        }
+        return undef if $pos + 6 > $len;
+        $$items{$id}{ProtectionIndex} = Get16u(\$val, $pos);
+        my $type = substr($val, $pos + 2, 4);
+        $$items{$id}{Type} = $type;
+        $pos += 6;
+        $$items{$id}{Name} = GetString(\$val, $pos);
+        if ($type eq 'mime') {
+            $$items{$id}{ContentType} = GetString(\$val, $pos);
+            $$items{$id}{ContentEncoding} = GetString(\$val, $pos);
+        } elsif ($type eq 'uri ') {
+            $$items{$id}{URI} = GetString(\$val, $pos);
+        }
+    }
+    $et->VPrint(1, "$$et{INDENT}  Item $id: Type=", $$items{$id}{Type} || '',
+                   ' Name=', $$items{$id}{Name} || '',
+                   ' ContentType=', $$items{$id}{ContentType} || '',
+                   "\n") if $verbose > 1;
+    return undef;
+}
+
+#------------------------------------------------------------------------------
+# Parse item property association (ipma) box (ref https://github.com/gpac/gpac/blob/master/src/isomedia/iff.c)
+# Inputs: 0) ipma data, 1) ExifTool ref
+# Returns: undef, and fills in ExifTool ItemInfo hash
+sub ParseItemPropAssoc($$)
+{
+    my ($val, $et) = @_;
+    my ($i, $j, $id);
+
+    my $verbose = $$et{IsWriting} ? 0 : $et->Options('Verbose');
+    my $items = $$et{ItemInfo} || ($$et{ItemInfo} = { });
+    my $len = length $val;
+    return undef if $len < 8;
+    my $ver = Get8u(\$val, 0);
+    my $flg = Get32u(\$val, 0);
+    my $num = Get32u(\$val, 4);
+    my $pos = 8;
+    for ($i=0; $i<$num; ++$i) {
+        if ($ver == 0) {
+            return undef if $pos + 3 > $len;
+            $id = Get16u(\$val, $pos);
+            $pos += 2;
+        } else {
+            return undef if $pos + 5 > $len;
+            $id = Get32u(\$val, $pos);
+            $pos += 4;
+        }
+        my $n = Get8u(\$val, $pos++);
+        my (@association, @essential);
+        if ($flg & 0x01) {
+            return undef if $pos + $n * 2 > $len;
+            for ($j=0; $j<$n; ++$j) {
+                my $tmp = Get16u(\$val, $pos + $j * 2);
+                push @association, $tmp & 0x7fff;
+                push @essential, ($tmp & 0x8000) ? 1 : 0;
+            }
+            $pos += $n * 2;
+        } else {
+            return undef if $pos + $n > $len;
+            for ($j=0; $j<$n; ++$j) {
+                my $tmp = Get8u(\$val, $pos + $j);
+                push @association, $tmp & 0x7f;
+                push @essential, ($tmp & 0x80) ? 1 : 0;
+            }
+            $pos += $n;
+        }
+        $$items{$id}{Association} = \@association;
+        $$items{$id}{Essential} = \@essential;
+        $et->VPrint(1, "$$et{INDENT}  Item $id properties: @association\n") if $verbose > 1;
+    }
+    return undef;
+}
+
+#------------------------------------------------------------------------------
+# Process item information now
+# Inputs: 0) ExifTool ref
+sub HandleItemInfo($)
+{
+    my $et = shift;
+    my $raf = $$et{RAF};
+    my $items = $$et{ItemInfo};
+    my $verbose = $et->Options('Verbose');
+    my $buff;
+
+    # extract information from EXIF/XMP metadata items
+    if ($items and $raf) {
+        push @{$$et{PATH}}, 'ItemInformation';
+        my $curPos = $raf->Tell();
+        my $primary = $$et{PrimaryItem};
+        my $id;
+        $et->VerboseDir('Processing items from ItemInformation', scalar(keys %$items));
+        foreach $id (sort { $a <=> $b } keys %$items) {
+            my $item = $$items{$id};
+            my $type = $$item{ContentType} || $$item{Type} || next;
+            if ($verbose) {
+                # add up total length of this item for the verbose output
+                my $len = 0;
+                if ($$item{Extents} and @{$$item{Extents}}) {
+                    $len += $$_[2] foreach @{$$item{Extents}};
+                }
+                $et->VPrint(0, "$$et{INDENT}Item $id) '${type}' ($len bytes)\n");
+            }
+            # get ExifTool name for this item
+            my $name = { Exif => 'EXIF', 'application/rdf+xml' => 'XMP' }->{$type} || '';
+            my ($warn, $extent);
+            $warn = "Can't currently decode encoded $type metadata" if $$item{ContentEncoding};
+            $warn = "Can't currently decode protected $type metadata" if $$item{ProtectionIndex};
+            $warn = "Can't currently extract $type with construction method $$item{ConstructionMethod}" if $$item{ConstructionMethod};
+            $et->WarnOnce($warn) if $warn and $name;
+            $warn = 'Not this file' if $$item{DataReferenceIndex}; # (can only extract from "this file")
+            unless (($$item{Extents} and @{$$item{Extents}}) or $warn) {
+                $warn = "No Extents for $type item";
+                $et->WarnOnce($warn) if $name;
+            }
+            if ($warn) {
+                $et->VPrint(0, "$$et{INDENT}    [not extracted]  ($warn)\n") if $verbose > 2;
+                next;
+            }
+            my $base = $$item{BaseOffset} || 0;
+            if ($verbose > 2) {
+                # do verbose hex dump
+                my $len = 0;
+                undef $buff;
+                my $val = '';
+                my $maxLen = $verbose > 3 ? 2048 : 96;
+                foreach $extent (@{$$item{Extents}}) {
+                    my $n = $$extent[2];
+                    my $more = $maxLen - $len;
+                    if ($more > 0 and $n) {
+                        $more = $n if $more > $n;
+                        $val .= $buff if defined $buff;
+                        $raf->Seek($$extent[1] + $base, 0) or last;
+                        $raf->Read($buff, $more) or last;
+                    }
+                    $len += $n;
+                }
+                if (defined $buff) {
+                    $buff = $val . $buff if length $val;
+                    $et->VerboseDump(\$buff, DataPos => $$item{Extents}[0][1] + $base);
+                    my $snip = $len - length $buff;
+                    $et->VPrint(0, "$$et{INDENT}    [snip $snip bytes]\n") if $snip;
+                }
+            }
+            next unless $name;
+            # assemble the data for this item
+            undef $buff;
+            my $val = '';
+            foreach $extent (@{$$item{Extents}}) {
+                $val .= $buff if defined $buff;
+                $raf->Seek($$extent[1] + $base, 0) or last;
+                $raf->Read($buff, $$extent[2]) or last;
+            }
+            next unless defined $buff;
+            $buff = $val . $buff if length $val;
+            next unless length $buff;   # ignore empty directories
+            my ($start, $subTable, $proc);
+            if ($name eq 'EXIF') {
+                $start = 10;
+                $subTable = GetTagTable('Image::ExifTool::Exif::Main');
+                $proc = \&Image::ExifTool::ProcessTIFF;
+            } else {
+                $start = 0;
+                $subTable = GetTagTable('Image::ExifTool::XMP::Main');
+            }
+            my $pos = $$item{Extents}[0][1] + $base;
+            my %dirInfo = (
+                DataPt   => \$buff,
+                DataLen  => length $buff,
+                DirStart => $start,
+                DirLen   => length($buff) - $start,
+                DataPos  => $pos,
+                Base     => $pos, # (needed for IsOffset tags in binary data)
+            );
+            # handle processing of metadata for sub-documents
+            if (defined $primary and $$item{RefersTo} and not $$item{RefersTo}{$primary}) {
+                # set document number if this doesn't refer to the primary document
+                $$et{DOC_NUM} = ++$$et{DOC_COUNT};
+                # associate this document number with the lowest item index
+                my ($lowest) = sort { $a <=> $b } keys %{$$item{RefersTo}};
+                $$items{$lowest}{DocNum} = $$et{DOC_NUM};
+            }
+            $et->ProcessDirectory(\%dirInfo, $subTable, $proc);
+            delete $$et{DOC_NUM};
+        }
+        $raf->Seek($curPos, 0);     # seek back to original position
+        pop @{$$et{PATH}};
+    }
+    # process the item properties now that we should know their associations and document numbers
+    if ($$et{ItemPropertyContainer}) {
+        my ($dirInfo, $subTable, $proc) = @{$$et{ItemPropertyContainer}};
+        $$et{IsItemProperty} = 1;   # set item property flag
+        $et->ProcessDirectory($dirInfo, $subTable, $proc);
+        delete $$et{ItemPropertyContainer};
+        delete $$et{IsItemProperty};
+        delete $$et{DOC_NUM};
+    }
+    delete $$et{ItemInfo};
+}
+
+#------------------------------------------------------------------------------
+# Warn if ExtractEmbedded option isn't used
+# Inputs: 0) ExifTool ref
+sub EEWarn($)
+{
+    my $et = shift;
+    $et->WarnOnce('The ExtractEmbedded option may find more tags in the movie data',3);
+}
+
+#------------------------------------------------------------------------------
+# Get quicktime format from flags word
+# Inputs: 0) quicktime atom flags, 1) data length
+# Returns: Exiftool format string
+sub QuickTimeFormat($$)
+{
+    my ($flags, $len) = @_;
+    my $format;
+    if ($flags == 0x15 or $flags == 0x16) {
+        $format = { 1=>'int8', 2=>'int16', 4=>'int32' }->{$len};
+        $format .= $flags == 0x15 ? 's' : 'u' if $format;
+    } elsif ($flags == 0x17) {
+        $format = 'float';
+    } elsif ($flags == 0x18) {
+        $format = 'double';
+    } elsif ($flags == 0x00) {
+        $format = { 1=>'int8u', 2=>'int16u' }->{$len};
+    }
+    return $format;
 }
 
 #------------------------------------------------------------------------------
@@ -6000,6 +7961,34 @@ sub ProcessMetaData($$$)
 }
 
 #------------------------------------------------------------------------------
+# Process sample description table
+# Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
+# Returns: 1 on success
+# (ref https://developer.apple.com/library/content/documentation/QuickTime/QTFF/QTFFChap2/qtff2.html#//apple_ref/doc/uid/TP40000939-CH204-25691)
+sub ProcessSampleDesc($$$)
+{
+    my ($et, $dirInfo, $tagTablePtr) = @_;
+    my $dataPt = $$dirInfo{DataPt};
+    my $pos = $$dirInfo{DirStart} || 0;
+    my $dirLen = $$dirInfo{DirLen} || (length($$dataPt) - $pos);
+    return 0 if $pos + 8 > $dirLen;
+
+    my $num = Get32u($dataPt, 4);   # get number of sample descriptions in table
+    $pos += 8;
+    my $i;
+    for ($i=0; $i<$num; ++$i) {     # loop through sample descriptions
+        last if $pos + 8 > $dirLen;
+        my $size = Get32u($dataPt, $pos);
+        last if $pos + $size > $dirLen;
+        $$dirInfo{DirStart} = $pos;
+        $$dirInfo{DirLen} = $size;
+        ProcessHybrid($et, $dirInfo, $tagTablePtr);
+        $pos += $size;
+    }
+    return 1;
+}
+
+#------------------------------------------------------------------------------
 # Process hybrid binary data + QuickTime container (ref PH)
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 # Returns: 1 on success
@@ -6008,23 +7997,25 @@ sub ProcessHybrid($$$)
     my ($et, $dirInfo, $tagTablePtr) = @_;
     # brute-force search for child atoms after first 8 bytes of binary data
     my $dataPt = $$dirInfo{DataPt};
-    my $pos = ($$dirInfo{DirStart} || 0) + 8;
-    my $len = length($$dataPt);
+    my $dirStart = $$dirInfo{DirStart} || 0;
+    my $dirLen = $$dirInfo{DirLen} || length($$dataPt) - $dirStart;
+    my $end = $dirStart + $dirLen;
+    my $pos = $dirStart + 8;   # skip length/version
     my $try = $pos;
     my $childPos;
 
-    while ($pos <= $len - 8) {
+    while ($pos <= $end - 8) {
         my $tag = substr($$dataPt, $try+4, 4);
         # look only for well-behaved tag ID's
         $tag =~ /[^\w ]/ and $try = ++$pos, next;
         my $size = Get32u($dataPt, $try);
-        if ($size + $try == $len) {
+        if ($size + $try == $end) {
             # the atom ends exactly at the end of the parent -- this must be it
             $childPos = $pos;
             $$dirInfo{DirLen} = $pos;   # the binary data ends at the first child atom
             last;
         }
-        if ($size < 8 or $size + $try > $len - 8) {
+        if ($size < 8 or $size + $try > $end - 8) {
             $try = ++$pos;  # fail.  try next position
         } else {
             $try += $size;  # could be another atom following this
@@ -6036,7 +8027,7 @@ sub ProcessHybrid($$$)
     # process child atoms if found
     if ($childPos) {
         $$dirInfo{DirStart} = $childPos;
-        $$dirInfo{DirLen} = $len - $childPos;
+        $$dirInfo{DirLen} = $end - $childPos;
         ProcessMOV($et, $dirInfo, $tagTablePtr);
     }
     return 1;
@@ -6052,7 +8043,7 @@ sub ProcessRights($$$)
     my $dataPt = $$dirInfo{DataPt};
     my $dataPos = $$dirInfo{Base};
     my $dirLen = length $$dataPt;
-    my $unknown = $$et{OPTIONS}{Unkown} || $$et{OPTIONS}{Verbose};
+    my $unknown = $$et{OPTIONS}{Unknown} || $$et{OPTIONS}{Verbose};
     my $pos;
     $et->VerboseDir('righ', $dirLen / 8);
     for ($pos = 0; $pos + 8 <= $dirLen; $pos += 8) {
@@ -6062,8 +8053,7 @@ sub ProcessRights($$$)
         my $tagInfo = $et->GetTagInfo($tagTablePtr, $tag);
         unless ($tagInfo) {
             next unless $unknown;
-            my $name = $tag;
-            $name =~ s/([\x00-\x1f\x7f-\xff])/'x'.unpack('H*',$1)/eg;
+            my $name = PrintableTagID($tag);
             $tagInfo = {
                 Name => "Unknown_$name",
                 Description => "Unknown $name",
@@ -6101,7 +8091,7 @@ sub ProcessEncodingParams($$$)
 }
 
 #------------------------------------------------------------------------------
-# Process Meta keys and add tags to the ItemList table ('mdta' handler) (ref PH)
+# Read Meta Keys and add tags to ItemList table ('mdta' handler) (ref PH)
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 # Returns: 1 on success
 sub ProcessKeys($$$)
@@ -6117,9 +8107,9 @@ sub ProcessKeys($$$)
     }
     my $pos = 8;
     my $index = 1;
-    ++$$et{KeyCount};   # increment key count for this directory
-    my $infoTable = GetTagTable('Image::ExifTool::QuickTime::ItemList');
-    my $userTable = GetTagTable('Image::ExifTool::QuickTime::UserData');
+    ++$$et{KeysCount};  # increment key count for this directory
+    my $itemList = GetTagTable('Image::ExifTool::QuickTime::ItemList');
+    my $userData = GetTagTable('Image::ExifTool::QuickTime::UserData');
     while ($pos < $dirLen - 4) {
         my $len = unpack("x${pos}N", $$dataPt);
         last if $len < 8 or $pos + $len > $dirLen;
@@ -6127,20 +8117,18 @@ sub ProcessKeys($$$)
         my $ns  = substr($$dataPt, $pos + 4, 4);
         my $tag = substr($$dataPt, $pos + 8, $len - 8);
         $tag =~ s/\0.*//s; # truncate at null
-        if ($ns eq 'mdta') {
-            $tag =~ s/^com\.apple\.quicktime\.//;   # remove common apple quicktime domain
-        }
-        next unless $tag;
+        $tag =~ s/^com\.apple\.quicktime\.// if $ns eq 'mdta'; # remove apple quicktime domain
+        $tag = "Tag_$ns" unless $tag;
         # (I have some samples where the tag is a reversed ItemList or UserData tag ID)
         my $tagInfo = $et->GetTagInfo($tagTablePtr, $tag);
         unless ($tagInfo) {
-            $tagInfo = $et->GetTagInfo($infoTable, $tag);
+            $tagInfo = $et->GetTagInfo($itemList, $tag);
             unless ($tagInfo) {
-                $tagInfo = $et->GetTagInfo($userTable, $tag);
+                $tagInfo = $et->GetTagInfo($userData, $tag);
                 if (not $tagInfo and $tag =~ /^\w{3}\xa9$/) {
                     $tag = pack('N', unpack('V', $tag));
-                    $tagInfo = $et->GetTagInfo($infoTable, $tag);
-                    $tagInfo or $tagInfo = $et->GetTagInfo($userTable, $tag);
+                    $tagInfo = $et->GetTagInfo($itemList, $tag);
+                    $tagInfo or $tagInfo = $et->GetTagInfo($userData, $tag);
                 }
             }
         }
@@ -6150,30 +8138,39 @@ sub ProcessKeys($$$)
                 Name      => $$tagInfo{Name},
                 Format    => $$tagInfo{Format},
                 ValueConv => $$tagInfo{ValueConv},
+                ValueConvInv => $$tagInfo{ValueConvInv},
                 PrintConv => $$tagInfo{PrintConv},
+                PrintConvInv => $$tagInfo{PrintConvInv},
+                Writable  => defined $$tagInfo{Writable} ? $$tagInfo{Writable} : 1,
+                KeysInfo  => $tagInfo,
             };
             my $groups = $$tagInfo{Groups};
-            $$newInfo{Groups} = { %$groups } if $groups;
-        } elsif ($tag =~ /^[-\w.]+$/) {
+            $$newInfo{Groups} = $groups ? { %$groups } : { };
+            $$newInfo{Groups}{$_} or $$newInfo{Groups}{$_} = $$tagTablePtr{GROUPS}{$_} foreach 0..2;
+            $$newInfo{Groups}{1} = 'Keys';
+        } elsif ($tag =~ /^[-\w. ]+$/) {
             # create info for tags with reasonable id's
-            my $name = $tag;
-            $name =~ s/\.(.)/\U$1/g;
-            $newInfo = { Name => ucfirst($name) };
+            my $name = ucfirst $tag;
+            $name =~ s/[. ]+(.?)/\U$1/g;
+            $name =~ s/_([a-z])/_\U$1/g;
+            $name =~ s/([a-z])_([A-Z])/$1$2/g;
+            $name = "Tag_$name" if length $name < 2;
+            $newInfo = { Name => $name, Groups => { 1 => 'Keys' } };
             $msg = ' (Unknown)';
         }
         # substitute this tag in the ItemList table with the given index
-        my $id = $$et{KeyCount} . '.' . $index;
-        if (ref $$infoTable{$id} eq 'HASH') {
+        my $id = $$et{KeysCount} . '.' . $index;
+        if (ref $$itemList{$id} eq 'HASH') {
             # delete other languages too if they exist
-            my $oldInfo = $$infoTable{$id};
+            my $oldInfo = $$itemList{$id};
             if ($$oldInfo{OtherLang}) {
-                delete $$infoTable{$_} foreach @{$$oldInfo{OtherLang}};
+                delete $$itemList{$_} foreach @{$$oldInfo{OtherLang}};
             }
-            delete $$infoTable{$id};
+            delete $$itemList{$id};
         }
         if ($newInfo) {
+            AddTagToTable($itemList, $id, $newInfo);
             $msg or $msg = '';
-            AddTagToTable($infoTable, $id, $newInfo);
             $out and print $out "$$et{INDENT}Added ItemList Tag $id = $tag$msg\n";
         }
         $pos += $len;
@@ -6183,25 +8180,48 @@ sub ProcessKeys($$$)
 }
 
 #------------------------------------------------------------------------------
+# Process keys in MetaSampleDesc directory
+# Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
+# Returns: 1 on success
+sub ProcessMetaKeys($$$)
+{
+    my ($et, $dirInfo, $tagTablePtr) = @_;
+    # save this information to decode timed metadata samples when ExtractEmbedded is used
+    SaveMetaKeys($et, $dirInfo, $tagTablePtr) if $$et{OPTIONS}{ExtractEmbedded};
+    return 1;
+}
+
+#------------------------------------------------------------------------------
 # Process a QuickTime atom
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) optional tag table ref
 # Returns: 1 on success
 sub ProcessMOV($$;$)
 {
+    local $_;
     my ($et, $dirInfo, $tagTablePtr) = @_;
     my $raf = $$dirInfo{RAF};
     my $dataPt = $$dirInfo{DataPt};
     my $verbose = $et->Options('Verbose');
+    my $validate = $$et{OPTIONS}{Validate};
     my $dataPos = $$dirInfo{Base} || 0;
+    my $dirID = $$dirInfo{DirID} || '';
     my $charsetQuickTime = $et->Options('CharsetQuickTime');
-    my ($buff, $tag, $size, $track, $isUserData, %triplet, $doDefaultLang);
+    my ($buff, $tag, $size, $track, $isUserData, %triplet, $doDefaultLang, $index);
+    my ($dirEnd, $ee, $unkOpt, %saveOptions, $atomCount);
 
-    unless (defined $$et{KeyCount}) {
-        $$et{KeyCount} = 0;     # initialize ItemList key directory count
+    my $topLevel = not $$et{InQuickTime};
+    $$et{InQuickTime} = 1;
+    $$et{HandlerType} = $$et{MetaFormat} = '' unless defined $$et{HandlerType};
+
+    unless (defined $$et{KeysCount}) {
+        $$et{KeysCount} = 0;    # initialize ItemList key directory count
         $doDefaultLang = 1;     # flag to generate default language tags
     }
     # more convenient to package data as a RandomAccess file
-    $raf or $raf = new File::RandomAccess($dataPt);
+    unless ($raf) {
+        $raf = new File::RandomAccess($dataPt);
+        $dirEnd = $dataPos + $$dirInfo{DirLen} + ($$dirInfo{DirStart} || 0) if $$dirInfo{DirLen};
+    }
     # skip leading bytes if necessary
     if ($$dirInfo{DirStart}) {
         $raf->Seek($$dirInfo{DirStart}, 1) or return 0;
@@ -6241,13 +8261,28 @@ sub ProcessMOV($$;$)
             }
             $fileType or $fileType = 'MP4'; # default to MP4
             $et->SetFileType($fileType, $mimeLookup{$fileType} || 'video/mp4');
+            # temporarily set ExtractEmbedded option for CRX files
+            $saveOptions{ExtractEmbedded} = $et->Options(ExtractEmbedded => 1) if $fileType eq 'CRX';
         } else {
             $et->SetFileType();       # MOV
         }
         SetByteOrder('MM');
         $$et{PRIORITY_DIR} = 'XMP';   # have XMP take priority
     }
+    $$raf{NoBuffer} = 1 if $et->Options('FastScan'); # disable buffering in FastScan mode
+
+    if ($$et{OPTIONS}{ExtractEmbedded}) {
+        $ee = 1;
+        $unkOpt = $$et{OPTIONS}{Unknown};
+        require 'Image/ExifTool/QuickTimeStream.pl';
+    }
+    if ($$tagTablePtr{VARS}) {
+        $index = $$tagTablePtr{VARS}{START_INDEX};
+        $atomCount = $$tagTablePtr{VARS}{ATOM_COUNT};
+    }
     for (;;) {
+        my ($eeTag, $ignore);
+        last if defined $atomCount and --$atomCount < 0;
         if ($size < 8) {
             if ($size == 0) {
                 if ($dataPt) {
@@ -6258,14 +8293,14 @@ sub ProcessMOV($$;$)
                     my $str = $$dirInfo{DirName} . ' with ' . ($raf->Tell() - $pos) . ' bytes';
                     $et->VPrint(0,"$$et{INDENT}\[Terminator found in $str remaining]");
                 } else {
-                    $tag = sprintf("0x%.8x",Get32u(\$tag,0)) if $tag =~ /[\x00-\x1f\x7f-\xff]/;
-                    $et->VPrint(0,"$$et{INDENT}Tag '$tag' extends to end of file");
+                    my $t = PrintableTagID($tag);
+                    $et->VPrint(0,"$$et{INDENT}Tag '${t}' extends to end of file");
                 }
                 last;
             }
             $size == 1 or $et->Warn('Invalid atom size'), last;
             # read extended atom size
-            $raf->Read($buff, 8) == 8 or last;
+            $raf->Read($buff, 8) == 8 or $et->Warn('Truncated atom header'), last;
             $dataPos += 8;
             my ($hi, $lo) = unpack('NN', $buff);
             if ($hi or $lo > 0x7fffffff) {
@@ -6282,6 +8317,18 @@ sub ProcessMOV($$;$)
         } else {
             $size -= 8;
         }
+        if ($validate) {
+            $$et{ValidatePath} or $$et{ValidatePath} = { };
+            my $path = join('-', @{$$et{PATH}}, $tag);
+            $path =~ s/-Track-/-$$et{SET_GROUP1}-/ if $$et{SET_GROUP1};
+            if ($$et{ValidatePath}{$path} and not $dupTagOK{$tag} and not $dupDirOK{$dirID}) {
+                my $i = Get32u(\$tag,0);
+                my $str = $i < 255 ? "index $i" : "tag '" . PrintableTagID($tag,2) . "'";
+                $et->WarnOnce("Duplicate $str at " . join('-', @{$$et{PATH}}));
+                $$et{ValidatePath} = { } if $path eq 'MOV-moov'; # avoid warnings for all contained dups
+            }
+            $$et{ValidatePath}{$path} = 1;
+        }
         if ($isUserData and $$et{SET_GROUP1}) {
             my $tagInfo = $et->GetTagInfo($tagTablePtr, $tag);
             # add track name to UserData tags inside tracks
@@ -6296,10 +8343,26 @@ sub ProcessMOV($$;$)
                 AddTagToTable($tagTablePtr, $tag, \%newInfo);
             }
         }
+        # set flag to store additional information for ExtractEmbedded option
+        my $handlerType = $$et{HandlerType};
+        if ($eeBox{$handlerType} and $eeBox{$handlerType}{$tag}) {
+            if ($ee) {
+                # (there is another 'gps ' box with a track log that doesn't contain offsets)
+                if ($tag ne 'gps ' or $eeBox{$handlerType}{$tag} eq $dirID) {
+                    $eeTag = 1;
+                    $$et{OPTIONS}{Unknown} = 1; # temporarily enable "Unknown" option
+                }
+            } elsif ($handlerType ne 'vide' and not $$et{OPTIONS}{Validate}) {
+                EEWarn($et);
+            }
+        }
         my $tagInfo = $et->GetTagInfo($tagTablePtr, $tag);
+
+        $$et{OPTIONS}{Unknown} = $unkOpt if $eeTag;     # restore Unknown option
+
         # allow numerical tag ID's
         unless ($tagInfo) {
-            my $id = $$et{KeyCount} . '.' . unpack('N', $tag);
+            my $id = $$et{KeysCount} . '.' . unpack('N', $tag);
             if ($$tagTablePtr{$id}) {
                 $tagInfo = $et->GetTagInfo($tagTablePtr, $id);
                 $tag = $id;
@@ -6309,10 +8372,7 @@ sub ProcessMOV($$;$)
         if (not defined $tagInfo and ($$et{OPTIONS}{Unknown} or
             $verbose or $tag =~ /^\xa9/))
         {
-            my $name = $tag;
-            my $n = ($name =~ s/([\x00-\x1f\x7f-\xff])/'x'.unpack('H*',$1)/eg);
-            # print in hex if tag is numerical
-            $name = sprintf('0x%.4x',unpack('N',$tag)) if $n > 2;
+            my $name = PrintableTagID($tag,1);
             if ($name =~ /^xa9(.*)/) {
                 $tagInfo = {
                     Name => "UserData_$1",
@@ -6333,24 +8393,59 @@ sub ProcessMOV($$;$)
             $et->HandleTag($tagTablePtr, "$tag-offset", $raf->Tell()) if $$tagTablePtr{"$tag-offset"};
         }
         # load values only if associated with a tag (or verbose) and not too big
-        my $ignore;
         if ($size > 0x2000000) {    # start to get worried above 32 MB
             $ignore = 1;
-            if ($tagInfo and not $$tagInfo{Unknown}) {
-                my $t = $tag;
-                $t =~ s/([\x00-\x1f\x7f-\xff])/'x'.unpack('H*',$1)/eg;
+            if ($tagInfo and not $$tagInfo{Unknown} and not $eeTag) {
+                my $t = PrintableTagID($tag);
                 if ($size > 0x8000000) {
-                    $et->Warn("Skipping '$t' atom > 128 MB", 1);
+                    $et->Warn("Skipping '${t}' atom > 128 MB", 1);
                 } else {
-                    $et->Warn("Skipping '$t' atom > 32 MB", 2) or $ignore = 0;
+                    $et->Warn("Skipping '${t}' atom > 32 MB", 2) or $ignore = 0;
                 }
             }
         }
         if (defined $tagInfo and not $ignore) {
+            # set document number for this item property if necessary
+            if ($$et{IsItemProperty}) {
+                my $items = $$et{ItemInfo};
+                my ($id, $prop, $docNum, $lowest);
+                my $primary = $$et{PrimaryItem} || 0;
+ItemID:         foreach $id (keys %$items) {
+                    next unless $$items{$id}{Association};
+                    my $item = $$items{$id};
+                    foreach $prop (@{$$item{Association}}) {
+                        next unless $prop == $index;
+                        if ($id == $primary or (not $dontInherit{$tag} and
+                            (not $$item{RefersTo} or $$item{RefersTo}{$primary})))
+                        {
+                            # this is associated with the primary item or an item describing
+                            # the primary item, so consider this part of the main document
+                            undef $docNum;
+                            undef $lowest;
+                            last ItemID;
+                        } elsif ($$item{DocNum}) {
+                            # this property is already associated with an item that has
+                            # an ExifTool document number, so use the lowest assocated DocNum
+                            $docNum = $$item{DocNum} if not defined $docNum or $docNum > $$item{DocNum};
+                        } elsif (not defined $lowest or $lowest > $id) {
+                            # keep track of the lowest associated item ID
+                            $lowest = $id;
+                        }
+                    }
+                }
+                if (not defined $docNum and defined $lowest) {
+                    # this is the first time we've seen metadata from this item,
+                    # so use a new document number
+                    $docNum = ++$$et{DOC_COUNT};
+                    $$items{$lowest}{DocNum} = $docNum;
+                }
+                $$et{DOC_NUM} = $docNum;
+            }
             my $val;
             my $missing = $size - $raf->Read($val, $size);
             if ($missing) {
-                $et->Warn("Truncated '$tag' data (missing $missing bytes)");
+                my $t = PrintableTagID($tag);
+                $et->Warn("Truncated '${t}' data (missing $missing bytes)");
                 last;
             }
             # use value to get tag info if necessary
@@ -6367,8 +8462,16 @@ sub ProcessMOV($$;$)
                     DataPos => $dataPos,
                     Size    => $size,
                     Format  => $tagInfo ? $$tagInfo{Format} : undef,
+                    Index   => $index,
                 );
             }
+            # extract metadata from stream if ExtractEmbedded option is enabled
+            if ($eeTag) {
+                ParseTag($et, $tag, \$val);
+                # forget this tag if we generated it only for ExtractEmbedded
+                undef $tagInfo if $tagInfo and $$tagInfo{Unknown} and not $unkOpt;
+            }
+
             # handle iTunesInfo mean/name/data triplets
             if ($tagInfo and $$tagInfo{Triplet}) {
                 if ($tag eq 'data' and $triplet{mean} and $triplet{name}) {
@@ -6418,6 +8521,7 @@ sub ProcessMOV($$;$)
                         DirStart   => $start,
                         DirLen     => $size - $start,
                         DirName    => $$subdir{DirName} || $$tagInfo{Name},
+                        DirID      => $tag,
                         HasData    => $$subdir{HasData},
                         Multi      => $$subdir{Multi},
                         IgnoreProp => $$subdir{IgnoreProp}, # (XML hack)
@@ -6437,7 +8541,21 @@ sub ProcessMOV($$;$)
                     my $proc = $$subdir{ProcessProc};
                     # make ProcessMOV() the default processing procedure for subdirectories
                     $proc = \&ProcessMOV unless $proc or $$subTable{PROCESS_PROC};
-                    $et->ProcessDirectory(\%dirInfo, $subTable, $proc) if $size > $start;
+                    if ($size > $start) {
+                        # delay processing of ipco box until after all other boxes
+                        if ($tag eq 'ipco' and not $$et{IsItemProperty}) {
+                            $$et{ItemPropertyContainer} = [ \%dirInfo, $subTable, $proc ];
+                            $et->VPrint(0,"$$et{INDENT}\[Process ipco box later]");
+                        } else {
+                            $et->ProcessDirectory(\%dirInfo, $subTable, $proc);
+                        }
+                    }
+                    if ($tag eq 'stbl') {
+                        # process sample data when exiting SampleTable box if extracting embedded
+                        ProcessSamples($et) if $ee;
+                    } elsif ($tag eq 'minf') {
+                        $$et{HandlerType} = ''; # reset handler type at end of media info box
+                    }
                     $$et{SET_GROUP1} = $oldGroup1;
                     SetByteOrder('MM');
                 } elsif ($hasData) {
@@ -6448,7 +8566,7 @@ sub ProcessMOV($$;$)
                         last if $pos + 16 > $size;
                         my ($len, $type, $flags, $ctry, $lang) = unpack("x${pos}Na4Nnn", $val);
                         last if $pos + $len > $size;
-                        my $value;
+                        my ($value, $langInfo, $oldDir);
                         my $format = $$tagInfo{Format};
                         if ($type eq 'data' and $len >= 16) {
                             $pos += 16;
@@ -6465,23 +8583,7 @@ sub ProcessMOV($$;$)
                                 # (shouldn't be null terminated, but some software writes it anyway)
                                 $value =~ s/\0$// unless $$tagInfo{Binary};
                             } else {
-                                if (not $format) {
-                                    if ($flags == 0x15 or $flags == 0x16) {
-                                        $format = { 1=>'int8', 2=>'int16', 4=>'int32' }->{$len};
-                                        $format .= $flags == 0x15 ? 's' : 'u' if $format;
-                                    } elsif ($flags == 0x17) {
-                                        $format = 'float';
-                                    } elsif ($flags == 0x18) {
-                                        $format = 'double';
-                                    } elsif ($flags == 0x00) {
-                                        # read 1 and 2-byte binary as integers
-                                        if ($len == 1) {
-                                            $format = 'int8u',
-                                        } elsif ($len == 2) {
-                                            $format = 'int16u',
-                                        }
-                                    }
-                                }
+                                $format = QuickTimeFormat($flags, $len) unless $format;
                                 if ($format) {
                                     $value = ReadValue(\$value, 0, $format, $$tagInfo{Count}, $len);
                                 } elsif (not $$tagInfo{ValueConv}) {
@@ -6491,22 +8593,8 @@ sub ProcessMOV($$;$)
                                 }
                             }
                         }
-                        my $langInfo;
                         if ($ctry or $lang) {
-                            # ignore country ('ctry') and language lists ('lang') for now
-                            undef $ctry if $ctry and $ctry <= 255;
-                            undef $lang if $lang and $lang <= 255;
-                            $lang = UnpackLang($lang);
-                            # add country code if specified
-                            if ($ctry) {
-                                $ctry = unpack('a2',pack('n',$ctry)); # unpack as ISO 3166-1
-                                # treat 'ZZ' like a default country (see ref 12)
-                                undef $ctry if $ctry eq 'ZZ';
-                                if ($ctry and $ctry =~ /^[A-Z]{2}$/) {
-                                    $lang or $lang = 'und';
-                                    $lang .= "-$ctry";
-                                }
-                            }
+                            $lang = GetLangCode($lang, $ctry);
                             if ($lang) {
                                 # get tagInfo for other language
                                 $langInfo = GetLangInfoQT($et, $tagInfo, $lang);
@@ -6525,9 +8613,17 @@ sub ProcessMOV($$;$)
                             Start   => $pos,
                             Size    => $len,
                             Format  => $format,
-                            Extra   => sprintf(", Type='$type', Flags=0x%x",$flags)
+                            Index   => $index,
+                            Extra   => sprintf(", Type='${type}', Flags=0x%x%s",$flags,($lang ? ", Lang=$lang" : '')),
                         ) if $verbose;
+                        # use "Keys" in path instead of ItemList if this was defined by a Keys tag
+                        my $isKey = $$tagInfo{Groups} && $$tagInfo{Groups}{1} && $$tagInfo{Groups}{1} eq 'Keys';
+                        if ($isKey) {
+                            $oldDir = $$et{PATH}[-1];
+                            $$et{PATH}[-1] = 'Keys';
+                        }
                         $et->FoundTag($langInfo, $value) if defined $value;
+                        $$et{PATH}[-1] = $oldDir if $isKey;
                         $pos += $len;
                     }
                 } elsif ($tag =~ /^\xa9/ or $$tagInfo{IText}) {
@@ -6538,22 +8634,31 @@ sub ProcessMOV($$;$)
                         $pos = $size;
                     }
                     for (;;) {
-                        last if $pos + 4 > $size;
-                        my ($len, $lang) = unpack("x${pos}nn", $val);
-                        $pos += 4;
-                        # according to the QuickTime spec (ref 12), $len should include
-                        # 4 bytes for length and type words, but nobody (including
-                        # Apple, Pentax and Kodak) seems to add these in, so try
-                        # to allow for either
-                        if ($pos + $len > $size) {
-                            $len -= 4;
-                            last if $pos + $len > $size or $len < 0;
+                        my ($len, $lang);
+                        if ($$tagInfo{IText} and $$tagInfo{IText} == 6) {
+                            last if $pos + 6 > $size;
+                            $pos += 4;
+                            $lang = unpack("x${pos}n", $val);
+                            $pos += 2;
+                            $len = $size - $pos;
+                        } else {
+                            last if $pos + 4 > $size;
+                            ($len, $lang) = unpack("x${pos}nn", $val);
+                            $pos += 4;
+                            # according to the QuickTime spec (ref 12), $len should include
+                            # 4 bytes for length and type words, but nobody (including
+                            # Apple, Pentax and Kodak) seems to add these in, so try
+                            # to allow for either
+                            if ($pos + $len > $size) {
+                                $len -= 4;
+                                last if $pos + $len > $size or $len < 0;
+                            }
                         }
                         # ignore any empty entries (or null padding) after the first
                         next if not $len and $pos;
                         my $str = substr($val, $pos, $len);
                         my $langInfo;
-                        if ($lang < 0x400) {
+                        if ($lang < 0x400 and $str !~ /^\xfe\xff/) {
                             # this is a Macintosh language code
                             # a language code of 0 is Macintosh english, so treat as default
                             if ($lang) {
@@ -6571,6 +8676,7 @@ sub ProcessMOV($$;$)
                             my $enc = $str=~s/^\xfe\xff// ? 'UTF16' : 'UTF8';
                             $str = $et->Decode($str, $enc);
                         }
+                        $str =~ s/\0+$//;   # remove any trailing nulls (eg. 3gp tags)
                         $langInfo = GetLangInfoQT($et, $tagInfo, $lang) if $lang;
                         $et->FoundTag($langInfo || $tagInfo, $str);
                         $pos += $len;
@@ -6608,24 +8714,44 @@ sub ProcessMOV($$;$)
                 Size  => $size,
                 Extra => sprintf(' at offset 0x%.4x', $raf->Tell()),
             ) if $verbose;
-            $raf->Seek($size, 1) or $et->Warn("Truncated '$tag' data"), last;
+            if ($size and (not $raf->Seek($size-1, 1) or $raf->Read($buff, 1) != 1)) {
+                my $t = PrintableTagID($tag);
+                $et->Warn("Truncated '${t}' data");
+                last;
+            }
         }
+        $dataPos += $size + 8;  # point to start of next atom data
+        last if $dirEnd and $dataPos >= $dirEnd; # (note: ignores last value if 0 bytes)
         $raf->Read($buff, 8) == 8 or last;
-        $dataPos += $size + 8;
         ($size, $tag) = unpack('Na4', $buff);
+        ++$index if defined $index;
     }
     # fill in missing defaults for alternate language tags
     # (the first language is taken as the default)
     if ($doDefaultLang and $$et{QTLang}) {
-        foreach $tag (@{$$et{QTLang}}) {
+QTLang: foreach $tag (@{$$et{QTLang}}) {
             next unless defined $$et{VALUE}{$tag};
             my $langInfo = $$et{TAG_INFO}{$tag} or next;
             my $tagInfo = $$langInfo{SrcTagInfo} or next;
-            next if defined $$et{VALUE}{$$tagInfo{Name}};
+            my $infoHash = $$et{TAG_INFO};
+            my $name = $$tagInfo{Name};
+            # loop through all instances of this tag name and generate the default-language
+            # version only if we don't already have a QuickTime tag with this name
+            my ($i, $key);
+            for ($i=0, $key=$name; $$infoHash{$key}; ++$i, $key="$name ($i)") {
+                next QTLang if $et->GetGroup($key, 0) eq 'QuickTime';
+            }
             $et->FoundTag($tagInfo, $$et{VALUE}{$tag});
         }
         delete $$et{QTLang};
     }
+    # process item information now that we are done processing its 'meta' container
+    HandleItemInfo($et) if $topLevel or $dirID eq 'meta';
+
+    ScanMovieData($et) if $ee and $topLevel;  # brute force scan for metadata embedded in movie data
+
+    # restore any changed options
+    $et->Options($_ => $saveOptions{$_}) foreach keys %saveOptions;
     return 1;
 }
 
@@ -6655,11 +8781,11 @@ This module is used by Image::ExifTool
 =head1 DESCRIPTION
 
 This module contains routines required by Image::ExifTool to extract
-information from QuickTime and MP4 video, and M4A audio files.
+information from QuickTime and MP4 video, M4A audio, and HEIC image files.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

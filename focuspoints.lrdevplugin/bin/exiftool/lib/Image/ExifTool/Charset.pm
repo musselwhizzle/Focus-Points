@@ -14,7 +14,7 @@ use strict;
 use vars qw($VERSION %csType);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.09';
+$VERSION = '1.11';
 
 my %charsetTable;   # character set tables we've loaded
 
@@ -57,6 +57,8 @@ my %unicode2byte = (
     Hebrew       => 0x101,
     Latin        => 0x101,
     Latin2       => 0x101,
+    DOSLatinUS   => 0x101,
+    DOSLatin1    => 0x101,
     MacCroatian  => 0x101,
     MacCyrillic  => 0x101,
     MacGreek     => 0x101,
@@ -141,6 +143,7 @@ sub IsUTF16($)
 # - byte order only used for fixed-width 2-byte and 4-byte character sets
 # - byte order mark observed and then removed with UCS2 and UCS4
 # - no warnings are issued if ExifTool object is not provided
+# - sets ExifTool WrongByteOrder flag if byte order is Unknown and current order is wrong
 sub Decompose($$$;$)
 {
     local $_;
@@ -222,6 +225,7 @@ sub Decompose($$$;$)
                     # we guessed wrong, so decode using the other byte order
                     $fmt =~ tr/nvNV/vnVN/;
                     @uni = unpack($fmt, $val);
+                    $$et{WrongByteOrder} = 1;
                 }
             }
             # handle surrogate pairs of UTF-16
@@ -251,7 +255,10 @@ sub Decompose($$$;$)
                     ++$e2;
                 }
                 # use this byte order if there are fewer errors
-                return \@try if $e2 < $e1;
+                if ($e2 < $e1) {
+                    $$et{WrongByteOrder} = 1;
+                    return \@try;
+                }
             }
         } else {
             # translate any characters found in the lookup
@@ -400,10 +407,11 @@ This module contains routines used by ExifTool to translate special
 character sets.  Currently, the following character sets are supported:
 
   UTF8, UTF16, UCS2, UCS4, Arabic, Baltic, Cyrillic, Greek, Hebrew, JIS,
-  Latin, Latin2, MacArabic, MacChineseCN, MacChineseTW, MacCroatian,
-  MacCyrillic, MacGreek, MacHebrew, MacIceland, MacJapanese, MacKorean,
-  MacLatin2, MacRSymbol, MacRoman, MacRomanian, MacThai, MacTurkish,
-  PDFDoc, RSymbol, ShiftJIS, Symbol, Thai, Turkish, Vietnam
+  Latin, Latin2, DOSLatinUS, DOSLatin1, MacArabic, MacChineseCN,
+  MacChineseTW, MacCroatian, MacCyrillic, MacGreek, MacHebrew, MacIceland,
+  MacJapanese, MacKorean, MacLatin2, MacRSymbol, MacRoman, MacRomanian,
+  MacThai, MacTurkish, PDFDoc, RSymbol, ShiftJIS, Symbol, Thai, Turkish,
+  Vietnam
 
 However, only some of these character sets are available to the user via
 ExifTool options -- the multi-byte character sets are used only internally
@@ -411,7 +419,7 @@ when decoding certain types of information.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

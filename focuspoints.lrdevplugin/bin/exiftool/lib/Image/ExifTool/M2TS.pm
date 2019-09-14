@@ -31,7 +31,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.13';
+$VERSION = '1.16';
 
 # program map table "stream_type" lookup (ref 6/1)
 my %streamType = (
@@ -275,9 +275,7 @@ sub ParsePID($$$$$)
     if ($verbose > 1) {
         my $out = $et->Options('TextOut');
         printf $out "Parsing stream 0x%.4x (%s)\n", $pid, $pidName;
-        my %parms = ( Out => $out );
-        $parms{MaxLen} = 96 if $verbose < 4;
-        HexDump($dataPt, undef, %parms) if $verbose > 2;
+        $et->VerboseDump($dataPt);
     }
     my $more = 0;
     if ($type == 0x01 or $type == 0x02) {
@@ -293,7 +291,11 @@ sub ParsePID($$$$$)
         require Image::ExifTool::H264;
         $more = Image::ExifTool::H264::ParseH264Video($et, $dataPt);
         # force parsing additional H264 frames with ExtractEmbedded option
-        $more = 1 if $et->Options('ExtractEmbedded');
+        if ($$et{OPTIONS}{ExtractEmbedded}) {
+            $more = 1;
+        } elsif (not $$et{OPTIONS}{Validate}) {
+            $et->WarnOnce('The ExtractEmbedded option may find more tags in the video data',3);
+        }
     } elsif ($type == 0x81 or $type == 0x87 or $type == 0x91) {
         # AC-3 audio
         ParseAC3Audio($et, $dataPt);
@@ -389,7 +391,7 @@ sub ProcessM2TS($$)
         my $prefix = unpack("x${pos}N", $buff); # (use unpack instead of Get32u for speed)
         # validate sync byte
         unless (($prefix & 0xff000000) == 0x47000000) {
-            $et->Warn('Synchronization error') unless defined $backScan;
+            $et->Warn('M2TS synchronization error') unless defined $backScan;
             last;
         }
       # my $transport_error_indicator    = $prefix & 0x00800000;
@@ -404,8 +406,7 @@ sub ProcessM2TS($$)
         if ($verbose > 1) {
             print  $out "Transport packet $i:\n";
             ++$i;
-            HexDump(\$buff, $pLen, Addr => $i * $pLen, Out => $out,
-                Start => $pos - $prePos) if $verbose > 2;
+            $et->VerboseDump(\$buff, Len => $pLen, Addr => $i * $pLen, Start => $pos - $prePos);
             my $str = $pidName{$pid} ? " ($pidName{$pid})" : '';
             printf $out "  Timecode:   0x%.4x\n", Get32u(\$buff, $pos - $prePos) if $pLen == 192;
             printf $out "  Packet ID:  0x%.4x$str\n", $pid;
@@ -693,7 +694,7 @@ video.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -644,7 +644,7 @@ sub ProcessJpeg2000Box($$$)
                     }
                 } elsif ($verbose) {
                     my $msg = sprintf("offset 0x%.4x to end of file", $dataPos + $base + $pos);
-                    $et->VPrint(0, "$$et{INDENT}- Tag '$boxID' ($msg)\n");
+                    $et->VPrint(0, "$$et{INDENT}- Tag '${boxID}' ($msg)\n");
                 }
                 last;   # (ignore the rest of the file when reading)
             }
@@ -874,7 +874,7 @@ files.
 
 =head1 AUTHOR
 
-Copyright 2003-2016, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
