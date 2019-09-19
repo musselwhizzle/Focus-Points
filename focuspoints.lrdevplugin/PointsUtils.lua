@@ -26,6 +26,10 @@ function PointsUtils.readFromFile(folder, filename)
   file = LrPathUtils.child(file, folder)
   file = LrPathUtils.child(file, filename)
 
+  -- replace special character.  '*' is an invalid char on windows file systems
+  file = string.gsub(file, "*", "_a_")
+  logDebug("PointsUtils", "readFromFile: " .. file)
+  
   if (LrFileUtils.exists(file) ~= false) then
     local data = LrFileUtils.readFile(file)
     return data
