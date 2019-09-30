@@ -34,9 +34,10 @@ local function showDialog()
     local catalog = LrApplication.activeCatalog()
     local targetPhoto = catalog:getTargetPhoto()
     local errorMsg = nil
-    local overlay = nil
+    local photoView = nil
     local dialogScope = nil
-
+    local rendererTable = nil
+    
     -- throw up this dialog as soon as possible as it blocks input which keeps the plugin from potentially launching 
     -- twice if clicked on really quickly
     -- let the renderer build the view now and show progress dialog
@@ -52,9 +53,12 @@ local function showDialog()
       
       if (targetPhoto:checkPhotoAvailability()) then
         local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-        local rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
+        rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
         if (rendererTable ~= nil) then
-          overlay = rendererTable.createView(targetPhoto, photoW, photoH)
+          photoView = rendererTable.createView(targetPhoto, photoW, photoH)
+          if photoView == nil then
+            errorMsg = "No Focus-Point information found"
+          end
         else 
           errorMsg = "Unmapped points renderer"
         end
@@ -70,7 +74,7 @@ local function showDialog()
       return
     end
     
-    if (dialogScope:isCanceled() or overlay == nil) then
+    if (dialogScope:isCanceled() or photoView == nil) then
       return
     end
 
@@ -79,8 +83,9 @@ local function showDialog()
       title = "Focus Point Viewer",
       cancelVerb = "< exclude >",
       actionVerb = "OK",
-      contents = FocusPointDialog.createDialog(targetPhoto, overlay)
+      contents = FocusPointDialog.createDialog(targetPhoto, photoView)
     }
+    rendererTable.cleanup()
     
   end)
 end
