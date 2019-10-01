@@ -34,17 +34,12 @@ Supported Cameras
 
 Installing
 --------
-**Prerequisite:**
-
-On a Windows Platform the usage of 'mogrify' is mandatory. Please install it from [https://imagemagick.org](https://imagemagick.org/script/download.php)
-
 **Installation steps**
 1. Use the green button in this webpage called "Clone or download".
 2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
 3. Move this folder to where you'd normally kept your Lightroom plugins.
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
-5. Windows only: if 'mogrify.exe' is not in the PATH,  please specify in the "Options" section of the plugin configuration the full path to 'mogrify.exe' 
-6. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point"
+5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point"
 
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 

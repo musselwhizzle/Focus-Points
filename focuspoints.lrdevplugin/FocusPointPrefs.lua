@@ -28,12 +28,8 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   -- on windows platform the usage of mogrify is mandatory as overlay rendering of focus frames does not work
   if (WIN_ENV) then
    prefs.mogrifyUsage = true
-   enableMogrifySettings = false
   end
   
-  if prefs.mogrifyPath == nil or prefs.mogrifyPath == '' then
-    prefs.mogrifyPath = "mogrify.exe" 
-  end 
 
   return {
   {
@@ -55,51 +51,23 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
     },
   },
   {
-    title = "Options",
+    title = "Acknowledgements",
     viewFactory:row {
-      bind_to_object = prefs,
-      spacing = viewFactory:control_spacing(),
-      viewFactory:checkbox {
-        fill = 1,
-        title = "Use Mogrify for Focus Point rendering. Mandatory on Windows platforms.",
-        enabled = enableMogrifySettings,
-        value = bind 'mogrifyUsage',
-      },
-    },
-    viewFactory:row {
-      spacing = viewFactory:control_spacing(),
+      fill_horizontal = 1,
       viewFactory:column {
+        fill_horizontal = 1,
         spacing = viewFactory:control_spacing(),
         viewFactory:static_text {
-          title = 'mogrify:',
+          font = "<system/bold>",
+          title = 'ImageMagick Studio LLC'
+        },
+        viewFactory:static_text {
+          title = 'This plugin uses ImageMagick mogrify'
         }
       },
       viewFactory:column {
-        spacing = viewFactory:control_spacing(),
-        bind_to_object = prefs,
-        viewFactory:edit_field {
-          fill = 1,
-          width_in_chars = 60,
-          value = bind 'mogrifyPath',
-        },
-      },
-      viewFactory:column {
-        spacing = viewFactory:control_spacing(),
-        viewFactory:push_button {
-          title = "Browse",
-          enable = true,
-          action = function ()
-            local path = LrDialogs.runOpenPanel(
-              { title = "Select Mogrify Executable" },
-              { canChooseFiles = true },
-              { canChooseDirectories = false },
-              { canCreateDirectories = false },
-              { allowsMultipleSelection = false },
-              { fileTypes = '*.EXE' } )
-            if path then
-              prefs.mogrifyPath = path[1]
-            end
-          end
+        viewFactory:static_text {
+          title = "https://imagemagick.org/index.php"
         },
       },
     },
