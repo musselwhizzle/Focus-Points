@@ -1,7 +1,7 @@
 Focus Points
 =======
 
-A plugin for Lightroom (on Mac) to show which focus point was active when the picture was taken.
+A plugin for Lightroom to show which focus point was active when the picture was taken.
 
 <img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
 
@@ -34,11 +34,13 @@ Supported Cameras
 
 Installing
 --------
+**Installation steps**
 1. Use the green button in this webpage called "Clone or download".
 2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
 3. Move this folder to where you'd normally kept your Lightroom plugins.
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point"
+
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
 Supported AF-Points
@@ -79,8 +81,7 @@ If 2 or more cameras share a common points mapping, simplying add that to the li
 
 Known Issues
 --------
-1. Not currently working on Windows.
-2. Not compatible if photo was edited in Photoshop. 3rd party tools often remove the necessary metadata from the image. 
+1. Not compatible if photo was edited in Photoshop. 3rd party tools often remove the necessary metadata from the image. 
 
 
 Contributing as a Developer
@@ -91,7 +92,7 @@ Special Thanks
 --------
 There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who has worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
 
-rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist. 
+rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma. 
 
 <a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 

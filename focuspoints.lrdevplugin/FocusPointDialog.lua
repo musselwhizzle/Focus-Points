@@ -50,39 +50,25 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
 
 end
 
-function FocusPointDialog.createDialog(targetPhoto, overlayView)
+function FocusPointDialog.createDialog(targetPhoto, photoView)
   local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+  local myView = nil
 
   -- temporary for dev'ing
   local developSettings = targetPhoto:getDevelopSettings()
   
   local viewFactory = LrView.osFactory()
-  local myPhoto = viewFactory:catalog_photo {
-    width = photoWidth, 
-    height = photoHeight,
-    photo = targetPhoto,
-  }
   local myText = viewFactory:static_text {
     title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
   }
       
   local column = viewFactory:column {
-    myPhoto, myText,
+    photoView, myText,
   }
   
-  local myView = viewFactory:view {
-    column, overlayView, 
-    place = 'overlapping', 
+  myView = viewFactory:view {
+    column,  
   }
-  
-  -- windows has the z index switched
-  if (WIN_ENV) then
-    myView = viewFactory:view {
-      overlayView, column, 
-      place = 'overlapping', 
-    }
-  end
-  
   return myView
   
 end

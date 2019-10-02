@@ -15,6 +15,7 @@
 --]]
 local LrView = import "LrView"
 local LrPrefs = import "LrPrefs"
+local LrDialogs = import "LrDialogs"
 
 local bind = LrView.bind
 
@@ -22,6 +23,14 @@ FocusPointPrefs = {}
 
 function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
+  local enableMogrifySettings =  true
+
+  -- on windows platform the usage of mogrify is mandatory as overlay rendering of focus frames does not work
+  if (WIN_ENV) then
+   prefs.mogrifyUsage = true
+  end
+  
+
   return {
   {
     title = "Logging",
@@ -38,6 +47,28 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           { title = "Info", value = "INFO"},
           { title = "Debug", value = "DEBUG"},
         }
+      },
+    },
+  },
+  {
+    title = "Acknowledgements",
+    viewFactory:row {
+      fill_horizontal = 1,
+      viewFactory:column {
+        fill_horizontal = 1,
+        spacing = viewFactory:control_spacing(),
+        viewFactory:static_text {
+          font = "<system/bold>",
+          title = 'ImageMagick Studio LLC'
+        },
+        viewFactory:static_text {
+          title = 'This plugin uses ImageMagick mogrify'
+        }
+      },
+      viewFactory:column {
+        viewFactory:static_text {
+          title = "https://imagemagick.org/index.php"
+        },
       },
     },
   },
