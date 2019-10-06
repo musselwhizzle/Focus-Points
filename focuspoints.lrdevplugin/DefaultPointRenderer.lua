@@ -201,7 +201,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
      -- Bottom Left, -270°
     local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
 
-    points = {
+    local points = {
       center = { x = x, y = y},
       tl  = { x = tlX, y = tlY },
       tr  = { x = trX, y = trY },

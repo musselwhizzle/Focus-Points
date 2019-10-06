@@ -19,9 +19,12 @@ local LrPathUtils = import 'LrPathUtils'
 local LrErrors = import 'LrErrors'
 local LrTasks = import 'LrTasks'
 
-local fileName
+require "Utils"
 
 MogrifyUtils = { }    -- class
+
+local fileName
+local mogrifyPath
 
 -- local helper functions
 
@@ -30,9 +33,11 @@ MogrifyUtils = { }    -- class
 -- Raises a LrError in case of an execution error 
 --]]
 local function mogrifyExecute(params)
-  mogrifyPath = LrPathUtils.child( _PLUGIN.path, "bin" )
-  mogrifyPath = LrPathUtils.child( mogrifyPath, "ImageMagick" )
-  mogrifyPath = LrPathUtils.child(mogrifyPath, "magick.exe")
+  if mogrifyPath == nil then
+    mogrifyPath = LrPathUtils.child( _PLUGIN.path, "bin" )
+    mogrifyPath = LrPathUtils.child( mogrifyPath, "ImageMagick" )
+    mogrifyPath = LrPathUtils.child(mogrifyPath, "magick.exe")
+  end
 
   local cmdline = '\"' .. mogrifyPath .. '\" mogrify ' .. params
   logDebug('mogrifyExecute', cmdline ) 
@@ -54,8 +59,8 @@ end
 local function exportToDisk(photo, xSize, ySize)
   local thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, errorMsg)
     if data == nil then
-      LrErrors.throwUserError("Export to disk failed. No thumbnail data received.")
       logError('exportToDisk', 'No thumbnail data')
+      LrErrors.throwUserError("Export to disk failed. No thumbnail data received.")
     else
       local orgPath = photo:getRawMetadata("path")
       local leafName = LrPathUtils.leafName( orgPath )
@@ -77,7 +82,7 @@ end
 -- ySize: height in pixel
 --]]
 local function mogrifyResize(xSize, ySize)
-  local params = '-resize ' .. xSize .. 'x' .. ySize .. ' ' .. fileName
+  local params = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' ' .. fileName
   logDebug('mogrifyResize', params )
   mogrifyExecute(params)
 end
@@ -100,7 +105,7 @@ end
 local function buildDrawParams(focuspointsTable)
   local para = nil
   local sw = nil
-  local color = red
+  local color = nil
   
   local params = '-fill none '
   for i, fpPoint in ipairs(focuspointsTable) do
@@ -118,6 +123,12 @@ local function buildDrawParams(focuspointsTable)
       local tly = math.floor(tonumber(fpPoint.points.tl.y))
       local brx = math.floor(tonumber(fpPoint.points.br.x))
       local bry = math.floor(tonumber(fpPoint.points.br.y))
+      -- normalize
+      if tlx > brx and ( fpPoint.rotation == 0 or fpPoint.rotation == 360) then
+        local x = tlx
+        tlx = brx
+        brx = x
+      end 
       if fpPoint.rotation == 0 or fpPoint.rotation == 360 then 
         para = para .. '-draw \"roundRectangle ' .. tlx .. ',' .. tly .. ' ' .. brx .. ',' .. bry .. ' 1,1\" '
       else
@@ -164,7 +175,7 @@ end
 --]]
 function MogrifyUtils.cleanup()
   if fileName ~= nil then
-    resultOK, errorMsg  = LrFileUtils.delete( fileName )
+    local resultOK, errorMsg  = LrFileUtils.delete( fileName )
     if errorMsg ~= nil then
       logError('MogrifyUtils.cleanup', errMsg)
       LrErrors.throwUserError("Deletion of temporary file failed: " ..  errMsg)
