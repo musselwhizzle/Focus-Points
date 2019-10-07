@@ -54,7 +54,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     return photoView
   end
   
-  if prefs.mogrifyUsage then
+  if (WIN_ENV == true) then
     local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
     MogrifyUtils.drawFocusPoints(fpTable)
     photoView = viewFactory:view {
@@ -64,7 +64,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
         value = fileName, 
       },
     }
-  else
+  else 
     overlayViews = DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
 
     -- create photo view 
@@ -73,18 +73,10 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
       height = photoDisplayHeight,
       photo = photo,
     }
-    if (WIN_ENV == false) then
-      photoView = viewFactory:view {
-        tmpView, overlayViews, 
-        place = 'overlapping', 
-      }
-    else
-      -- windows has the z index switched
-      photoView = viewFactory:view {
-        overlayViews, tmpView, 
-        place = 'overlapping', 
-      }
-    end
+    photoView = viewFactory:view {
+      tmpView, overlayViews, 
+      place = 'overlapping', 
+    }
   end
   
   return photoView
@@ -209,7 +201,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
      -- Bottom Left, -270°
     local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
 
-    points = {
+    local points = {
       center = { x = x, y = y},
       tl  = { x = tlX, y = tlY },
       tr  = { x = trX, y = trY },
@@ -273,8 +265,7 @@ function DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, pho
 end
 
 function DefaultPointRenderer.cleanup()
-  local prefs = LrPrefs.prefsForPlugin( nil )
-  if prefs.mogrifyUsage then
+  if (WIN_ENV == true) then
     MogrifyUtils.cleanup()
   end
 end

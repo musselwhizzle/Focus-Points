@@ -25,12 +25,6 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
   local enableMogrifySettings =  true
 
-  -- on windows platform the usage of mogrify is mandatory as overlay rendering of focus frames does not work
-  if (WIN_ENV) then
-   prefs.mogrifyUsage = true
-  end
-  
-
   return {
   {
     title = "Logging",
