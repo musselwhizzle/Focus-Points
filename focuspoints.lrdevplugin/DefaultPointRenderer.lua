@@ -25,7 +25,9 @@ local LrView = import 'LrView'
 local LrColor = import 'LrColor'
 local LrErrors = import 'LrErrors'
 local LrApplication = import 'LrApplication'
+local LrPrefs = import "LrPrefs"
 
+require "MogrifyUtils"
 require "ExifUtils"
 a = require "affine"
 
@@ -40,6 +42,57 @@ DefaultPointRenderer.funcGetAfPoints = nil
 -- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
 --]]
 function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayHeight)
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  local fpTable = DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
+  local viewFactory = LrView.osFactory()
+
+  local photoView = nil
+  local tmpView = nil
+  local overlayViews = nil
+
+  if fpTable == nil then
+    return photoView
+  end
+  
+  if (WIN_ENV == true) then
+    local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
+    MogrifyUtils.drawFocusPoints(fpTable)
+    photoView = viewFactory:view {
+      viewFactory:picture {
+        width  = photoDisplayWidth,
+        height = photoDisplayHeight,
+        value = fileName, 
+      },
+    }
+  else 
+    overlayViews = DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
+
+    -- create photo view 
+    tmpView = viewFactory:catalog_photo {
+      width = photoDisplayWidth, 
+      height = photoDisplayHeight,
+      photo = photo,
+    }
+    photoView = viewFactory:view {
+      tmpView, overlayViews, 
+      place = 'overlapping', 
+    }
+  end
+  
+  return photoView
+end
+
+--[[ Prepare raw focus data for rendering: apply crop factor, roation, etc
+-- photo - the selected catalog photo
+-- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
+-- Returns a table with detailed focus point rendering data
+--   points: array with  Center-, TopLeft-, TopRight-, BottonLeft-, BottonRight- point
+--   rotation: user + crop rotation
+--   userMirroring
+--   template: template discribing the focus-point. See DefaultDelegates.lua
+--   useSmallIcons
+--]]
+function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
   local developSettings = photo:getDevelopSettings()
   local metaData = ExifUtils.readMetaDataAsTable(photo)
 
@@ -92,10 +145,7 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     return nil
   end
 
-  -- Looping through the af-points and drawing them depending on their nature
-  local viewsTable = {
-    place = "overlapping"
-  }
+  local fpTable = {  }
 
   for key, point in pairs(pointsTable.points) do
     local template = pointsTable.pointTemplates[point.pointType]
@@ -142,50 +192,82 @@ function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayH
     end
     logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", minCornerDist: " .. template.minCornerDist .. ", minCornerPhotoDist: " .. minCornerPhotoDist)
 
-    -- Inserting center icon view
-    if template.center ~= nil then
-      if x >= 0 and x <= photoDisplayWidth and y >= 0 and y <= photoDisplayHeight then
-        local centerTemplate = template.center
-        if useSmallIcons and template.center_small ~= nil then
-          centerTemplate = template.center_small
-        end
+    -- Top Left, 0°
+    local tlX, tlY = resultingTransformation(point.x - pointWidth/2, point.y - pointHeight/2)
+    -- Top Right, -90°
+    local trX, trY = resultingTransformation(point.x + pointWidth/2, point.y - pointHeight/2)
+     -- Bottom Right, -180°
+    local brX, brY = resultingTransformation(point.x + pointWidth/2, point.y + pointHeight/2)
+     -- Bottom Left, -270°
+    local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
 
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(x, y, cropRotation + userRotation, userMirroring, centerTemplate.fileTemplate, centerTemplate.anchorX, centerTemplate.anchorY, template.angleStep))
-      end
+    local points = {
+      center = { x = x, y = y},
+      tl  = { x = tlX, y = tlY },
+      tr  = { x = trX, y = trY },
+      bl  = { x = blX, y = blY },
+      br  = { x = brX, y = brY },
+    }
+
+    table.insert(fpTable, { points = points, rotation = cropRotation + userRotation, userMirroring= userMirroring, template = template, useSmallIcons = useSmallIcons})
+  end
+
+  return fpTable
+end
+
+
+--[[ Create  overlay views
+-- fpTable - table with rendering information for the focus points
+-- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
+-- Returns a table with overlay view
+--]]
+function DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
+
+  local viewsTable = {
+    place = "overlapping"
+  }
+
+  for key, fpPoint in pairs(fpTable) do
+    -- Inserting center icon view
+    if fpPoint.template.center ~= nil then
+      if fpPoint.points.center.x >= 0 and fpPoint.points.center.x <= photoDisplayWidth and fpPoint.points.center.y >= 0 and fpPoint.points.center.y <= photoDisplayHeight then
+        local centerTemplate = fpPoint.template.center
+        if fpPoint.useSmallIcons and fpPoint.template.center_small ~= nil then
+          centerTemplate = fpPoint.template.center_small
+        end    
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.center.x, fpPoint.points.center.y, fpPoint.rotation, fpPoint.userMirroring, centerTemplate.fileTemplate, centerTemplate.anchorX, centerTemplate.anchorY, centerTemplate.angleStep))
+      end  
     end
 
     -- Inserting corner icon views
-    if template.corner ~= nil then
-      local cornerTemplate = template.corner
-      if useSmallIcons and template.corner_small ~= nil then
-        cornerTemplate = template.corner_small
+    if fpPoint.template.corner ~= nil then
+      local cornerTemplate = fpPoint.template.corner
+      if fpPoint.useSmallIcons and fpPoint.template.corner_small ~= nil then
+        cornerTemplate = fpPoint.template.corner_small
       end
-
-      -- Top Left, 0°
-      local tlX, tlY = resultingTransformation(point.x - pointWidth/2, point.y - pointHeight/2)
-      -- Top Right, -90°
-      local trX, trY = resultingTransformation(point.x + pointWidth/2, point.y - pointHeight/2)
-       -- Bottom Right, -180°
-      local brX, brY = resultingTransformation(point.x + pointWidth/2, point.y + pointHeight/2)
-       -- Bottom Left, -270°
-      local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
-
-      if tlX >= 0 and tlX <= photoDisplayWidth and tlY >= 0 and tlY <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(tlX, tlY, cropRotation + userRotation, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+    
+      if fpPoint.points.tl.x >= 0 and fpPoint.points.tl.x <= photoDisplayWidth and fpPoint.points.tl.y >= 0 and fpPoint.points.tl.y <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.tl.x, fpPoint.points.tl.y, fpPoint.rotation, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
       end
-      if trX >= 0 and trX <= photoDisplayWidth and trY >= 0 and trY <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(trX, trY, cropRotation + userRotation - 90, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+      if fpPoint.points.tr.x >= 0 and fpPoint.points.tr.x <= photoDisplayWidth and fpPoint.points.tr.y >= 0 and fpPoint.points.tr.y <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.tr.x, fpPoint.points.tr.y, fpPoint.rotation - 90, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
       end
-      if brX >= 0 and brX <= photoDisplayWidth and brY >= 0 and brY <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(brX, brY, cropRotation + userRotation - 180, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+      if fpPoint.points.br.x >= 0 and fpPoint.points.br.x <= photoDisplayWidth and fpPoint.points.br.y >= 0 and fpPoint.points.br.y <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.br.x, fpPoint.points.br.y, fpPoint.rotation - 180, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
       end
-      if blX >= 0 and blX <= photoDisplayWidth and blY >= 0 and blY <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(blX, blY, cropRotation + userRotation - 270, userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, template.angleStep))
+      if fpPoint.points.bl.y >= 0 and fpPoint.points.bl.x <= photoDisplayWidth and fpPoint.points.bl.y >= 0 and fpPoint.points.bl.y <= photoDisplayHeight then
+        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.bl.x, fpPoint.points.bl.y, fpPoint.rotation - 270, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
       end
     end
   end
 
   return LrView.osFactory():view(viewsTable)
+end
+
+function DefaultPointRenderer.cleanup()
+  if (WIN_ENV == true) then
+    MogrifyUtils.cleanup()
+  end
 end
 
 --[[
