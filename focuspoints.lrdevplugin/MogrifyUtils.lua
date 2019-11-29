@@ -82,7 +82,7 @@ end
 -- ySize: height in pixel
 --]]
 local function mogrifyResize(xSize, ySize)
-  local params = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' ' .. fileName
+  local params = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' \"' .. fileName  .. '\"'
   logDebug('mogrifyResize', params )
   mogrifyExecute(params)
 end
@@ -143,7 +143,7 @@ local function buildDrawParams(focuspointsTable)
       params = params .. para
     end
   end
-  params = params .. fileName
+  params = params .. '\"' ..fileName  .. '\"'
   return params
 end
 
