@@ -29,7 +29,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.53';
+$VERSION = '1.54';
 
 sub ConvertTimecode($);
 sub ProcessSGLT($$$);
@@ -142,7 +142,7 @@ my %code2charset = (
     0x64 => 'APICOM G.726 ADPCM',
     0x65 => 'APICOM G.722 ADPCM',
     0x66 => 'Microsoft DSAT', #6
-    0x67 => 'Micorsoft DSAT DISPLAY', #6
+    0x67 => 'Microsoft DSAT DISPLAY', #6
     0x69 => 'Voxware Byte Aligned', #7
     0x70 => 'Voxware AC8', #7
     0x71 => 'Voxware AC10', #7
@@ -339,7 +339,7 @@ my %code2charset = (
         these files, information is extracted from subsequent RIFF chunks as
         sub-documents, but the Duration is calculated for the full video.
     },
-    # (not 100% sure that the concatination technique mentioned above is valid - PH)
+    # (not 100% sure that the concatenation technique mentioned above is valid - PH)
    'fmt ' => {
         Name => 'AudioFormat',
         SubDirectory => { TagTable => 'Image::ExifTool::RIFF::AudioFormat' },
@@ -534,6 +534,12 @@ my %code2charset = (
             ProcessProc => \&ProcessSLLT,
         },
     },
+    iXML => { #PH
+        SubDirectory => { TagTable => 'Image::ExifTool::XMP::XML' },
+    },
+    aXML => { #PH
+        SubDirectory => { TagTable => 'Image::ExifTool::XMP::XML' },
+    },
 #
 # tags found in an AlphaImagingTech AVI video - PH
 #
@@ -631,7 +637,11 @@ my %code2charset = (
         Name => 'BWFVersion',
         Format => 'int16u',
     },
-    # 348 - int8u[64] - SMPTE 330M UMID (Unique Material Identifier)
+    348 => {
+        Name => 'BWF_UMID',
+        Format => 'undef[64]',
+        ValueConv => '$_=unpack("H*",$val); s/0{64}$//; uc $_',
+    },
     # 412 - int8u[190] - reserved
     602 => {
         Name => 'CodingHistory',
@@ -1744,7 +1754,7 @@ including AVI videos, WAV audio files and WEBP images.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

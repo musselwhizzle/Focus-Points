@@ -13,7 +13,7 @@ use strict;
 
 #------------------------------------------------------------------------------
 # Calculate CRC or update running CRC (ref 1)
-# Inputs: 0) data reference, 1) running crc to update (undef intially)
+# Inputs: 0) data reference, 1) running crc to update (undef initially)
 #         2) data position (undef for 0), 3) data length (undef for all data),
 # Returns: updated CRC
 my @crcTable;
@@ -379,7 +379,7 @@ strings).
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

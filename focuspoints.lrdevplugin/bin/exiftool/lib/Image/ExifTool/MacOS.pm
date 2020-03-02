@@ -343,7 +343,7 @@ sub SetMacOSTags($$$)
             next unless $overwrite;
             if ($overwrite < 0) {
                 my $operation = $$nvHash{Shift} ? 'Shifting' : 'Conditional replacement';
-                $et->Warn("$operation of $tag not yet supported");
+                $et->Warn("$operation of MacOS $tag not yet supported");
                 next;
             }
         }
@@ -605,7 +605,7 @@ for writing.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

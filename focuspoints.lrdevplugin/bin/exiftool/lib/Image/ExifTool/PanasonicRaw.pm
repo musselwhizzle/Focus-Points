@@ -6,7 +6,7 @@
 # Revisions:    2009/03/24 - P. Harvey Created
 #               2009/05/12 - PH Added RWL file type (same format as RW2)
 #
-# References:   1) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,1542.0.html
+# References:   1) https://exiftool.org/forum/index.php/topic,1542.0.html
 #               2) http://www.cybercom.net/~dcoffin/dcraw/
 #               3) http://syscall.eu/#pana
 #               4) Klaus Homeister private communication
@@ -21,7 +21,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.23';
+$VERSION = '1.24';
 
 sub ProcessJpgFromRaw($$$);
 sub WriteJpgFromRaw($$$);
@@ -500,7 +500,31 @@ my %panasonicWhiteBalance = ( #forum9396
         Writable => 'int32u',
         PrintConv => { 0 => 'No', 1 => 'Yes' },
     },
-    # 1201 - LensStyle? ref forum9394
+    # Note: LensTypeMake and LensTypeModel are combined into a Composite LensType tag
+    # defined in Olympus.pm which has the same values as Olympus:LensType
+    0x1201 => { #IB
+        Name => 'LensTypeMake',
+        Condition => '$format eq "int16u"',
+        Writable => 'int16u',
+        # when format is int16u, these values have been observed:
+        #  0 - Olympus or unknown lens
+        #  2 - Leica or Lumix lens
+        # when format is int32u (S models), these values have been observed (ref IB):
+        #  256 - Leica lens
+        #  257 - Lumix lens
+    },
+    0x1202 => { #IB
+        Name => 'LensTypeModel',
+        Condition => '$format eq "int16u"',
+        Writable => 'int16u',
+        RawConv => q{
+            return undef unless $val;
+            require Image::ExifTool::Olympus; # (to load Composite LensID)
+            return $val;
+        },
+        ValueConv => '$_=sprintf("%.4x",$val); s/(..)(..)/$2 $1/; $_',
+        ValueConvInv => '$val =~ s/(..) (..)/$2$1/; hex($val)',
+    },
     0x1203 => { #4
         Name => 'FocalLengthIn35mmFormat',
         Writable => 'int16u',
@@ -827,7 +851,7 @@ write meta information in Panasonic/Leica RAW, RW2 and RWL images.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

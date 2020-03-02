@@ -7060,7 +7060,7 @@ $VERSION = '1.14';
    'SubfileType' => {
       Description => 'Tipo sotto-file',
       PrintConv => {
-        'Full-resolution Image' => 'Immagine con risoluzione originale',
+        'Full-resolution image' => 'Immagine con risoluzione originale',
         'Reduced-resolution image' => 'Immagine a risoluzione ridotta',
         'Single page of multi-page image' => 'Singola pagina di un\'immagine multi-pagina',
         'Single page of multi-page reduced-resolution image' => 'Singola pagina di un\'immagine multi-pagina a risoluzione ridotta',
@@ -7903,7 +7903,7 @@ and values.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

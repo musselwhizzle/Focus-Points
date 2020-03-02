@@ -73,7 +73,7 @@ sub ProcessFITS($$)
             # add to tag table if necessary
             unless ($$tagTablePtr{$tag}) {
                 my $name = ucfirst lc $tag; # make tag name lower case with leading capital
-                $name =~ s/_(.)/\U$1/g;     # remove all '_' and capitalize subsquent letter
+                $name =~ s/_(.)/\U$1/g;     # remove all '_' and capitalize subsequent letter
                 AddTagToTable($tagTablePtr, $tag, { Name => $name });
             }
         }
@@ -126,7 +126,7 @@ information from FITS (Flexible Image Transport System) images.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

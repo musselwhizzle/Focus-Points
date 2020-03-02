@@ -11,7 +11,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.29';
+$VERSION = '1.30';
 
 sub ProcessOcad($$$);
 sub ProcessJPEG_HDR($$$);
@@ -141,6 +141,7 @@ sub ProcessJPEG_HDR($$$);
         Name => 'GoPro',
         Condition => '$$valPt =~ /^GoPro\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::GoPro::GPMF' },
+      # also seen Motorola APP6 "MMIMETA\0", with sub-types: AL3A,ALED,MMI0,MOTD,QC3A
     }],
     APP7 => [{
         Name => 'Pentax',
@@ -196,7 +197,7 @@ sub ProcessJPEG_HDR($$$);
     APP14 => {
         Name => 'Adobe',
         Condition => '$$valPt =~ /^Adobe/',
-        Writable => 1,  # (for docs only)
+        Writable => 2,  # (for docs only)
         SubDirectory => { TagTable => 'Image::ExifTool::JPEG::Adobe' },
     },
     APP15 => {
@@ -209,7 +210,7 @@ sub ProcessJPEG_HDR($$$);
         Name => 'Comment',
         # note: flag as writable for documentation, but it won't show up
         # in the TagLookup as writable because there is no WRITE_PROC
-        Writable => 1,
+        Writable => 2,
     },
     SOF => {
         Name => 'StartOfFrame',
@@ -247,13 +248,16 @@ sub ProcessJPEG_HDR($$$);
         Condition => '$$valPt =~ /QDIOBS$/',
         SubDirectory => { TagTable => 'Image::ExifTool::Samsung::Trailer' },
       }, {
-        Name => 'PreviewImage',
-        Condition => '$$valPt =~ /^\xff\xd8\xff/',
-        Writable => 1,  # (for docs only)
-      }, {
         Name => 'EmbeddedVideo',
         Notes => 'extracted only when ExtractEmbedded option is used',
         Condition => '$$valPt =~ /^.{4}ftyp/s',
+      }, {
+        Name => 'Insta360',
+        Condition => '$$valPt =~ /8db42d694ccc418790edff439fe026bf$/',
+      }, {
+        Name => 'PreviewImage',
+        Condition => '$$valPt =~ /^\xff\xd8\xff/',
+        Writable => 2,  # (for docs only)
     }],
 );
 
@@ -267,6 +271,7 @@ sub ProcessJPEG_HDR($$$);
     0xc4a5 => {
         Name => 'PrintIM',
         # must set Writable here so this tag will be saved with MakerNotes option
+        # (but it isn't actually writable because there is no WRITE_PROC)
         Writable => 'undef',
         Description => 'Print Image Matching',
         SubDirectory => {
@@ -617,7 +622,7 @@ segments are included in the Image::ExifTool module itself.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
