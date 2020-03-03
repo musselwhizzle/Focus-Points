@@ -21,7 +21,7 @@ sub ProcessKodakPatch($$$);
 sub WriteUnknownOrPreview($$$);
 sub FixLeicaBase($$;$);
 
-$VERSION = '2.09';
+$VERSION = '2.10';
 
 my $debug;          # set to 1 to enable debugging code
 
@@ -160,6 +160,10 @@ my $debug;          # set to 1 to enable debugging code
             Start => '$valuePtr',
             Base => 0, # (avoids warnings since maker notes are not self-contained)
         },
+        # 0x0011 - sensor code (ref IB)
+        # 0x0012 - camera model id?
+        # 0x0015 - camera model name
+        # 0x0016 - coating code (ref IB)
     },
     # (the GE X5 has really messed up EXIF-like maker notes starting with
     #  "GENIC\x0c\0" --> currently not decoded)
@@ -687,7 +691,6 @@ my $debug;          # set to 1 to enable debugging code
         SubDirectory => {
             TagTable => 'Image::ExifTool::Panasonic::Leica9',
             Start => '$valuePtr + 8',
-            Base => '$start - 8',
             ByteOrder => 'Unknown',
         },
     },
@@ -970,21 +973,15 @@ my $debug;          # set to 1 to enable debugging code
     },
     {
         Name => 'MakerNoteSigma',
-        # (starts with "SIGMA\0")
-        Condition => '$$self{Make}=~/^(SIGMA|FOVEON)/ and $$valPt!~/^SIGMA\0\0\0\0\x03/',
+        Condition => q{
+            return undef unless $$self{Make}=~/^(SIGMA|FOVEON)/;
+            # save version number in "MakerNoteSigmaVer" member variable
+            $$self{MakerNoteSigmaVer} = $$valPt=~/^SIGMA\0\0\0\0(.)/ ? ord($1) : -1;
+            return 1;
+        },
         SubDirectory => {
             TagTable => 'Image::ExifTool::Sigma::Main',
             Validate => '$val =~ /^(SIGMA|FOVEON)/',
-            Start => '$valuePtr + 10',
-            ByteOrder => 'Unknown',
-        },
-    },
-    {
-        Name => 'MakerNoteSigma3',
-        # (starts with "SIGMA\0\0\0\0\x03")
-        Condition => '$$valPt=~/^SIGMA\0\0\0\0\x03/ and $$self{MakerNoteSigma3}=1',
-        SubDirectory => {
-            TagTable => 'Image::ExifTool::Sigma::Main',
             Start => '$valuePtr + 10',
             ByteOrder => 'Unknown',
         },
@@ -1815,7 +1812,7 @@ maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

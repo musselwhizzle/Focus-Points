@@ -13,7 +13,7 @@
 #               2018/03/13 - PH Update to DPP 4.8.20
 #
 # References:   1) Bogdan private communication (Canon DPP v3.4.1.1)
-#               2) Gert Kello private communiation (DPP 3.8)
+#               2) Gert Kello private communication (DPP 3.8)
 #------------------------------------------------------------------------------
 
 package Image::ExifTool::CanonVRD;
@@ -2264,7 +2264,7 @@ files, and as a trailer in JPEG, CRW, CR2 and TIFF images.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

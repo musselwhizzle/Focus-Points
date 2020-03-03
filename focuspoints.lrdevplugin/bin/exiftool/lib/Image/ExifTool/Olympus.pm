@@ -21,7 +21,7 @@
 #              13) Chris Shaw private communication (E-3)
 #              14) Viktor Lushnikov private communication (E-400)
 #              15) Yrjo Rauste private communication (E-30)
-#              16) Godfrey DiGiorgi private communcation (E-P1) + http://forums.dpreview.com/forums/read.asp?message=33187567
+#              16) Godfrey DiGiorgi private communication (E-P1) + http://forums.dpreview.com/forums/read.asp?message=33187567
 #              17) Martin Hibers private communication
 #              18) Tomasz Kawecki private communication
 #              19) Brad Grier private communication
@@ -39,7 +39,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::APP12;
 
-$VERSION = '2.60';
+$VERSION = '2.65';
 
 sub PrintLensInfo($$$);
 
@@ -109,6 +109,7 @@ my %olympusLensTypes = (
     '0 32 10' => 'Olympus M.Zuiko Digital ED 12-200mm F3.5-6.3', #IB
     '0 33 00' => 'Olympus Zuiko Digital 25mm F2.8', #PH
     '0 34 00' => 'Olympus Zuiko Digital ED 9-18mm F4.0-5.6', #7
+    '0 34 10' => 'Olympus M.Zuiko Digital ED 12-45mm F4.0 Pro', #IB
     '0 35 00' => 'Olympus Zuiko Digital 14-54mm F2.8-3.5 II', #PH
     # Sigma lenses
     '1 01 00' => 'Sigma 18-50mm F3.5-5.6 DC', #8
@@ -169,6 +170,15 @@ my %olympusLensTypes = (
     '2 26 10' => 'Lumix G 25mm F1.7 Asph.', #NJ
     '2 27 10' => 'Leica DG Vario-Elmar 100-400mm F4.0-6.3 Asph. Power OIS', #NJ
     '2 28 10' => 'Lumix G Vario 12-60mm F3.5-5.6 Asph. Power OIS', #NJ
+    '2 29 10' => 'Leica DG Summilux 12mm F1.4 Asph.', #IB
+    '2 30 10' => 'Leica DG Vario-Elmarit 12-60mm F2.8-4 Asph. Power OIS', #IB
+    '2 32 10' => 'Lumix G Vario 100-300mm F4.0-5.6 II', #PH
+    '2 33 10' => 'Lumix G X Vario 12-35mm F2.8 II Asph. Power OIS', #IB
+    '2 34 10' => 'Lumix G Vario 35-100mm F2.8 II', #forum3833
+    '2 35 10' => 'Leica DG Vario-Elmarit 8-18mm F2.8-4 Asph.', #IB
+    '2 36 10' => 'Leica DG Elmarit 200mm F2.8 Power OIS', #IB
+    '2 37 10' => 'Leica DG Vario-Elmarit 50-200mm F2.8-4 Asph. Power OIS', #IB
+    '2 38 10' => 'Leica DG Vario-Summilux 10-25mm F1.7 Asph.', #IB
     '3 01 00' => 'Leica D Vario Elmarit 14-50mm F2.8-3.5 Asph.', #11
     '3 02 00' => 'Leica D Summilux 25mm F1.4 Asph.', #11
     # Tamron lenses
@@ -409,6 +419,9 @@ my %olympusCameraTypes = (
     S0068 => 'E-M10MarkIII',
     S0076 => 'E-PL9', #IB
     S0080 => 'E-M1X', #IB
+    S0085 => 'E-PL10', #IB
+    S0089 => 'E-M5MarkIII',
+    S0092 => 'E-M1MarkIII', #IB
     SR45 => 'D220',
     SR55 => 'D320L',
     SR83 => 'D340L',
@@ -1589,14 +1602,14 @@ my %indexInfo = (
         Writable => 'int8u',
         Count => 6,
         Notes => q{
-            6 numbers: 0. Make, 1. Unknown, 2. Model, 3. Sub-model, 4-5. Unknown.  Only
+            6 numbers: 1. Make, 2. Unknown, 3. Model, 4. Sub-model, 5-6. Unknown.  Only
             the Make, Model and Sub-model are used to identify the lens type
         },
         SeparateTable => 'LensType',
         # Have seen these values for the unknown numbers:
-        # 1: 0
-        # 4: 0, 2(Olympus lenses for which I have also seen 0 for this number)
-        # 5: 0, 16(new Lumix lenses)
+        # 2: 0
+        # 5: 0, 2(Olympus lenses for which I have also seen 0 for this number)
+        # 6: 0, 16(new Lumix lenses)
         ValueConv => 'my @a=split(" ",$val); sprintf("%x %.2x %.2x",@a[0,2,3])',
         # set unknown values to zero when writing
         ValueConvInv => 'my @a=split(" ",$val); hex($a[0])." 0 ".hex($a[1])." ".hex($a[2])." 0 0"',
@@ -1661,7 +1674,7 @@ my %indexInfo = (
         Writable => 'int8u',
         Count => 6,
         Notes => q{
-            6 numbers: 0. Make, 1. Unknown, 2. Model, 3. Sub-model, 4-5. Unknown.  Only
+            6 numbers: 1. Make, 2. Unknown, 3. Model, 4. Sub-model, 5-6. Unknown.  Only
             the Make and Model are used to identify the extender
         },
         ValueConv => 'my @a=split(" ",$val); sprintf("%x %.2x",@a[0,2])',
@@ -3196,7 +3209,7 @@ my %indexInfo = (
         Writable => 'int16s',
         RawConv => '($val and $val ne "-32768") ? $val : undef', # ignore 0 and -32768
         # ValueConv => '-2*(($val/135)**2)+55', #11
-        ValueConv => '84 - 3 * $val / 26', #http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,5423.0.html
+        ValueConv => '84 - 3 * $val / 26', #https://exiftool.org/forum/index.php/topic,5423.0.html
         ValueConvInv => 'int((84 - $val) * 26 / 3 + 0.5)',
         PrintConv => 'sprintf("%.1f C",$val)',
         PrintConvInv => '$val=~s/ ?C$//; $val',
@@ -3907,6 +3920,17 @@ my %indexInfo = (
             Image::ExifTool::Exif::ExtractImage($self,$val[0],$val[1],"ZoomedPreviewImage");
         },
     },
+    # this is actually for PanasonicRaw tags, but it uses the lens lookup here
+    LensType => {
+        Require => {
+            0 => 'LensTypeMake',
+            1 => 'LensTypeModel',
+        },
+        Notes => 'based on tags found in some Panasonic RW2 images',
+        SeparateTable => 'LensType',
+        ValueConv => '"$val[0] $val[1]"',
+        PrintConv => \%olympusLensTypes,
+    },
 );
 
 # add our composite tags
@@ -4015,7 +4039,7 @@ Olympus or Epson maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -5,7 +5,7 @@
 #
 # Notes:        Also contains some less used ExifTool functions
 #
-# URL:          http://owl.phy.queensu.ca/~phil/exiftool/
+# URL:          https://exiftool.org/
 #
 # Revisions:    12/16/2004 - P. Harvey Created
 #------------------------------------------------------------------------------
@@ -135,8 +135,8 @@ my %rawType = (
 my @delGroups = qw(
     Adobe AFCP APP0 APP1 APP2 APP3 APP4 APP5 APP6 APP7 APP8 APP9 APP10 APP11
     APP12 APP13 APP14 APP15 CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
-    FotoStation GlobParamIFD GPS ICC_Profile IFD0 IFD1 InteropIFD IPTC ItemList
-    JFIF Jpeg2000 Keys MakerNotes Meta MetaIFD MIE MPF NikonCapture PDF
+    FotoStation GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC
+    ItemList JFIF Jpeg2000 Keys MakerNotes Meta MetaIFD MIE MPF NikonCapture PDF
     PDF-update PhotoMechanic Photoshop PNG PNG-pHYs PrintIM QuickTime RMETA RSRC
     SubIFD Trailer UserData XML XML-* XMP XMP-*
 );
@@ -280,8 +280,8 @@ my %ignorePrintConv = map { $_ => 1 } qw(OTHER BITMASK Notes);
 #        each value in the list.  Internally, the new information is stored in
 #        the following members of the $$self{NEW_VALUE}{$tagInfo} hash:
 #           TagInfo - tag info ref
-#           DelValue - list ref for values to delete
-#           Value - list ref for values to add (not defined if deleting the tag)
+#           DelValue - list ref for raw values to delete
+#           Value - list ref for raw values to add (not defined if deleting the tag)
 #           IsCreating - must be set for the tag to be added for the standard file types,
 #                        otherwise just changed if it already exists.  This may be
 #                        overridden for file types with a PREFERRED metadata type.
@@ -745,7 +745,7 @@ TAG: foreach $tagInfo (@matchingTags) {
         }
         $writeGroup{$tagInfo} = $writeGroup;
     }
-    # sort tag info list in reverse order of priority (higest number last)
+    # sort tag info list in reverse order of priority (highest number last)
     # so we get the highest priority error message in the end
     @tagInfoList = sort { $tagPriority{$a} <=> $tagPriority{$b} } @tagInfoList;
     # must write any tags which also write other tags first
@@ -857,7 +857,7 @@ TAG: foreach $tagInfo (@matchingTags) {
             # check to make sure this is a List or Shift tag if adding
             if ($addValue and not ($shift or $$tagInfo{List})) {
                 if ($addValue eq '2') {
-                    undef $addValue;    # quitely reset this option
+                    undef $addValue;    # quietly reset this option
                 } else {
                     $err = "Can't add $wgrp1:$tag (not a List type)";
                     $verbose > 2 and print $out "$err\n";
@@ -1273,6 +1273,8 @@ sub SetNewValuesFromFile($$;@)
         QuickTimeUTC    => $$options{QuickTimeUTC},
         RequestAll      => $$options{RequestAll} || 1, # (is this still necessary now that RequestTags are being set?)
         RequestTags     => $$options{RequestTags},
+        SaveFormat      => $$options{SaveFormat},
+        SavePath        => $$options{SavePath},
         ScanForXMP      => $$options{ScanForXMP},
         StrictDate      => defined $$options{StrictDate} ? $$options{StrictDate} : 1,
         Struct          => $structOpt,
@@ -1336,13 +1338,13 @@ sub SetNewValuesFromFile($$;@)
         foreach $tag (@tags) {
             # don't try to set errors or warnings
             next if $tag =~ /^(Error|Warning)\b/;
-            # get approprite value type if necessary
+            # get appropriate value type if necessary
             if ($opts{SrcType} and $opts{SrcType} ne $srcType) {
                 $$info{$tag} = $srcExifTool->GetValue($tag, $opts{SrcType});
             }
             # set value for this tag
             my ($n, $e) = $self->SetNewValue($tag, $$info{$tag}, %opts);
-            # delete this tag if we could't set it
+            # delete this tag if we couldn't set it
             $n or delete $$info{$tag};
         }
         return $info;
@@ -1738,6 +1740,8 @@ sub SaveNewValues($)
 # Notes: Restores saved new values, but currently doesn't restore them in the
 # original order, so there may be some minor side-effects when restoring tags
 # with overlapping groups. eg) XMP:Identifier, XMP-dc:Identifier
+# Also, this doesn't do the right thing for list-type tags which accumulate
+# values across a save point
 sub RestoreNewValues($)
 {
     my $self = shift;
@@ -2301,6 +2305,10 @@ sub WriteInfo($$;$$)
                     $fileType = $tiffType;
                     undef $rtnVal;
                 } else {
+                    if ($tiffType eq 'FFF') {
+                        # (see https://exiftool.org/forum/index.php?topic=10848.0)
+                        $self->Error('Phocus may not properly update previews of edited FFF images', 1);
+                    }
                     $dirInfo{Parent} = $tiffType;
                     $rtnVal = $self->ProcessTIFF(\%dirInfo);
                 }
@@ -2621,6 +2629,8 @@ sub GetAllGroups($)
 
     $family == 3 and return('Doc#', 'Main');
     $family == 4 and return('Copy#');
+    $family == 5 and return('[too many possibilities to list]');
+    $family == 6 and return(@Image::ExifTool::Exif::formatName[1..$#Image::ExifTool::Exif::formatName]);
 
     LoadAllTables();    # first load all our tables
 
@@ -2746,8 +2756,8 @@ Conv: for (;;) {
                     ($wantGroup or not defined $wantGroup))
                 {
                     $listSplit = ',?\s+' if $listSplit eq '1' and $$tagInfo{AutoSplit};
-                    my @splitVal = split /$listSplit/, $val;
-                    $val = \@splitVal if @splitVal > 1;
+                    my @splitVal = split /$listSplit/, $val, -1;
+                    $val = @splitVal > 1 ? \@splitVal : @splitVal ? $splitVal[0] : '';
                 }
             }
             $type = $convType || $$self{ConvType} || 'PrintConv';
@@ -2844,7 +2854,7 @@ Conv: for (;;) {
                     last Conv;
                 }
             } elsif ($conv) {
-                if (ref $conv eq 'HASH') {
+                if (ref $conv eq 'HASH' and (not exists $$tagInfo{"${type}Inv"} or $convInvList)) {
                     my ($multi, $lc);
                     # insert alternate language print conversions if required
                     if ($$self{CUR_LANG} and $type eq 'PrintConv' and
@@ -2921,14 +2931,16 @@ Conv: for (;;) {
 }
 
 #------------------------------------------------------------------------------
-# convert tag names to values in a string (eg. '${EXIF:ISO}x $$' --> '100x $')
+# Convert tag names to values or variables in a string
+# (eg. '${EXIF:ISO}x $$' --> '100x $' without hash ref, or "$info{'EXIF:ISO'}x $" with)
 # Inputs: 0) ExifTool object ref, 1) reference to list of found tags
 #         2) string with embedded tag names, 3) Options:
 #               undef    - set missing tags to ''
 #              'Error'   - issue minor error on missing tag (and return undef)
 #              'Warn'    - issue minor warning on missing tag (and return undef)
 #              'Silent'  - just return undef on missing tag (no errors/warnings)
-#               Hash ref - hash for return of tag/value pairs
+#               Hash ref - defined to interpolate as variables in string instead of values
+#                          --> receives tag/value pairs for interpolation of the variables
 #         4) document group name if extracting from a specific document
 #         5) hash ref to cache tag keys for subsequent calls in document loop
 # Returns: string with embedded tag values (or '$info{TAGNAME}' entries with Hash ref option)
@@ -3975,7 +3987,10 @@ sub WriteDirectory($$$;$)
         # (never delete an entire QuickTime group)
         if ($delFlag) {
             if (($grp0 =~ /^(MakerNotes)$/ or $grp1 =~ /^(IFD0|ExifIFD|MakerNotes)$/) and
-                $self->IsRawType())
+                $self->IsRawType() and
+                # allow non-permanent MakerNote directories to be deleted (ie. NikonCapture)
+                (not $$dirInfo{TagInfo} or not defined $$dirInfo{TagInfo}{Permanent} or
+                $$dirInfo{TagInfo}{Permanent}))
             {
                 $self->WarnOnce("Can't delete $1 from $$self{FileType}",1);
                 undef $grp1;
@@ -4059,7 +4074,7 @@ sub WriteDirectory($$$;$)
                 $self->Warn("Can't write EXIF as a block to $$self{FILE_TYPE} file");
                 last;
             }
-            # this can happen if we call WriteDirectory for an EXIF directory without  going
+            # this can happen if we call WriteDirectory for an EXIF directory without going
             # through WriteTIFF as the WriteProc (which happens if conditionally replacing
             # the EXIF block and the condition fails), but we never want to do a block write
             # in this case because the EXIF block would end up with two TIFF headers
@@ -4704,6 +4719,11 @@ TryLib: for ($lib=$strptimeLib; ; $lib='') {
             } elsif ($lib eq 'POSIX::strptime') {
                 @a = eval { POSIX::strptime($val, $fmt) };
             } else {
+                # protect against a negative epoch time, it can cause a hard crash in Windows
+                if ($^O eq 'MSWin32' and $fmt =~ /%s/ and $val =~ /-\d/) {
+                    warn "Can't convert negative epoch time\n";
+                    return undef;
+                }
                 @a = eval {
                     my $t = Time::Piece->strptime($val, $fmt);
                     return ($t->sec, $t->min, $t->hour, $t->mday, $t->_mon, $t->_year);
@@ -4747,7 +4767,7 @@ TryLib: for ($lib=$strptimeLib; ; $lib='') {
                 if (not $tz) {
                     if (eval { require Time::Local }) {
                         # determine timezone offset for this time
-                        my @args = ($a[4],$a[3],$a[2],$a[1],$a[0]-1,$yr-1900);
+                        my @args = ($a[4],$a[3],$a[2],$a[1],$a[0]-1,$yr);
                         my $diff = Time::Local::timegm(@args) - TimeLocal(@args);
                         $tz = TimeZoneString($diff / 60);
                     } else {
@@ -4778,19 +4798,20 @@ TryLib: for ($lib=$strptimeLib; ; $lib='') {
 
 #------------------------------------------------------------------------------
 # Set byte order according to our current preferences
-# Inputs: 0) ExifTool object ref
+# Inputs: 0) ExifTool object ref, 1) default byte order
 # Returns: new byte order ('II' or 'MM') and sets current byte order
 # Notes: takes the first of the following that is valid:
 #  1) ByteOrder option
 #  2) new value for ExifByteOrder
-#  3) makenote byte order from last file read
-#  4) big endian
-sub SetPreferredByteOrder($)
+#  3) default byte order passed to this routine
+#  4) makenote byte order from last file read
+#  5) big endian
+sub SetPreferredByteOrder($;$)
 {
-    my $self = shift;
+    my ($self, $default) = @_;
     my $byteOrder = $self->Options('ByteOrder') ||
                     $self->GetNewValue('ExifByteOrder') ||
-                    $$self{MAKER_NOTE_BYTE_ORDER} || 'MM';
+                    $default || $$self{MAKER_NOTE_BYTE_ORDER} || 'MM';
     unless (SetByteOrder($byteOrder)) {
         warn "Invalid byte order '${byteOrder}'\n" if $self->Options('Verbose');
         $byteOrder = $$self{MAKER_NOTE_BYTE_ORDER} || 'MM';
@@ -5652,7 +5673,8 @@ sub WriteJPEG($$)
             my ($buff, $endPos, $trailInfo);
             my $delPreview = $$self{DEL_PREVIEW};
             $trailInfo = IdentifyTrailer($raf) unless $$delGroup{Trailer};
-            unless ($oldOutfile or $delPreview or $trailInfo or $$delGroup{Trailer}) {
+            my $nvTrail = $self->GetNewValueHash($Image::ExifTool::Extra{Trailer});
+            unless ($oldOutfile or $delPreview or $trailInfo or $$delGroup{Trailer} or $nvTrail) {
                 # blindly copy the rest of the file
                 while ($raf->Read($buff, 65536)) {
                     Write($outfile, $buff) or $err = 1, last;
@@ -5683,7 +5705,20 @@ sub WriteJPEG($$)
             }
             # remember position of last data copied
             $endPos = $raf->Tell() - length($buff);
-            # rewrite trailers if they exist
+            # write new trailer if specified
+            if ($nvTrail) {
+                # access new value directly to avoid copying a potentially very large data block
+                if ($$nvTrail{Value} and $$nvTrail{Value}[0]) { # (note: "0" will also delete the trailer)
+                    $self->VPrint(0, '  Writing new trailer');
+                    Write($outfile, $$nvTrail{Value}[0]) or $err = 1;
+                    ++$$self{CHANGED};
+                } elsif ($raf->Seek(0, 2) and $raf->Tell() != $endPos) {
+                    $self->VPrint(0, '  Deleting trailer (', $raf->Tell() - $endPos, ' bytes)');
+                    ++$$self{CHANGED};  # changed if there was previously a trailer
+                }
+                last;   # all done
+            }
+            # rewrite existing trailers
             if ($trailInfo) {
                 my $tbuf = '';
                 $raf->Seek(-length($buff), 1);  # seek back to just after EOI
@@ -5847,7 +5882,7 @@ sub WriteJPEG($$)
                 HexDump($segDataPt, undef, %dumpParms);
             }
         }
-        # group delete of APP segements
+        # group delete of APP segments
         if ($$delGroup{$dirName}) {
             $verbose and print $out "  Deleting $dirName segment\n";
             ++$$self{CHANGED};
@@ -6848,6 +6883,7 @@ sub WriteBinaryData($$$)
 sub WriteTIFF($$$)
 {
     my ($self, $dirInfo, $tagTablePtr) = @_;
+    $self or return 1;    # allow dummy access
     my $buff = '';
     $$dirInfo{OutFile} = \$buff;
     return $buff if $self->ProcessTIFF($dirInfo, $tagTablePtr) > 0;
@@ -6873,7 +6909,7 @@ used routines.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

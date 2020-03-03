@@ -23,6 +23,7 @@ require "PointsUtils"
 require "DefaultDelegates"
 require "CanonDelegates"
 require "FujifilmDelegates"
+require "NikonDelegates"
 require "OlympusDelegates"
 require "PanasonicDelegates"
 require "AppleDelegates"
@@ -66,6 +67,9 @@ function PointsRendererFactory.createRenderer(photo)
     end
   end
 
+  logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
+  logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
+
   if (cameraMake == "fujifilm") then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
@@ -82,6 +86,11 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = SonyDelegates.getAfPoints
+  elseif (cameraMake == "nikon corporation") then
+    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
+    DefaultDelegates.focusPointsMap = pointsMap
+    DefaultDelegates.focusPointDimen = pointDimen
+    DefaultPointRenderer.funcGetAfPoints = NikonDelegates.getAfPoints
   elseif (string.find(cameraMake, "olympus", 1, true)) then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused

@@ -31,10 +31,10 @@
 #              22) http://www.mi-fo.de/forum/index.php?act=attach&type=post&id=6024
 #              23) Marcin Krol private communication
 #              24) http://cpanforum.com/threads/12291
-#              26) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3521.0.html
-#              27) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3833.0.html
+#              26) https://exiftool.org/forum/index.php/topic,3521.0.html
+#              27) https://exiftool.org/forum/index.php/topic,3833.0.html
 #              28) Michael Reitinger private communication (RX100)
-#              29) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,4086.0.html
+#              29) https://exiftool.org/forum/index.php/topic,4086.0.html
 #              IB) Iliah Borg private communication (LibRaw)
 #              JD) Jens Duttke private communication
 #              JR) Jos Roost private communication
@@ -49,7 +49,7 @@ use vars qw($VERSION %minoltaLensTypes %minoltaTeleconverters %minoltaColorMode
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '2.82';
+$VERSION = '2.83';
 
 # Full list of product codes for Sony-compatible Minolta lenses
 # (ref http://www.kb.sony.com/selfservice/documentLink.do?externalId=C1000570)
@@ -236,7 +236,7 @@ $VERSION = '2.82';
     24 => 'Minolta/Sony AF 24-105mm F3.5-4.5 (D) or Sigma or Tamron Lens',
     # 24 => 'Sony 24-105mm F3.5-4.5 (SAL24105)', (ref JR)
     24.1 => 'Sigma 18-50mm F2.8',
-    24.2 => 'Sigma 17-70mm F2.8-4.5 (D)',
+    24.2 => 'Sigma 17-70mm F2.8-4.5 DC Macro', # (changed "(D)" to "DC Macro", ref JR)
     24.3 => 'Sigma 20-40mm F2.8 EX DG Aspherical IF', #JD/22
     24.4 => 'Sigma 18-200mm F3.5-6.3 DC', #22
     24.5 => 'Sigma DC 18-125mm F4-5,6 D', #exiv2 0.23
@@ -296,6 +296,7 @@ $VERSION = '2.82';
     50 => 'Sony DT 18-250mm F3.5-6.3 (SAL18250)', #11/JR
     51 => 'Sony DT 16-105mm F3.5-5.6 (SAL16105)', #11/JR
     #51.1 => 'Sony AF DT 55-200mm F4-5.5', #11 (anomaly? - PH)
+    # LensType 52 also seen for Fringer Contax_N to E-mount adapter Ver.31 and Ver.21 (ref JR)
     52 => 'Sony 70-300mm F4.5-5.6 G SSM (SAL70300G) or G SSM II or Tamron Lens', #JD
     52.1 => 'Sony 70-300mm F4.5-5.6 G SSM II (SAL70300G2)', #JR
     52.2 => 'Tamron SP 70-300mm F4-5.6 Di USD', #JR,NJ (Model A005)
@@ -306,7 +307,7 @@ $VERSION = '2.82';
     55.1 => 'Sony DT 18-55mm F3.5-5.6 SAM II (SAL18552)', #JR
     56 => 'Sony DT 55-200mm F4-5.6 SAM (SAL55200-2)', #22/JR
     57 => 'Sony DT 50mm F1.8 SAM (SAL50F18) or Tamron Lens or Commlite CM-EF-NEX adapter', #22/JR
-    57.1 => 'Tamron SP AF 60mm F2 Di II LD [IF] Macro 1:1', # (Model G005) (ref http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3858.0.html)
+    57.1 => 'Tamron SP AF 60mm F2 Di II LD [IF] Macro 1:1', # (Model G005) (ref https://exiftool.org/forum/index.php/topic,3858.0.html)
     57.2 => 'Tamron 18-270mm F3.5-6.3 Di II PZD', #27 (Model B008)
     # (note: the Commlite CM-EF-NEX adapter also appears to give LensType 57, ref JR)
     58 => 'Sony DT 30mm F2.8 Macro SAM (SAL30M28)', #22/JR
@@ -342,7 +343,7 @@ $VERSION = '2.82';
    '128.11' => 'Sigma 24-70mm F2.8 IF EX DG HSM', #27
    '128.12' => 'Sigma 18-250mm F3.5-6.3 DC OS HSM', #27
    '128.13' => 'Sigma 17-50mm F2.8 EX DC HSM', #Exiv2
-   '128.14' => 'Sigma 17-70mm F2.8-4 DC Macro HSM', #JR (OS Model C013, ref IB)
+   '128.14' => 'Sigma 17-70mm F2.8-4 DC Macro HSM', # (no OS for Sony mount, ref JR) (also C013 Model, ref IB)
    '128.15' => 'Sigma 150mm F2.8 EX DG OS HSM APO Macro', #Marcus Holland-Moritz
    '128.16' => 'Sigma 150-500mm F5-6.3 APO DG OS HSM', #IB
    '128.17' => 'Tamron AF 28-105mm F4-5.6 [IF]', #IB (Model 179D)
@@ -437,7 +438,7 @@ $VERSION = '2.82';
     25611.5 => 'Tokina AT-X AF 300mm F4', #JD
     25611.6 => 'Tokina AT-X AF 400mm F5.6 SD', #22
     25611.7 => 'Tokina AF 730 II 75-300mm F4.5-5.6', #JD
-    25611.8 => 'Sigma 800mm F5.6 APO', #http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3472.0.html
+    25611.8 => 'Sigma 800mm F5.6 APO', #https://exiftool.org/forum/index.php/topic,3472.0.html
     25611.9 => 'Sigma AF 400mm F5.6 APO Macro', #27
    '25611.10' => 'Sigma 1000mm F8 APO', #JR
     25621 => 'Minolta AF 50mm F1.4 [New]', # original and New, not Sony (ref 13/18)
@@ -450,7 +451,7 @@ $VERSION = '2.82';
     25641.1 => 'Sigma 50mm F2.8 EX Macro', #11
     25651 => 'Minolta AF 600mm F4 APO', # ("APO" added - ref JR)
     25661 => 'Minolta AF 24mm F2.8 or Sigma Lens',
-    25661.1 => 'Sigma 17-35mm F2.8-4 EX Aspherical', #http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3789.msg17679.html#msg17679
+    25661.1 => 'Sigma 17-35mm F2.8-4 EX Aspherical', #https://exiftool.org/forum/index.php/topic,3789.msg17679.html#msg17679
     25721 => 'Minolta/Sony AF 500mm F8 Reflex',
     # 25721 => 'Sony 500mm F8 Reflex (SAL500F80)', (ref JR)
     25781 => 'Minolta/Sony AF 16mm F2.8 Fisheye or Sigma Lens', # Sony added (ref 13/18)
@@ -460,12 +461,12 @@ $VERSION = '2.82';
     25781.3 => 'Sigma 15mm F2.8 Fisheye', #JD (writes 16mm to EXIF)
     25791 => 'Minolta/Sony AF 20mm F2.8 or Tokina Lens', # Sony added (ref 11)
     # 25791 => 'Sony 20mm F2.8 (SAL20F28)', (ref JR)
-    25791.1 => 'Tokina AT-X Pro DX 11-16mm F2.8', #http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3593.0.html
+    25791.1 => 'Tokina AT-X Pro DX 11-16mm F2.8', #https://exiftool.org/forum/index.php/topic,3593.0.html
     25811 => 'Minolta AF 100mm F2.8 Macro [New] or Sigma or Tamron Lens', # not Sony (ref 13/18)
     25811.1 => 'Sigma AF 90mm F2.8 Macro', #JD
     25811.2 => 'Sigma AF 105mm F2.8 EX [DG] Macro', #JD
     25811.3 => 'Sigma 180mm F5.6 Macro',
-    25811.4 => 'Sigma 180mm F3.5 EX DG Macro', #http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3789.msg17679.html#msg17679
+    25811.4 => 'Sigma 180mm F3.5 EX DG Macro', #https://exiftool.org/forum/index.php/topic,3789.msg17679.html#msg17679
     25811.5 => 'Tamron 90mm F2.8 Macro',
     25851 => 'Beroflex 35-135mm F3.5-4.5', #16
     25858 => 'Minolta AF 35-105mm F3.5-4.5 New or Tamron Lens',
@@ -1837,7 +1838,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
     },
 );
 
-# Image stabilization inforamtion used by the Sony DSLR-A100 (ref 20)
+# Image stabilization information used by the Sony DSLR-A100 (ref 20)
 %Image::ExifTool::Minolta::ISInfoA100 = (
     PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
     WRITE_PROC => \&Image::ExifTool::WriteBinaryData,
@@ -2686,7 +2687,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         PrintConv => 'int($val + 0.5)',
         PrintConvInv => '$val',
     },
-    0x49bb => { # (http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3688.0.html)
+    0x49bb => { # (https://exiftool.org/forum/index.php/topic,3688.0.html)
         # if this value is the 35mm equivalent magnification, then the formula could
         # be (1.5 * 2**($val/16-5)+1) * FocalLength, but this tends to underestimate
         # distance by about 18% (ref 20) (255=inf)
@@ -2922,7 +2923,7 @@ and write Minolta RAW (MRW) images.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
