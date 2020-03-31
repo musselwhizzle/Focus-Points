@@ -15,8 +15,13 @@ Supported Cameras
   * Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
 * Nikon 
   * D7100, D7200, D700, D800 (possibly D810 and D800E), D5500, D5300, D5200
-* Sony
-  * a7R3
+* Sony E-Mount cameras
+  * Full Frame
+	   * &alpha;7 III
+	   * &alpha;7R II, &alpha;7R III, &alpha;7R IV
+	   * &alpha;9, &alpha;9 II
+  * APS-C
+    * &alpha;6100, &alpha;6400, &alpha;6500, &alpha;6600
 * Fuji cameras 
   * all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 * Olympus cameras 
