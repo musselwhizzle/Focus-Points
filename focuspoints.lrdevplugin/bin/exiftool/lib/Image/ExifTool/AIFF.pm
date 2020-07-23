@@ -202,7 +202,7 @@ sub ProcessAIFF($$)
         $et->SetFileType('DJVU');
         return 1 if $fast3;
         $tagTablePtr = GetTagTable('Image::ExifTool::DjVu::Main');
-        # modifiy FileType to indicate a multi-page document
+        # modify FileType to indicate a multi-page document
         $$et{VALUE}{FileType} .= " (multi-page)" if $buf2 eq 'DJVM';
         $type = 'DjVu';
     } else {
@@ -287,7 +287,7 @@ information from AIFF (Audio Interchange File Format) audio files.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

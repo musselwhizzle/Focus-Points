@@ -37,11 +37,11 @@
 #              22) Bozi (K10D, http://www.cpanforum.com/posts/8480)
 #              23) Akos Szalkai (https://rt.cpan.org/Ticket/Display.html?id=43743)
 #              24) Albert Bogner private communication
-#              26) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3444.0.html
-#              27) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,3833.0.html
-#              28) Klaus Homeister http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,4803.0.html
+#              26) https://exiftool.org/forum/index.php/topic,3444.0.html
+#              27) https://exiftool.org/forum/index.php/topic,3833.0.html
+#              28) Klaus Homeister https://exiftool.org/forum/index.php/topic,4803.0.html
 #              29) Louis Granboulan private communication (K-5II)
-#              30) http://u88.n24.queensu.ca/exiftool/forum/index.php?topic=5433
+#              30) https://exiftool.org/forum/index.php?topic=5433
 #              31) Andras Salamon private communication (K-70)
 #              IB) Iliah Borg private communication (LibRaw)
 #              JD) Jens Duttke private communication
@@ -58,7 +58,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 use Image::ExifTool::HP;
 
-$VERSION = '3.29';
+$VERSION = '3.30';
 
 sub CryptShutterCount($$);
 sub PrintFilter($$$);
@@ -178,6 +178,7 @@ sub DecodeAFPoints($$$$;$);
     '4 2' => 'smc PENTAX-FA 80-320mm F4.5-5.6',
     '4 3' => 'smc PENTAX-FA 43mm F1.9 Limited',
     '4 6' => 'smc PENTAX-FA 35-80mm F4-5.6',
+    '4 8' => 'Irix 150mm F2.8 Macro', #exiv2 issue 1084
     '4 9' => 'Irix 11mm F4 Firefly', #27
     '4 10' => 'Irix 15mm F2.4', #27
     '4 12' => 'smc PENTAX-FA 50mm F1.4', #17
@@ -336,6 +337,7 @@ sub DecodeAFPoints($$$$;$);
     '8 62' => 'HD PENTAX-D FA 24-70mm F2.8 ED SDM WR', #PH
     '8 63' => 'HD PENTAX-D FA 15-30mm F2.8 ED SDM WR', #PH
     '8 64' => 'HD PENTAX-D FA* 50mm F1.4 SDM AW', #27
+    '8 65' => 'HD PENTAX-D FA 70-210mm F4 ED SDM WR', #PH
     '8 196' => 'HD PENTAX-DA* 11-18mm F2.8 ED DC AW', #29
     '8 197' => 'HD PENTAX-DA 55-300mm F4.5-6.3 ED PLM WR RE', #29
     '8 198' => 'smc PENTAX-DA L 18-50mm F4-5.6 DC WR RE', #29
@@ -4307,15 +4309,15 @@ my %binaryDataAttrs = (
         Name => 'LC3',
         %lensCode,
     },
-    5 => { # LC4 = abberation correction, near distance data
+    5 => { # LC4 = aberration correction, near distance data
         Name => 'LC4',
         %lensCode,
     },
-    6 => { # LC5 = light color abberation correction data
+    6 => { # LC5 = light color aberration correction data
         Name => 'LC5',
         %lensCode,
     },
-    7 => { # LC6 = open abberation data
+    7 => { # LC6 = open aberration data
         Name => 'LC6',
         %lensCode,
     },
@@ -6271,7 +6273,7 @@ tags, and everyone who helped contribute to the LensType values.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -36,7 +36,7 @@ use strict;
 use vars qw($VERSION $AUTOLOAD %stdCase);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.52';
+$VERSION = '1.54';
 
 sub ProcessPNG_tEXt($$$);
 sub ProcessPNG_iTXt($$$);
@@ -92,7 +92,7 @@ my %isDatChunk = ( IDAT => 1, JDAT => 1, JDAA => 1 );
 my %isTxtChunk = ( tEXt => 1, zTXt => 1, iTXt => 1 );
 
 # chunks that we shouldn't move other chunks across (ref 3)
-my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND => 1, 
+my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND => 1,
                    DHDR => 1, BASI => 1, CLON => 1, PAST => 1, SHOW => 1, MAGN => 1 );
 
 # PNG chunks
@@ -114,10 +114,15 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
         Also according to the PNG specification, there is no restriction on the
         location of text-type chunks (tEXt, zTXt and iTXt).  However, certain
         utilities (including some Apple and Adobe utilities) won't read the XMP iTXt
-        chunk (and at least one utility won't read other text chunks) that come
-        after the IDAT chunk.  For this reason, ExifTool 11.63 and later write all
-        text chunks (including XMP) before IDAT, and will move existing text chunks
-        up from after IDAT.
+        chunk if it comes after the IDAT chunk, and at least one utility won't read
+        other text chunks here.  For this reason, when writing, ExifTool 11.63 and
+        later create new text chunks (including XMP) before IDAT, and move existing
+        text chunks to before IDAT.
+
+        The PNG format contains CRC checksums that are validated when reading with
+        either the L<Verbose|../ExifTool.html#Verbose> or L<Validate|../ExifTool.html#Validate> option.  When writing, these checksums are
+        validated by default, but the L<FastScan|../ExifTool.html#FastScan> option may be used to bypass this
+        check if speed is more of a concern.
     },
     bKGD => {
         Name => 'BackgroundColor',
@@ -376,14 +381,17 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     0 => {
         Name => 'PixelsPerUnitX',
         Format => 'int32u',
+        Notes => 'default 2834',
     },
     4 => {
         Name => 'PixelsPerUnitY',
         Format => 'int32u',
+        Notes => 'default 2834',
     },
     8 => {
         Name => 'PixelUnits',
         PrintConv => { 0 => 'Unknown', 1 => 'meters' },
+        Notes => 'default meters',
     },
 );
 
@@ -611,7 +619,7 @@ my %unreg = ( Notes => 'unregistered' );
     GROUPS => { 2 => 'Image' },
     FORMAT => 'int32u',
     NOTES => q{
-        Tags found in the Animation Conrol chunk.  See
+        Tags found in the Animation Control chunk.  See
         L<https://wiki.mozilla.org/APNG_Specification> for details.
     },
     0 => {
@@ -1245,14 +1253,12 @@ sub ProcessPNG($$)
     my $datChunk = '';
     my $datCount = 0;
     my $datBytes = 0;
+    my $fastScan = $et->Options('FastScan');
     my ($n, $sig, $err, $hbuf, $dbuf, $cbuf);
     my ($wasHdr, $wasEnd, $wasDat, $doTxt, @txtOffset);
 
     # check to be sure this is a valid PNG/MNG/JNG image
     return 0 unless $raf->Read($sig,8) == 8 and $pngLookup{$sig};
-
-    # disable buffering in FastScan mode
-    $$raf{NoBuffer} = 1 if $et->Options('FastScan') and not $outfile;
 
     if ($outfile) {
         delete $$et{TextChunkType};
@@ -1263,6 +1269,9 @@ sub ProcessPNG($$)
             \%Image::ExifTool::PNG::TextualData);
         # initialize with same directories, with PNG tags taking priority
         $et->InitWriteDirs(\%pngMap,'PNG');
+    } else {
+        # disable buffering in FastScan mode
+        $$raf{NoBuffer} = 1 if $fastScan;
     }
     my ($fileType, $hdrChunk, $endChunk) = @{$pngLookup{$sig}};
     $et->SetFileType($fileType);  # set the FileType tag
@@ -1344,6 +1353,10 @@ sub ProcessPNG($$)
             next;
         }
         if ($isDatChunk{$chunk}) {
+            if ($fastScan and $fastScan >= 2) {
+                $et->VPrint(0,"End processing at $chunk chunk due to FastScan=$fastScan setting");
+                last;
+            }
             $datChunk = $chunk;
             $datCount++;
             $datBytes += $len;
@@ -1419,7 +1432,7 @@ sub ProcessPNG($$)
             $et->Warn("Corrupted $fileType image") unless $wasEnd;
             last;
         }
-        if ($verbose or $validate or $outfile) {
+        if ($verbose or $validate or ($outfile and not $fastScan)) {
             # check CRC when in verbose mode (since we don't care about speed)
             my $crc = CalculateCRC(\$hbuf, undef, 4);
             $crc = CalculateCRC(\$dbuf, $crc);
@@ -1507,7 +1520,7 @@ and JNG (JPEG Network Graphics) images.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -19,7 +19,7 @@ use strict;
 use vars qw($VERSION $warnString);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.25';
+$VERSION = '1.26';
 
 sub WarnProc($) { $warnString = $_[0]; }
 
@@ -397,7 +397,7 @@ sub ProcessZIP($$)
     my $tagTablePtr = GetTagTable('Image::ExifTool::ZIP::Main');
     my $docNum = 0;
 
-    # use Archive::Zip if avilable
+    # use Archive::Zip if available
     for (;;) {
         unless (eval { require Archive::Zip } and eval { require IO::File }) {
             if ($$et{FILE_EXT} and $$et{FILE_EXT} ne 'ZIP') {
@@ -456,7 +456,14 @@ sub ProcessZIP($$)
         my $cType = $zip->memberNamed('[Content_Types].xml');
         if ($cType) {
             ($buff, $status) = $zip->contents($cType);
-            if (not $status and $buff =~ /ContentType\s*=\s*(['"])([^"']+)\.main(\+xml)?\1/) {
+            if (not $status and (
+                # first look for the main document with the expected name
+                $buff =~ m{\sPartName\s*=\s*['"](?:/ppt/presentation.xml|/word/document.xml|/xl/workbook.xml)['"][^>]*\sContentType\s*=\s*(['"])([^"']+)\.main(\+xml)?\1} or
+                # then look for the main part
+                $buff =~ /<Override[^>]*\sPartName[^<]+\sContentType\s*=\s*(['"])([^"']+)\.main(\+xml)?\1/ or
+                # and if all else fails, use the default main
+                $buff =~ /ContentType\s*=\s*(['"])([^"']+)\.main(\+xml)?\1/))
+            {
                 $mime = $2;
             }
         }
@@ -693,7 +700,7 @@ Electronic Publication (EPUB), and Sketch design files (SKETCH).
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

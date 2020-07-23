@@ -6950,8 +6950,8 @@ my %noYes = ( 0 => 'No', 1 => 'Yes' );
         },
     },
     49.1 => { # CSa9
-        Name => 'LimitAFAreaModeSelection',  #note that 'Dynamic area (9 points)' can be selected from the camera menu but the setting is not writen to the EXIF data.
-        Mask => 0x7e,                        #...This AF Mode was addded to the D5 firmware several months after the camera's initial release which may help explain the inconsistency.
+        Name => 'LimitAFAreaModeSelection',  #note that 'Dynamic area (9 points)' can be selected from the camera menu but the setting is not written to the EXIF data.
+        Mask => 0x7e,                        #...This AF Mode was added to the D5 firmware several months after the camera's initial release which may help explain the inconsistency.
         PrintConv => {
             0 => 'No Restrictions',
             BITMASK => {
@@ -9534,7 +9534,7 @@ this information.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

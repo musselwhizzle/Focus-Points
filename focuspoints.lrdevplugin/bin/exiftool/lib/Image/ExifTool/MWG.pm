@@ -16,7 +16,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::XMP;
 
-$VERSION = '1.22';
+$VERSION = '1.23';
 
 sub RecoverTruncatedIPTC($$$);
 sub ListToString($);
@@ -29,6 +29,7 @@ my $mwgLoaded;  # flag set if we alreaded Load()ed the MWG tags
 %Image::ExifTool::MWG::Composite = (
     GROUPS => { 0 => 'Composite', 1 => 'MWG', 2 => 'Image' },
     VARS => { NO_ID => 1 },
+    WRITE_PROC => \&Image::ExifTool::DummyWriteProc,
     NOTES => q{
         The table below lists special Composite tags which are used to access other
         tags based on the MWG 2.0 recommendations.  These tags are only accessible
@@ -744,7 +745,7 @@ must be loaded explicitly as described above.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

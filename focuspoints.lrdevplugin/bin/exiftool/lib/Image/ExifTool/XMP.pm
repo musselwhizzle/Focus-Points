@@ -49,7 +49,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 require Exporter;
 
-$VERSION = '3.26';
+$VERSION = '3.31';
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(EscapeXML UnescapeXML);
 
@@ -62,7 +62,7 @@ sub EncodeBase64($;$);
 sub SaveBlankInfo($$$;$);
 sub ProcessBlankInfo($$$;$);
 sub ValidateXMP($;$);
-sub ValidateProperty($$);
+sub ValidateProperty($$;$);
 sub UnescapeChar($$;$);
 sub AddFlattenedTags($;$$);
 sub FormatXMPDate($);
@@ -183,10 +183,11 @@ my %xmpNS = (
     dwc       => 'http://rs.tdwg.org/dwc/index.htm',
     GettyImagesGIFT => 'http://xmp.gettyimages.com/gift/1.0/',
     LImage    => 'http://ns.leiainc.com/photos/1.0/image/',
+    Profile   => 'http://ns.google.com/photos/dd/1.0/profile/',
 );
 
 # build reverse namespace lookup
-my %uri2ns;
+my %uri2ns = ( 'http://ns.exiftool.org/1.0/' => 'et' ); # (allow exiftool.org as well as exiftool.ca)
 {
     my $ns;
     foreach $ns (keys %nsURI) {
@@ -778,6 +779,10 @@ my %sRetouchArea = (
         Name => 'LImage',
         SubDirectory => { TagTable => 'Image::ExifTool::XMP::LImage' },
     },
+    Device => {
+        Name => 'Device',
+        SubDirectory => { TagTable => 'Image::ExifTool::XMP::Device' },
+    },
 );
 
 # hack to allow XML containing Dublin Core metadata to be handled like XMP (eg. EPUB - see ZIP.pm)
@@ -951,7 +956,7 @@ my %sPantryItem = (
         This structure must have an InstanceID field, but may also contain any other
         XMP properties.
     },
-    InstanceID => { Namespace => 'xmpMM' },
+    InstanceID => { Namespace => 'xmpMM', List => 0 },
 );
 
 # XMP Media Management namespace properties (xmpMM, xapMM)
@@ -1471,6 +1476,15 @@ my %sPantryItem = (
     UprightFourSegmentsCount            => { Writable => 'integer' },
     AutoTone                            => { Writable => 'boolean' },
     Texture                             => { Writable => 'integer' },
+    # more stuff (ref forum10721)
+    OverrideLookVignette                => { Writable => 'boolean' },
+    Look => {
+        Struct => {
+            STRUCT_NAME => 'Look',
+            NAMESPACE   => 'crs',
+            Name   => { },
+        }
+    },
 );
 
 # Tiff namespace properties (tiff)
@@ -1482,8 +1496,8 @@ my %sPantryItem = (
     TABLE_DESC => 'XMP TIFF',
     NOTES => q{
         EXIF namespace for TIFF tags.  See
-        L<http://www.cipa.jp/std/documents/e/DC-010-2017_E.pdf> for the
-        specification.
+        L<https://web.archive.org/web/20180921145139if_/http://www.cipa.jp:80/std/documents/e/DC-010-2017_E.pdf>
+        for the specification.
     },
     ImageWidth    => { Writable => 'integer' },
     ImageLength   => { Writable => 'integer', Name => 'ImageHeight' },
@@ -1573,8 +1587,8 @@ my %sPantryItem = (
     PRIORITY => 0, # not as reliable as actual EXIF tags
     NOTES => q{
         EXIF namespace for EXIF tags.  See
-        L<http://www.cipa.jp/std/documents/e/DC-010-2017_E.pdf> for the
-        specification.
+        L<https://web.archive.org/web/20180921145139if_/http://www.cipa.jp:80/std/documents/e/DC-010-2017_E.pdf>
+        for the specification.
     },
     ExifVersion     => { },
     FlashpixVersion => { },
@@ -2017,6 +2031,7 @@ my %sPantryItem = (
         PrintConvInv => '$val=~s/\s*m$//; $val',
     },
     NativeDigest => { }, #PH
+    # new Exif
 );
 
 # Exif extended properties (exifEX, ref 12)
@@ -2103,6 +2118,35 @@ my %sPantryItem = (
     WaterDepth          => { Writable => 'rational' },
     Acceleration        => { Writable => 'rational' },
     CameraElevationAngle=> { Writable => 'rational' },
+    # new in Exif 2.32 (according to the spec, these should use a different namespace
+    # URI, but the same namespace prefix... Exactly how is that supposed to work?!!
+    # -- I'll just stick with the same URI)
+    CompositeImage => { Writable => 'integer',
+        PrintConv => {
+            0 => 'Unknown',
+            1 => 'Not a Composite Image',
+            2 => 'General Composite Image',
+            3 => 'Composite Image Captured While Shooting',
+        },
+    },
+    CompositeImageCount => { List => 'Seq', Writable => 'integer' },
+    CompositeImageExposureTimes => {
+        FlatName => 'CompImage',
+        Struct => {
+            STRUCT_NAME => 'CompImageExp',
+            NAMESPACE => 'exifEX',
+            TotalExposurePeriod     => { Writable => 'rational' },
+            SumOfExposureTimesOfAll => { Writable => 'rational', FlatName => 'SumExposureAll' },
+            SumOfExposureTimesOfUsed=> { Writable => 'rational', FlatName => 'SumExposureUsed' },
+            MaxExposureTimesOfAll   => { Writable => 'rational', FlatName => 'MaxExposureAll' },
+            MaxExposureTimesOfUsed  => { Writable => 'rational', FlatName => 'MaxExposureUsed' },
+            MinExposureTimesOfAll   => { Writable => 'rational', FlatName => 'MinExposureAll'  },
+            MinExposureTimesOfUsed  => { Writable => 'rational', FlatName => 'MinExposureUsed' },
+            NumberOfSequences       => { Writable => 'integer',  FlatName => 'NumSequences' },
+            NumberOfImagesInSequences=>{ Writable => 'integer',  FlatName => 'ImagesPerSequence' },
+            Values =>   { List => 'Seq', Writable => 'rational' },
+        },
+    },
 );
 
 # Auxiliary namespace properties (aux) - not fully documented (ref PH)
@@ -2234,7 +2278,7 @@ my %sPantryItem = (
 
 # Composite XMP tags
 %Image::ExifTool::XMP::Composite = (
-    # get latitude/logitude reference from XMP lat/long tags
+    # get latitude/longitude reference from XMP lat/long tags
     # (used to set EXIF GPS position from XMP tags)
     GPSLatitudeRef => {
         Require => 'XMP-exif:GPSLatitude',
@@ -2428,14 +2472,14 @@ sub UnescapeChar($$;$)
 
 #------------------------------------------------------------------------------
 # Does a string contain valid UTF-8 characters?
-# Inputs: 0) string reference
+# Inputs: 0) string reference, 1) true to allow last character to be truncated
 # Returns: 0=regular ASCII, -1=invalid UTF-8, 1=valid UTF-8 with maximum 16-bit
 #          wide characters, 2=valid UTF-8 requiring 32-bit wide characters
 # Notes: Changes current string position
 # (see http://www.fileformat.info/info/unicode/utf8.htm for help understanding this)
-sub IsUTF8($)
+sub IsUTF8($;$)
 {
-    my $strPt = shift;
+    my ($strPt, $trunc) = @_;
     pos($$strPt) = 0; # start at beginning of string
     return 0 unless $$strPt =~ /([\x80-\xff])/g;
     my $rtnVal = 1;
@@ -2457,7 +2501,11 @@ sub IsUTF8($)
             # were required in the UTF-8 character
             $rtnVal = 2;
         }
-        return -1 unless $$strPt =~ /\G([\x80-\xbf]{$n})/g;
+        my $pos = pos $$strPt;
+        unless ($$strPt =~ /\G([\x80-\xbf]{$n})/g) {
+            return $rtnVal if $trunc and $pos + $n > length $$strPt;
+            return -1;
+        }
         # the following is ref https://www.cl.cam.ac.uk/%7Emgk25/ucs/utf8_check.c
         if ($n == 2) {
             return -1 if ($ch == 0xe0 and (ord($1) & 0xe0) == 0x80) or
@@ -2677,8 +2725,6 @@ sub AddFlattenedTags($;$$)
             $$tagInfo{Struct} = $strTable;  # replace old-style name with HASH ref
             delete $$tagInfo{SubDirectory}; # deprecated use of SubDirectory in Struct tags
         }
-        # do not add flattened tags to variable-namespace structures
-        next if exists $$strTable{NAMESPACE} and not defined $$strTable{NAMESPACE};
 
         # get prefix for flattened tag names
         my $flat = (defined $$tagInfo{FlatName} ? $$tagInfo{FlatName} : $$tagInfo{Name});
@@ -2720,6 +2766,7 @@ sub AddFlattenedTags($;$$)
                 # generate new flattened tag information based on structure field
                 my $flatName = $flat . $flatField;
                 $flatInfo = { %$fieldInfo, Name => $flatName, Flat => 0 };
+                $$flatInfo{FlatName} = $flatName if $$fieldInfo{FlatName};
                 # make a copy of the Groups hash if necessary
                 $$flatInfo{Groups} = { %{$$fieldInfo{Groups}} } if $$fieldInfo{Groups};
                 # add new flattened tag to table
@@ -3027,14 +3074,6 @@ NoLoop:
             $ti = $$tagTablePtr{$t} or next;
             next unless ref $ti eq 'HASH' and $$ti{Struct};
             $addedFlat = AddFlattenedTags($tagTablePtr, $t);
-            if ($tagInfo) {
-                # all done if we just wanted to initialize the flattened tag
-                if ($$tagInfo{Flat}) {
-                    warn "Orphan tagInfo with Flat flag set: $$tagInfo{Name}\n";
-                    delete $$tagInfo{Flat};
-                }
-                last NoLoop;
-            }
             # all done if we generated the tag we are looking for
             $tagInfo = $$tagTablePtr{$tagID} and last NoLoop if $addedFlat;
         }
@@ -3092,11 +3131,8 @@ NoLoop:
                     }
                     last unless $sti;
                 }
-                $tagInfo = {
-                    %$sti,
-                    Name => $flat . $$sti{Name},
-                    WasAdded => 1,
-                };
+                # generate new tagInfo hash based on existing top-level tag
+                $tagInfo = { %$sti, Name => $flat . $$sti{Name} };
                 # be careful not to copy elements we shouldn't...
                 delete $$tagInfo{Description}; # Description will be different
                 # can't copy group hash because group 1 will be different and
@@ -3106,11 +3142,12 @@ NoLoop:
                 last;
             }
         }
-        $tagInfo or $tagInfo = { Name => $name, WasAdded => 1, Priority => 0 };
+        # generate a default tagInfo hash if necessary
+        $tagInfo or $tagInfo = { Name => $name, IsDefault => 1, Priority => 0 };
 
         # add tag Namespace entry for tags in variable-namespace tables
         $$tagInfo{Namespace} = $xns if $xns;
-        if ($$et{curURI}{$ns} and $$et{curURI}{$ns} =~ m{^http://ns.exiftool.ca/(.*?)/(.*?)/}) {
+        if ($$et{curURI}{$ns} and $$et{curURI}{$ns} =~ m{^http://ns.exiftool.(?:ca|org)/(.*?)/(.*?)/}) {
             my %grps = ( 0 => $1, 1 => $2 );
             # apply a little magic to recover original group names
             # from this exiftool-written RDF/XML file
@@ -3175,7 +3212,7 @@ NoLoop:
     $val = $et->Decode($val, 'UTF8');
     # convert rational and date values to a more sensible format
     my $fmt = $$tagInfo{Writable};
-    my $new = $$tagInfo{WasAdded} && $$et{OPTIONS}{XMPAutoConv};
+    my $new = $$tagInfo{IsDefault} && $$et{OPTIONS}{XMPAutoConv};
     if ($fmt or $new) {
         $rawVal = $val; # save raw value for verbose output
         if (($new or $fmt eq 'rational') and ConvertRational($val)) {
@@ -3614,7 +3651,7 @@ sub ParseXMPElement($$$;$$$$)
                         # ignore et:desc, and et:val if preceded by et:prt
                         --$count;
                     } else {
-                        ValidateProperty($et, $propList) if $$et{XmpValidate};
+                        ValidateProperty($et, $propList, \%attrs) if $$et{XmpValidate};
                         &$foundProc($et, $tagTablePtr, $propList, $val, \%attrs);
                     }
                 }
@@ -3688,6 +3725,7 @@ sub ProcessXMP($$;$)
     $$et{definedNS} = { };
     delete $$et{XmpAbout};
     delete $$et{XmpValidate};   # don't validate by default
+    delete $$et{XmpValidateLangAlt};
 
     # ignore non-standard XMP while in strict MWG compatibility mode
     if (($Image::ExifTool::MWG::strict or $$et{OPTIONS}{Validate}) and
@@ -3749,7 +3787,7 @@ sub ProcessXMP($$;$)
                 $fmt = 'n';     # UTF-16 or 32 MM with BOM
             } elsif ($buf2 =~ /^(\xff\xfe)(<\?xml|<rdf:RDF|<x(mp)?:x[ma]pmeta)/g) {
                 $fmt = 'v';     # UTF-16 or 32 II with BOM
-            } elsif ($buf2 =~ /^(\xef\xbb\xbf)?(<\?xml|<rdf:RDF|<x(mp)?:x[ma]pmeta)/g) {
+            } elsif ($buf2 =~ /^(\xef\xbb\xbf)?(<\?xml|<rdf:RDF|<x(mp)?:x[ma]pmeta|<svg\b)/g) {
                 $fmt = 0;       # UTF-8 with BOM or unknown encoding without BOM
             } elsif ($buf2 =~ /^(\xfe\xff|\xff\xfe|\xef\xbb\xbf)(<\?xpacket begin=)/g) {
                 $double = $1;   # double-encoded UTF
@@ -4061,7 +4099,7 @@ information.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

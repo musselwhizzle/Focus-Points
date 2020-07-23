@@ -20,9 +20,9 @@
 #              14) Carl Bretteville private communication (M9)
 #              15) Zdenek Mihula private communication (TZ8)
 #              16) Olaf Ulrich private communication
-#              17) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,4922.0.html
+#              17) https://exiftool.org/forum/index.php/topic,4922.0.html
 #              18) Thomas Modes private communication (G6)
-#              19) http://u88.n24.queensu.ca/exiftool/forum/index.php/topic,5533.0.html
+#              19) https://exiftool.org/forum/index.php/topic,5533.0.html
 #              20) Bernd-Michael Kemper private communication (DMC-GX80/85)
 #              21) Klaus Homeister forum post
 #              22) Daniel Beichl private communication (G9)
@@ -36,7 +36,7 @@ use vars qw($VERSION %leicaLensTypes);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '2.06';
+$VERSION = '2.07';
 
 sub ProcessLeicaLEIC($$$);
 sub WhiteBalanceConv($;$$);
@@ -253,7 +253,7 @@ my %shootingMode = (
     83 => 'Clear Night Portrait', #18
     84 => 'Soft Image of a Flower', #18
     85 => 'Appetizing Food', #18
-    86 => 'Cute Desert', #18
+    86 => 'Cute Dessert', #18
     87 => 'Freeze Animal Motion', #18
     88 => 'Clear Sports Shot', #18
     89 => 'Monochrome', #18
@@ -2449,7 +2449,7 @@ sub ProcessLeicaLEIC($$$)
 #------------------------------------------------------------------------------
 # Process MakerNote trailer written by Leica S2
 # Inputs: 0) ExifTool object ref, 1) new absolute position of Leica trailer when writing
-# Returns: On success: 1 when reading, directory data when writing; othewise undef
+# Returns: On success: 1 when reading, directory data when writing; otherwise undef
 # Notes:
 # - may be called twice for a file if the first call doesn't succeed
 # - must leave RAF position unchanged
@@ -2637,7 +2637,7 @@ Panasonic and Leica maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2019, Phil Harvey (phil at owl.phy.queensu.ca)
+Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
