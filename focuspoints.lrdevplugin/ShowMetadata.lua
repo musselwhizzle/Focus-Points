@@ -29,6 +29,7 @@ require "ExifUtils"
 require "Utils"
 
 local function showDialog()
+
   LrFunctionContext.callWithContext("showDialog", function(context)
 
   local catalog = LrApplication.activeCatalog()
@@ -36,7 +37,9 @@ local function showDialog()
 
   LrTasks.startAsyncTask(function(context)
     --https://forums.adobe.com/thread/359790
+
     LrFunctionContext.callWithContext("function", function(dialogContext)
+
         LrFunctionContext.callWithContext("function2", function(dialogContext2)
           local dialogScope = LrDialogs.showModalProgressDialog {
             title = "Loading Data",
@@ -55,6 +58,10 @@ local function showDialog()
         end)
 
       LrTasks.sleep(0)
+
+      --[[
+      -- BEGIN MOD - Add Metadata filter
+      -- Creation/presentation of dialog by additional entry field with associated observer moved to MetaDataDialog.lua
       LrDialogs.presentModalDialog {
         title = "Metadata display",
         resizable = true,
@@ -62,12 +69,30 @@ local function showDialog()
         actionVerb = "OK",
         contents = MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
       }
+      --]]
+
+      local result = showMetadataDialog(column1, column2, column1Length, column2Length, numLines)
+
+      -- Check whether dialog has been left by pressing "Open as text"
+      if result == "other" then
+        -- if so, open metadata file in default application (and keep it)
+        openFileInApp(ExifUtils.getMetaDataFile())
+      else
+        -- otherwise remove the temp file
+        LrFileUtils.delete(metaDataFile)
+      end
+      --[[
+      -- END MOD - Add Metadata filter
+      --]]
 
     end)
   end)
 end)
 end
+
 showDialog()
+
+
 
 function splitForColumns(metaData)
   local parts = createParts(metaData)
@@ -78,31 +103,31 @@ function splitForColumns(metaData)
   local numOfLines = 0;
   for k in pairs(parts) do
     local l = parts[k].key
-    
+
     local v = parts[k].value
     if l == nil then l = "" end
     if v == nil then v = "" end
     l = LrStringUtils.trimWhitespace(l)
     v = LrStringUtils.trimWhitespace(v)
-    
+
     maxLabelsLength = math.max(maxLabelsLength, string.len(l))
     maxValuesLength = math.max(maxValuesLength, string.len(v))
     numOfLines = numOfLines + 1
-    
+
     --logDebug("ShowMetadata", "l: " .. l)
     --logDebug("ShowMetadata", "v: " .. v)
-    
+
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
   return labels, values, maxLabelsLength, maxValuesLength, numOfLines
-  
+
 end
 
 function createParts(metaData)
   local parts = {}
   local num = 1;
-  for i in string.gmatch(metaData, "[^\\\n]+") do 
+  for i in string.gmatch(metaData, "[^\\\n]+") do
     logDebug("ShowMetadata", "i = " .. i)
     p = stringToKeyValue(i, ":")
     if p ~= nil then
