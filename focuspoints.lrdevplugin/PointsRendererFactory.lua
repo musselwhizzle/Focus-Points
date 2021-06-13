@@ -30,6 +30,7 @@ require "AppleDelegates"
 require "PentaxDelegates"
 require "NikonDuplicates"
 require "SonyDelegates"
+require "SonyRX10M4Delegates"
 
 local LrErrors = import 'LrErrors'
 
@@ -85,7 +86,10 @@ function PointsRendererFactory.createRenderer(photo)
   elseif (cameraMake == "sony") then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = SonyDelegates.getAfPoints
+    if (cameraModel == "DSC-RX10M4") then
+    	DefaultPointRenderer.funcGetAfPoints = SonyRX10M4Delegates.getAfPoints
+    else DefaultPointRenderer.funcGetAfPoints = SonyDelegates.getAfPoints
+    end
   elseif (cameraMake == "nikon corporation") then
     local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
     DefaultDelegates.focusPointsMap = pointsMap
