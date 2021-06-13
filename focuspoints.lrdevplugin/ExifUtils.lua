@@ -29,11 +29,24 @@ exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftoolWindows = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftoolWindows = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
 
+--[[
+-- BEGIN MOD.156 - Add Metadata filter
+-- metaDataFile needs to be a global variable that can be accessed from metaDataDialog
+--]]
+metaDataFile = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
+
+function ExifUtils.getMetaDataFile()
+  return metaDataFile
+end
+-- END MOD.156 - Add Metadata filter
+
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
+  --[[MOD.156 - Add Metadata filter
   local metaDataFile = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
+  --]]
   local singleQuoteWrap = '\'"\'"\''
-  
+
   local cmd
   if (WIN_ENV) then
     -- windows needs " around the entire command and then " around each path
@@ -53,7 +66,7 @@ function ExifUtils.readMetaData(targetPhoto)
   local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
   LrTasks.execute(cmd)
   local fileInfo = LrFileUtils.readFile(metaDataFile)
-  LrFileUtils.delete(metaDataFile)
+--LrFileUtils.delete(metaDataFile)
   return fileInfo
 end
 
@@ -89,7 +102,7 @@ end
 function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
   local exifValue = nil
 
-  
+
   for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
     exifValue = metaDataTable[value]
 

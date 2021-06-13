@@ -26,6 +26,10 @@ local LrPathUtils = import 'LrPathUtils'
 local LrLogger = import 'LrLogger'
 local LrStringUtils = import "LrStringUtils"
 local LrPrefs = import "LrPrefs"
+-- BEGIN MOD - Add Metadata filter
+local LrShell = import "LrShell"
+-- END MOD - Add Metadata filter
+
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
@@ -87,7 +91,7 @@ function splitTrim(str, delim)
 end
 
 --[[
- Splits a string into 2 parts: key and value. 
+ Splits a string into 2 parts: key and value.
  @str  the string to split
  @delim the character used for splitting the string
 --]]
@@ -106,7 +110,7 @@ end
 --[[
 -- Logging functions. You are provided 5 levels of logging. Wisely choose the level of the message you want to report
 -- to prevent to much messages.
--- Typical use cases: 
+-- Typical use cases:
 --   - logDebug - Informations diagnostically helpful to people (developers, IT, sysadmins, etc.)
 --   - logInfo - Informations generally useful to log (service start/stop, configuration assumptions, etc)
 --   - logWarn - Informations about an unexpected state that won't generate a problem
@@ -224,3 +228,17 @@ function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
 
   return tX, tY
 end
+
+--[[
+-- BEGIN MOD - Add Metadata filter
+-- Open filename in associated application as per file extension
+-- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
+--]]
+function openFileInApp(filename)
+  if WIN_ENV then
+    LrShell.openFilesInApp({""}, filename)
+  else
+    LrShell.openFilesInApp({filename}, "open")
+  end
+end
+-- END MOD - Add Metadata filter
