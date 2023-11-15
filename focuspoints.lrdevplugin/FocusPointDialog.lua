@@ -18,9 +18,12 @@ local LrSystemInfo = import 'LrSystemInfo'
 local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
+local LrPrefs = import 'LrPrefs'
+
 require "Utils"
 
 FocusPointDialog = {}
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
@@ -29,6 +32,14 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local contentWidth = appWidth * .7
   local contentHeight = appHeight * .7
 
+  if (WIN_ENV == true) then
+	if prefs.screenScaling == nil or prefs.screenScaling == 0 then
+   	  prefs.screenScaling = 1
+	end
+	contentWidth = contentWidth * prefs.screenScaling
+	contentHeight = contentHeight * prefs.screenScaling
+  end
+  
   local photoWidth
   local photoHeight
   if (w > h) then

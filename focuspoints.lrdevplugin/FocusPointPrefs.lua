@@ -25,7 +25,29 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
   local enableMogrifySettings =  true
 
+  if prefs.screenScaling == nil then
+	prefs.screenScaling = 1.0
+  end
+  
   return {
+  {
+	title = "Screen Scaling (only for Windows)",
+    viewFactory:row {
+      bind_to_object = prefs,
+      spacing = viewFactory:control_spacing(),
+      viewFactory:popup_menu {
+        title = "Scaling",
+        value = bind 'screenScaling',
+        items = {
+          { title = "100%", value = 1.0},
+          { title = "125%", value = 0.8},
+          { title = "150%", value = 0.67},
+          { title = "175%", value = 0.57},  
+          { title = "200%", value = 0.5},
+        }
+      },
+    },
+  },
   {
     title = "Logging",
     viewFactory:row {
