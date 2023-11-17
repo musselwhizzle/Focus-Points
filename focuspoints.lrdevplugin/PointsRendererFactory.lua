@@ -46,15 +46,15 @@ function PointsRendererFactory.createRenderer(photo)
 
   cameraMake = string.lower(cameraMake)
   cameraModel = string.lower(cameraModel)
-  
+
   logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
   logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
-  
+
   -- normalize the camera names. Pentax can be called multiple things
   if (string.find(cameraMake, "ricoh imaging company", 1, true) or string.find(cameraMake, "pentax", 1, true)) then
     cameraMake = "pentax"
   end
-  
+
   if (string.find(cameraMake, "nikon", 1, true)) then
     cameraMake = "nikon corporation"
   end
@@ -99,6 +99,10 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints
+  elseif (string.find(cameraMake, "om digital solutions", 1, true)) then  -- to support new camera maker OMDS (OM-1, OM-5), ref #162, 168
+    DefaultDelegates.focusPointsMap = nil     -- unused
+    DefaultDelegates.focusPointDimen = nil    -- unused
+    DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints   -- for OM-1, same logic applies as for Olympus cameras
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
     DefaultDelegates.focusPointsMap = nil     -- unused
     DefaultDelegates.focusPointDimen = nil    -- unused
@@ -119,11 +123,11 @@ function PointsRendererFactory.createRenderer(photo)
 end
 
 --[[
-  Method to get the focus point maps from the text files. The params 
+  Method to get the focus point maps from the text files. The params
   passed in may be changed from what the camera reports. For instance, if the camera is a Nikon D7100
   the cameraModel will be passed as "nikon d7200" since they share the same
   focus point map.
-  
+
   cameraMake - make of the camera
   cameraModel - make of the camera
 --]]

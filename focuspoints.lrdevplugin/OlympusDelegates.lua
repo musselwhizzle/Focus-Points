@@ -90,7 +90,8 @@ function OlympusDelegates.getAfPoints(photo, metaData)
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+--      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED,           -- for Olympus the center dot has no relevance, exact focus point is somewhere inside the box
         x = x,
         y = y,
         width = afAreaWidth,

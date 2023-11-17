@@ -43,6 +43,8 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     local properties = LrBinding.makePropertyTable( context ) -- make a table
     local delimiter = "\r"  -- carriage return; used to separate individual entries in column1 and column2 strings
 
+    bool_to_number={ [true]=1, [false]=0 }
+
     -- Split column1/column2 strings into arrays of tags/values to ease filtering
     tagLabels = {};
     for match in (column1..delimiter):gmatch("(.-)"..delimiter) do
@@ -57,12 +59,6 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     numTags = 0
     for _ in pairs(tagLabels) do numTags = numTags + 1 end
 
-    -- these props are needed on windows. on mac, they make the columns a bit larger than needed
-    if (MAC_ENV) then
-      column1Length = nil
-      column2Length = nil
-    end
-
     -- Define the various dialog UI elements
     local tagFilterLabel = viewFactory:static_text {
       title = "Show only tags containing:",
@@ -73,7 +69,9 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
   		immediate = true,
   	 	value = LrView.bind( 'tagFilter' ),
       fill_horizonal = 1,
-      width_in_chars = column1Length,
+      -- for proper window dimensions on MAC and WIN need to set different properties
+      width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
+      width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
       immediate = true,
     }
 
@@ -110,17 +108,19 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     local myText = viewFactory:static_text {
       title = LrView.bind "column1",
       selectable = false,
-      width_in_chars = column1Length,
+      -- for proper window dimensions on MAC and WIN need to set different properties
+      width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
+      width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
       height_in_lines = 1, -- when using numLines as height the window has a lots ob blank space to scroll down (at least on WIN)
-      wrap = false,
     }
 
     local myText2 = viewFactory:static_text {
       title = LrView.bind "column2",
       selectable = false,
-      width_in_chars = column2Length,
+      -- for proper window dimensions on MAC and WIN need to set different properties
+      width_in_chars  = column2Length * bool_to_number[MAC_ENV == true],
+      width_in_digits = column2Length * bool_to_number[WIN_ENV == true],
       height_in_lines = 1, -- same as for myText
-      wrap = false,
     }
 
     local row = viewFactory:row {
@@ -159,7 +159,6 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
   return result
 
 end
-
 --[[
 -- END MOD - Add Metadata filter
 --]]
