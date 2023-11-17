@@ -93,22 +93,26 @@ end
 showDialog()
 
 
-
 function splitForColumns(metaData)
   local parts = createParts(metaData)
   local labels = ""
   local values = ""
   local maxLabelsLength = 0
   local maxValuesLength = 0
-  local numOfLines = 0;
-  for k in pairs(parts) do
-    local l = parts[k].key
+  local numOfLines = 0
+  local limitValueLength = 255  -- to avoid super-long value strings that whill slow down display
 
+  for k in pairs(parts) do
+    local l = parts[k].label
     local v = parts[k].value
     if l == nil then l = "" end
     if v == nil then v = "" end
-    l = LrStringUtils.trimWhitespace(l)
-    v = LrStringUtils.trimWhitespace(v)
+
+    -- limit length of a displayed value string, indicate spillover by dots
+    -- the original entry can still be examined by opening the metadata txt file in editor
+    if string.len(v) > limitValueLength then
+       v = LrStringUtils.truncate(v, limitValueLength) .. "[...]"
+    end
 
     maxLabelsLength = math.max(maxLabelsLength, string.len(l))
     maxValuesLength = math.max(maxValuesLength, string.len(v))
@@ -116,14 +120,37 @@ function splitForColumns(metaData)
 
     --logDebug("ShowMetadata", "l: " .. l)
     --logDebug("ShowMetadata", "v: " .. v)
-
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
+
   return labels, values, maxLabelsLength, maxValuesLength, numOfLines
 
 end
 
+function createParts(metaData)
+  local parts = {}
+  local num = 1;
+
+  function createPart(label, value)
+    local p = {}
+    p.label = LrStringUtils.trimWhitespace(label)
+    p.value = LrStringUtils.trimWhitespace(value)
+    logDebug("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
+    return p
+  end
+
+  for label, value in string.gmatch(metaData, "([^\:]+)\:([^\r\n]*)\r?\n") do
+    parts[num] = createPart(label, value)
+    num = num+1
+  end
+  return parts
+end
+
+
+--[[
+-- Original code has a problem with entries that contain filenames with backslash, eg in Photoshop "History" entry.
+-- Rewritten using the logic of ExifUtils.readMetaDataAsTable() that seems to work very well
 function createParts(metaData)
   local parts = {}
   local num = 1;
@@ -137,3 +164,4 @@ function createParts(metaData)
   end
   return parts
 end
+--]]
