@@ -31,7 +31,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   
   return {
   {
-	title = "Screen Scaling (only for Windows)",
+    title = "Screen Scaling (only for Windows)",
     viewFactory:row {
       bind_to_object = prefs,
       spacing = viewFactory:control_spacing(),

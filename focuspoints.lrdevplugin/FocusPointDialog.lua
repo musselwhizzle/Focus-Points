@@ -33,11 +33,12 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local contentHeight = appHeight * .7
 
   if (WIN_ENV == true) then
-	if prefs.screenScaling == nil or prefs.screenScaling == 0 then
+    if prefs.screenScaling == nil or prefs.screenScaling == 0 then
    	  prefs.screenScaling = 1
-	end
-	contentWidth = contentWidth * prefs.screenScaling
-	contentHeight = contentHeight * prefs.screenScaling
+    end
+    logDebug('calculatePhotoDimens', prefs.screenScaling ) 
+    contentWidth = contentWidth * prefs.screenScaling
+    contentHeight = contentHeight * prefs.screenScaling
   end
   
   local photoWidth
