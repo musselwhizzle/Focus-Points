@@ -22,18 +22,34 @@ return {
 
 	LrToolkitIdentifier = 'com.thewhizzbang.focuspoint',
 	LrPluginName = "Focus Point Viewer",
-	
-	LrLibraryMenuItems = { 
+
+	LrLibraryMenuItems = {
     {
       title = "Show Focus Point",
       file = "FocusPoint.lua",
-      enabledWhen = "photosSelected"  
-    }, 
-    
+      enabledWhen = "photosSelected"
+    },
+
     {
       title = "Show Metadata",
       file = "ShowMetadata.lua",
-      enabledWhen = "photosSelected"  
+      enabledWhen = "photosSelected"
+    },
+  },
+
+  -- Allow invokation from "File -> Plugin Extras" menu as well
+  -- ref issue #169	
+  LrExportMenuItems = {
+    {
+      title = "Show Focus Point",
+      file = "FocusPoint.lua",
+      enabledWhen = "photosSelected"
+    },
+
+    {
+      title = "Show Metadata",
+      file = "ShowMetadata.lua",
+      enabledWhen = "photosSelected"
     },
   },
 
@@ -42,8 +58,8 @@ return {
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 }
 
---[[ 
-KNOWN BUGS: 
+--[[
+KNOWN BUGS:
  1. LrPhoto.getDevelopmentSettings()["Orientation"] return nil. I have no way of knowing if the photo
         was rotated in development mode
  2. Orientation must be determined from the metadata. The metdata does not tell me if the camera was upside down
