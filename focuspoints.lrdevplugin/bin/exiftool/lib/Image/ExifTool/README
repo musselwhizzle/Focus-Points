@@ -3,6 +3,9 @@ File:         Image/ExifTool/README
 
 Description:  ExifTool support modules documentation
 
+Note:         This documentation is a reference to be used by developers when
+              adding new tags to ExifTool.
+
 The ExifTool support modules are loaded by ExifTool to allow processing of
 various meta information formats.
 
@@ -62,10 +65,11 @@ key:
   information about the source directory for tags to be copied to the output.
 
   CHECK_PROC : Reference to a function which validates Raw values for writing.
-  The function takes three arguments: 0) ExifTool object reference, 1) tagInfo
-  reference, 2) value reference, and returns undefined (and possibly modifies
-  the input value) if successful, or an error message if there was a format
-  problem.  May set ExifTool CHECK_WARN datamember for success with a warning.
+  The function takes 3-4 arguments: 0) ExifTool object reference, 1) tagInfo
+  reference, 2) value reference, and 3) [optional] conversion type.  It returns
+  undefined (and possibly modifies the input value) if successful, or an error
+  message if there was a format problem.  May set ExifTool CHECK_WARN datamember
+  for success with a warning.
 
   INIT_TABLE : Routine called to do any necessary initialization before the
   first time the table is loaded.  Argument is a reference to the table.
@@ -245,6 +249,13 @@ key:
                   within this atom.  Currently used only for Canon CNTH atom,
                   which contains garbage after the first contained atom.
 
+    NIKON_OFFSETS [Nikon Encrypted tables only] Pointer to int32u NumberOffsets
+                  for offset-type encrypted Nikon directories.  When set,
+                  directory and decryption lengths are calculated automatically.
+
+    ALLOW_REPROCESS Flag to allow reprocessing of another directory at this
+                  same location in the file, bypassing recursion avoidance test.
+
   DATAMEMBER : BinaryData tables only.  A reference to a list of sorted tag ID's
   which must be extracted as data members when writing.  Must also list "var_"
   format tags and tags with Hook so offsets are properly calculated if the table
@@ -332,9 +343,10 @@ numerical, and generated automatically otherwise.
                   but applied automatically to individual tags.  Value specifies
                   pattern for split, or 1 for default pattern ',?\\s+'.
 
-                  'Avoid' - avoid creating this tag if possible.  This is only
-                  effective if another tag exists with the same name.  Setting
-                  this flag also sets the default Priority to 0 for this tag.
+                  'Avoid' - avoid creating this tag when writing if possible. 
+                  This is only effective if another tag exists with the same
+                  name.  Setting this flag also sets the default Priority to 0
+                  for this tag.
 
                   'Binary' - set to 1 for binary data.  This has the same effect
                   as setting ValueConv to '\$val', but it it a bit cleaner and
@@ -387,13 +399,22 @@ numerical, and generated automatically otherwise.
                   'Flattened' - [reserved] used internally to mark Struct tags
                   which have been processed to generate flattened equivalents.
 
-                  'GotGroups' - [reserved] flag used internally to indicate that
-                  the Groups hash has been initialized for this tag.
+                  'NotFlat' - [XMP tags only] Flag indicates that this tag ID
+                  does not represent a flattened tag.  Used to avoid a conflict
+                  if the tag ID would be the same as a generated ID for a
+                  flattened tag.  The result is that the flattened tag will not
+                  be accessible.
 
                   'Hidden' - set to hide tag from the TagName documentation.
-                  Also suppresses verbose output of a BinaryData tag.
+                  Also suppresses verbose output of a BinaryData tag.  The
+                  RawConv of a Hidden tag should return undef so the tag value
+                  is not seen by the user.
 
                   'IsComposite' - flag set for Composite tags
+
+                  'IsImageData' - flag set if this is an image data offset to
+                  be included in ImageDataHash calculation.  Must have an
+                  OffsetPair entry which is the ID of the corresponding size.
 
                   'IsOffset' - flag set if the tag represents an offset to some
                   data, and causes value will be adjusted to an absolute file
@@ -403,6 +424,9 @@ numerical, and generated automatically otherwise.
                   absolute file offsets are used.  May be set to an expression
                   to be evaluated.  Expression may access $val and $et,
                   and is evaluated only when reading.
+
+                  'iTXt' - [PNG TextualData tags only] flag to write tag as PNG
+                  iTXt chunk even if it contains no special characters.
 
                   'List' - flag indicating that duplicate entries of this tag
                   are allowed, and will be accumulated in a list.  Note that for
@@ -443,11 +467,19 @@ numerical, and generated automatically otherwise.
                   may be written if the tag already exists.  By default, all
                   MakerNotes tags are permanent unless otherwise specified.
 
+                  'PreservePadding' - [QuickTime only] flag to preserve the
+                  original size of the QuickTime atom by padding with nulls when
+                  writing with the QuickTimePad option.
+
                   'PrintHex' - specifies that unknown PrintConv values should
                   be printed in hex (eg. 'Unknown (0x1)').  Also causes
                   numerical tag values to be printed in hex in the HTML tag name
                   documentation, padded to the number of digits given by the
                   PrintHex value.
+
+                  'PrintInt' - remove decimal part of tag ID in HTML tag name
+                  documentation.  (To avoid confusing ExifTool users because
+                  the LensType decimal numbers are for internal use only.)
 
                   'PrintSort' - causes PrintConv values to be sorted by value
                   rather than key in the HTML tag name documentation.
@@ -467,9 +499,9 @@ numerical, and generated automatically otherwise.
                   tags in IFD1 of JPEG images which default to priority 0.
 
                   'Protected' - bit mask to protect tags from writing:
-                  Bit 0x01 indicates an 'unsafe' tag, which is not set via
+                  Bit 0x01 indicates an 'Unsafe' tag, which is not set via
                   SetNewValuesFromFile() unless specified explicitly.
-                  Bit 0x02 indicates a 'protected' tag, which should not be set
+                  Bit 0x02 indicates a 'Protected' tag, which should not be set
                   directly by the user.
 
                   'PutFirst' - [EXIF only] flag to place this value before IFD0
@@ -520,7 +552,8 @@ numerical, and generated automatically otherwise.
                   SubIFD's where the PutFirst flag is valid.
 
                   'Unknown' - this is an unknown tag (only extracted when the
-                  Unknown option is set).
+                  Unknown option is set).  This is set to 2 for Unknown tags in
+                  binary tables (extracted when Unknown is 2).
 
                   'WriteNothing' - flag indicating that nothing is actually
                   written when this tag is set.  It is a fake writable tag that
@@ -605,7 +638,7 @@ numerical, and generated automatically otherwise.
                   RawConv instead to return undef if it is necessary to test the
                   value for validity, otherwise an undef tag may hide a
                   previously defined value when the Duplicates option is not
-                  enabled. If this isn't possible (as with Composite tags where
+                  enabled.  If this isn't possible (as with Composite tags where
                   the converted values of the source tags are needed), set the
                   Priority to 0 to avoid taking priority over a valid tag. If
                   ValueConv is not specified, the Raw value is not converted. 
@@ -627,7 +660,8 @@ numerical, and generated automatically otherwise.
                   expression, a code reference or a list reference.  In this
                   expression, $self, $val and $tag may be used as with
                   ValueConv, but if ValueConv was defined then $val is the
-                  ValueConv value instead of the Raw value.  The returned value
+                  ValueConv value instead of the Raw value.  Composite tags
+                  may also use the @val, @prt and @raw lists. The returned value
                   should always be defined.  Note that the print conversion is
                   only done if the PrintConv option is enabled (which it is by
                   default), and if the result of the ValueConv is not a scalar
@@ -695,7 +729,7 @@ numerical, and generated automatically otherwise.
                   BitShift are applied before evaluating RawConv.
 
   BitShift      : [Mask tags only] Bit shift for Mask-ed values.  If not
-                  specified, set to the number of trailing bits in the Mask.
+                  specified, set to the number of trailing zero bits in Mask.
                   When reading, the value is shifted right by this number of
                   bits after the Mask is applied.
 
@@ -706,7 +740,7 @@ numerical, and generated automatically otherwise.
                   condition exists, then a 'true' condition is assumed.  The
                   expression may use $self to access the ExifTool object.  The
                   first 128 bytes of the raw data value are accessible through
-                  the reference $valPt for EXIF, Jpeg2000, QuickTime and
+                  the reference $valPt for EXIF, Jpeg2000, QuickTime, FLAC and
                   BinaryData tags only (note that for BinaryData tags, the raw
                   data of $$valPt is always 'undef' type, and may not be used
                   when writing except for SubDirectory tags).  EXIF tags (and
@@ -763,25 +797,26 @@ numerical, and generated automatically otherwise.
                   conditionally deleted.
 
   Writable      : Indicates this tag can be written (or not written if Writable
-                  is set to zero), and for EXIF-type tables gives format for
-                  writing.  Writable may be set to 1 for MakerNotes information
-                  because the existing format is always used, however providing
-                  a format is desirable because it is used in validating the
-                  value.  Set to 2 for tag to show "yes" in the Writable column
-                  of the tag name documentation even when there is no WRITE_PROC
-                  defined (eg. if it is written via an Extra tag).  For EXIF
-                  tables, the Writable flag may be different than the Format
-                  flag, in which case Format is used for converting the binary
-                  value and Writable specifies the format code written to the
-                  EXIF IFD.  For SubDirectories in EXIF information, this flag
-                  is only defined if the SubDirectory is writable as a block, or
-                  if the SubDirectory can not be edited (in which case Writable
-                  is set to 0).  If non-zero, the SubDirectory is also extracted
-                  as a block, so the Binary and Protected flags should usually
-                  set as well.  There is currently no way to specify a write
-                  format for a SubDirectory that is not writable as a block (the
-                  default is 'int32u' for IFD-type SubDirectories, and 'undef'
-                  for all others).
+                  is set to zero), and for EXIF and QuickTime tables gives
+                  format for writing.  Writable may be set to 1 for MakerNotes
+                  information because the existing format is always used,
+                  however providing a format is desirable because it is used in
+                  validating the value.  Set to 2 for tag to show "yes" in the
+                  Writable column of the tag name documentation even when there
+                  is no WRITE_PROC defined (eg. if it is written via an Extra
+                  tag).  For EXIF and QuickTime tables, the Writable flag may be
+                  different than the Format flag, in which case Format is used
+                  for converting the binary value and Writable specifies the
+                  format code written to the EXIF IFD.  For SubDirectories in
+                  EXIF information, this flag is only defined if the
+                  SubDirectory is writable as a block, or if the SubDirectory
+                  can not be edited (in which case Writable is set to 0).  If
+                  non-zero, the SubDirectory is also extracted as a block, so
+                  the Binary and Protected flags should usually set as well. 
+                  There is currently no way to specify a write format for a
+                  SubDirectory that is not writable as a block (the default is
+                  'int32u' for IFD-type SubDirectories, and 'undef' for all
+                  others).
 
   WriteAlso     : Used for writable tag to specify other tags to write when this
                   tag is written.  The value is a hash reference.  The hash keys
@@ -883,6 +918,9 @@ numerical, and generated automatically otherwise.
   FixedSize     : [EXIF only] Hack to ignore value size and use this instead.
                   Only valid if Format is also defined.
 
+  TruncateOK    : [EXIF only] Hack to demote a truncated value in an IFD to a
+                   minor error.
+
   Struct        : [XMP tags only] Reference to structure hash for structured XMP
                   tags.  See "STRUCTURES" section below for more details.  (For
                   backward compatibility, this may be a name to an entry in
@@ -952,6 +990,10 @@ numerical, and generated automatically otherwise.
   OtherLang     : [reserved] Used internally by QuickTime module to store a list
                   of tag ID's for alternate-language tags based on this one.
 
+  ParentTagInfo : [reserved] Used internally to store a reference to the tag
+                  information hash of the parent structure for flattened
+                  structure tags.
+
   RootTagInfo   : [reserved] Used internally to store a reference to the tag
                   information hash of the top-level structure for flattened
                   structure tags.
@@ -962,6 +1004,9 @@ numerical, and generated automatically otherwise.
   LangCode      : [reserved] Used internally to indicate language code for
                   alternate language tags (eg. 'fr').  Only used with formats
                   which support alternate languages (eg. XMP, MIE, etc).
+
+  AddedUnknown  : [reserved] Used internally to mark Unknown tags that were
+                  added to the table at run time.
 
   SubDirectory {  If it exists, this specifies the start of a new subdirectory.
                   It contains a collection of variables which specify the type
@@ -977,7 +1022,9 @@ numerical, and generated automatically otherwise.
                   current Base.  This is a Perl expression which may use
                   $valuePtr to represent the location of the tag value in the
                   file, or $val for the value itself.  If not specified, a Start
-                  of '$valuePtr' is assumed.
+                  of '$valuePtr' is assumed.  Subdirectories in BinaryData may
+                  also use $dirStart to represent the offset of the current
+                  directory start relative to the start of the data block.
 
      OffsetPt   : [EXIF directories only] If specified, this is a Perl
                   expression that gives the position of a 32-bit word in the
@@ -1083,7 +1130,7 @@ The contained structure field information hashes are similar to tag information
 hashes, except that only the following elements are used:
 
   Raw/Value/PrintConv (and their inverses), TagID (optional), Groups, List,
-  Writable, Struct, Namespace, LangCode, PropertyPath, Notes.
+  Writable, Struct, Namespace, FlatName, LangCode, PropertyPath, Notes.
 
 But note that for PropertyPath, only the element of the path corresponding to
 the specific field is stored (including any necessary list properties).  The

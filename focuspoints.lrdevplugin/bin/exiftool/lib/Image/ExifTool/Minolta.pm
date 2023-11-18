@@ -49,7 +49,7 @@ use vars qw($VERSION %minoltaLensTypes %minoltaTeleconverters %minoltaColorMode
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '2.83';
+$VERSION = '2.88';
 
 # Full list of product codes for Sony-compatible Minolta lenses
 # (ref http://www.kb.sony.com/selfservice/documentLink.do?externalId=C1000570)
@@ -179,12 +179,9 @@ $VERSION = '2.83';
 # ("New" and "II" appear in brackets if original version also has this LensType)
 %minoltaLensTypes = (
     Notes => q{
-        Decimal values have been added to differentiate lenses which would otherwise
-        have the same LensType, and are used by the Composite LensID tag when
-        attempting to identify the specific lens model.  "New" or "II" appear in
-        brackets if the original version of the lens has the same LensType.  Special
-        logic is employed to identify the attached lens when a Metabones Canon EF
-        adapter is used.
+        "New" or "II" appear in brackets if the original version of the lens has the
+        same LensType.  Special logic is employed to identify the attached lens when
+        a Metabones Canon EF adapter is used.
     },
     OTHER => sub {
         my ($val, $inv) = @_;
@@ -602,13 +599,18 @@ $VERSION = '2.83';
     15 => 'Light', #JR (NC)
     16 => 'Autumn Leaves', #JR (NC)
     17 => 'Sepia', #JR
+    18 => 'FL', #JR (7SM3)
+    19 => 'Vivid 2', #JR (7SM3)
+    20 => 'IN', #JR (7SM3)
+    21 => 'SH', #JR (7SM3)
     100 => 'Neutral', #JD
     101 => 'Clear', #JD
     102 => 'Deep', #JD
     103 => 'Light', #JD
     104 => 'Night View', #JD
     105 => 'Autumn Leaves', #JD
-    0xffffffff => 'n/a', #PH
+    255 => 'Off', #JR (new for ILCE-7SM3, July 2020)
+   0xffffffff => 'n/a', #PH
 );
 
 %minoltaSceneMode = (
@@ -893,6 +895,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         SeparateTable => 1,
         ValueConvInv => 'int($val)', # (must truncate decimal part)
         PrintConv => \%minoltaLensTypes,
+        PrintInt => 1,
     },
     # 0x010e - WhiteBalance according to ref #10
     0x0111 => { #20
@@ -2703,6 +2706,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         SeparateTable => 1,
         ValueConvInv => 'int($val)', # (must truncate decimal part)
         PrintConv => \%minoltaLensTypes,
+        PrintInt => 1,
     },
     0x49c0 => {
         Name => 'ExposureCompensation', # (in exposure bracketing, this is the actual value used)
@@ -2923,7 +2927,7 @@ and write Minolta RAW (MRW) images.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

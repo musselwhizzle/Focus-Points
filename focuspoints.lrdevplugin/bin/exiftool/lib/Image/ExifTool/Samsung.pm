@@ -22,12 +22,13 @@ use vars qw($VERSION %samsungLensTypes);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.48';
+$VERSION = '1.54';
 
 sub WriteSTMN($$$);
 sub ProcessINFO($$$);
 sub ProcessSamsungMeta($$$);
 sub ProcessSamsungIFD($$$);
+sub ProcessSamsung($$$);
 
 # Samsung LensType lookup
 %samsungLensTypes = (
@@ -453,6 +454,8 @@ my %formatMinMax = (
     0xa018 => { #1
         Name => 'ExposureTime',
         Writable => 'rational64u',
+        ValueConv => '$val=~s/ .*//; $val', # some models write 2 values here
+        ValueConvInv => '$val',
         PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
         PrintConvInv => '$val',
     },
@@ -460,6 +463,8 @@ my %formatMinMax = (
         Name => 'FNumber',
         Priority => 0,
         Writable => 'rational64u',
+        ValueConv => '$val=~s/ .*//; $val', # some models write 2 values here
+        ValueConvInv => '$val',
         PrintConv => 'sprintf("%.1f",$val)',
         PrintConvInv => '$val',
     },
@@ -940,13 +945,31 @@ my %formatMinMax = (
 %Image::ExifTool::Samsung::Trailer = (
     GROUPS => { 0 => 'MakerNotes', 2 => 'Other' },
     VARS => { NO_ID => 1, HEX_ID => 0 },
+    PROCESS_PROC => \&ProcessSamsung,
+    PRIORITY => 0, # (first one takes priority so DepthMapWidth/Height match first DepthMapData)
     NOTES => q{
         Tags extracted from the trailer of JPEG images written when using certain
         features (such as "Sound & Shot" or "Shot & More") from Samsung models such
-        as the Galaxy S4 and Tab S.
+        as the Galaxy S4 and Tab S, and from the 'sefd' atom in HEIC images from the
+        Samsung S10+.
     },
-    '0x0001-name' => 'EmbeddedImageName', # ("DualShot_1","DualShot_2")
-    '0x0001' => { Name => 'EmbeddedImage', Groups => { 2 => 'Preview' }, Binary => 1 },
+    '0x0001-name' => {
+        Name => 'EmbeddedImageName', # ("DualShot_1","DualShot_2")
+        RawConv => '$$self{EmbeddedImageName} = $val',
+    },
+    '0x0001' => [
+        {
+            Name => 'EmbeddedImage',
+            Condition => '$$self{EmbeddedImageName} eq "DualShot_1"',
+            Groups => { 2 => 'Preview' },
+            Binary => 1,
+        },
+        {
+            Name => 'EmbeddedImage2',
+            Groups => { 2 => 'Preview' },
+            Binary => 1,
+        },
+    ],
     '0x0100-name' => 'EmbeddedAudioFileName', # ("SoundShot_000")
     '0x0100' => { Name => 'EmbeddedAudioFile', Groups => { 2 => 'Audio' }, Binary => 1 },
     '0x0201-name' => 'SurroundShotVideoName', # ("Interactive_Panorama_000")
@@ -968,7 +991,7 @@ my %formatMinMax = (
     '0x0a01' => { #forum7161
         Name => 'TimeStamp',
         Groups => { 2 => 'Time' },
-        ValueConv => 'ConvertUnixTime($val / 1e3, 1)',
+        ValueConv => 'ConvertUnixTime($val / 1e3, 1, 3)',
         PrintConv => '$self->ConvertDateTime($val)',
     },
     '0x0a20-name' => 'DualCameraImageName', # ("FlipPhoto_002")
@@ -976,10 +999,255 @@ my %formatMinMax = (
     '0x0a30-name' => 'EmbeddedVideoType', # ("MotionPhoto_Data")
     '0x0a30' => { Name => 'EmbeddedVideoFile', Groups => { 2 => 'Video' }, Binary => 1 }, #forum7161
    # 0x0aa1-name - seen 'MCC_Data'
-   # 0x0aa1 - seen '234','222'
+   # 0x0aa1 - seen '204','222','234','302','429'
+    '0x0aa1' => {
+        Name => 'MCCData',
+        Groups => { 2 => 'Location' },
+        PrintConv => {
+            202 => 'Greece (202)',
+            204 => 'Netherlands (204)',
+            206 => 'Belgium (206)',
+            208 => 'France (208)',
+            212 => 'Monaco (212)',
+            213 => 'Andorra (213)',
+            214 => 'Spain (214)',
+            216 => 'Hungary (216)',
+            218 => 'Bosnia & Herzegov. (218)',
+            219 => 'Croatia (219)',
+            220 => 'Serbia (220)',
+            221 => 'Kosovo (221)',
+            222 => 'Italy (222)',
+            226 => 'Romania (226)',
+            228 => 'Switzerland (228)',
+            230 => 'Czech Rep. (230)',
+            231 => 'Slovakia (231)',
+            232 => 'Austria (232)',
+            234 => 'United Kingdom (234)',
+            235 => 'United Kingdom (235)',
+            238 => 'Denmark (238)',
+            240 => 'Sweden (240)',
+            242 => 'Norway (242)',
+            244 => 'Finland (244)',
+            246 => 'Lithuania (246)',
+            247 => 'Latvia (247)',
+            248 => 'Estonia (248)',
+            250 => 'Russian Federation (250)',
+            255 => 'Ukraine (255)',
+            257 => 'Belarus (257)',
+            259 => 'Moldova (259)',
+            260 => 'Poland (260)',
+            262 => 'Germany (262)',
+            266 => 'Gibraltar (266)',
+            268 => 'Portugal (268)',
+            270 => 'Luxembourg (270)',
+            272 => 'Ireland (272)',
+            274 => 'Iceland (274)',
+            276 => 'Albania (276)',
+            278 => 'Malta (278)',
+            280 => 'Cyprus (280)',
+            282 => 'Georgia (282)',
+            283 => 'Armenia (283)',
+            284 => 'Bulgaria (284)',
+            286 => 'Turkey (286)',
+            288 => 'Faroe Islands (288)',
+            289 => 'Abkhazia (289)',
+            290 => 'Greenland (290)',
+            292 => 'San Marino (292)',
+            293 => 'Slovenia (293)',
+            294 => 'Macedonia (294)',
+            295 => 'Liechtenstein (295)',
+            297 => 'Montenegro (297)',
+            302 => 'Canada (302)',
+            308 => 'St. Pierre & Miquelon (308)',
+            310 => 'United States / Guam (310)',
+            311 => 'United States / Guam (311)',
+            312 => 'United States (312)',
+            316 => 'United States (316)',
+            330 => 'Puerto Rico (330)',
+            334 => 'Mexico (334)',
+            338 => 'Jamaica (338)',
+            340 => 'French Guiana / Guadeloupe / Martinique (340)',
+            342 => 'Barbados (342)',
+            344 => 'Antigua and Barbuda (344)',
+            346 => 'Cayman Islands (346)',
+            348 => 'British Virgin Islands (348)',
+            350 => 'Bermuda (350)',
+            352 => 'Grenada (352)',
+            354 => 'Montserrat (354)',
+            356 => 'Saint Kitts and Nevis (356)',
+            358 => 'Saint Lucia (358)',
+            360 => 'St. Vincent & Gren. (360)',
+            362 => 'Bonaire, Sint Eustatius and Saba / Curacao / Netherlands Antilles (362)',
+            363 => 'Aruba (363)',
+            364 => 'Bahamas (364)',
+            365 => 'Anguilla (365)',
+            366 => 'Dominica (366)',
+            368 => 'Cuba (368)',
+            370 => 'Dominican Republic (370)',
+            372 => 'Haiti (372)',
+            374 => 'Trinidad and Tobago (374)',
+            376 => 'Turks and Caicos Islands / US Virgin Islands (376)',
+            400 => 'Azerbaijan (400)',
+            401 => 'Kazakhstan (401)',
+            402 => 'Bhutan (402)',
+            404 => 'India (404)',
+            405 => 'India (405)',
+            410 => 'Pakistan (410)',
+            412 => 'Afghanistan (412)',
+            413 => 'Sri Lanka (413)',
+            414 => 'Myanmar (Burma) (414)',
+            415 => 'Lebanon (415)',
+            416 => 'Jordan (416)',
+            417 => 'Syrian Arab Republic (417)',
+            418 => 'Iraq (418)',
+            419 => 'Kuwait (419)',
+            420 => 'Saudi Arabia (420)',
+            421 => 'Yemen (421)',
+            422 => 'Oman (422)',
+            424 => 'United Arab Emirates (424)',
+            425 => 'Israel / Palestinian Territory (425)',
+            426 => 'Bahrain (426)',
+            427 => 'Qatar (427)',
+            428 => 'Mongolia (428)',
+            429 => 'Nepal (429)',
+            430 => 'United Arab Emirates (430)',
+            431 => 'United Arab Emirates (431)',
+            432 => 'Iran (432)',
+            434 => 'Uzbekistan (434)',
+            436 => 'Tajikistan (436)',
+            437 => 'Kyrgyzstan (437)',
+            438 => 'Turkmenistan (438)',
+            440 => 'Japan (440)',
+            441 => 'Japan (441)',
+            450 => 'South Korea (450)',
+            452 => 'Viet Nam (452)',
+            454 => 'Hongkong, China (454)',
+            455 => 'Macao, China (455)',
+            456 => 'Cambodia (456)',
+            457 => 'Laos P.D.R. (457)',
+            460 => 'China (460)',
+            466 => 'Taiwan (466)',
+            467 => 'North Korea (467)',
+            470 => 'Bangladesh (470)',
+            472 => 'Maldives (472)',
+            502 => 'Malaysia (502)',
+            505 => 'Australia (505)',
+            510 => 'Indonesia (510)',
+            514 => 'Timor-Leste (514)',
+            515 => 'Philippines (515)',
+            520 => 'Thailand (520)',
+            525 => 'Singapore (525)',
+            528 => 'Brunei Darussalam (528)',
+            530 => 'New Zealand (530)',
+            537 => 'Papua New Guinea (537)',
+            539 => 'Tonga (539)',
+            540 => 'Solomon Islands (540)',
+            541 => 'Vanuatu (541)',
+            542 => 'Fiji (542)',
+            544 => 'American Samoa (544)',
+            545 => 'Kiribati (545)',
+            546 => 'New Caledonia (546)',
+            547 => 'French Polynesia (547)',
+            548 => 'Cook Islands (548)',
+            549 => 'Samoa (549)',
+            550 => 'Micronesia (550)',
+            552 => 'Palau (552)',
+            553 => 'Tuvalu (553)',
+            555 => 'Niue (555)',
+            602 => 'Egypt (602)',
+            603 => 'Algeria (603)',
+            604 => 'Morocco (604)',
+            605 => 'Tunisia (605)',
+            606 => 'Libya (606)',
+            607 => 'Gambia (607)',
+            608 => 'Senegal (608)',
+            609 => 'Mauritania (609)',
+            610 => 'Mali (610)',
+            611 => 'Guinea (611)',
+            612 => 'Ivory Coast (612)',
+            613 => 'Burkina Faso (613)',
+            614 => 'Niger (614)',
+            615 => 'Togo (615)',
+            616 => 'Benin (616)',
+            617 => 'Mauritius (617)',
+            618 => 'Liberia (618)',
+            619 => 'Sierra Leone (619)',
+            620 => 'Ghana (620)',
+            621 => 'Nigeria (621)',
+            622 => 'Chad (622)',
+            623 => 'Central African Rep. (623)',
+            624 => 'Cameroon (624)',
+            625 => 'Cape Verde (625)',
+            626 => 'Sao Tome & Principe (626)',
+            627 => 'Equatorial Guinea (627)',
+            628 => 'Gabon (628)',
+            629 => 'Congo, Republic (629)',
+            630 => 'Congo, Dem. Rep. (630)',
+            631 => 'Angola (631)',
+            632 => 'Guinea-Bissau (632)',
+            633 => 'Seychelles (633)',
+            634 => 'Sudan (634)',
+            635 => 'Rwanda (635)',
+            636 => 'Ethiopia (636)',
+            637 => 'Somalia (637)',
+            638 => 'Djibouti (638)',
+            639 => 'Kenya (639)',
+            640 => 'Tanzania (640)',
+            641 => 'Uganda (641)',
+            642 => 'Burundi (642)',
+            643 => 'Mozambique (643)',
+            645 => 'Zambia (645)',
+            646 => 'Madagascar (646)',
+            647 => 'Reunion (647)',
+            648 => 'Zimbabwe (648)',
+            649 => 'Namibia (649)',
+            650 => 'Malawi (650)',
+            651 => 'Lesotho (651)',
+            652 => 'Botswana (652)',
+            653 => 'Swaziland (653)',
+            654 => 'Comoros (654)',
+            655 => 'South Africa (655)',
+            657 => 'Eritrea (657)',
+            659 => 'South Sudan (659)',
+            702 => 'Belize (702)',
+            704 => 'Guatemala (704)',
+            706 => 'El Salvador (706)',
+            708 => 'Honduras (708)',
+            710 => 'Nicaragua (710)',
+            712 => 'Costa Rica (712)',
+            714 => 'Panama (714)',
+            716 => 'Peru (716)',
+            722 => 'Argentina Republic (722)',
+            724 => 'Brazil (724)',
+            730 => 'Chile (730)',
+            732 => 'Colombia (732)',
+            734 => 'Venezuela (734)',
+            736 => 'Bolivia (736)',
+            738 => 'Guyana (738)',
+            740 => 'Ecuador (740)',
+            744 => 'Paraguay (744)',
+            746 => 'Suriname (746)',
+            748 => 'Uruguay (748)',
+            750 => 'Falkland Islands (Malvinas) (750)',
+            901 => 'International Networks / Satellite Networks (901)',
+        },
+    },
    # 0x0ab0-name - seen 'DualShot_Meta_Info'
-    '0x0ab1-name' => 'DepthMapName', # seen 'DualShot_DepthMap_1' (SM-N950U)
-    '0x0ab1' => { Name => 'DepthMapData', Binary => 1 },
+    '0x0ab1-name' => {
+        Name => 'DepthMapName',
+        # seen 'DualShot_DepthMap_1' (SM-N950U), DualShot_DepthMap_5 (SM-G998W)
+        RawConv => '$$self{DepthMapName} = $val',
+    },
+    '0x0ab1' => [
+        {
+            Name => 'DepthMapData',
+            Condition => '$$self{DepthMapName} eq "DualShot_DepthMap_1"',
+            Binary => 1,
+        },{
+            Name => 'DepthMapData2',
+            Binary => 1,
+        },
+    ],
    # 0x0ab3-name - seen 'DualShot_Extra_Info' (SM-N950U)
     '0x0ab3' => { # (SM-N950U)
         Name => 'DualShotExtra',
@@ -993,8 +1261,10 @@ my %formatMinMax = (
      },
    # 0x0b41-name - seen 'SingeShot_DepthMap_1' (Yes, "Singe") (SM-N975X front camera)
     '0x0b41' => { Name => 'SingleShotDepthMap', Binary => 1 },
+   # 0x0ba1-name - seen 'Original_Path_Hash_Key', 'PhotoEditor_Re_Edit_Data'
    # 0xa050-name - seen 'Jpeg360_2D_Info' (Samsung Gear 360)
    # 0xa050 - seen 'Jpeg3602D' (Samsung Gear 360)
+   # 0x0c81-name - seen 'Watermark_Info'
 );
 
 # DualShot Extra Info (ref PH)
@@ -1014,7 +1284,8 @@ my %formatMinMax = (
         Hook => q{
             if ($size >= 96) {
                 my $tmp = substr($$dataPt, $pos, 64);
-                if ($tmp =~ /\x01\0\xff\xff/g and not pos($tmp) % 4) {
+                # (have seen 0x01,0x03 and 0x07)
+                if ($tmp =~ /[\x01-\x09]\0\xff\xff/g and not pos($tmp) % 4) {
                     $$self{DepthMapTagPos} = pos($tmp);
                     $varSize += $$self{DepthMapTagPos} - 32;
                 }
@@ -1273,6 +1544,10 @@ sub ProcessSamsung($$$)
     my $unknown = $et->Options('Unknown');
     my ($buff, $buf2, $index, $offsetPos, $audioNOff, $audioSize);
 
+    unless ($raf) {
+        $raf = new File::RandomAccess($$dirInfo{DataPt});
+        $et->VerboseDir('SamsungTrailer');
+    }
     return 0 unless $raf->Seek(-6-$offset, 2) and $raf->Read($buff, 6) == 6 and
                     ($buff eq 'QDIOBS' or $buff eq "\0\0SEFT");
     my $endPos = $raf->Tell();
@@ -1327,7 +1602,7 @@ SamBlock:
         # save trailer position and length
         my $dataPos = $$dirInfo{DataPos} = $dirPos - $firstBlock;
         my $dirLen = $$dirInfo{DirLen} = $endPos - $dataPos;
-        if (($verbose or $$et{HTML_DUMP}) and not $outfile) {
+        if (($verbose or $$et{HTML_DUMP}) and not $outfile and $$dirInfo{RAF}) {
             $et->DumpTrailer($dirInfo);
             return 1 if $$et{HTML_DUMP};
         }
@@ -1447,7 +1722,7 @@ Samsung maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -11,12 +11,12 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.30';
+$VERSION = '1.35';
 
 sub ProcessOcad($$$);
 sub ProcessJPEG_HDR($$$);
 
-# (this main JPEG table is for documentation purposes only)
+# (most of the tags in this table are for documentation purposes only)
 %Image::ExifTool::JPEG::Main = (
     NOTES => q{
         This table lists information extracted by ExifTool from JPEG images. See
@@ -84,6 +84,10 @@ sub ProcessJPEG_HDR($$$);
         Condition => '$$valPt =~ /^MPF\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::MPF::Main' },
       }, {
+        Name => 'InfiRayVersion',
+        Condition => '$$valPt =~ /^....IJPEG\0/s',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Version' },
+      }, {
         Name => 'PreviewImage',
         Condition => '$$valPt =~ /^(|QVGA\0|BGTH)\xff\xd8\xff\xdb/',
         Notes => 'Samsung APP2 preview image', # (Samsung/GoPro="", BenQ="QVGA\0", Digilife="BGTH")
@@ -96,6 +100,22 @@ sub ProcessJPEG_HDR($$$);
         Name => 'Stim',
         Condition => '$$valPt =~ /^Stim\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::Stim::Main' },
+      }, {
+        Name => 'JPS',
+        Condition => '$$valPt =~ /^_JPSJPS_/',
+        SubDirectory => { TagTable => 'Image::ExifTool::JPEG::JPS' },
+      }, {
+        Name => 'ThermalData', # (written by DJI FLIR models)
+        Condition => '$$self{Make} eq "DJI"',
+        Notes => 'DJI raw thermal data',
+        Groups => { 0 => 'APP3', 1 => 'DJI', 2 => 'Image' },
+        Binary => 1,
+      }, {
+        Name => 'ImagingData', # (written by InfiRay models)
+        Condition => '$$self{HasIJPEG}',
+        Notes => 'InfiRay IR+thermal+visible data',
+        Groups => { 0 => 'APP3', 1 => 'InfiRay', 2 => 'Image' },
+        Binary => 1,
       }, {
         Name => 'PreviewImage', # (written by HP R837 and Samsung S1060)
         Condition => '$$valPt =~ /^\xff\xd8\xff\xdb/',
@@ -110,6 +130,22 @@ sub ProcessJPEG_HDR($$$);
         Condition => '$$valPt =~ /^FPXR\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::FlashPix::Main' },
       }, {
+        Name => 'InfiRayFactory',
+        Condition => '$$self{HasIJPEG}"',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Factory' },
+      }, {
+        Name => 'ThermalParams', # (written by some DJI FLIR models)
+        Condition => '$$self{Make} eq "DJI" and $$valPt =~ /^\xaa\x55\x12\x06/',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::ThermalParams' },
+      }, {
+        Name => 'ThermalParams2', # (written by M3T)
+        Condition => '$$self{Make} eq "DJI" and $$valPt =~ /^(.{32})?.{32}\x2c\x01\x20\0/s',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::ThermalParams2' },
+      }, {
+        Name => 'ThermalParams3', # (written by M30T)
+        Condition => '$$self{Make} eq "DJI" and $$valPt =~ /^.{32}\xaa\x55\x38\0/s',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::ThermalParams3' },
+      }, {
         Name => 'PreviewImage', # (eg. Samsung S1060)
         Notes => 'continued from APP3',
     }],
@@ -121,6 +157,16 @@ sub ProcessJPEG_HDR($$$);
         Name => 'SamsungUniqueID',
         Condition => '$$valPt =~ /ssuniqueid\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::Samsung::APP5' },
+      }, {
+        Name => 'InfiRayPicture',
+        Condition => '$$self{HasIJPEG}',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Picture' },
+      }, {
+        Name => 'ThermalCalibration', # (written by DJI FLIR models)
+        Condition => '$$self{Make} eq "DJI"',
+        Notes => 'DJI thermal calibration data',
+        Groups => { 0 => 'APP5', 1 => 'DJI', 2 => 'Image' },
+        Binary => 1,
       }, {
         Name => 'PreviewImage', # (eg. BenQ DC E1050)
         Notes => 'continued from APP4',
@@ -141,6 +187,16 @@ sub ProcessJPEG_HDR($$$);
         Name => 'GoPro',
         Condition => '$$valPt =~ /^GoPro\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::GoPro::GPMF' },
+      }, {
+        Name => 'InfiRayMixMode',
+        Condition => '$$self{HasIJPEG}',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::MixMode' },
+      }, {
+        Name => 'DJI_DTAT', # (written by ZH20T)
+        Condition => '$$valPt =~ /^DTAT\0\0.\{/s',
+        Groups => { 0 => 'APP6', 1 => 'DJI' },
+        Notes => 'DJI Thermal Analysis Tool record',
+        ValueConv => 'substr($val,7)',
       # also seen Motorola APP6 "MMIMETA\0", with sub-types: AL3A,ALED,MMI0,MOTD,QC3A
     }],
     APP7 => [{
@@ -155,27 +211,48 @@ sub ProcessJPEG_HDR($$$);
         Name => 'Qualcomm',
         Condition => '$$valPt =~ /^\x1aQualcomm Camera Attributes/',
         SubDirectory => { TagTable => 'Image::ExifTool::Qualcomm::Main' },
+      }, {
+        Name => 'InfiRayOpMode',
+        Condition => '$$self{HasIJPEG}',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::OpMode' },
+      }, {
+        Name => 'DJI-DBG',
+        Condition => '$$valPt =~ /^DJI-DBG\0/',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::Info' },
     }],
-    APP8 => {
+    APP8 => [{
         Name => 'SPIFF',
         Condition => '$$valPt =~ /^SPIFF\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::JPEG::SPIFF' },
-    },
-    APP9 => {
+      }, {
+        Name => 'InfiRayIsothermal',
+        Condition => '$$self{HasIJPEG}',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Isothermal' },
+    }],
+    APP9 => [{
         Name => 'MediaJukebox',
         Condition => '$$valPt =~ /^Media Jukebox\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::JPEG::MediaJukebox' },
-    },
+      }, {
+        Name => 'InfiRaySensor',
+        Condition => '$$self{HasIJPEG}',
+        SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Sensor' },
+    }],
     APP10 => {
         Name => 'Comment',
         Condition => '$$valPt =~ /^UNICODE\0/',
         Notes => 'PhotoStudio Unicode comment',
     },
-    APP11 => {
+    APP11 => [{
         Name => 'JPEG-HDR',
         Condition => '$$valPt =~ /^HDR_RI /',
         SubDirectory => { TagTable => 'Image::ExifTool::JPEG::HDR' },
-    },
+    },{
+        Name => 'JUMBF',
+        Condition => '$$valPt =~ /^JP/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Jpeg2000::Main' },
+        # Note: The recommended options for reading C2PA JUMBF metadata are "-G3 -b -j -u"
+    }],
     APP12 => [{
         Name => 'PictureInfo',
         Condition => '$$valPt =~ /(\[picture info\]|Type=)/',
@@ -255,10 +332,76 @@ sub ProcessJPEG_HDR($$$);
         Name => 'Insta360',
         Condition => '$$valPt =~ /8db42d694ccc418790edff439fe026bf$/',
       }, {
+        Name => 'NikonApp',
+        Condition => '$$valPt =~ m(\0{6}/NIKON APP$)',
+        Notes => 'contains editing information in XMP format',
+      }, {
         Name => 'PreviewImage',
         Condition => '$$valPt =~ /^\xff\xd8\xff/',
         Writable => 2,  # (for docs only)
     }],
+);
+
+# JPS APP3 segment (ref http://paulbourke.net/stereographics/stereoimage/)
+%Image::ExifTool::JPEG::JPS = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 0 => 'APP3', 1 => 'JPS', 2 => 'Image' },
+    NOTES => 'Tags found in JPEG Stereo (JPS) images.',
+    0x0a => {
+        Name => 'JPSSeparation',
+        Format => 'int32u', # (just so we can look ahead to MediaType);
+        Notes => 'stereo only',
+        RawConv => q{
+            $$self{MediaType} = $val & 0xff;
+            return undef unless $$self{MediaType} == 1;
+            return(($val >> 24) & 0xff);
+        },
+    },
+    0x08 => {
+        Name => 'HdrLength',
+        Format => 'int16u',
+        Hidden => 1,
+        RawConv => '$$self{HdrLength} = $val; undef',
+    },
+    0x0b => {
+        Name => 'JPSFlags',
+        PrintConv => { BITMASK => {
+            0 => 'Half height',
+            1 => 'Half width',
+            2 => 'Left field first',
+        }},
+    },
+    0x0c => [{
+        Name => 'JPSLayout',
+        Condition => '$$self{MediaType} == 0',
+        Notes => 'mono',
+        PrintConv => {
+            0 => 'Both Eyes',
+            1 => 'Left Eye',
+            2 => 'Right Eye',
+        },
+    },{
+        Name => 'JPSLayout',
+        Condition => '$$self{MediaType} == 1',
+        Notes => 'stereo',
+        PrintConv => {
+            1 => 'Interleaved',
+            2 => 'Side By Side',
+            3 => 'Over Under',
+            4 => 'Anaglyph',
+        },
+    }],
+    0x0d => {
+        Name => 'JPSType',
+        Hook => '$varSize += $$self{HdrLength} - 4', # comment starts after header block
+        PrintConv => { 0 => 'Mono', 1 => 'Stereo' },
+    },
+    # 0x0e - in16u comment length (ignored -- assume the remainder is all comment)
+    #        (this is offset if we had a 4-byte JPS header block)
+    0x10 => {
+        Name => 'JPSComment',
+        Format => 'string',
+    },
 );
 
 # EPPIM APP6 (Toshiba PrintIM) segment (ref PH, from PDR-M700 samples)
@@ -519,7 +662,7 @@ sub ProcessJPEG_HDR($$$);
     },
     2 => {
         Name => 'ImageFormat',
-        ValueConv => 'chr($val)',
+        ValueConv => 'chr($val & 0xff)',
         PrintConv => { B => 'IMode B' },
     },
     3 => {
@@ -622,7 +765,7 @@ segments are included in the Image::ExifTool module itself.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

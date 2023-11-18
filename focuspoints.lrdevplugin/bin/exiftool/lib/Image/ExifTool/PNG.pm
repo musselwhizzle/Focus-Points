@@ -36,7 +36,7 @@ use strict;
 use vars qw($VERSION $AUTOLOAD %stdCase);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.54';
+$VERSION = '1.65';
 
 sub ProcessPNG_tEXt($$$);
 sub ProcessPNG_iTXt($$$);
@@ -89,7 +89,7 @@ $Image::ExifTool::PNG::colorType = -1;
 
 # data and text chunk types
 my %isDatChunk = ( IDAT => 1, JDAT => 1, JDAA => 1 );
-my %isTxtChunk = ( tEXt => 1, zTXt => 1, iTXt => 1 );
+my %isTxtChunk = ( tEXt => 1, zTXt => 1, iTXt => 1, eXIf => 1 );
 
 # chunks that we shouldn't move other chunks across (ref 3)
 my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND => 1,
@@ -142,11 +142,14 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
     gAMA => {
         Name => 'Gamma',
+        Writable => 1,
+        Protected => 1,
         Notes => q{
             ExifTool reports the gamma for decoding the image, which is consistent with
             the EXIF convention, but is the inverse of the stored encoding gamma
         },
         ValueConv => 'my $a=unpack("N",$val);$a ? int(1e9/$a+0.5)/1e4 : $val',
+        ValueConvInv => 'pack("N", int(1e5/$val+0.5))',
     },
     gIFg => {
         Name => 'GIFGraphicControlExtension',
@@ -166,7 +169,10 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
     iCCP => {
         Name => 'ICC_Profile',
-        Notes => 'this is where ExifTool will write a new ICC_Profile',
+        Notes => q{
+            this is where ExifTool will write a new ICC_Profile.  When creating a new
+            ICC_Profile, the SRGBRendering tag should be deleted if it exists
+        },
         SubDirectory => {
             TagTable => 'Image::ExifTool::ICC_Profile::Main',
             ProcessProc => \&ProcessPNG_Compressed,
@@ -174,7 +180,12 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
    'iCCP-name' => {
         Name => 'ProfileName',
-        Notes => 'not a real tag ID, this tag represents the iCCP profile name',
+        Writable => 1,
+        FakeTag => 1, # (not a real PNG tag, so don't try to write it)
+        Notes => q{
+            not a real tag ID, this tag represents the iCCP profile name, and may only
+            be written when the ICC_Profile is written
+        },
     },
 #   IDAT
 #   IEND
@@ -227,7 +238,11 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
     sRGB => {
         Name => 'SRGBRendering',
+        Writable => 1,
+        Protected => 1,
+        Notes => 'this chunk should not be present if an iCCP chunk exists',
         ValueConv => 'unpack("C",$val)',
+        ValueConvInv => 'pack("C",$val)',
         PrintConv => {
             0 => 'Perceptual',
             1 => 'Relative Colorimetric',
@@ -259,6 +274,7 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
     tRNS => {
         Name => 'Transparency',
+        # may have as many entries as the PLTE table, but who wants to see all that?
         ValueConv => q{
             return \$val if length($val) > 6;
             join(" ",unpack($Image::ExifTool::PNG::colorType == 3 ? "C*" : "n*", $val));
@@ -311,6 +327,28 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
     # fcTL - animation frame control for each frame
     # fdAT - animation data for each frame
+    iDOT => { # (ref NealKrawetz)
+        Name => 'AppleDataOffsets',
+        Binary => 1,
+        # Apple offsets into data relative to start of iDOT chunk:
+        #    int32u Divisor  [only ever seen 2]
+        #    int32u Unknown  [always 0]
+        #    int32u TotalDividedHeight  [image height from IDHR/Divisor]
+        #    int32u Size  [always 40 / 0x28; size of this chunk]
+        #    int32u DividedHeight1
+        #    int32u DividedHeight2
+        #    int32u IDAT_Offset2 [location of IDAT with start of DividedHeight2 segment]
+    },
+    caBX => { # C2PA metadata
+        Name => 'JUMBF',
+        SubDirectory => { TagTable => 'Image::ExifTool::Jpeg2000::Main' },
+    },
+    cICP => {
+        Name => 'CICodePoints',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::PNG::CICodePoints',
+        },
+    },
 );
 
 # PNG IHDR chunk
@@ -395,6 +433,79 @@ my %noLeapFrog = ( SAVE => 1, SEEK => 1, IHDR => 1, JHDR => 1, IEND => 1, MEND =
     },
 );
 
+# PNG cICP chunk
+%Image::ExifTool::PNG::CICodePoints = (
+    PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
+    GROUPS => { 1 => 'PNG-cICP', 2 => 'Image' },
+    NOTES => q{
+        These tags are found in the PNG cICP chunk and belong to the PNG-cICP family
+        1 group.
+    },
+    # (same as tags in QuickTime::ColorRep)
+    0 => {
+        Name => 'ColorPrimaries',
+        PrintConv => {
+            1 => 'BT.709',
+            2 => 'Unspecified',
+            4 => 'BT.470 System M (historical)',
+            5 => 'BT.470 System B, G (historical)',
+            6 => 'BT.601',
+            7 => 'SMPTE 240',
+            8 => 'Generic film (color filters using illuminant C)',
+            9 => 'BT.2020, BT.2100',
+            10 => 'SMPTE 428 (CIE 1921 XYZ)',
+            11 => 'SMPTE RP 431-2',
+            12 => 'SMPTE EG 432-1',
+            22 => 'EBU Tech. 3213-E',
+        },
+    },
+    1 => {
+        Name => 'TransferCharacteristics',
+        PrintConv => {
+            0 => 'For future use (0)',
+            1 => 'BT.709',
+            2 => 'Unspecified',
+            3 => 'For future use (3)',
+            4 => 'BT.470 System M (historical)',
+            5 => 'BT.470 System B, G (historical)',
+            6 => 'BT.601',
+            7 => 'SMPTE 240 M',
+            8 => 'Linear',
+            9 => 'Logarithmic (100 : 1 range)',
+            10 => 'Logarithmic (100 * Sqrt(10) : 1 range)',
+            11 => 'IEC 61966-2-4',
+            12 => 'BT.1361',
+            13 => 'sRGB or sYCC',
+            14 => 'BT.2020 10-bit systems',
+            15 => 'BT.2020 12-bit systems',
+            16 => 'SMPTE ST 2084, ITU BT.2100 PQ',
+            17 => 'SMPTE ST 428',
+            18 => 'BT.2100 HLG, ARIB STD-B67',
+        },
+    },
+    2 => {
+        Name => 'MatrixCoefficients',
+        PrintConv => {
+            0 => 'Identity matrix',
+            1 => 'BT.709',
+            2 => 'Unspecified',
+            3 => 'For future use (3)',
+            4 => 'US FCC 73.628',
+            5 => 'BT.470 System B, G (historical)',
+            6 => 'BT.601',
+            7 => 'SMPTE 240 M',
+            8 => 'YCgCo',
+            9 => 'BT.2020 non-constant luminance, BT.2100 YCbCr',
+            10 => 'BT.2020 constant luminance',
+            11 => 'SMPTE ST 2085 YDzDx',
+            12 => 'Chromaticity-derived non-constant luminance',
+            13 => 'Chromaticity-derived constant luminance',
+            14 => 'BT.2100 ICtCp',
+        },
+    },
+    3 => 'VideoFullRangeFlag',
+);
+
 # PNG sCAL chunk
 %Image::ExifTool::PNG::SubjectScale = (
     PROCESS_PROC => \&Image::ExifTool::ProcessBinaryData,
@@ -466,6 +577,8 @@ my %unreg = ( Notes => 'unregistered' );
         if the L<Compress|../ExifTool.html#Compress> option is used and Compress::Zlib is available.  Raw profile
         information is always created as compressed zTXt if Compress::Zlib is
         available, or tEXt otherwise.  Standard XMP is written as uncompressed iTXt.
+        User-defined tags may set an 'iTXt' flag in the tag definition to be written
+        only as iTXt.
 
         Alternate languages are accessed by suffixing the tag name with a '-',
         followed by an RFC 3066 language code (eg. "PNG:Comment-fr", or
@@ -506,6 +619,8 @@ my %unreg = ( Notes => 'unregistered' );
     Label       => { %unreg },
     Make        => { %unreg, Groups => { 2 => 'Camera' } },
     Model       => { %unreg, Groups => { 2 => 'Camera' } },
+    # parameters      (written by Stable Diffusion)
+    # aesthetic_score (written by Stable Diffusion)
    'create-date'=> {
         Name => 'CreateDate',
         Groups => { 2 => 'Time' },
@@ -858,13 +973,20 @@ sub FoundPNG($$$$;$$$$)
                 undef $processProc if $wasCompressed and $processProc and $processProc eq \&ProcessPNG_Compressed;
                 # rewrite this directory if necessary (but always process TextualData normally)
                 if ($outBuff and not $processProc and $subTable ne \%Image::ExifTool::PNG::TextualData) {
-                    return 1 unless $$et{EDIT_DIRS}{$dirName};
-                    $$outBuff = $et->WriteDirectory(\%subdirInfo, $subTable);
-                    if ($tagName eq 'XMP' and $$outBuff) {
-                        # make sure the XMP is marked as read-only
-                        Image::ExifTool::XMP::ValidateXMP($outBuff,'r');
+                    # allow JUMBF to be deleted (may want to expand this for other types too?)
+                    if ($dirName eq 'JUMBF' and $$et{DEL_GROUP}{$dirName}) {
+                        $$outBuff = '';
+                        ++$$et{CHANGED};
+                        $et->VPrint(0, "  Deleting $dirName");
+                    } else {
+                        return 1 unless $$et{EDIT_DIRS}{$dirName};
+                        $$outBuff = $et->WriteDirectory(\%subdirInfo, $subTable);
+                        if ($tagName eq 'XMP' and $$outBuff) {
+                            # make sure the XMP is marked as read-only
+                            Image::ExifTool::XMP::ValidateXMP($outBuff,'r');
+                        }
+                        DoneDir($et, $dirName, $outBuff, $$tagInfo{NonStandard});
                     }
-                    DoneDir($et, $dirName, $outBuff, $$tagInfo{NonStandard});
                 } else {
                     $processed = $et->ProcessDirectory(\%subdirInfo, $subTable, $processProc);
                 }
@@ -963,7 +1085,7 @@ sub FoundPNG($$$$;$$$$)
         $$tagInfo{LangCode} = $lang if $lang;
         # make unknown profiles binary data type
         $$tagInfo{Binary} = 1 if $tag =~ /^Raw profile type /;
-        $verbose and $et->VPrint(0, "  | [adding $tag]\n");
+        $verbose and $et->VPrint(0, "  [adding $tag]\n");
         AddTagToTable($tagTablePtr, $tag, $tagInfo);
     }
 #
@@ -1144,11 +1266,16 @@ sub ProcessPNG_Compressed($$$)
     if ($tagInfo and $$tagInfo{Name} eq 'ICC_Profile') {
         $et->VerboseDir('iCCP');
         $tagTablePtr = \%Image::ExifTool::PNG::Main;
-        if (length($tag) and not $outBuff) {
-            FoundPNG($et, $tagTablePtr, 'iCCP-name', $tag);
-        }
+        FoundPNG($et, $tagTablePtr, 'iCCP-name', $tag) if length($tag) and not $outBuff;
         $success = FoundPNG($et, $tagTablePtr, 'iCCP', $val, $compressed, $outBuff);
-        $$outBuff = $hdr . $$outBuff if $outBuff and $$outBuff;
+        if ($outBuff and $$outBuff) {
+            my $profileName = $et->GetNewValue($Image::ExifTool::PNG::Main{'iCCP-name'});
+            if (defined $profileName) {
+                $hdr = $profileName . substr($hdr, length $tag);
+                $et->VerboseValue("+ PNG:ProfileName", $profileName);
+            }
+            $$outBuff = $hdr . $$outBuff;
+        }
     } else {
         $success = FoundPNG($et, $tagTablePtr, $tag, $val, $compressed, $outBuff, 'Latin');
     }
@@ -1254,6 +1381,7 @@ sub ProcessPNG($$)
     my $datCount = 0;
     my $datBytes = 0;
     my $fastScan = $et->Options('FastScan');
+    my $hash = $$et{ImageDataHash};
     my ($n, $sig, $err, $hbuf, $dbuf, $cbuf);
     my ($wasHdr, $wasEnd, $wasDat, $doTxt, @txtOffset);
 
@@ -1333,6 +1461,7 @@ sub ProcessPNG($$)
             if ($datCount and $chunk ne $datChunk) {
                 my $s = $datCount > 1 ? 's' : '';
                 print $out "$fileType $datChunk ($datCount chunk$s, total $datBytes bytes)\n";
+                print $out "$$et{INDENT}(ImageDataHash: $datBytes bytes of $datChunk data)\n" if $hash;
                 $datCount = $datBytes = 0;
             }
         }
@@ -1342,8 +1471,7 @@ sub ProcessPNG($$)
             } elsif ($hdrChunk eq 'IHDR' and $chunk eq 'CgBI') {
                 $et->Warn('Non-standard PNG image (Apple iPhone format)');
             } else {
-                $et->Warn("$fileType image did not start with $hdrChunk");
-                last;
+                $et->WarnOnce("$fileType image did not start with $hdrChunk");
             }
         }
         if ($outfile and ($isDatChunk{$chunk} or $chunk eq $endChunk) and @txtOffset) {
@@ -1371,9 +1499,8 @@ sub ProcessPNG($$)
                 # to add it as a text profile chunk if this isn't successful
                 # (ie. if Compress::Zlib wasn't available)
                 Add_iCCP($et, $outfile);
-                AddChunks($et, $outfile) or $err = 1;   # all all text chunks
-                # add EXIF before end chunk if not found already
-                AddChunks($et, $outfile, 'IFD0') if $chunk eq $endChunk;
+                AddChunks($et, $outfile) or $err = 1;           # add all text chunks
+                AddChunks($et, $outfile, 'IFD0') or $err = 1;   # and eXIf chunk
             } elsif ($chunk eq 'PLTE') {
                 # iCCP chunk must come before PLTE (and IDAT, handled above)
                 # (ignore errors -- will add later as text profile if this fails)
@@ -1411,9 +1538,22 @@ sub ProcessPNG($$)
             next;
         }
         if ($datChunk) {
-            # skip over data chunks if possible
-            unless ($verbose or $validate or $outfile) {
-                $raf->Seek($len + 4, 1) or $et->Warn('Seek error'), last;
+            my $chunkSizeLimit = 10000000;  # largest chunk to read into memory
+            if ($outfile) {
+                # avoid loading very large data chunks into memory
+                if ($len > $chunkSizeLimit) {
+                    Write($outfile, $hbuf) or $err = 1;
+                    Image::ExifTool::CopyBlock($raf, $outfile, $len+4) or $et->Error("Error copying $datChunk");
+                    next;
+                }
+            # skip over data chunks if possible/necessary
+            } elsif (not $validate or $len > $chunkSizeLimit) {
+                if ($hash) {
+                    $et->ImageDataHash($raf, $len);
+                    $raf->Read($cbuf, 4) == 4 or $et->Warn('Truncated data'), last;
+                } else {
+                    $raf->Seek($len + 4, 1) or $et->Warn('Seek error'), last;
+                }
                 next;
             }
         } elsif ($wasDat and $isTxtChunk{$chunk}) {
@@ -1425,13 +1565,14 @@ sub ProcessPNG($$)
             } else {
                 $msg = 'fixed';
             }
-            $et->WarnOnce("Text chunk(s) found after $$et{FileType} $wasDat ($msg)", 1);
+            $et->WarnOnce("Text/EXIF chunk(s) found after $$et{FileType} $wasDat ($msg)", 1);
         }
         # read chunk data and CRC
         unless ($raf->Read($dbuf,$len)==$len and $raf->Read($cbuf, 4)==4) {
             $et->Warn("Corrupted $fileType image") unless $wasEnd;
             last;
         }
+        $hash->add($dbuf) if $hash and $datChunk;   # add to hash if necessary
         if ($verbose or $validate or ($outfile and not $fastScan)) {
             # check CRC when in verbose mode (since we don't care about speed)
             my $crc = CalculateCRC(\$hbuf, undef, 4);
@@ -1520,7 +1661,7 @@ and JNG (JPEG Network Graphics) images.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

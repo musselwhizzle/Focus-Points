@@ -19,7 +19,7 @@ package Image::ExifTool::Shortcuts;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.65';
+$VERSION = '1.68';
 
 # this is a special table used to define command-line shortcuts
 # (documentation Notes may be added for these via %shortcutNotes in BuildTagLookup.pm)
@@ -118,6 +118,7 @@ $VERSION = '1.65';
         'MakerNoteCasio',
         'MakerNoteCasio2',
         'MakerNoteDJI',
+        'MakerNoteDJIInfo',
         'MakerNoteFLIR',
         'MakerNoteFujiFilm',
         'MakerNoteGE',
@@ -158,6 +159,7 @@ $VERSION = '1.65';
         'MakerNoteNintendo',
         'MakerNoteOlympus',
         'MakerNoteOlympus2',
+        'MakerNoteOlympus3',
         'MakerNoteLeica',
         'MakerNoteLeica2',
         'MakerNoteLeica3',
@@ -265,6 +267,16 @@ $VERSION = '1.65';
         'XMP',
         'ZoomedPreviewImage',
     ],
+    'ls-l' => [
+        'FilePermissions',
+        'FileHardLinks',
+        'FileUserID',
+        'FileGroupID',
+        'FileSize#',
+        'FileModifyDate',
+        'FileName',
+    ],
+    ImageDataMD5 => [ 'ImageDataHash' ], # (for backward compatibilty)
 );
 
 #------------------------------------------------------------------------------
@@ -332,7 +344,7 @@ name prefix.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

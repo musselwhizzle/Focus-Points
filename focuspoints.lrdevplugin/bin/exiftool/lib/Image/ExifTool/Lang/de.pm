@@ -11,7 +11,7 @@ package Image::ExifTool::Lang::de;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.35';
+$VERSION = '1.36';
 
 %Image::ExifTool::Lang::de::Translate = (
    'AEAperture' => 'AE-Blende',
@@ -993,7 +993,9 @@ $VERSION = '1.35';
       },
     },
    'AdvancedSceneMode' => {
+      Description => 'Erweiteter Szenenmodus',
       PrintConv => {
+        'Off' => 'Aus',
         'Creative Macro' => 'Makro kreativ',
         'Flower' => 'Blumen',
         'HDR B&W' => 'HDR Schwarz-Weiß',
@@ -4147,7 +4149,7 @@ $VERSION = '1.35';
         'Auto' => 'Automatisch',
         'Continuous' => 'Serienaufnahme',
         'Custom' => 'Benutzerdefiniert',
-        'Face detect' => 'Gesichtserkennung AF',
+        'Face Detect' => 'Gesichtserkennung AF',
         'Infinity' => 'Unendlich',
         'Macro' => 'Makro',
         'Macro (1)' => 'Makro (1)',
@@ -8700,7 +8702,7 @@ and values.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
