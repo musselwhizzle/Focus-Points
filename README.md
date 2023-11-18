@@ -26,6 +26,8 @@ Supported Cameras
   * all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
 * Olympus cameras 
   * (Should work on recent E-* bodies)
+* OM System cameras
+  * OM-1, OM-5
 * Panasonic cameras
 * Pentax ([full list](focuspoints.lrdevplugin/focus_points/pentax/README.md))
   * Tested
@@ -44,7 +46,9 @@ Installing
 2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
 3. Move this folder to where you'd normally kept your Lightroom plugins.
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
-5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point"
+5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
+   or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
+6. Windows only: Select the display scaling factor. Use the same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%.
 
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
@@ -60,6 +64,13 @@ Currently, 5 types of AF-points will be displayed :
 <img src="screens/faces1.jpg" alt="Screenshot" style="width: 200px;"/>
 
 Please note that not all cameras save the needed information in the Exifs of the photo. Thus, the accuracy of the displayed points will greatly depend on whether or not your camera supports it.
+
+Metadata viewer
+--------
+The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing information like FocusDistance from Maker Notes section, which Lightroom doesn't read and display via its UI.
+The information is fetched (by Phil Harvey's exiftool) directly from the image file on disk so that this gives the full picture of metadata written by the camera:
+
+<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
 
 Adding your own camera
 --------
