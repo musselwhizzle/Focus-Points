@@ -68,8 +68,7 @@ Metadata viewer
 --------
 The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing information like FocusDistance from Maker Notes section, which Lightroom doesn't read and display via its UI:
 
-<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>
-<img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
+<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
 
 Adding your own camera
 --------
