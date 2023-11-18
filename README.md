@@ -68,7 +68,7 @@ Please note that not all cameras save the needed information in the Exifs of the
 Metadata viewer
 --------
 The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing information like FocusDistance from Maker Notes section, which Lightroom doesn't read and display via its UI.
-The information is fetched (by Phil Harvey's exiftool) directly from the image file on disk so that this gives the full picture of metadata written by the camera.
+The information is fetched (by Phil Harvey's exiftool) directly from the image file on disk so that this gives the full picture of metadata written by the camera:
 
 <img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
 
