@@ -47,7 +47,7 @@ Installing
 3. Move this folder to where you'd normally kept your Lightroom plugins.
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
-   or alternatively "File -> Plug-in Extras -> Focus Point".
+   or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
 
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
@@ -66,7 +66,7 @@ Please note that not all cameras save the needed information in the Exifs of the
 
 Metadata viewer
 --------
-The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing information like FocusDistance from Maker Notes, which Lightroom doesn't read and display via its UI:
+The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing information like FocusDistance from Maker Notes section, which Lightroom doesn't read and display via its UI:
 
 <img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>
 <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
