@@ -27,6 +27,7 @@
 #              19) Brad Grier private communication
 #              22) Herbert Kauer private communication
 #              23) Daniel Pollock private communication (PEN-F)
+#              24) Sebastian private communication (E-M1 Mark III)
 #              IB) Iliah Borg private communication (LibRaw)
 #              NJ) Niels Kristian Bech Jensen private communication
 #------------------------------------------------------------------------------
@@ -39,7 +40,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::APP12;
 
-$VERSION = '2.65';
+$VERSION = '2.81';
 
 sub PrintLensInfo($$$);
 
@@ -108,9 +109,14 @@ my %olympusLensTypes = (
     '0 32 00' => 'Olympus Zuiko Digital ED 14-35mm F2.0 SWD', #PH
     '0 32 10' => 'Olympus M.Zuiko Digital ED 12-200mm F3.5-6.3', #IB
     '0 33 00' => 'Olympus Zuiko Digital 25mm F2.8', #PH
+    '0 33 10' => 'Olympus M.Zuiko Digital 150-400mm F4.5 TC1.25x IS Pro', #IB
     '0 34 00' => 'Olympus Zuiko Digital ED 9-18mm F4.0-5.6', #7
     '0 34 10' => 'Olympus M.Zuiko Digital ED 12-45mm F4.0 Pro', #IB
     '0 35 00' => 'Olympus Zuiko Digital 14-54mm F2.8-3.5 II', #PH
+    '0 35 10' => 'Olympus M.Zuiko 100-400mm F5.0-6.3', #IB
+    '0 36 10' => 'Olympus M.Zuiko Digital ED 8-25mm F4 Pro', #IB
+    '0 37 10' => 'Olympus M.Zuiko Digital ED 40-150mm F4.0 Pro', #forum3833
+    '0 39 10' => 'Olympus M.Zuiko Digital ED 90mm F3.5 Macro IS Pro', #forum3833
     # Sigma lenses
     '1 01 00' => 'Sigma 18-50mm F3.5-5.6 DC', #8
     '1 01 10' => 'Sigma 30mm F2.8 EX DN', #NJ
@@ -172,6 +178,7 @@ my %olympusLensTypes = (
     '2 28 10' => 'Lumix G Vario 12-60mm F3.5-5.6 Asph. Power OIS', #NJ
     '2 29 10' => 'Leica DG Summilux 12mm F1.4 Asph.', #IB
     '2 30 10' => 'Leica DG Vario-Elmarit 12-60mm F2.8-4 Asph. Power OIS', #IB
+    '2 31 10' => 'Lumix G Vario 45-200mm F4.0-5.6 II', #forum3833
     '2 32 10' => 'Lumix G Vario 100-300mm F4.0-5.6 II', #PH
     '2 33 10' => 'Lumix G X Vario 12-35mm F2.8 II Asph. Power OIS', #IB
     '2 34 10' => 'Lumix G Vario 35-100mm F2.8 II', #forum3833
@@ -179,10 +186,14 @@ my %olympusLensTypes = (
     '2 36 10' => 'Leica DG Elmarit 200mm F2.8 Power OIS', #IB
     '2 37 10' => 'Leica DG Vario-Elmarit 50-200mm F2.8-4 Asph. Power OIS', #IB
     '2 38 10' => 'Leica DG Vario-Summilux 10-25mm F1.7 Asph.', #IB
+    '2 40 10' => 'Leica DG Vario-Summilux 25-50mm F1.7 Asph.', #IB (H-X2550)
     '3 01 00' => 'Leica D Vario Elmarit 14-50mm F2.8-3.5 Asph.', #11
     '3 02 00' => 'Leica D Summilux 25mm F1.4 Asph.', #11
     # Tamron lenses
     '5 01 10' => 'Tamron 14-150mm F3.5-5.8 Di III', #NJ (model C001)
+  # '65535 07 40' - Seen for LUMIX S 16-35/F4 on Panasonic DC-S1H (ref PH)
+    # Other makes
+    '24 01 10' => 'Venus Optics Laowa 50mm F2.8 2x Macro', #DonKomarechka
 );
 
 # lookup for Olympus camera types (ref PH)
@@ -422,6 +433,9 @@ my %olympusCameraTypes = (
     S0085 => 'E-PL10', #IB
     S0089 => 'E-M5MarkIII',
     S0092 => 'E-M1MarkIII', #IB
+    S0093 => 'E-P7', #IB
+    S0095 => 'OM-1', #IB
+    S0101 => 'OM-5', #IB
     SR45 => 'D220',
     SR55 => 'D320L',
     SR83 => 'D340L',
@@ -1823,7 +1837,7 @@ my %indexInfo = (
             1 => 'Sequential shooting AF',
             2 => 'Continuous AF',
             3 => 'Multi AF',
-            4 => 'Face detect', #11
+            4 => 'Face Detect', #11
             10 => 'MF',
         }, {
             0 => '(none)',
@@ -1831,10 +1845,11 @@ my %indexInfo = (
                 0 => 'S-AF',
                 2 => 'C-AF',
                 4 => 'MF',
-                5 => 'Face detect',
+                5 => 'Face Detect',
                 6 => 'Imager AF',
                 7 => 'Live View Magnification Frame',
                 8 => 'AF sensor',
+                9 => 'Starry Sky AF', #24
             },
         }],
     },
@@ -1892,8 +1907,29 @@ my %indexInfo = (
     },
     0x307 => { #15
         Name => 'AFFineTuneAdj',
-        Format => 'int16s',
+        Writable => 'int16s',
         Count => 3, # not sure what the 3 values mean
+    },
+    0x308 => { #forum11578
+        Name => 'FocusBracketStepSize',
+        Writable => 'int8u',
+    },
+    0x309 => { #forum13341
+        Name => 'AISubjectTrackingMode',
+        Writable => 'int16u',
+        ValueConv => '($val >> 8) . " " . ($val & 0xff)',
+        ValueConvInv => 'my @a = split " ", $val; $val = $a[0]*256 + $a[1]',
+        PrintConv => [{
+            0 => 'Off',
+            1 => 'Motorsports',
+            2 => 'Airplanes',
+            3 => 'Trains',
+            4 => 'Birds',
+            5 => 'Dogs & Cats',
+        },{
+            0 => 'Object Not Found',
+            1 => 'Object Found',
+        }],
     },
     0x400 => { #6
         Name => 'FlashMode',
@@ -2119,6 +2155,11 @@ my %indexInfo = (
             67 => 'Soft Background Shot', #11
             142 => 'Hand-held Starlight', #PH (SH-21)
             154 => 'HDR', #PH (XZ-2)
+            197 => 'Panning', #forum11631 (EM5iii)
+            203 => 'Light Trails', #forum11631 (EM5iii)
+            204 => 'Backlight HDR', #forum11631 (EM5iii)
+            205 => 'Silent', #forum11631 (EM5iii)
+            206 => 'Multi Focus Shot', #forum11631 (EM5iii)
         },
     },
     0x50a => { #PH/4/6
@@ -2510,29 +2551,38 @@ my %indexInfo = (
         Count => 2,
         PrintConv => {
             '0 0' => 'No',
+            '1 *' => 'Live Composite (* images)', #24
+            '4 *' => 'Live Time/Bulb (* images)', #24
             '3 2' => 'ND2 (1EV)', #IB
             '3 4' => 'ND4 (2EV)', #IB
             '3 8' => 'ND8 (3EV)', #IB
             '3 16' => 'ND16 (4EV)', #IB
             '3 32' => 'ND32 (5EV)', #IB
+            '3 64' => 'ND64 (6EV)', #forum13341
             '5 4' => 'HDR1', #forum8906
             '6 4' => 'HDR2', #forum8906
             '8 8' => 'Tripod high resolution', #IB
-            '9 2' => 'Focus-stacked (2 images)', #IB
-            '9 3' => 'Focus-stacked (3 images)', #IB
-            '9 4' => 'Focus-stacked (4 images)', #IB
-            '9 5' => 'Focus-stacked (5 images)', #IB
-            '9 6' => 'Focus-stacked (6 images)', #IB
-            '9 7' => 'Focus-stacked (7 images)', #IB
-            '9 8' => 'Focus-stacked (8 images)',
-            '9 9' => 'Focus-stacked (9 images)', #IB
-            '9 10' => 'Focus-stacked (10 images)', #IB
-            '9 11' => 'Focus-stacked (11 images)', #IB
-            '9 12' => 'Focus-stacked (12 images)', #IB
-            '9 13' => 'Focus-stacked (13 images)', #IB
-            '9 14' => 'Focus-stacked (14 images)', #IB
-            '9 15' => 'Focus-stacked (15 images)', #IB
-            '11 16' => 'Hand-held high resolution', #IB
+            '9 *' => 'Focus-stacked (* images)', #IB (* = 2-15)
+            '11 12' => 'Hand-held high resolution (11 12)', #forum13341 (OM-1)
+            '11 16' => 'Hand-held high resolution (11 16)', #IB (perhaps '11 15' would be possible, ref 24)
+            OTHER => sub {
+                my ($val, $inv, $conv) = @_;
+                if ($inv) {
+                    $val = lc $val;
+                    return undef unless $val =~ s/(\d+) images/\* images/;
+                    my $num = $1;
+                    foreach (keys %$conv) {
+                        next unless $val eq lc $$conv{$_};
+                        ($val = $_) =~ s/\*/$num/ or return undef;
+                        return $val;
+                    }
+                } else {
+                    return "Unknown ($_[0])" unless $val =~ s/ (\d+)/ \*/ and $$conv{$val};
+                    my $num = $1;
+                    ($val = $$conv{$val}) =~ s/\*/$num/;
+                    return $val;
+                }
+            },
         },
     },
     0x900 => { #11
@@ -2893,6 +2943,7 @@ my %indexInfo = (
         Count => 2,
         PrintConv => [{
             0 => 'Off',
+            1 => 'Live Composite', #github issue#61
             2 => 'On (2 frames)',
             3 => 'On (3 frames)',
         }],
@@ -3114,21 +3165,38 @@ my %indexInfo = (
             PrintHex => 1,
             ValueConv => '($val & 0x1f) . " " . ($val & 0xffe0)',
             ValueConvInv => 'my @v=split(" ",$val); @v == 2 ? $v[0] + $v[1] : $val',
-            PrintConv => [
+            PrintConv => [ # herb values added:
+                           # based on code of W.P. in https://exiftool.org/forum/index.php?topic=14144.0
                 {
-                    0x00 => '(none)',
-                    0x01 => 'Center',
+                    # 0x00 => '(none)',
+                    # 0x01 => 'Center',
                     # need to fill this in...
+                    0x00 => '(none)',
+                    0x02 => 'Top-center (horizontal)',
+                    0x04 => 'Right (horizontal)',
+                    0x05 => 'Mid-right (horizontal)',
+                    0x06 => 'Center (horizontal)',
+                    0x07 => 'Mid-left (horizontal)',
+                    0x08 => 'Left (horizontal)',
+                    0x0a => 'Bottom-center (horizontal)',
+                    0x0c => 'Top-center (vertical)',
+                    0x0f => 'Right (vertical)',
+                    0x15 => 'Bottom-center (vertical)',
+                    0x10 => 'Mid-right (vertical)',
+                    0x11 => 'Center (vertical)',
+                    0x12 => 'Mid-left (vertical)',
+                    0x13 => 'Left (vertical)',
                 },
                 {
                     0x00 => 'Single Target',
                     0x40 => 'All Target', # (guess)
                 },
             ]
-        },{ #11
+        },{ #herb all camera model except E-Mxxx and OM-x
             Name => 'AFPoint',
+            Condition => '$$self{Model} !~ /^(E-M|OM-)/  ',
             Writable => 'int16u',
-            Notes => 'other models',
+            Notes => 'models other than E-Mxxx and OM-x',
             RawConv => '($val or $$self{Model} ne "E-P1") ? $val : undef',
             PrintConv => {
                 # (E-P1 always writes 0, maybe other models do too - PH)
@@ -3138,9 +3206,73 @@ my %indexInfo = (
                 3 => 'Center (vertical)', #6 (E-510)
                 255 => 'None',
             },
+        },{ #herb all newer models E-Mxxx and OM-x; we do not know details
+            Name => 'AFPoint',
+            Writable => 'int16u',
+            Notes => 'other models',
         }
     ],
     # 0x31a Continuous AF parameters?
+    0x31b => [ #herb, based on investigations of abgestumpft: https://exiftool.org/forum/index.php?topic=14527.0
+               # for newer models E-Mxxx and OM-x 
+        {
+            Name => 'AFPointDetails',
+            Condition => '$$self{Model} =~ m/^E-M|^OM-/ ',
+            Writable => 'int16u',
+            Notes => 'models E-Mxxx and OM-x',
+            PrintHex => 1,
+            ValueConv => '(($val >> 13) & 0x7) . " " . (($val >> 12) & 0x1) . " " .  (($val >> 11) & 0x1) . " " .
+            #               subject detect               face and eye                  half press
+                          (($val >> 8) & 0x3) . " " . (($val >> 7) & 0x1) . " " . (($val >> 5) & 0x1) . " " .
+            #               eye AF                      face detect                 x-AF with MF
+                          (($val >> 4) & 0x1) . " " . (($val >> 3) & 0x1) . " " . ($val & 0x7)',
+            #               release                     object found               MF...  
+            PrintConvColumns => 4,
+            PrintConv => [
+                {
+                    # should be identical to AISubjectTrackingMode
+                    0 => 'No Subject Detection',
+                    1 => 'Motorsports',
+                    2 => 'Airplanes',
+                    3 => 'Trains',
+                    4 => 'Birds',
+                    5 => 'Dogs & Cats',
+                },{
+                    0 => 'Face Priority',
+                    1 => 'Target Priority',
+                },{
+                    0 => 'Normal AF',
+                    1 => 'AF on Half Press',
+                },{
+                    0 => 'No Eye-AF',
+                    1 => 'Right Eye Priority',
+                    2 => 'Left Eye Priority',
+                    3 => 'Both Eyes Priority',
+                },{
+                    0 => 'No Face Detection',
+                    1 => 'Face Detection',
+                },{
+                    0 => 'No MF',
+                    1 => 'With MF',
+                },{
+                    0 => 'AF Priority',
+                    1 => 'Release Priority',
+                },{
+                    0 => 'No Object found',
+                    1 => 'Object found',
+                },{
+                    0 => 'MF',
+                    1 => 'S-AF',
+                    2 => 'C-AF',
+                    6 => 'C-AF + TR',
+                },
+            ],
+        },{ # for older models
+            Name => 'AFPointDetails',
+            Writable => 'int16u',
+            Notes => 'other models',
+        }
+    ],
     0x328 => { #PH
         Name => 'AFInfo',
         SubDirectory => { TagTable => 'Image::ExifTool::Olympus::AFInfo' },
@@ -3402,7 +3534,7 @@ my %indexInfo = (
     0x2a => {
         Name => 'FNumber',
         Format => 'rational64u',
-        PrintConv => 'sprintf("%.1f",$val)',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
     },
     0x32 => { #(NC)
         Name => 'ExposureCompensation',
@@ -3448,7 +3580,7 @@ my %indexInfo = (
     0x3a => {
         Name => 'FNumber',
         Format => 'rational64u',
-        PrintConv => 'sprintf("%.1f",$val)',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
     },
     0x42 => { #(NC)
         Name => 'ExposureCompensation',
@@ -3499,7 +3631,7 @@ my %indexInfo = (
     0x28 => {
         Name => 'FNumber',
         Format => 'rational64u',
-        PrintConv => 'sprintf("%.1f",$val)',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
     },
     0x30 => { #(NC)
         Name => 'ExposureCompensation',
@@ -3580,6 +3712,10 @@ my %indexInfo = (
         Name => 'DateTime2',
         Format => 'string[24]',
         Groups => { 2 => 'Time' },
+    },
+    0x17f => {
+        Name => 'LensModel',
+        Format => 'string[32]'
     },
 );
 
@@ -3712,7 +3848,7 @@ my %indexInfo = (
     0x5a => {
         Name => 'FNumber',
         Format => 'rational64u',
-        PrintConv => 'sprintf("%.1f",$val)',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
     },
     0x7f => {
         Name => 'DateTimeOriginal', #(NC)
@@ -3757,7 +3893,7 @@ my %indexInfo = (
     0x5e => {
         Name => 'FNumber',
         Format => 'rational64u',
-        PrintConv => 'sprintf("%.1f",$val)',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
     },
     0x83 => {
         Name => 'DateTime1',
@@ -3927,7 +4063,7 @@ my %indexInfo = (
             1 => 'LensTypeModel',
         },
         Notes => 'based on tags found in some Panasonic RW2 images',
-        SeparateTable => 'LensType',
+        SeparateTable => 'Olympus LensType',
         ValueConv => '"$val[0] $val[1]"',
         PrintConv => \%olympusLensTypes,
     },
@@ -4039,7 +4175,7 @@ Olympus or Epson maker notes in EXIF information.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -18,7 +18,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::ID3;
 
-$VERSION = '1.10';
+$VERSION = '1.12';
 
 # information for time/date-based tags (time zero is Jan 1, 1904)
 my %timeInfo = (
@@ -73,12 +73,12 @@ my %timeInfo = (
             ProcessProc => \&Image::ExifTool::ID3::ProcessID3,
         },
     },
+    APPL => 'ApplicationData', # (first 4 bytes are the application signature)
 #    SSND => 'SoundData',
 #    MARK => 'Marker',
 #    INST => 'Instrument',
 #    MIDI => 'MidiData',
 #    AESD => 'AudioRecording',
-#    APPL => 'ApplicationSpecific',
 );
 
 %Image::ExifTool::AIFF::Common = (
@@ -203,7 +203,7 @@ sub ProcessAIFF($$)
         return 1 if $fast3;
         $tagTablePtr = GetTagTable('Image::ExifTool::DjVu::Main');
         # modify FileType to indicate a multi-page document
-        $$et{VALUE}{FileType} .= " (multi-page)" if $buf2 eq 'DJVM';
+        $$et{VALUE}{FileType} .= " (multi-page)" if $buf2 eq 'DJVM' and $$et{VALUE}{FileType};
         $type = 'DjVu';
     } else {
         return 0 unless $buff =~ /^FORM....(AIF(F|C))/s;
@@ -287,7 +287,7 @@ information from AIFF (Audio Interchange File Format) audio files.
 
 =head1 AUTHOR
 
-Copyright 2003-2020, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
