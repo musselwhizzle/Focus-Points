@@ -48,6 +48,7 @@ Installing
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
    or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
+6. Windows only: Select the display scaling factor. Use the same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%.
 
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
