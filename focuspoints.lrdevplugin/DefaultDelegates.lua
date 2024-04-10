@@ -33,6 +33,7 @@ DefaultDelegates.POINTTYPE_AF_INFOCUS = "af_infocus"                      -- The
 DefaultDelegates.POINTTYPE_AF_SELECTED = "af_selected"                    -- The AF-point is selected but not in focus
 DefaultDelegates.POINTTYPE_AF_INACTIVE = "af_inactive"                    -- The AF-point is inactive
 DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A face has been detected
+DefaultDelegates.POINTTYPE_CROP = "crop"                                  -- A crop has been detected
 DefaultDelegates.pointTemplates = {
   af_selected_infocus = {
     center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
@@ -69,6 +70,13 @@ DefaultDelegates.pointTemplates = {
   face = {
     corner = { fileTemplate = "assets/imgs/corner/yellow/normal_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/yellow/small_%s.png", anchorX = 23, anchorY = 23 },
+    bigToSmallTriggerDist = 100,
+    minCornerDist = 10,
+    angleStep = 5
+  },
+  crop = {
+    corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/black/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5

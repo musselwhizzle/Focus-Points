@@ -87,5 +87,64 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     end
   end
 
+--[[
+  Modified by Andy Lawrence AKA Greybeard to add visual representation of Fujifilm subject tracking
+  Requires Exiftool minimum version 12.44
+  (23rd August 2022)
+--]]
+  -- Subject detection
+    local coordinatesStr = ExifUtils.findFirstMatchingValue(metaData, { "Face Element Positions" })
+    if coordinatesStr ~= nil then
+      local coordinatesTable = split(coordinatesStr, " ")
+      if coordinatesTable ~= nil then
+        local objectCount = #(coordinatesTable) / 4
+        for i=1, objectCount, 1 do
+          local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
+          local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
+          local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
+          local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
+          logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+          table.insert(result.points, {
+            pointType = DefaultDelegates.POINTTYPE_FACE,
+            x = (x1 + x2) / 2,
+            y = (y1 + y2) / 2,
+            width = math.abs(x1 - x2),
+            height = math.abs(y1 - y2)
+          })
+        end
+      end
+    end
+
+--[[
+  Modified by Andy Lawrence AKA Greybeard to add visual representation of Fujifilm tele-converter crop area
+  Requires Exiftool minimum version 12.82
+  (8th April 2024)
+--]]
+  -- Digital Tele-converter crop area
+    local cropsizeStr = ExifUtils.findFirstMatchingValue(metaData, { "Crop Size" })
+    local croptopleftStr = ExifUtils.findFirstMatchingValue(metaData, { "Crop Top Left" })
+    if cropsizeStr ~= nil then
+      local cropsizeTable = split(cropsizeStr, " ")
+      if cropsizeTable ~= nil then
+        if croptopleftStr ~= nil then
+          local croptopleftTable = split(croptopleftStr, " ")
+          if croptopleftTable ~= nil then
+            local x1 = croptopleftTable[1] * xScale
+            local y1 = croptopleftTable[2] * yScale
+            local x2 = (cropsizeTable[1]+croptopleftTable[1]) * xScale
+            local y2 = (cropsizeTable[2]+croptopleftTable[2]) * yScale
+            logInfo("Fujifilm", "Crop area at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+            table.insert(result.points, {
+              pointType = DefaultDelegates.POINTTYPE_CROP,
+              x = (x1 + x2) / 2,
+              y = (y1 + y2) / 2,
+              width = math.abs(x1 - x2),
+              height = math.abs(y1 - y2)
+            })
+          end
+        end
+      end
+    end
+
   return result
 end

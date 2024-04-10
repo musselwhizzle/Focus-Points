@@ -148,6 +148,7 @@ sub PrintInvGPSCoordinates($)
         $v[2] = Image::ExifTool::ToFloat($v[2]) * ($below ? -1 : 1) if @v == 3;
         return "@v";
     }
+    return $val if $val =~ /^([-+]?\d+(\.\d*)?)\s+([-+]?\d+(\.\d*)?)$/; # already 2 floats?
     return $val if $val =~ /^([-+]\d+(\.\d*)?){2,3}(CRS.*)?\/?$/; # already in ISO6709 format?
     return undef;
 }
@@ -169,8 +170,11 @@ sub ConvInvISO6709($)
         #  with more than 5 digits after the decimal place:
         #  https://exiftool.org/forum/index.php?topic=11055.msg67171#msg67171 )
         my @fmt = ('%s%02d.%s%s','%s%03d.%s%s','%s%d.%s%s');
+        my @limit = (90,180);
         foreach (@a) {
             return undef unless Image::ExifTool::IsFloat($_);
+            my $lim = shift @limit;
+            warn((@limit ? 'Lat' : 'Long') . "itude out of range\n") if $lim and abs($_) > $lim;
             $_ =~ s/^([-+]?)(\d+)\.?(\d*)/sprintf(shift(@fmt),$1||'+',$2,$3,length($3)<3 ? '0'x(3-length($3)) : '')/e;
         }
         return join '', @a, '/';
@@ -351,6 +355,18 @@ sub SetVarInt($$)
         return Set64u($val);
     }
     return '';
+}
+
+#------------------------------------------------------------------------------
+# Write Nextbase infi atom (ref PH)
+# Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
+# Returns: updated infi data
+sub WriteNextbase($$$)
+{
+    my ($et, $dirInfo, $tagTablePtr) = @_;
+    $et or return 1;
+    $$et{DEL_GROUP}{Nextbase} and ++$$et{CHANGED}, return '';
+    return ${$$dirInfo{DataPt}};
 }
 
 #------------------------------------------------------------------------------
@@ -769,6 +785,7 @@ sub WriteQuickTime($$$)
     $et or return 1;    # allow dummy access to autoload this package
     my ($mdat, @mdat, @mdatEdit, $edit, $track, $outBuff, $co, $term, $delCount);
     my (%langTags, $canCreate, $delGrp, %boxPos, %didDir, $writeLast, $err, $atomCount);
+    my ($tag, $lastTag, $errStr);
     my $outfile = $$dirInfo{OutFile} || return 0;
     my $raf = $$dirInfo{RAF};       # (will be null for lower-level atoms)
     my $dataPt = $$dirInfo{DataPt}; # (will be null for top-level atoms)
@@ -782,7 +799,7 @@ sub WriteQuickTime($$$)
     my ($rtnVal, $rtnErr) = $dataPt ? (undef, undef) : (1, 0);
 
     if ($dataPt) {
-        $raf = new File::RandomAccess($dataPt);
+        $raf = File::RandomAccess->new($dataPt);
     } else {
         return 0 unless $raf;
     }
@@ -841,7 +858,10 @@ sub WriteQuickTime($$$)
     }
     $atomCount = $$tagTablePtr{VARS}{ATOM_COUNT} if $$tagTablePtr{VARS};
 
+    $tag = $lastTag = '';
+
     for (;;) {      # loop through all atoms at this level
+        $lastTag = $tag if $$tagTablePtr{$tag};    # keep track of last known tag
         if (defined $atomCount and --$atomCount < 0 and $dataPt) {
             # stop processing now and just copy the rest of the atom
             Write($outfile, substr($$dataPt, $raf->Tell())) or $rtnVal=$rtnErr, $err=1;
@@ -860,15 +880,15 @@ sub WriteQuickTime($$$)
             last;
         }
         my $size = Get32u(\$hdr, 0) - 8;    # (atom size without 8-byte header)
-        my $tag = substr($hdr, 4, 4);
+        $tag = substr($hdr, 4, 4);
         if ($size == -7) {
             # read the extended size
-            $raf->Read($buff, 8) == 8 or $et->Error('Truncated extended atom'), last;
+            $raf->Read($buff, 8) == 8 or $errStr = 'Truncated extended atom', last;
             $hdr .= $buff;
             my ($hi, $lo) = unpack('NN', $buff);
             if ($hi or $lo > 0x7fffffff) {
                 if ($hi > 0x7fffffff) {
-                    $et->Error('Invalid atom size');
+                    $errStr = 'Invalid atom size';
                     last;
                 } elsif (not $et->Options('LargeFileSupport')) {
                     $et->Error('End of processing at large atom (LargeFileSupport not enabled)');
@@ -876,7 +896,7 @@ sub WriteQuickTime($$$)
                 }
             }
             $size = $hi * 4294967296 + $lo - 16;
-            $size < 0 and $et->Error('Invalid extended atom size'), last;
+            $size < 0 and $errStr = 'Invalid extended atom size', last;
         } elsif ($size == -8) {
             if ($dataPt) {
                 last if $$dirInfo{DirName} eq 'CanonCNTH';  # (this is normal for Canon CNTH atom)
@@ -892,7 +912,7 @@ sub WriteQuickTime($$$)
             }
             last;
         } elsif ($size < 0) {
-            $et->Error('Invalid atom size');
+            $errStr = 'Invalid atom size';
             last;
         }
 
@@ -936,11 +956,11 @@ sub WriteQuickTime($$$)
                 $tag = PrintableTagID($tag,3);
                 if ($size > $maxReadLen and $got == 0x10000) {
                     my $mb = int($size / 0x100000 + 0.5);
-                    $et->Error("'${tag}' atom is too large for rewriting ($mb MB)");
+                    $errStr = "'${tag}' atom is too large for rewriting ($mb MB)";
                 } else {
-                    $et->Error("Truncated '${tag}' atom");
+                    $errStr = "Truncated '${tag}' atom";
                 }
-                return $rtnVal;
+                last;
             }
         }
         # save the handler type for this track
@@ -1056,6 +1076,7 @@ sub WriteQuickTime($$$)
                     Parent   => $dirName,
                     DirName  => $subName,
                     Name     => $$tagInfo{Name},
+                    TagInfo  => $tagInfo,
                     DirID    => $tag,
                     DataPt   => \$buff,
                     DataLen  => $size,
@@ -1429,6 +1450,24 @@ sub WriteQuickTime($$$)
             Write($outfile, $hdr, $buff) or $rtnVal=$rtnErr, $err=1, last;
         }
     }
+    # ($errStr is set if there was an error that could possibly be due to an unknown trailer)
+    if ($errStr) {
+        if (($lastTag eq 'mdat' or $lastTag eq 'moov') and not $dataPt and (not $$tagTablePtr{$tag} or
+            ref $$tagTablePtr{$tag} eq 'HASH' and $$tagTablePtr{$tag}{Unknown}))
+        {
+            my $nvTrail = $et->GetNewValueHash($Image::ExifTool::Extra{Trailer});
+            if ($$et{DEL_GROUP}{Trailer} or ($nvTrail and not ($$nvTrail{Value} and $$nvTrail{Value}[0]))) {
+                $errStr =~ s/ is too large.*//;
+                $et->Warn('Deleted unknown trailer with ' . lcfirst($errStr));
+            } else {
+                $et->Warn('Unknown trailer with ' . lcfirst($errStr));
+                $et->Error('Use "-trailer=" to delete unknown trailer');
+            }
+        } else {
+            $et->Error($errStr);
+            return $dataPt ? undef : 1;
+        }
+    }
     $et->VPrint(0, "  [deleting $delCount $dirName tag".($delCount==1 ? '' : 's')."]\n") if $delCount;
 
     $createKeys &= ~0x01 unless $$addDirs{Keys};   # (Keys may have been written)
@@ -1615,7 +1654,8 @@ sub WriteQuickTime($$$)
         if ($isEmpty) {
             $et->VPrint(0,'  Deleting ' . join('+', sort map { $emptyMeta{$_} } keys %boxPos)) if %boxPos;
             $$outfile = '';
-            ++$$et{CHANGED};
+            # (could report a file if editing nothing when it contained an empty Meta atom)
+            # ++$$et{CHANGED};
         }
         if ($curPath eq 'MOV-Movie-Meta') {
             delete $$addDirs{Keys}; # prevent creation of another Meta for Keys tags
@@ -1957,7 +1997,7 @@ QuickTime-based file formats like MOV and MP4.
 
 =head1 AUTHOR
 
-Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

@@ -224,6 +224,7 @@ my %sAppInfo = (
     fileDataRate    => { Writable => 'rational' },
     genre           => { },
     good            => { Writable => 'boolean' },
+    pick            => { Writable => 'integer' }, #forum15815
     instrument      => { },
     introTime       => { Struct => \%sTime },
     key => {
@@ -402,6 +403,18 @@ my %sLocationDetails = (
         Writable => 'rational',
         PrintConv => '$val =~ /^(inf|undef)$/ ? $val : "$val m"',
         PrintConvInv => '$val=~s/\s*m$//;$val',
+    },
+    GPSAltitudeRef  => {
+        Writable => 'integer',
+        PrintConv => {
+            OTHER => sub {
+                my ($val, $inv) = @_;
+                return undef unless $inv and $val =~ /^([-+0-9])/;
+                return($1 eq '-' ? 1 : 0);
+            },
+            0 => 'Above Sea Level',
+            1 => 'Below Sea Level',
+        },
     },
 );
 my %sCVTermDetails = (
@@ -1373,6 +1386,57 @@ my %sSubVersion = (
     Snapshots           => { List => 'Bag', Binary => 1 },
 );
 
+# ACDSee region tags (ref BKW)
+my %sACDSeeDimensions = (
+    STRUCT_NAME => 'ACDSeeDimensions',
+    NAMESPACE   => {'acdsee-stDim' => 'http://ns.acdsee.com/sType/Dimensions#'},
+    'w'         => { Writable => 'real' },
+    'h'         => { Writable => 'real' },
+    'unit'      => { },
+);
+my %sACDSeeArea = (
+    STRUCT_NAME => 'ACDSeeArea',
+    NAMESPACE => { 'acdsee-stArea' => 'http://ns.acdsee.com/sType/Area#' },
+    'x'     => { Writable => 'real' },
+    'y'     => { Writable => 'real' },
+    w       => { Writable => 'real' },
+    h       => { Writable => 'real' },
+);
+my %sACDSeeRegionStruct = (
+    STRUCT_NAME     => 'ACDSeeRegion',
+    NAMESPACE       => 'acdsee-rs',
+    ALGArea         => { Struct => \%sACDSeeArea },
+    DLYArea         => { Struct => \%sACDSeeArea },
+    Name            => { },
+    NameAssignType  => { },
+    Type            => { },
+);
+%Image::ExifTool::XMP::ACDSeeRegions = (
+    GROUPS => { 0 => 'XMP', 1 => 'XMP-acdsee-rs', 2 => 'Image' },
+    NAMESPACE => 'acdsee-rs',
+    WRITABLE => 'string',
+    AVOID => 1,
+    Regions => {
+        Name => 'RegionInfoACDSee',
+        FlatName => 'ACDSee',
+        # the "Struct" entry defines the structure fields
+        Struct => {
+            # optional structure name (used for warning messages only)
+            STRUCT_NAME => 'ACDSeeRegionInfo',
+            NAMESPACE   => 'acdsee-rs',
+            RegionList => {
+                FlatName => 'Region',
+                Struct => \%sACDSeeRegionStruct,
+                List => 'Bag',
+            },
+            AppliedToDimensions => {
+                FlatName => 'RegionAppliedToDimensions',
+                Struct => \%sACDSeeDimensions,
+            },
+        },
+    },
+);
+
 # Picture Licensing Universal System namespace properties (xmpPLUS)
 %Image::ExifTool::XMP::xmpPLUS = (
     %xmpTableDefaults,
@@ -2191,6 +2255,15 @@ my %sSubVersion = (
     GROUPS => { 0 => 'SVG', 2 => 'Unknown' },
     LANG_INFO => \&GetLangInfo,
     NAMESPACE => undef, # variable namespace
+    'c2pa:manifest' => {
+        Name => 'JUMBF',
+        Groups => { 0 => 'JUMBF' },
+        RawConv => 'Image::ExifTool::XMP::DecodeBase64($val)',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::Jpeg2000::Main',
+            ByteOrder => 'BigEndian',
+        },
+    },
 );
 
 #------------------------------------------------------------------------------
@@ -2228,7 +2301,7 @@ This file contains definitions for less common XMP namespaces.
 
 =head1 AUTHOR
 
-Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

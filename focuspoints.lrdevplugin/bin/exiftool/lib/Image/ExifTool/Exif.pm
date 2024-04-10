@@ -57,7 +57,7 @@ use vars qw($VERSION $AUTOLOAD @formatSize @formatName %formatNumber %intFormat
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::MakerNotes;
 
-$VERSION = '4.45';
+$VERSION = '4.51';
 
 sub ProcessExif($$$);
 sub WriteExif($$$);
@@ -594,6 +594,14 @@ my %opcodeInfo = (
             DataTag => 'OtherImage',
         },
         {
+            Condition => '$$self{Compression} and $$self{Compression} eq "52546"', # DNG 1.7 Jpeg XL
+            Name => 'PreviewJXLStart',
+            IsOffset => 1,
+            IsImageData => 1,
+            OffsetPair => 0x117,  # point to associated byte counts
+            DataTag => 'PreviewJXL',
+        },
+        {
             # (APP1 IFD2 is for Leica JPEG preview)
             Condition => q[
                 not ($$self{TIFF_TYPE} eq 'CR2' and $$self{DIR_NAME} eq 'IFD0') and
@@ -686,6 +694,12 @@ my %opcodeInfo = (
             Name => 'OtherImageLength',
             OffsetPair => 0x111,   # point to associated offset
             DataTag => 'OtherImage',
+        },
+        {
+            Condition => '$$self{Compression} and $$self{Compression} eq "52546"', # DNG 1.7 Jpeg XL
+            Name => 'PreviewJXLLength',
+            OffsetPair => 0x111,   # point to associated offset
+            DataTag => 'PreviewJXL',
         },
         {
             # (APP1 IFD2 is for Leica JPEG preview)
@@ -1005,7 +1019,7 @@ my %opcodeInfo = (
     },
     0x14d => 'InkNames', #3
     0x14e => 'NumberofInks', #3
-    0x150 => 'DotRange',
+    0x150 => 'DotRange', # (int8u or int16u)
     0x151 => {
         Name => 'TargetPrinter',
         Writable => 'string',
@@ -1426,12 +1440,12 @@ my %opcodeInfo = (
         Count => 6,
         Priority => 0,
     },
-  # 0x220 - int32u: 0 (IFD0, Xaiomi Redmi models)
-  # 0x221 - int32u: 0 (IFD0, Xaiomi Redmi models)
-  # 0x222 - int32u: 0 (IFD0, Xaiomi Redmi models)
-  # 0x223 - int32u: 0 (IFD0, Xaiomi Redmi models)
-  # 0x224 - int32u: 0,1 (IFD0, Xaiomi Redmi models)
-  # 0x225 - string: "" (IFD0, Xaiomi Redmi models)
+  # 0x220 - int32u: 0 (IFD0, Xiaomi Redmi models)
+  # 0x221 - int32u: 0 (IFD0, Xiaomi Redmi models)
+  # 0x222 - int32u: 0 (IFD0, Xiaomi Redmi models)
+  # 0x223 - int32u: 0 (IFD0, Xiaomi Redmi models)
+  # 0x224 - int32u: 0,1 (IFD0, Xiaomi Redmi models)
+  # 0x225 - string: "" (IFD0, Xiaomi Redmi models)
     0x22f => 'StripRowCounts',
     0x2bc => {
         Name => 'ApplicationNotes', # (writable directory!)
@@ -1443,6 +1457,16 @@ my %opcodeInfo = (
         SubDirectory => {
             DirName => 'XMP',
             TagTable => 'Image::ExifTool::XMP::Main',
+        },
+    },
+    0x303 => { #https://learn.microsoft.com/en-us/windows/win32/gdiplus/-gdiplus-constant-property-item-descriptions
+        Name => 'RenderingIntent',
+        Format => 'int8u',
+        PrintConv => {
+            0 => 'Perceptual',
+            1 => 'Relative Colorimetric',
+            2 => 'Saturation',
+            3 => 'Absolute colorimetric',
         },
     },
     0x3e7 => 'USPTOMiscellaneous', #20
@@ -1492,6 +1516,75 @@ my %opcodeInfo = (
         WriteGroup => 'IFD0',
         Avoid => 1,
     },
+    # tags 0x5XXX are obscure tags defined by Microsoft:
+    # ref https://learn.microsoft.com/en-us/previous-versions/windows/embedded/ms932271(v=msdn.10)
+    # ref https://learn.microsoft.com/en-us/windows/win32/gdiplus/-gdiplus-constant-property-item-descriptions
+    0x5001 => { Name => 'ResolutionXUnit', Notes => "ID's from 0x5001 to 0x5113 are obscure tags defined by Microsoft" }, # (int16u)
+    0x5002 => 'ResolutionYUnit', # (int16u)
+    0x5003 => 'ResolutionXLengthUnit', # (int16u)
+    0x5004 => 'ResolutionYLengthUnit', # (int16u)
+    0x5005 => 'PrintFlags', # (string)
+    0x5006 => 'PrintFlagsVersion', # (int16u)
+    0x5007 => 'PrintFlagsCrop', # (int8u)
+    0x5008 => 'PrintFlagsBleedWidth', # (int32u)
+    0x5009 => 'PrintFlagsBleedWidthScale', # (int16u)
+    0x500a => 'HalftoneLPI', # (rational64u)
+    0x500b => 'HalftoneLPIUnit', # (int16u, 1=inch, 2=cm)
+    0x500c => 'HalftoneDegree', # (rational64u)
+    0x500d => 'HalftoneShape', # (int16u,0=round,1=Ellipse,2=Line,3=Square,4=Cross,5=Diamond)
+    0x500e => 'HalftoneMisc', # (int32u)
+    0x500f => 'HalftoneScreen', # (int8u)
+    0x5010 => 'JPEGQuality', # (int32u[N])
+    0x5011 => { Name => 'GridSize', Binary => 1 }, # (undef)
+    0x5012 => 'ThumbnailFormat', # (int32u,1=raw RGB,2=JPEG)
+    0x5013 => 'ThumbnailWidth', # (int32u)
+    0x5014 => 'ThumbnailHeight', # (int32u)
+    0x5015 => 'ThumbnailColorDepth', # (int16u)
+    0x5016 => 'ThumbnailPlanes', # (int16u)
+    0x5017 => 'ThumbnailRawBytes', # (int32u)
+    0x5018 => 'ThumbnailLength', # (int32u)
+    0x5019 => 'ThumbnailCompressedSize', # (int32u)
+    0x501a => { Name => 'ColorTransferFunction', Binary => 1 }, # (undef)
+    0x501b => { Name => 'ThumbnailData', Binary => 1, Format => 'undef' }, # (int8u)
+    0x5020 => 'ThumbnailImageWidth', # (int16u or int32u)
+    0x5021 => 'ThumbnailImageHeight', # (int16u or int32u)
+    0x5022 => 'ThumbnailBitsPerSample', # (int16u[N])
+    0x5023 => 'ThumbnailCompression', # (int16u)
+    0x5024 => 'ThumbnailPhotometricInterp', # (int16u)
+    0x5025 => 'ThumbnailDescription', # (string)
+    0x5026 => 'ThumbnailEquipMake', # (string)
+    0x5027 => 'ThumbnailEquipModel', # (string)
+    0x5028 => 'ThumbnailStripOffsets', # (int16u or int32u)
+    0x5029 => 'ThumbnailOrientation', # (int16u)
+    0x502a => 'ThumbnailSamplesPerPixel', # (int16u)
+    0x502b => 'ThumbnailRowsPerStrip', # (int16u or int32u)
+    0x502c => 'ThumbnailStripByteCounts', # (int16u or int32u)
+    0x502d => 'ThumbnailResolutionX',
+    0x502e => 'ThumbnailResolutionY',
+    0x502f => 'ThumbnailPlanarConfig', # (int16u)
+    0x5030 => 'ThumbnailResolutionUnit', # (int16u)
+    0x5031 => 'ThumbnailTransferFunction', # (int16u[N])
+    0x5032 => 'ThumbnailSoftware', # (string)
+    0x5033 => { Name => 'ThumbnailDateTime', Groups => { 2 => 'Time' } }, # (string)
+    0x5034 => 'ThumbnailArtist', # (string)
+    0x5035 => 'ThumbnailWhitePoint', # (rational64u[2])
+    0x5036 => 'ThumbnailPrimaryChromaticities', # (rational64u[6])
+    0x5037 => 'ThumbnailYCbCrCoefficients', # (rational64u[3])
+    0x5038 => 'ThumbnailYCbCrSubsampling', # (int16u)
+    0x5039 => 'ThumbnailYCbCrPositioning', # (int16u)
+    0x503a => 'ThumbnailRefBlackWhite', # (rational64u[6])
+    0x503b => 'ThumbnailCopyright', # (string)
+    0x5090 => 'LuminanceTable', # (int16u[64])
+    0x5091 => 'ChrominanceTable', # (int16u[64])
+    0x5100 => 'FrameDelay', # (int32u[N])
+    0x5101 => 'LoopCount', # (int16u)
+    0x5102 => 'GlobalPalette', # (int8u[N])
+    0x5103 => 'IndexBackground', # (int8u)
+    0x5104 => 'IndexTransparent', # (int8u)
+    0x5110 => 'PixelUnits', # (int8u)
+    0x5111 => 'PixelsPerUnitX', # (int32u)
+    0x5112 => 'PixelsPerUnitY', # (int32u)
+    0x5113 => 'PaletteHistogram', # (int8u[N])
     0x7000 => { #JR
         Name => 'SonyRawFileType',
         # (only valid if Sony:FileFormat >= ARW 2.0, ref IB)
@@ -2342,7 +2435,7 @@ my %opcodeInfo = (
         Count => -1, # 2, 3 or 4 values
     },
     0x9215 => 'ExposureIndex', #12
-    0x9216 => 'TIFF-EPStandardID', #12
+    0x9216 => { Name => 'TIFF-EPStandardID', PrintConv => '$val =~ tr/ /./; $val' }, #12
     0x9217 => { #12
         Name => 'SensingMethod',
         Groups => { 2 => 'Camera' },
@@ -2454,8 +2547,18 @@ my %opcodeInfo = (
         Name => 'CameraElevationAngle',
         Writable => 'rational64s',
     },
-  # 0x9999 - string: camera settings (ExifIFD, Xiaomi POCO F1)
-  # 0x9aaa - int8u[2176]: ? (ExifIFD, Xiaomi POCO F1)
+    0x9999 => { # (ExifIFD, Xiaomi)
+        Name => 'XiaomiSettings', # (writable directory!)
+        Writable => 'string',
+        Protected => 1,
+        SubDirectory => { TagTable => 'Image::ExifTool::JSON::Main' },
+    },
+    0x9a00 => {
+        Name => 'XiaomiModel',
+        Writable => 'string',
+        Protected => 1,
+    },
+  # 0x9aaa - int8u[2048/2176]: ? (ExifIFD, Xiaomi POCO F1)
     0x9c9b => {
         Name => 'XPTitle',
         Format => 'undef',
@@ -2622,7 +2725,7 @@ my %opcodeInfo = (
         Count => 2,
     },
     0xa215 => { Name => 'ExposureIndex', Writable => 'rational64u' },
-    0xa216 => 'TIFF-EPStandardID',
+    0xa216 => { Name => 'TIFF-EPStandardID', PrintConv => '$val =~ tr/ /./; $val' },
     0xa217 => {
         Name => 'SensingMethod',
         Groups => { 2 => 'Camera' },
@@ -2907,6 +3010,7 @@ my %opcodeInfo = (
     0xa480 => { Name => 'GDALMetadata',     Writable => 'string', WriteGroup => 'IFD0' }, #3
     0xa481 => { Name => 'GDALNoData',       Writable => 'string', WriteGroup => 'IFD0' }, #3
     0xa500 => { Name => 'Gamma',            Writable => 'rational64u' },
+  # 0xa661 - string: ? (ExifIFD, Xiaomi)
     0xafc0 => 'ExpandSoftware', #JD (Opanda)
     0xafc1 => 'ExpandLens', #JD (Opanda)
     0xafc2 => 'ExpandFilm', #JD (Opanda)
@@ -3102,7 +3206,7 @@ my %opcodeInfo = (
             # by returning undef from the WriteProc), but we can't rebuild this directory
             # by writing it properly because there is an erroneous StripByteCounts value
             # written by the X2D 100C that renders the data unreadable
-            WriteProc => sub { return undef }, 
+            WriteProc => sub { return undef },
         },
     },
     0xc573 => { #PH
@@ -4251,6 +4355,17 @@ my %opcodeInfo = (
         Protected => 1,
         Binary => 1,
     },
+    0xcd41 => {
+        Name => 'JUMBF',
+        # (set Deletable flag so we can delete this because
+        #  Jpeg2000 directories are otherwise permanent)
+        Deletable => 1,
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::Jpeg2000::Main',
+            DirName => 'JUMBF',
+            ByteOrder => 'BigEndian',
+        },
+    },
     0xcd43 => { # DNG 1.7
         Name => 'ColumnInterleaveFactor',
         Writable => 'int32u',
@@ -4870,6 +4985,39 @@ my %subSecConv = (
             Image::ExifTool::Exif::ExtractImage($self,$val[0],$val[1],"OtherImage");
         },
     },
+    PreviewJXL => {
+        Groups => { 0 => 'EXIF', 1 => 'SubIFD', 2 => 'Preview' },
+        Require => {
+            0 => 'PreviewJXLStart',
+            1 => 'PreviewJXLLength',
+        },
+        Desire => {
+            2 => 'PreviewJXLStart (1)',
+            3 => 'PreviewJXLLength (1)',
+        },
+        # retrieve all other JXL images
+        RawConv => q{
+            if ($val[2] and $val[3]) {
+                my $i = 1;
+                for (;;) {
+                    my %val = ( 0 => $$val{2}, 1 => $$val{3} );
+                    $self->FoundTag($tagInfo, \%val);
+                    ++$i;
+                    $$val{2} = "$$val{0} ($i)";
+                    last unless defined $$self{VALUE}{$$val{2}};
+                    $$val{3} = "$$val{1} ($i)";
+                    last unless defined $$self{VALUE}{$$val{3}};
+                }
+            }
+            @grps = $self->GetGroup($$val{0});
+            my $image = $self->ExtractBinary($val[0], $val[1], 'PreviewJXL');
+            unless ($image =~ /^(Binary data|\xff\x0a|\0\0\0\x0cJXL \x0d\x0a......ftypjxl )/s) {
+                $self->Warn("$tag is not a valid JXL image",1);
+                return undef;
+            }
+            return \$image;
+        },
+    },
     PreviewImageSize => {
         Require => {
             0 => 'PreviewImageWidth',
@@ -4995,7 +5143,8 @@ my %subSecConv = (
             GPSLongitudeRef => '(defined $val and $val =~ / (-?)/) ? ($1 ? "W" : "E") : undef',
         },
         PrintConvInv => q{
-            return undef unless $val =~ /(.*? ?[NS]?), ?(.*? ?[EW]?)$/;
+            return undef unless $val =~ /(.*? ?[NS]?), ?(.*? ?[EW]?)$/ or
+                $val =~ /^\s*(-?\d+(?:\.\d+)?)\s*(-?\d+(?:\.\d+)?)\s*$/;
             my ($lat, $lon) = ($1, $2);
             require Image::ExifTool::GPS;
             $lat = Image::ExifTool::GPS::ToDegrees($lat, 1, "lat");
@@ -6365,7 +6514,7 @@ sub ProcessExif($$$)
                                 TagInfo => $tagInfo || $tmpInfo,
                                 Offset  => $base + $valuePtr + $dataPos,
                                 Size    => $size,
-                                Fixup   => new Image::ExifTool::Fixup,
+                                Fixup   => Image::ExifTool::Fixup->new,
                             };
                         }
                     } else {
@@ -6964,7 +7113,7 @@ EXIF and TIFF meta information.
 
 =head1 AUTHOR
 
-Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
