@@ -29,7 +29,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:Public);
 use Image::ExifTool::GPS;
 
-$VERSION = '1.73';
+$VERSION = '1.75';
 
 sub JITTER() { return 2 }       # maximum time jitter
 
@@ -174,7 +174,7 @@ sub LoadTrackLog($$;$)
         # $val is track file name
         if ($et->Open(\*EXIFTOOL_TRKFILE, $val)) {
             $trackFile = $val;
-            $raf = new File::RandomAccess(\*EXIFTOOL_TRKFILE);
+            $raf = File::RandomAccess->new(\*EXIFTOOL_TRKFILE);
             unless ($raf->Read($_, 256)) {
                 close EXIFTOOL_TRKFILE;
                 return "Empty track file '${val}'";
@@ -202,7 +202,7 @@ sub LoadTrackLog($$;$)
     }
     unless ($from) {
         # set up RAF for reading log file in memory
-        $raf = new File::RandomAccess(\$val);
+        $raf = File::RandomAccess->new(\$val);
         $from = 'data';
     }
 
@@ -1109,7 +1109,7 @@ sub SetGeoValues($$;$)
                     $iExt = $i1;
                 }
                 if (abs($time - $tn) > $geoMaxExtSecs) {
-                    $err or $err = 'Time is too far from nearest GPS fix'.' '.abs($time-$tn).' '.$geoMaxExtSecs;
+                    $err or $err = 'Time is too far from nearest GPS fix'.' '.abs($time-$tn).' > '.$geoMaxExtSecs;
                     $et->VPrint(2, '  Nearest fix:     ', PrintFixTime($tn), "\n") if $verbose > 2;
                     $fix = { } if $$geotag{DateTimeOnly};
                 } else {
@@ -1218,6 +1218,18 @@ Category:       foreach $category (qw{pos track alt orient atemp}) {
             $coords .= " $alt";
         }
         @r = $et->SetNewValue(GPSCoordinates => $coords, %opts);
+        # also Geolocate if specified
+        my $nvHash;
+        my $geoloc = $et->GetNewValue('Geolocate', \$nvHash);
+        if ($geoloc and $geoloc =~ /\bgeotag\b/i) {
+            my $tag = ($$nvHash{WantGroup} ? "$$nvHash{WantGroup}:" : '') . 'Geolocate';
+            # pass along any regular expressions to qualify geolocation search
+            my $parms = join ',', grep m(/), split /\s*,\s*/, $geoloc;
+            $parms and $parms = ",$parms,both"; 
+            $et->SetNewValue($tag => "$$fix{lat},$$fix{lon}$parms");
+            # (the Geolocate tag will be restored to its original value
+            # by RestoreNewValues before the next file in batch processing)
+        }
         return $err if $qt; # all done if writing to QuickTime only
         # (capture error messages by calling SetNewValue in list context)
         @r = $et->SetNewValue(GPSLatitude => $$fix{lat}, %opts);
@@ -1492,7 +1504,7 @@ user-defined tag GPSRoll, must be active.
 
 =head1 AUTHOR
 
-Copyright 2003-2023, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
