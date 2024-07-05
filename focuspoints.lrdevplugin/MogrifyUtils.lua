@@ -18,6 +18,7 @@ local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrErrors = import 'LrErrors'
 local LrTasks = import 'LrTasks'
+local LrPrefs = import "LrPrefs"
 
 require "Utils"
 
@@ -32,21 +33,38 @@ local mogrifyPath
 -- Call mogrify with 'params'
 -- Raises a LrError in case of an execution error 
 --]]
-local function mogrifyExecute(params)
+local function mogrifyExecute(params, script)
   if mogrifyPath == nil then
     mogrifyPath = LrPathUtils.child( _PLUGIN.path, "bin" )
     mogrifyPath = LrPathUtils.child( mogrifyPath, "ImageMagick" )
     mogrifyPath = LrPathUtils.child(mogrifyPath, "magick.exe")
   end
 
-  local cmdline = '\"' .. mogrifyPath .. '\" mogrify ' .. params
+  local scriptName
+  local cmdline = '\"' .. mogrifyPath .. '\" '
+  if script then
+    scriptName = createMagickScript(params)
+    cmdline = cmdline .. '-script ' .. '\"' .. scriptName .. '\"' 
+  else
+    cmdline = cmdline .. 'mogrify ' .. params
+  end
   logDebug('mogrifyExecute', cmdline ) 
   local stat = LrTasks.execute( '\"' .. cmdline .. '\"' )
   if stat ~= 0 then
     logError('mogrifyDraw', 'Error calling: ' .. cmdline ) 
     LrErrors.throwUserError("Error calling 'mogirfy.exe' Please check plugin configuration")
   end
+  if script then
+    local prefs = LrPrefs.prefsForPlugin( nil )
+    if prefs.loggingLevel ~= "DEBUG" then
+      -- keep temporary script file for log level DEBUG
+      LrFileUtils.delete(scriptName)
+    end
+  end
+ 
 end
+
+
 
 --[[
 -- Export the catalog photo to disk
@@ -84,7 +102,7 @@ end
 local function mogrifyResize(xSize, ySize)
   local params = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' \"' .. fileName  .. '\"'
   logDebug('mogrifyResize', params )
-  mogrifyExecute(params)
+  mogrifyExecute(params, false)
 end
 
 --[[
@@ -143,7 +161,6 @@ local function buildDrawParams(focuspointsTable)
       params = params .. para
     end
   end
-  params = params .. '\"' ..fileName  .. '\"'
   return params
 end
 
@@ -166,8 +183,23 @@ end
 --]]
 function MogrifyUtils.drawFocusPoints(focuspointsTable)
   local params = buildDrawParams(focuspointsTable)  
-  mogrifyExecute(params)
+  mogrifyExecute(params, true)
 end
+
+
+--[[ 
+-- Creates a temporay script file for Magick. Returns the name of the temp file
+--]]
+function createMagickScript(params)
+  local scriptName = os.tmpname()
+  local file = io.open(scriptName, "w")
+  file:write('-read \"' .. fileName .. '\"', "\n")
+  file:write(params, "\n")
+  file:write('-write \"' .. fileName .. '\"', "\n")
+  file:close()
+  return scriptName
+end
+
 
 --[[ 
 -- Deletes the temporary file (created by 'MogrifyUtils.exportToDisk') 
