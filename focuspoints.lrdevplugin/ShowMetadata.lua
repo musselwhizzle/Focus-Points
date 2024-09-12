@@ -97,8 +97,8 @@ function splitForColumns(metaData)
   local parts = createParts(metaData)
   local labels = ""
   local values = ""
-  local maxLabelLength = 0
-  local maxValueLength = 0
+  local maxLabelsLength = 0
+  local maxValuesLength = 0
   local numOfLines = 0
   local limitValueLength = 255  -- to avoid super-long value strings that whill slow down display
 
@@ -114,24 +114,17 @@ function splitForColumns(metaData)
        v = LrStringUtils.truncate(v, limitValueLength) .. "[...]"
     end
 
-    maxLabelLength = math.max(maxLabelLength, string.len(l))
-    maxValueLength = math.max(maxValueLength, string.len(v))
+    maxLabelsLength = math.max(maxLabelsLength, string.len(l))
+    maxValuesLength = math.max(maxValuesLength, string.len(v))
     numOfLines = numOfLines + 1
 
-    -- logDebug("ShowMetadata", "l: " .. l)
-    -- logDebug("ShowMetadata", "v: " .. v)
-
+    --logDebug("ShowMetadata", "l: " .. l)
+    --logDebug("ShowMetadata", "v: " .. v)
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
 
-  logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
-  logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
-  logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
-  logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
-  logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
-
-  return labels, values, maxLabelLength, maxValueLength, numOfLines
+  return labels, values, maxLabelsLength, maxValuesLength, numOfLines
 
 end
 
