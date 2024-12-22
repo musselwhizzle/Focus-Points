@@ -111,7 +111,7 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
       -- for proper window dimensions on MAC and WIN need to set different properties
       width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
       width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
-      height_in_lines = 1, -- when using numLines as height the window has a lots ob blank space to scroll down (at least on WIN)
+      height_in_lines = numLines * bool_to_number[MAC_ENV == true] + 1 * bool_to_number[WIN_ENV == true],  -- #181: numLines for MAC, 1 for WIN
     }
 
     local myText2 = viewFactory:static_text {
@@ -120,7 +120,7 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
       -- for proper window dimensions on MAC and WIN need to set different properties
       width_in_chars  = column2Length * bool_to_number[MAC_ENV == true],
       width_in_digits = column2Length * bool_to_number[WIN_ENV == true],
-      height_in_lines = 1, -- same as for myText
+      height_in_lines = numLines * bool_to_number[MAC_ENV == true] + 1 * bool_to_number[WIN_ENV == true],  -- #181: numLines for MAC, 1 for WIN
     }
 
     local row = viewFactory:row {
