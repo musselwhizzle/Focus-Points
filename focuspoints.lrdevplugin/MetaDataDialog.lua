@@ -36,6 +36,8 @@ require "Utils"
 
 function showMetadataDialog(column1, column2, column1Length, column2Length, numLines)
 
+  local result
+
   LrFunctionContext.callWithContext("showMetaDataDialog", function(context)
 
     local appWidth, appHeight = LrSystemInfo.appWindowSize()
@@ -43,20 +45,20 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     local properties = LrBinding.makePropertyTable( context ) -- make a table
     local delimiter = "\r"  -- carriage return; used to separate individual entries in column1 and column2 strings
 
-    bool_to_number={ [true]=1, [false]=0 }
+    local bool_to_number={ [true]=1, [false]=0 }
 
     -- Split column1/column2 strings into arrays of tags/values to ease filtering
-    tagLabels = {};
+    local tagLabels = {};
     for match in (column1..delimiter):gmatch("(.-)"..delimiter) do
       table.insert(tagLabels, match);
     end
 
-    tagValues = {};
+    local tagValues = {};
     for match in (column2..delimiter):gmatch("(.-)"..delimiter) do
       table.insert(tagValues, match);
     end
 
-    numTags = 0
+    local numTags = 0
     for _ in pairs(tagLabels) do numTags = numTags + 1 end
 
     -- Define the various dialog UI elements
