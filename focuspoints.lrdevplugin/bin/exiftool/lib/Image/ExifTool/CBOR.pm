@@ -16,7 +16,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::JSON;
 
-$VERSION = '1.03';
+$VERSION = '1.02';
 
 sub ProcessCBOR($$$);
 sub ReadCBORValue($$$$);
@@ -160,7 +160,6 @@ sub ReadCBORValue($$$$)
             Start   => $dumpStart,
             DataPos => $$et{cbor_datapos},
             Prefix  => $$et{INDENT},
-            Out     => $et->Options('TextOut'),
         ) if $verbose > 2;
         while ($num) {
             $$et{cbor_pre} = "$i) ";
@@ -201,7 +200,6 @@ sub ReadCBORValue($$$$)
                 Start   => $dumpStart,
                 DataPos => $$et{cbor_datapos},
                 Prefix  => $$et{INDENT} . '  ',
-                Out     => $et->Options('TextOut'),
             ) if $verbose > 2;
         }
         # read next value (note: in the case of multiple tags,
@@ -261,7 +259,6 @@ sub ReadCBORValue($$$$)
         DataPos => $$et{cbor_datapos},
         Prefix  => $$et{INDENT} . '  ',
         MaxLen  => $verbose < 5 ? ($verbose == 3 ? 96 : 2048) : undef,
-        Out     => $et->Options('TextOut'),
     ) if $verbose > 2;
     return($val, $err, $pos);
 }

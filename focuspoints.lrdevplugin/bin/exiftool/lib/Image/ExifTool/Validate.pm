@@ -17,7 +17,7 @@ package Image::ExifTool::Validate;
 use strict;
 use vars qw($VERSION %exifSpec);
 
-$VERSION = '1.24';
+$VERSION = '1.23';
 
 use Image::ExifTool qw(:Utils);
 use Image::ExifTool::Exif;
@@ -421,7 +421,7 @@ sub ValidateExif($$$$$$$$)
 {
     my ($et, $tagTablePtr, $tag, $tagInfo, $lastTag, $ifd, $count, $formatStr) = @_;
 
-    $et->Warn("Entries in $ifd are out of order") if $tag <= $lastTag;
+    $et->WarnOnce("Entries in $ifd are out of order") if $tag <= $lastTag;
 
     # (get tagInfo for unknown tags if Unknown option not used)
     if (not defined $tagInfo and $$tagTablePtr{$tag} and ref $$tagTablePtr{$tag} eq 'HASH') {
@@ -532,8 +532,8 @@ sub ValidateOffsetInfo($$$;$)
         while (@offsets) {
             my $start = pop @offsets;
             my $end = $start + pop @sizes;
-            $et->Warn("$dirName:$$offsets[0]{Name} is zero", $minor) if $start == 0;
-            $et->Warn("$dirName:$$sizes[0]{Name} is zero", $minor) if $start == $end;
+            $et->WarnOnce("$dirName:$$offsets[0]{Name} is zero", $minor) if $start == 0;
+            $et->WarnOnce("$dirName:$$sizes[0]{Name} is zero", $minor) if $start == $end;
             next unless $end > $fileSize;
             if ($start >= $fileSize) {
                 if ($start == 0xffffffff) {
@@ -575,7 +575,7 @@ sub FinishValidate($$)
             # get all tags in this group
             foreach $key (sort keys %{$$et{VALUE}}) {
                 next unless $et->GetGroup($key, 1) eq $grp;
-                next if $$et{TAG_EXTRA}{$key}{G3}; # ignore sub-documents
+                next if $$et{TAG_EXTRA}{$key} and $$et{TAG_EXTRA}{$key}{G3}; # ignore sub-documents
                 # fill in %val lookup with values based on tag ID
                 my $tag = $$et{TAG_INFO}{$key}{TagID};
                 $val{$tag} = $$et{VALUE}{$key};

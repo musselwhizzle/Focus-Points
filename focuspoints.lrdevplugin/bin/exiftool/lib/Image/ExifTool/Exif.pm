@@ -57,7 +57,7 @@ use vars qw($VERSION $AUTOLOAD @formatSize @formatName %formatNumber %intFormat
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::MakerNotes;
 
-$VERSION = '4.55';
+$VERSION = '4.51';
 
 sub ProcessExif($$$);
 sub WriteExif($$$);
@@ -2931,7 +2931,7 @@ my %opcodeInfo = (
     0xa433 => { Name => 'LensMake',         Writable => 'string' }, #24
     0xa434 => { Name => 'LensModel',        Writable => 'string' }, #24
     0xa435 => { Name => 'LensSerialNumber', Writable => 'string' }, #24
-    0xa436 => { Name => 'ImageTitle',       Writable => 'string' }, #33
+    0xa436 => { Name => 'Title',            Writable => 'string', Avoid => 1 }, #33
     0xa437 => { Name => 'Photographer',     Writable => 'string' }, #33
     0xa438 => { Name => 'ImageEditor',      Writable => 'string' }, #33
     0xa439 => { Name => 'CameraFirmware',          Writable => 'string' }, #33
@@ -4342,7 +4342,7 @@ my %opcodeInfo = (
         Count => -1,
         Protected => 1,
     },
-    0xcd3f => { # DNG 1.6
+    0xcd3b => { # DNG 1.6
         Name => 'RGBTables',
         Writable => 'undef',
         WriteGroup => 'IFD0',
@@ -4403,30 +4403,6 @@ my %opcodeInfo = (
         Format => 'string',
         WriteGroup => 'IFD0',
         Protected => 1,
-    },
-    0xcd49 => { # DNG 1.7.1
-        Name => 'JXLDistance',
-        Writable => 'float',
-        WriteGroup => 'IFD0',
-    },
-    0xcd4a => { # DNG 1.7.1
-        Name => 'JXLEffort',
-        Notes => 'values range from 1=low to 9=high',
-        Writable => 'int32u',
-        WriteGroup => 'IFD0',
-    },
-    0xcd4b => { # DNG 1.7.1
-        Name => 'JXLDecodeSpeed',
-        Notes => 'values range from 1=slow to 4=fast',
-        Writable => 'int32u',
-        WriteGroup => 'IFD0',
-    },
-    0xcea1 => {
-        Name => 'SEAL', # (writable directory!)
-        Writable => 'string',
-        WriteGroup => 'IFD0',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::SEAL' },
-        WriteCheck => 'return "Can only delete"',  # (don't allow writing)
     },
     0xea1c => { #13
         Name => 'Padding',
@@ -5353,7 +5329,10 @@ sub CalcScaleFactor35efl
     # calculate Canon sensor size using a dedicated algorithm
     if ($$et{Make} eq 'Canon') {
         require Image::ExifTool::Canon;
-        my $canonDiag = Image::ExifTool::Canon::CalcSensorDiag($et);
+        my $canonDiag = Image::ExifTool::Canon::CalcSensorDiag(
+            $$et{RATIONAL}{FocalPlaneXResolution},
+            $$et{RATIONAL}{FocalPlaneYResolution},
+        );
         $diag = $canonDiag if $canonDiag;
     }
     unless ($diag and Image::ExifTool::IsFloat($diag)) {
@@ -6175,7 +6154,7 @@ sub ProcessExif($$$)
     my $base = $$dirInfo{Base} || 0;
     my $firstBase = $base;
     my $raf = $$dirInfo{RAF};
-    my ($verbose,$validate,$saveFormat,$saveBin) = @{$$et{OPTIONS}}{qw(Verbose Validate SaveFormat SaveBin)};
+    my ($verbose,$validate,$saveFormat) = @{$$et{OPTIONS}}{qw(Verbose Validate SaveFormat)};
     my $htmlDump = $$et{HTML_DUMP};
     my $success = 1;
     my ($tagKey, $dirSize, $makerAddr, $strEnc, %offsetInfo, $offName, $nextOffName, $doHash);
@@ -6186,7 +6165,7 @@ sub ProcessExif($$$)
     if ($$dirInfo{DirName} eq 'MakerNotes' and $$et{FileType} eq 'CR3' and
         $$dirInfo{Parent} and $$dirInfo{Parent} eq 'ExifIFD')
     {
-        $et->Warn("MakerNotes shouldn't exist ExifIFD of CR3 image", 1);
+        $et->WarnOnce("MakerNotes shouldn't exist ExifIFD of CR3 image", 1);
     }
     # set flag to calculate image data hash if requested
     $doHash = 1 if $$et{ImageDataHash} and (($$et{FILE_TYPE} eq 'TIFF' and not $base and not $inMakerNotes) or
@@ -6365,7 +6344,7 @@ sub ProcessExif($$$)
         my $valueDataLen = $dataLen;
         my $valuePtr = $entry + 8;      # pointer to value within $$dataPt
         my $tagInfo = $et->GetTagInfo($tagTablePtr, $tagID);
-        my ($origFormStr, $bad, $rational, $binVal, $subOffName);
+        my ($origFormStr, $bad, $rational, $subOffName);
         # save the EXIF format codes if requested
         $$et{SaveFormat}{$saveFormat = $formatStr} = 1 if $saveFormat;
         # hack to patch incorrect count in Kodak SubIFD3 tags
@@ -6656,13 +6635,12 @@ sub ProcessExif($$$)
             if ($count > 500 and $formatStr !~ /^(undef|string|binary)$/ and
                 (not $tagInfo or $$tagInfo{LongBinary} or $warned) and not $$et{OPTIONS}{IgnoreMinorErrors})
             {
-                $et->Warn('Not decoding some large array(s). Ignore minor errors to decode', 2) unless $warned;
+                $et->WarnOnce('Not decoding some large array(s). Ignore minor errors to decode', 2) unless $warned;
                 next if $$et{TAGS_FROM_FILE};   # don't generate bogus value when copying tags
                 $val = "(large array of $count $formatStr values)";
             } else {
                 # convert according to specified format
                 $val = ReadValue($valueDataPt,$valuePtr,$formatStr,$count,$readSize,\$rational);
-                $binVal = substr($$valueDataPt,$valuePtr,$readSize) if $saveBin;
                 # re-code if necessary
                 if (defined $val) {
                     if ($formatStr eq 'utf8') {
@@ -6697,9 +6675,8 @@ sub ProcessExif($$$)
                           "Format: $fstr\nSize: $size bytes\n";
                 if ($size > 4) {
                     my $offPt = Get32u($dataPt,$entry+8);
-                    # (test this with ../pics/{CanonEOS-1D_XMarkIII.hif,PanasonicDC-G9.rw2,*.raf})
-                    my $actPt = $valuePtr + $valueDataPos + $base - ($$et{EXIF_POS} || 0) +
-                                ($$et{BASE_FUDGE} || $$et{BASE} || 0);
+                    # (test this with ../pics/{CanonEOS-1D_XMarkIII.hif,PanasonicDC-G9.rw2})
+                    my $actPt = $valuePtr + $valueDataPos + $base - ($$et{EXIF_POS} || 0) + ($$et{BASE_FUDGE} || 0);
                     $tip .= sprintf("Value offset: 0x%.4x\n", $offPt);
                     # highlight tag name (red for bad size)
                     my $style = ($bad or not defined $tval) ? 'V' : 'H';
@@ -6730,14 +6707,11 @@ sub ProcessExif($$$)
                     } elsif ($tagInfo and Image::ExifTool::IsInt($tval)) {
                         if ($$tagInfo{IsOffset} or $$tagInfo{SubIFD}) {
                             $tval = sprintf('0x%.4x', $tval);
-                            my $actPt = $val + $base - ($$et{EXIF_POS} || 0) + ($$et{BASE_FUDGE} || $$et{BASE} || 0);
+                            my $actPt = $val + $base - ($$et{EXIF_POS} || 0) + ($$et{BASE_FUDGE} || 0);
                             if ($actPt != $val) {
                                 $tval .= sprintf("\nActual offset: 0x%.4x", $actPt);
                                 my $sign = $actPt < $val ? '-' : '';
                                 $tval .= sprintf("\nOffset base: ${sign}0x%.4x", abs($actPt - $val));
-                            }
-                            if ($$et{EXIF_POS} and not $$et{BASE_FUDGE}) {
-                                $tip .= sprintf("File offset:   0x%.4x\n", $actPt + $$et{EXIF_POS})
                             }
                         } elsif ($$tagInfo{PrintHex}) {
                             $tval = sprintf('0x%x', $tval);
@@ -7064,8 +7038,7 @@ sub ProcessExif($$$)
             # set the group 1 name for tags in specified tables
             $et->SetGroup($tagKey, $dirName) if $$tagTablePtr{SET_GROUP1};
             # save original components of rational numbers (used when copying)
-            $$et{TAG_EXTRA}{$tagKey}{Rational} = $rational if defined $rational;
-            $$et{TAG_EXTRA}{$tagKey}{BinVal} = $binVal if defined $binVal;
+            $$et{RATIONAL}{$tagKey} = $rational if defined $rational;
             $$et{TAG_EXTRA}{$tagKey}{G6} = $saveFormat if $saveFormat;
             if ($$et{MAKER_NOTE_FIXUP}) {
                 $$et{TAG_EXTRA}{$tagKey}{Fixup} = $$et{MAKER_NOTE_FIXUP};

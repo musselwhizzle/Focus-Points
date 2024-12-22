@@ -12,7 +12,7 @@ require Exporter;
 
 use vars qw($VERSION @ISA @EXPORT_OK);
 
-$VERSION = '1.13';
+$VERSION = '1.12';
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(ReadCSV ReadJSON);
 
@@ -87,7 +87,6 @@ sub ReadCSV($$;$$)
                 $fileInfo{$tags[$i]} =
                     (defined $missingValue and $vals[$i] eq $missingValue) ? undef : $vals[$i];
             }
-            $fileInfo{_ordered_keys_} = \@tags;
             # figure out the file name to use
             if ($fileInfo{SourceFile}) {
                 $$database{$fileInfo{SourceFile}} = \%fileInfo;
@@ -174,7 +173,7 @@ Tok: for (;;) {
         }
         # see what type of object this is
         if ($tok eq '{') {      # object (hash)
-            $rtnVal = { _ordered_keys_ => [ ] } unless defined $rtnVal;
+            $rtnVal = { } unless defined $rtnVal;
             for (;;) {
                 # read "KEY":"VALUE" pairs
                 unless (defined $key) {
@@ -190,7 +189,6 @@ Tok: for (;;) {
                     $pos = pos $$buffPt;
                     return undef unless defined $val;
                     $$rtnVal{$key} = $val;
-                    push @{$$rtnVal{_ordered_keys_}}, $key;
                     undef $key;
                 }
                 # scan to delimiting ',' or bounding '}'
@@ -347,9 +345,7 @@ option for a list of valid character sets.
 These functions return an error string, or undef on success and populate the
 database hash with entries from the CSV or JSON file.  Entries are keyed
 based on the SourceFile column of the CSV or JSON information, and are
-stored as hash lookups of tag name/value for each SourceFile.  The order
-of the keys (CSV column order or order in a JSON object) is stored as an
-ARRAY reference in a special "_ordered_keys_" element of this hash.
+stored as hash lookups of tag name/value for each SourceFile.
 
 =back
 

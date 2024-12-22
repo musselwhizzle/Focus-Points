@@ -15,7 +15,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.17';
+$VERSION = '1.15';
 
 sub HandleStruct($$;$$$$);
 
@@ -44,8 +44,7 @@ my %uidInfo = (
     NOTES => q{
         The following tags are extracted from Matroska multimedia container files. 
         This container format is used by file types such as MKA, MKV, MKS and WEBM. 
-        For speed, by default ExifTool extracts tags only up to the first Cluster
-        unless a Seek element specifies the position of a Tags element after this.
+        For speed, by default ExifTool extracts tags only up to the first Cluster.
         However, the L<Verbose|../ExifTool.html#Verbose> (-v) and L<Unknown|../ExifTool.html#Unknown> = 2 (-U) options force processing of
         Cluster data, and the L<ExtractEmbedded|../ExifTool.html#ExtractEmbedded> (-ee) option skips over Clusters to
         read subsequent tags.  See
@@ -113,25 +112,8 @@ my %uidInfo = (
         Name => 'Seek',
         SubDirectory => { TagTable => 'Image::ExifTool::Matroska::Main' },
     },
-    0x13ab => {
-        Name => 'SeekID',
-        Unknown => 1,
-        SeekInfo => 'ID',       # save seek ID's
-        # (note: converted from VInt internally)
-        PrintConv => q{
-            my $tagInfo = $Image::ExifTool::Matroska::Main{$val};
-            $val = sprintf('0x%x', $val);
-            $val .= " ($$tagInfo{Name})" if ref $tagInfo eq 'HASH' and $$tagInfo{Name};
-            return $val;
-        },
-    },
-    0x13ac => {
-        Name => 'SeekPosition',
-        Format => 'unsigned',
-        Unknown => 1,
-        SeekInfo => 'Position', # save seek positions
-        RawConv => '$val + $$self{SeekHeadOffset}',
-    },
+    0x13ab => { Name => 'SeekID',           Binary => 1, Unknown => 1 },
+    0x13ac => { Name => 'SeekPosition',     Format => 'unsigned', Unknown => 1 },
 #
 # Segment Info
 #
@@ -368,9 +350,8 @@ my %uidInfo = (
         Name => 'VideoScanType',
         Format => 'unsigned',
         PrintConv => {
-            0 => 'Undetermined',
+            0 => 'Progressive',
             1 => 'Interlaced',
-            2 => 'Progressive',
         },
     },
     0x13b8 => {
@@ -685,14 +666,6 @@ my %uidInfo = (
         Name => 'Projection',
         SubDirectory => { TagTable => 'Image::ExifTool::Matroska::Projection' },
     },
-#
-# other
-#
-    0x5345414c => { # ('SEAL' in hex)
-        Name => 'SEAL',
-        NotEBML => 1,   # don't process SubDirectory as EBML elements
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::SEAL' },
-    },
 );
 
 # Spherical video v2 projection tags (ref https://github.com/google/spatial-media/blob/master/docs/spherical-video-v2-rfc.md)
@@ -920,7 +893,6 @@ sub HandleStruct($$;$$$$)
 # Inputs: 0) data buffer, 1) position in data
 # Returns: integer value and updates position, -1 for unknown/reserved value,
 #          or undef if no data left
-# Notes: Increments position pointer
 sub GetVInt($$)
 {
     return undef if $_[1] >= length $_[0];
@@ -957,7 +929,7 @@ sub ProcessMKV($$)
 {
     my ($et, $dirInfo) = @_;
     my $raf = $$dirInfo{RAF};
-    my ($buff, $buf2, @dirEnd, $trackIndent, %trackTypes, $struct, %seekInfo, %seek);
+    my ($buff, $buf2, @dirEnd, $trackIndent, %trackTypes, $struct);
 
     $raf->Read($buff, 4) == 4 or return 0;
     return 0 unless $buff =~ /^\x1a\x45\xdf\xa3/;
@@ -980,7 +952,6 @@ sub ProcessMKV($$)
     my $processAll = ($verbose or $et->Options('Unknown') > 1) ? 2 : 0;
     ++$processAll if $et->Options('ExtractEmbedded');
     $$et{TrackTypes} = \%trackTypes;  # store Track types reference
-    $$et{SeekHeadOffset} = 0;
     my $oldIndent = $$et{INDENT};
     my $chapterNum = 0;
     my $dirName = 'MKV';
@@ -989,16 +960,6 @@ sub ProcessMKV($$)
     for (;;) {
         while (@dirEnd) {
             if ($pos + $dataPos >= $dirEnd[-1][0]) {
-                if ($dirEnd[-1][1] eq 'Seek') {
-                    # save seek info
-                    if (defined $seekInfo{ID} and defined $seekInfo{Position}) {
-                        my $seekTag = $$tagTablePtr{$seekInfo{ID}};
-                        if (ref $seekTag eq 'HASH' and $$seekTag{Name}) {
-                            $seek{$$seekTag{Name}} = $seekInfo{Position} + $$et{SeekHeadOffset};
-                        }
-                    }
-                    undef %seekInfo;
-                }
                 pop @dirEnd;
                 if ($struct) {
                     if (@dirEnd and $dirEnd[-1][2]) {
@@ -1032,10 +993,9 @@ sub ProcessMKV($$)
         }
         my $tag = GetVInt($buff, $pos);
         last unless defined $tag and $tag >= 0;
-        $$et{SeekHeadOffset} = $pos if $tag == 0x14d9b74;   # save offset of seek head
         my $size = GetVInt($buff, $pos);
         last unless defined $size;
-        my ($unknownSize, $seekInfoOnly);
+        my $unknownSize;
         $size < 0 and $unknownSize = 1, $size = 1e20;
         if (@dirEnd and $pos + $dataPos + $size > $dirEnd[-1][0]) {
             $et->Warn("Invalid or corrupted $dirEnd[-1][1] master element");
@@ -1050,28 +1010,14 @@ sub ProcessMKV($$)
             next;
         }
         my $tagInfo = $et->GetTagInfo($tagTablePtr, $tag);
-        if (not $tagInfo and ref $$tagTablePtr{$tag} eq 'HASH' and $$tagTablePtr{$tag}{SeekInfo}) {
-            $tagInfo = $$tagTablePtr{$tag};
-            $seekInfoOnly = 1;
-        }
+        # just fall through into the contained EBML elements
         if ($tagInfo) {
-            if ($$tagInfo{SubDirectory} and not $$tagInfo{NotEBML}) {
+            if ($$tagInfo{SubDirectory}) {
                 # stop processing at first cluster unless we are using -v -U or -ee
-                # or there are Tags after this
                 if ($$tagInfo{Name} eq 'Cluster' and $processAll < 2) {
-                    # jump to Tags if possible
-                    unless ($processAll) {
-                        if ($seek{Tags} and $seek{Tags} > $pos + $dataPos and $raf->Seek($seek{Tags},0)) {
-                            $buff = '';
-                            $dataPos = $seek{Tags};
-                            $pos = $dataLen = 0;
-                            next;
-                        }
-                        last;
-                    }
+                    last unless $processAll;
                     undef $tagInfo; # just skip the Cluster when -ee is used
                 } else {
-                    # just fall through into the contained EBML elements
                     $$et{INDENT} .= '| ';
                     $et->VerboseDir($$tagTablePtr{$tag}{Name}, undef, $size);
                     $dirName = $$tagInfo{Name};
@@ -1094,12 +1040,7 @@ sub ProcessMKV($$)
             # just skip unknown and large data blocks
             if (not $tagInfo or $more > 10000000) {
                 # don't try to skip very large blocks unless LargeFileSupport is enabled
-                if ($more >= 0x80000000) {
-                    last unless $et->Options('LargeFileSupport');
-                    if ($et->Options('LargeFileSupport') eq '2') {
-                        $et->Warn('Processing large block (LargeFileSupport is 2)');
-                    }
-                }
+                last if $more >= 0x80000000 and not $et->Options('LargeFileSupport');
                 $raf->Seek($more, 1) or last;
                 $buff = '';
                 $dataPos += $dataLen + $more;
@@ -1177,11 +1118,6 @@ sub ProcessMKV($$)
         if ($$tagInfo{NoSave} or $struct) {
             $et->VerboseInfo($tag, $tagInfo, Value => $val, %parms) if $verbose;
             $$struct{$$tagInfo{Name}} = $val if $struct;
-        } elsif ($$tagInfo{SeekInfo}) {
-            my $p = $pos;
-            $val = GetVInt($buff, $p) unless defined $val;
-            $seekInfo{$$tagInfo{SeekInfo}} = $val;
-            $et->HandleTag($tagTablePtr, $tag, $val, %parms) unless $seekInfoOnly;
         } else {
             $et->HandleTag($tagTablePtr, $tag, $val, %parms);
         }

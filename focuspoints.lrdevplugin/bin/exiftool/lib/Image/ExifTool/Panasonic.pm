@@ -366,7 +366,6 @@ my %shootingMode = (
                 '32 1'  => '3-area (left)?', # (DMC-L1 guess)
                 '32 2'  => '3-area (center)?', # (DMC-L1 guess)
                 '32 3'  => '3-area (right)?', # (DMC-L1 guess)
-                # '32 16' ? (DC-GH6)
                 '64 0'  => 'Face Detect',
                 '64 1' => 'Face Detect (animal detect on)', #forum11194
                 '64 2' => 'Face Detect (animal detect off)', #forum11194
@@ -2802,7 +2801,7 @@ sub ProcessLeicaTrailer($;$)
                 }
             } else { # M (Type 240)
                 # scan for the lens type (M writes 114 bytes of garbage first)
-                if ($buff =~ /\G.{114}([\x20-\x7e]*\0*)/sg and length($1) >= 50) {
+                if ($buff =~ /\G.{114}([\x20-\x7f]*\0*)/sg and length($1) >= 50) {
                     $expect = 114;
                 }
             }

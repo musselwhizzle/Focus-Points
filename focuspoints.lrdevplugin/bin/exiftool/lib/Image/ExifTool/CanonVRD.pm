@@ -23,7 +23,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Canon;
 
-$VERSION = '1.41';
+$VERSION = '1.39';
 
 sub ProcessCanonVRD($$;$);
 sub WriteCanonVRD($$;$);
@@ -1020,18 +1020,6 @@ my $blankFooter = "CANON OPTIONAL DATA\0" . ("\0" x 42) . "\xff\xd9";
     # 0x10018 - fmt=8: 0
     # 0x10020 - fmt=2: ''
     0x10021 => 'CustomPictureStyle', # (string)
-    0x10100 => { #forum15965
-        Name => 'Rating',
-        PrintConv => {
-            0 => 'Unrated',
-            1 => 1,
-            2 => 2,
-            3 => 3,
-            4 => 4,
-            5 => 5,
-            4294967295 => 'Rejected',
-        },
-    },
     0x10101 => {
         Name => 'CheckMark',
         PrintConv => {
@@ -1212,9 +1200,9 @@ my $blankFooter = "CANON OPTIONAL DATA\0" . ("\0" x 42) . "\xff\xd9";
             4 => 'Emphasize Center',
         },
     },
-    0x2070b => { Name => 'DiffractionCorrectionOn', %noYes },
     # 0x20800 - fmt=1: 0
     # 0x20801 - fmt=1: 0
+    0x2070b => { Name => 'DiffractionCorrectionOn', %noYes },
     0x20900 => 'ColorHue',
     0x20901 => 'SaturationAdj',
     0x20910 => 'RedHSL',
@@ -1282,9 +1270,6 @@ my $blankFooter = "CANON OPTIONAL DATA\0" . ("\0" x 42) . "\xff\xd9";
     # 0xf0521 - DLO data
     # 0xf0520 - DLO data
     # 0xf0530 - created when dust delete data applied (4 bytes, all zero)
-    # 0xf0561 - 1932 bytes, related to Partial Adjustment Tool Palette (ref forum15660)
-    # 0xf0562 - 1596 bytes, related to Partial Adjustment Tool Palette (ref forum15660)
-    # 0xf0566 - 1520 bytes, related to Partial Adjustment Tool Palette (ref forum15660)
     # 0xf0600 - fmt=253 (2308 bytes, JPG images)
     # 0xf0601 - fmt=253 (2308 bytes, JPG images)
     # 0x1ff52c - values: 129,130,132 (related to custom picture style somehow)
@@ -1306,7 +1291,7 @@ my $blankFooter = "CANON OPTIONAL DATA\0" . ("\0" x 42) . "\xff\xd9";
     # 2 - value: 6
     3 => {
         Name => 'DR4CameraModel',
-        Format => 'int32u',
+        Writable => 'int32u',
         PrintHex => 1,
         SeparateTable => 'Canon CanonModelID',
         PrintConv => \%Image::ExifTool::Canon::canonModelID,
@@ -1442,16 +1427,15 @@ my $blankFooter = "CANON OPTIONAL DATA\0" . ("\0" x 42) . "\xff\xd9";
     4 => 'CropY',
     5 => 'CropWidth',
     6 => 'CropHeight',
-    7 => 'CropRotation',
     8 => {
-        Name => 'CropAngle',
+        Name => 'CropRotation',
         Format => 'double',
         PrintConv => 'sprintf("%.7g",$val)',
         PrintConvInv => '$val',
     },
-    10 => 'CropOriginalWidth',
-    11 => 'CropOriginalHeight',
-    # 12 double - value: 100
+    0x0a => 'CropOriginalWidth',
+    0x0b => 'CropOriginalHeight',
+    # 0x0c double - value: 100
 );
 
 # DR4 Stamp Tool tags (ref PH)

@@ -18,7 +18,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.62';
+$VERSION = '1.61';
 
 sub ProcessID3v2($$$);
 sub ProcessPrivate($$$);
@@ -66,12 +66,6 @@ my %pictureType = (
 my %dateTimeConv = (
     ValueConv => 'require Image::ExifTool::XMP; Image::ExifTool::XMP::ConvertXMPDate($val)',
     PrintConv => '$self->ConvertDateTime($val)',
-);
-
-# patch for names of user-defined tags which don't automatically generate very well
-my %userTagName = (
-    ALBUMARTISTSORT => 'AlbumArtistSort',
-    ASIN => 'ASIN',
 );
 
 # This table is just for documentation purposes
@@ -878,19 +872,6 @@ Image::ExifTool::AddCompositeTags('Image::ExifTool::ID3');
 }
 
 #------------------------------------------------------------------------------
-# Make tag name for user-defined tag
-# Inputs: 0) User defined tag description
-# Returns: Tag name
-sub MakeTagName($)
-{
-    my $name = shift;
-    return $userTagName{$name} if $userTagName{$name};
-    $name = ucfirst(lc $name) unless $name =~ /[a-z]/;  # convert all uppercase to mixed case
-    $name =~ s/([a-z])[_ ]([a-z])/$1\U$2/g;
-    return Image::ExifTool::MakeTagName($name);
-}
-
-#------------------------------------------------------------------------------
 # Convert ID3v1 text to exiftool character set
 # Inputs: 0) ExifTool object ref, 1) text string
 # Returns: converted text
@@ -1169,7 +1150,7 @@ sub ProcessID3v2($$$)
             }
             $tagInfo = $et->GetTagInfo($otherTable, $id) if $otherTable;
             if ($tagInfo) {
-                $et->Warn("Frame '${id}' is not valid for this ID3 version", 1);
+                $et->WarnOnce("Frame '${id}' is not valid for this ID3 version", 1);
             } else {
                 next unless $verbose or $et->Options('Unknown');
                 $id =~ tr/-A-Za-z0-9_//dc;
@@ -1198,7 +1179,7 @@ sub ProcessID3v2($$$)
             }
         }
         if ($flags{Encrypt}) {
-            $et->Warn('Encrypted frames currently not supported');
+            $et->WarnOnce('Encrypted frames currently not supported');
             next;
         }
         # extract the value
@@ -1232,7 +1213,7 @@ sub ProcessID3v2($$$)
                     next;
                 }
             } else {
-                $et->Warn('Install Compress::Zlib to decode compressed frames');
+                $et->WarnOnce('Install Compress::Zlib to decode compressed frames');
                 next;
             }
         }
@@ -1266,34 +1247,25 @@ sub ProcessID3v2($$$)
             # two encoded strings separated by a null
             my @vals = DecodeString($et, $val);
             foreach (0..1) { $vals[$_] = '' unless defined $vals[$_]; }
-            if (length $vals[0]) {
-                $id .= "_$vals[0]";
-                $tagInfo = $$tagTablePtr{$id} || AddTagToTable($tagTablePtr, $id, MakeTagName($vals[0]));
-            }
-            $val = $vals[1];
+            ($val = "($vals[0]) $vals[1]") =~ s/^\(\) //;
         } elsif ($id =~ /^T/ or $id =~ /^(IPL|IPLS|GP1|MVI|MVN)$/) {
             $val = DecodeString($et, $val);
         } elsif ($id =~ /^(WXX|WXXX)$/) {
             # one encoded string and one Latin string separated by a null
             my $enc = unpack('C', $val);
-            my ($tag, $url);
+            my $url;
             if ($enc == 1 or $enc == 2) {
-                ($tag, $url) = ($tag =~ /^(.(?:..)*?)\0\0(.*)/s);
+                ($val, $url) = ($val =~ /^(.(?:..)*?)\0\0(.*)/s);
             } else {
-                ($tag, $url) = ($tag =~ /^(..*?)\0(.*)/s);
+                ($val, $url) = ($val =~ /^(..*?)\0(.*)/s);
             }
-            unless (defined $tag and defined $url) {
+            unless (defined $val and defined $url) {
                 $et->Warn("Invalid $id frame value");
                 next;
             }
-            $tag = DecodeString($et, $tag);
-            if (length $tag) {
-                $id .= "_$tag";
-                $tag .= '_URL' unless $tag =~ /url/i;
-                $tagInfo = $$tagTablePtr{$id} || AddTagToTable($tagTablePtr, $id, MakeTagName($tag));
-            }
+            $val = DecodeString($et, $val);
             $url =~ s/\0.*//s;
-            $val = $url;
+            $val = length($val) ? "($val) $url" : $url;
         } elsif ($id =~ /^W/) {
             $val =~ s/\0.*//s;  # truncate at null
         } elsif ($id =~ /^(COM|COMM|ULT|USLT)$/) {

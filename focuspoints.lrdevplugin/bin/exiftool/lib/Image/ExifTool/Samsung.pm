@@ -22,13 +22,13 @@ use vars qw($VERSION %samsungLensTypes);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '1.58';
+$VERSION = '1.56';
 
 sub WriteSTMN($$$);
 sub ProcessINFO($$$);
 sub ProcessSamsungMeta($$$);
 sub ProcessSamsungIFD($$$);
-sub ProcessSamsung($$;$);
+sub ProcessSamsung($$$);
 
 # Samsung LensType lookup
 %samsungLensTypes = (
@@ -943,25 +943,25 @@ my %formatMinMax = (
 );
 
 # information extracted from Samsung trailer (ie. Samsung SM-T805 "Sound & Shot" JPEG) (ref PH)
-# NOTE: These tags may use $$self{SamsungTagName} in a Condition statement
-#       if necessary to differentiate tags with the same ID but different names
 %Image::ExifTool::Samsung::Trailer = (
     GROUPS => { 0 => 'MakerNotes', 2 => 'Other' },
     VARS => { NO_ID => 1, HEX_ID => 0 },
     PROCESS_PROC => \&ProcessSamsung,
-    TAG_PREFIX => 'SamsungTrailer',
     PRIORITY => 0, # (first one takes priority so DepthMapWidth/Height match first DepthMapData)
     NOTES => q{
-        Tags extracted from the SEFT trailer of JPEG and PNG images written when
-        using certain features (such as "Sound & Shot" or "Shot & More") from
-        Samsung models such as the Galaxy S4 and Tab S, and from the 'sefd' atom in
-        HEIC images from models such as the S10+.
+        Tags extracted from the trailer of JPEG images written when using certain
+        features (such as "Sound & Shot" or "Shot & More") from Samsung models such
+        as the Galaxy S4 and Tab S, and from the 'sefd' atom in HEIC images from the
+        Samsung S10+.
     },
-    '0x0001-name' => 'EmbeddedImageName', # ("DualShot_1","DualShot_2","SingleShot")
+    '0x0001-name' => {
+        Name => 'EmbeddedImageName', # ("DualShot_1","DualShot_2")
+        RawConv => '$$self{EmbeddedImageName} = $val',
+    },
     '0x0001' => [
         {
             Name => 'EmbeddedImage',
-            Condition => '$$self{SamsungTagName} ne "DualShot_2"',
+            Condition => '$$self{EmbeddedImageName} eq "DualShot_1"',
             Groups => { 2 => 'Preview' },
             Binary => 1,
         },
@@ -970,7 +970,6 @@ my %formatMinMax = (
             Groups => { 2 => 'Preview' },
             Binary => 1,
         },
-        # (have also seen the string "BOKEH" here (SM-A226B)
     ],
     '0x0100-name' => 'EmbeddedAudioFileName', # ("SoundShot_000")
     '0x0100' => { Name => 'EmbeddedAudioFile', Groups => { 2 => 'Audio' }, Binary => 1 },
@@ -980,7 +979,6 @@ my %formatMinMax = (
    # 0x0800 - unknown (29 bytes) (contains already-extracted EmbeddedAudioFileName)
    # 0x0830-name - seen '1165724808.pre'
    # 0x0830 - unknown (164004 bytes)
-   # 0x08c0-name - seen 'Auto_Enhance_Info' #forum16086
    # 0x08d0-name - seen 'Interactive_Panorama_Info'
    # 0x08d0 - unknown (7984 bytes)
    # 0x08e0-name - seen 'Panorama_Shot_Info'
@@ -990,8 +988,6 @@ my %formatMinMax = (
    # 0x0910 - string, seen 'Front_Cam_Selfie_Info'
    # 0x09e0-name - seen 'Burst_Shot_Info'
    # 0x09e0 - string, seen '489489125'
-   # 0x09e1-name - seen 'BurstShot_Best_Photo_Info' #forum16086
-   # 0x09f0-name - seen 'Pro_Mode_Info' #forum16086
    # 0x0a01-name - seen 'Image_UTC_Data'
     '0x0a01' => { #forum7161
         Name => 'TimeStamp',
@@ -1003,7 +999,6 @@ my %formatMinMax = (
     '0x0a20' => { Name => 'DualCameraImage', Groups => { 2 => 'Preview' }, Binary => 1 },
     '0x0a30-name' => 'EmbeddedVideoType', # ("MotionPhoto_Data")
     '0x0a30' => { Name => 'EmbeddedVideoFile', Groups => { 2 => 'Video' }, Binary => 1 }, #forum7161
-   # 0x0a41-name - seen 'BackupRestore_Data' #forum16086
    # 0x0aa1-name - seen 'MCC_Data'
    # 0x0aa1 - seen '204','222','234','302','429'
     '0x0aa1' => {
@@ -1259,46 +1254,15 @@ my %formatMinMax = (
         Name => 'DualShotExtra',
         SubDirectory => { TagTable => 'Image::ExifTool::Samsung::DualShotExtra' },
      },
-   # 0x0ab4-name - seen 'DualShot_Core_Info' #forum16086
    # 0x0ac0-name - seen 'ZoomInOut_Info' (SM-N950U)
    # 0x0ac0 - 2048 bytes of interesting stuff including firmware version? (SM-N950U)
-   # 0x0b30-name - seen 'Camera_Sticker_Info' #forum16086
     '0x0b40' => { # (SM-N975X front camera)
         Name => 'SingleShotMeta',
         SubDirectory => { TagTable => 'Image::ExifTool::Samsung::SingleShotMeta' },
-        # (have also see the string "BOKEH_INFO" here (SM-A226B)
      },
    # 0x0b41-name - seen 'SingeShot_DepthMap_1' (Yes, "Singe") (SM-N975X front camera)
     '0x0b41' => { Name => 'SingleShotDepthMap', Binary => 1 },
-   # 0x0b51-name - seen 'Intelligent_PhotoEditor_Data' #forum16086
-   # 0x0b60-name - seen 'UltraWide_PhotoEditor_Data' #forum16086
-   # 0x0b90-name - seen 'Document_Scan_Info' #forum16086
-   # 0x0ba1-name - seen 'Original_Path_Hash_Key', 'PhotoEditor_Re_Edit_Data', 'deco_doodle_bitmap', 'deco_sticker_bitmap', 'deco_text_bitmap'
-   # 0x0ba2-name - seen 'Copy_Available_Edit_Info' #forum16086
-   # 0x0bc0-name - seen 'Single_Relighting_Bokeh_Info' #forum16086
-   # 0x0bd0-name - seen 'Dual_Relighting_Bokeh_Info' #forum16086
-   # 0x0be0-name - seen 'Livefocus_JDM_Info' #forum16086
-   # 0x0bf0-name - seen 'Remaster_Info' #forum16086
-   '0x0bf0' => 'RemasterInfo', #forum16086/16242
-   # 0x0c21-name - seen 'Portrait_Effect_Info' #forum16086
-   # 0x0c51-name - seen 'Samsung_Capture_Info' #forum16086
-   '0x0c51' => 'SamsungCaptureInfo', #forum16086/16242
-   # 0x0c61-name - seen 'Camera_Capture_Mode_Info' #forum16086
-   # 0x0c71-name - seen 'Pro_White_Balance_Info' #forum16086
-   # 0x0c81-name - seen 'Watermark_Info' #forum16086
-   # 0x0cc1-name - seen 'Color_Display_P3' #forum16086
-   # 0x0cd2-name - seen 'Photo_HDR_Info' #forum16086
-   # 0x0ce1-name - seen 'Gallery_DC_Data' #forum16086
-   # 0x0d01-name - seen 'Camera_Scene_Info', 'Camera_Scene_Info2', 'Camera_Scene_Info3' #forum16086
-   # 0x0d11-name - seen 'Video_Snapshot_Info' #forum16086
-   # 0x0d21-name - seen 'Camera_Scene_Info' #forum16086
-   # 0x0d31-name - seen 'Food_Blur_Effect_Info' #forum16086
-    '0x0d91' => { #forum16086/16242
-        Name => 'PEg_Info',
-        Description => 'PEg Info',
-        SubDirectory => { TagTable => 'Image::ExifTool::JSON::Main' },
-    },
-   # 0x0da1-name - seen 'Captured_App_Info' #forum16086
+   # 0x0ba1-name - seen 'Original_Path_Hash_Key', 'PhotoEditor_Re_Edit_Data'
    # 0xa050-name - seen 'Jpeg360_2D_Info' (Samsung Gear 360)
    # 0xa050 - seen 'Jpeg3602D' (Samsung Gear 360)
    # 0x0c81-name - seen 'Watermark_Info'
@@ -1495,7 +1459,7 @@ sub ProcessSamsungMeta($$$)
     my $pos = $$dirInfo{DirStart};
     my $end = $$dirInfo{DirLen} + $pos;
     unless ($pos + 8 <= $end and substr($$dataPt, $pos, 4) eq 'DOFS') {
-        $et->Warn("Unrecognized $dirName data", 1);
+        $et->Warn("Unrecognized $dirName data");
         return 0;
     }
     my $ver = Get32u($dataPt, $pos + 4);
@@ -1571,7 +1535,7 @@ sub ProcessSamsungIFD($$$)
 # Returns: 1 on success, 0 not valid Samsung trailer, or -1 error writing
 # - updates DataPos to point to start of Samsung trailer
 # - updates DirLen to existing trailer length
-sub ProcessSamsung($$;$)
+sub ProcessSamsung($$$)
 {
     my ($et, $dirInfo) = @_;
     my $raf = $$dirInfo{RAF};
@@ -1661,13 +1625,8 @@ SamBlock:
                 $audioSize = $size - 8 - $len;
                 next;
             }
-            last unless $raf->Seek($dirPos-$noff, 0) and $raf->Read($buf2, $size) == $size;
-            # (could validate the first 4 bytes of the block because they
-            # are the same as the first 4 bytes of the directory entry)
-            $len = Get32u(\$buf2, 4);
-            last if $len + 8 > $size;
-            my $tag = sprintf("0x%.4x", $type);
             # add unknown tags if necessary
+            my $tag = sprintf("0x%.4x", $type);
             unless ($$tagTablePtr{$tag}) {
                 next unless $unknown or $verbose;
                 my %tagInfo = (
@@ -1686,8 +1645,11 @@ SamBlock:
                 );
                 AddTagToTable($tagTablePtr, "$tag-name", \%tagInfo2);
             }
-            # set SamsungTagName ExifTool member for use in tag Condition
-            $$et{SamsungTagName} = substr($buf2, 8, $len);
+            last unless $raf->Seek($dirPos-$noff, 0) and $raf->Read($buf2, $size) == $size;
+            # (could validate the first 4 bytes of the block because they
+            # are the same as the first 4 bytes of the directory entry)
+            $len = Get32u(\$buf2, 4);
+            last if $len + 8 > $size;
             # extract tag name and value
             $et->HandleTag($tagTablePtr, "$tag-name", undef,
                 DataPt  => \$buf2,
@@ -1701,7 +1663,6 @@ SamBlock:
                 Start   => 8 + $len,
                 Size    => $size - (8 + $len),
             );
-            delete $$et{SamsungTagName};
         }
         if ($outfile) {
             last unless $raf->Seek($dataPos, 0) and $raf->Read($buff, $dirLen) == $dirLen;

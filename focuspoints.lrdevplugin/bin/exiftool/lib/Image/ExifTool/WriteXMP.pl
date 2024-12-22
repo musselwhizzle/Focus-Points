@@ -112,7 +112,7 @@ sub ValidateProperty($$;$)
                             my $valLang = $$et{XmpValidateLangAlt} || ($$et{XmpValidateLangAlt} = { });
                             $$valLang{$langPath} or $$valLang{$langPath} = { };
                             if ($$valLang{$langPath}{$lang}) {
-                                $et->Warn("Duplicate language ($lang) in lang-alt list: $langPath");
+                                $et->WarnOnce("Duplicate language ($lang) in lang-alt list: $langPath");
                             } else {
                                 $$valLang{$langPath}{$lang} = 1;
                             }
@@ -925,31 +925,19 @@ sub WriteXMP($$;$)
     # get hash of all information we want to change
     # (sorted by tag name so alternate languages come last, but with structures
     # first so flattened tags may be used to override individual structure elements)
-    my (@tagInfoList, @structList, $delLangPath, %delLangPaths, %delAllLang, $firstNewPath, @langTags);
+    my (@tagInfoList, $delLangPath, %delLangPaths, %delAllLang, $firstNewPath);
     my $writeGroup = $$dirInfo{WriteGroup};
     foreach $tagInfo (sort ByTagName $et->GetNewTagInfoList()) {
         next unless $et->GetGroup($tagInfo, 0) eq 'XMP';
         next if $$tagInfo{Name} eq 'XMP'; # (ignore full XMP block if we didn't write it already)
         next if $writeGroup and $writeGroup ne $$et{NEW_VALUE}{$tagInfo}{WriteGroup};
-        if ($$tagInfo{LangCode}) {
-            push @langTags, $tagInfo
-        } elsif ($$tagInfo{Struct}) {
-            push @structList, $tagInfo;
+        if ($$tagInfo{Struct}) {
+            unshift @tagInfoList, $tagInfo;
         } else {
             push @tagInfoList, $tagInfo;
         }
     }
-    if (@langTags) {
-        # keep original order in which lang-alt entries were added
-        foreach $tagInfo (sort { $$et{NEW_VALUE}{$a}{Order} <=> $$et{NEW_VALUE}{$b}{Order} } @langTags) {
-            if ($$tagInfo{Struct}) {
-                push @structList, $tagInfo;
-            } else {
-                push @tagInfoList, $tagInfo;
-            }
-        }
-    }
-    foreach $tagInfo (@structList, @tagInfoList) {
+    foreach $tagInfo (@tagInfoList) {
         my @delPaths;   # list of deleted paths
         my $tag = $$tagInfo{TagID};
         my $path = GetPropertyPath($tagInfo);
@@ -984,7 +972,7 @@ sub WriteXMP($$;$)
                         (not @fixInfo or $fixInfo[0] ne $info);
                     pop @props;
                 }
-                $et->Warn("Error finding parent structure for $$tagInfo{Name}") unless @fixInfo;
+                $et->WarnOnce("Error finding parent structure for $$tagInfo{Name}") unless @fixInfo;
             }
             # fix property path for this tag (last in the @fixInfo list)
             push @fixInfo, $tagInfo unless @fixInfo and $isStruct;

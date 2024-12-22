@@ -168,8 +168,7 @@ sub ConvInvISO6709($)
         # requires at least 3 digits after the decimal point
         # (and as of Apr 2021, Google Photos doesn't accept coordinats
         #  with more than 5 digits after the decimal place:
-        #  https://exiftool.org/forum/index.php?topic=11055.msg67171#msg67171 
-        #  still a problem Apr 2024: https://exiftool.org/forum/index.php?msg=85761)
+        #  https://exiftool.org/forum/index.php?topic=11055.msg67171#msg67171 )
         my @fmt = ('%s%02d.%s%s','%s%03d.%s%s','%s%d.%s%s');
         my @limit = (90,180);
         foreach (@a) {
@@ -339,7 +338,7 @@ sub FormatQTValue($$;$$)
         $flags = 0x01;  # UTF8
         $$valPt = $et->Encode($$valPt, 'UTF8');
     }
-    defined $$valPt or $et->Warn("Error converting value for $$tagInfo{Name}");
+    defined $$valPt or $et->WarnOnce("Error converting value for $$tagInfo{Name}");
     return $flags;
 }
 
@@ -482,26 +481,23 @@ sub WriteKeys($$$)
 sub WriteItemInfo($$$)
 {
     my ($et, $dirInfo, $outfile) = @_;
-    my $boxPos = $$dirInfo{BoxPos}; # hash of [position,length,irefVer(iref only)] for box in $outfile
+    my $boxPos = $$dirInfo{BoxPos};     # hash of [length,position] for each box
     my $raf = $$et{RAF};
     my $items = $$et{ItemInfo};
-    my (%did, @mdatEdit, $name, $tmap);
+    my (%did, @mdatEdit, $name);
 
     return () unless $items and $raf;
 
     # extract information from EXIF/XMP metadata items
     my $primary = $$et{PrimaryItem};
     my $curPos = $raf->Tell();
-    my $lastID = 0;
     my $id;
     foreach $id (sort { $a <=> $b } keys %$items) {
-        $lastID = $id;
         $primary = $id unless defined $primary; # assume primary is lowest-number item if pitm missing
         my $item = $$items{$id};
         # only edit primary EXIF/XMP metadata
         next unless $$item{RefersTo} and $$item{RefersTo}{$primary};
         my $type = $$item{ContentType} || $$item{Type} || next;
-        $tmap = $id if $type eq 'tmap'; # save ID of primary 'tmap' item (tone-mapped image)
         # get ExifTool name for this item
         $name = { Exif => 'EXIF', 'application/rdf+xml' => 'XMP' }->{$type};
         next unless $name;  # only care about EXIF and XMP
@@ -510,16 +506,10 @@ sub WriteItemInfo($$$)
         my ($warn, $extent, $buff, @edit);
         $warn = 'Missing iloc box' unless $$boxPos{iloc};
         $warn = "No Extents for $type item" unless $$item{Extents} and @{$$item{Extents}};
-        if ($$item{ContentEncoding}) {
-            if ($$item{ContentEncoding} ne 'deflate') {
-                $warn = "Can't currently decode $$item{ContentEncoding} encoded $type metadata";
-            } elsif (not eval { require Compress::Zlib }) {
-                $warn = "Install Compress::Zlib to decode deflated $type metadata";
-            }
-        }
+        $warn = "Can't currently decode encoded $type metadata" if $$item{ContentEncoding};
         $warn = "Can't currently decode protected $type metadata" if $$item{ProtectionIndex};
         $warn = "Can't currently extract $type with construction method $$item{ConstructionMethod}" if $$item{ConstructionMethod};
-        $warn = "$type metadata is not in this file" if $$item{DataReferenceIndex};
+        $warn = "$type metadata is not this file" if $$item{DataReferenceIndex};
         $warn and $et->Warn($warn), next;
         my $base = $$item{BaseOffset} || 0;
         my $val = '';
@@ -536,25 +526,6 @@ sub WriteItemInfo($$$)
         }
         next unless defined $buff;
         $buff = $val . $buff if length $val;
-        my $comp = $et->Options('Compress');
-        if (defined $comp and ($comp xor $$item{ContentEncoding})) {
-            #TODO: add ability to edit infe entry in iinf to change encoding according to Compress option if set
-            $et->Warn("Can't currently change compression when rewriting $name in HEIC",1);
-        }
-        my $wasDeflated;
-        if ($$item{ContentEncoding}) {
-            my ($v2, $stat);
-            my $inflate = Compress::Zlib::inflateInit();
-            $inflate and ($v2, $stat) = $inflate->inflate($buff);
-            $et->VPrint(0, "  (Inflating stored $name metadata)\n");
-            if ($inflate and $stat == Compress::Zlib::Z_STREAM_END()) {
-                $buff = $v2;
-                $wasDeflated = 1;
-            } else {
-                $et->Warn("Error inflating $name metadata");
-                next;
-            }
-        }
         my ($hdr, $subTable, $proc);
         if ($name eq 'EXIF') {
             if (not length $buff) {
@@ -588,17 +559,6 @@ sub WriteItemInfo($$$)
             ($dirInfo{DirLen} or length $newVal))
         {
             $newVal = $hdr . $newVal if length $hdr and length $newVal;
-            if ($wasDeflated) {
-                my $deflate = Compress::Zlib::deflateInit();
-                if ($deflate) {
-                    $et->VPrint(0, "  (Re-deflating new $name metadata)\n");
-                    $buff = $deflate->deflate($newVal);
-                    if (defined $buff) {
-                        $buff .= $deflate->flush();
-                        $newVal = $buff;
-                    }
-                }
-            }
             $edit[0][2] = \$newVal;     # replace the old chunk with the new data
             $edit[0][3] = $id;          # mark this chunk with the item ID
             push @mdatEdit, @edit;
@@ -679,49 +639,27 @@ sub WriteItemInfo($$$)
             # add new infe to iinf
             $add{iinf} = $add{iref} = $add{iloc} = '' unless defined $add{iinf};
             my ($type, $mime);
-            my $enc = '';
             if ($name eq 'XMP') {
                 $type = "mime\0";
                 $mime = "application/rdf+xml\0";
-                # write compressed XMP if Compress option is set
-                if ($et->Options('Compress') and length $newVal) {
-                    if (not eval { require Compress::Zlib }) {
-                        $et->Warn('Install Compress::Zlib to write compressed metadata');
-                    } else {
-                        my $deflate = Compress::Zlib::deflateInit();
-                        if ($deflate) {
-                            $et->VPrint(0, "  (Deflating new $name metadata)\n");
-                            my $buff = $deflate->deflate($newVal);
-                            if (defined $buff) {
-                                $newVal = $buff . $deflate->flush();
-                                $enc = "deflate\0";
-                            }
-                        }
-                    }
-                }
             } else {
                 $type = "Exif\0";
                 $mime = '';
             }
-            my $id = ++$lastID; # use next highest available ID (so ID's in iinf are in order)
-            #[retracted] # create new item information hash to save infe box in case we need it for sorting
-            #[retracted] my $item = $$items{$id} = { };
-            # add new infe entry to iinf box
-            my $n = length($type) + length($mime) + length($enc) + 16;
+            my $id = 1;
+            ++$id while $$items{$id} or $usedID{$id};   # find next unused item ID
+            my $n = length($type) + length($mime) + 16;
             if ($id < 0x10000) {
-                $add{iinf} .= pack('Na4CCCCnn', $n, 'infe', 2, 0, 0, 1, $id, 0) . $type . $mime . $enc;
+                $add{iinf} .= pack('Na4CCCCnn', $n, 'infe', 2, 0, 0, 1, $id, 0) . $type . $mime;
             } else {
                 $n += 2;
-                $add{iinf} .= pack('Na4CCCCNn', $n, 'infe', 3, 0, 0, 1, $id, 0) . $type . $mime . $enc;
+                $add{iinf} .= pack('Na4CCCCNn', $n, 'infe', 3, 0, 0, 1, $id, 0) . $type . $mime;
             }
-            #[retracted] $add{iinf} .= $$item{infe};
-            # add new cdsc to iref (also refer to primary 'tmap' if it exists)
+            # add new cdsc to iref
             if ($irefVer) {
-                my ($fmt, $siz, $num) = defined $tmap ? ('N', 22, 2) : ('', 18, 1);
-                $add{iref} .= pack('Na4NnN'.$fmt, $siz, 'cdsc', $id, $num, $primary, $tmap);
+                $add{iref} .= pack('Na4NnN', 18, 'cdsc', $id, 1, $primary);
             } else {
-                my ($fmt, $siz, $num) = defined $tmap ? ('n', 16, 2) : ('', 14, 1);
-                $add{iref} .= pack('Na4nnn'.$fmt, $siz, 'cdsc', $id, $num, $primary, $tmap);
+                $add{iref} .= pack('Na4nnn', 14, 'cdsc', $id, 1, $primary);
             }
             # add new entry to iloc table (see ISO14496-12:2015 pg.79)
             my $ilocVer = Get8u($outfile, $$boxPos{iloc}[0] + 8);
@@ -786,45 +724,36 @@ sub WriteItemInfo($$$)
         my $added = 0;
         my $tag;
         foreach $tag (sort { $$boxPos{$a}[0] <=> $$boxPos{$b}[0] } keys %$boxPos) {
-            $$boxPos{$tag}[0] += $added;
             next unless $add{$tag};
-            my $pos = $$boxPos{$tag}[0];
+            my $pos = $$boxPos{$tag}[0] + $added;
             unless ($$boxPos{$tag}[1]) {
                 $tag eq 'iref' or $et->Error('Internal error adding iref box'), last;
                 # create new iref box
                 $add{$tag} = Set32u(12 + length $add{$tag}) . $tag .
                              Set8u($$boxPos{$tag}[2]) . "\0\0\0" . $add{$tag};
             } elsif ($tag ne 'hdlr') {
-                my $n = Get32u($outfile, $pos) +  length($add{$tag});
-                Set32u($n, $outfile, $pos);    # increase box size
+                my $n = Get32u($outfile, $pos);
+                Set32u($n + length($add{$tag}), $outfile, $pos);    # increase box size
             }
             if ($tag eq 'iinf') {
                 my $iinfVer = Get8u($outfile, $pos + 8);
                 if ($iinfVer == 0) {
-                    my $n = Get16u($outfile, $pos + 12) + $countNew;
-                    if ($n > 0xffff) {
-                        $et->Error("Can't currently handle rollover to long item count");
-                        return undef;
-                    }
-                    Set16u($n, $outfile, $pos + 12);    # incr count
+                    my $n = Get16u($outfile, $pos + 12);
+                    Set16u($n + $countNew, $outfile, $pos + 12);    # incr count
                 } else {
-                    my $n = Get32u($outfile, $pos + 12) + $countNew;
-                    Set32u($n, $outfile, $pos + 12);    # incr count
+                    my $n = Get32u($outfile, $pos + 12);
+                    Set32u($n + $countNew, $outfile, $pos + 12);    # incr count
                 }
             } elsif ($tag eq 'iref') {
                 # nothing more to do
             } elsif ($tag eq 'iloc') {
                 my $ilocVer = Get8u($outfile, $pos + 8);
                 if ($ilocVer < 2) {
-                    my $n = Get16u($outfile, $pos + 14) + $countNew;
-                    Set16u($n, $outfile, $pos + 14);    # incr count
-                    if ($n > 0xffff) {
-                        $et->Error("Can't currently handle rollover to long item count");
-                        return undef;
-                    }
+                    my $n = Get16u($outfile, $pos + 14);
+                    Set16u($n + $countNew, $outfile, $pos + 14);    # incr count
                 } else {
-                    my $n = Get32u($outfile, $pos + 14) + $countNew;
-                    Set32u($n, $outfile, $pos + 14);    # incr count
+                    my $n = Get32u($outfile, $pos + 14);
+                    Set32u($n + $countNew, $outfile, $pos + 14);    # incr count
                 }
                 # must also update pointer locations in this box
                 if ($added) {
@@ -835,34 +764,9 @@ sub WriteItemInfo($$$)
             }
             # add new entries to this box (or add pitm after hdlr)
             substr($$outfile, $pos + $$boxPos{$tag}[1], 0) = $add{$tag};
-            $$boxPos{$tag}[1] += length $add{$tag};
             $added += length $add{$tag};    # positions are shifted by length of new entries
         }
     }
-    #[This sorting idea was retracted because just sorting 'iinf' wasn't sufficient to
-    # repair the problem where an out-of-order ID was added -- Apple Preview still
-    # ignores the gain-map image.  It looks like either or both 'iref' and 'iloc' must
-    # also be sorted by ID, although the spec doesn't mention this]
-    #[retracted] # sort infe entries in iinf box if necessary
-    #[retracted] if ($$et{ItemsNotSorted}) {
-    #[retracted]     if ($$boxPos{iinf}) {
-    #[retracted]         my $iinfVer = Get8u($outfile, $$boxPos{iinf}[0] + 8);
-    #[retracted]         my $off = $iinfVer == 0 ? 14 : 16;  # offset to first infe item
-    #[retracted]         my $sorted = '';    # sorted iinf payload
-    #[retracted]         $sorted .= $$items{$_}{infe} || '' foreach sort { $a <=> $b } keys %$items;
-    #[retracted]         if (length $sorted == $$boxPos{iinf}[1]-$off) {
-    #[retracted]             # replace with sorted infe entries
-    #[retracted]             substr($$outfile, $$boxPos{iinf}[0] + $off, length $sorted) = $sorted;
-    #[retracted]             $et->Warn('Item info entries are out of order. Fixed.');
-    #[retracted]             ++$$et{CHANGED};
-    #[retracted]         } else {
-    #[retracted]             $et->Warn('Error sorting item info entries');
-    #[retracted]         }
-    #[retracted]     } else {
-    #[retracted]         $et->Warn('Item info entries are out of order');
-    #[retracted]     }
-    #[retracted]     delete $$et{ItemsNotSorted};
-    #[retracted] }
     delete $$et{ItemInfo};
     return @mdatEdit ? \@mdatEdit : undef;
 }
@@ -881,7 +785,7 @@ sub WriteQuickTime($$$)
     $et or return 1;    # allow dummy access to autoload this package
     my ($mdat, @mdat, @mdatEdit, $edit, $track, $outBuff, $co, $term, $delCount);
     my (%langTags, $canCreate, $delGrp, %boxPos, %didDir, $writeLast, $err, $atomCount);
-    my ($tag, $lastTag, $lastPos, $errStr, $trailer, $buf2);
+    my ($tag, $lastTag, $errStr);
     my $outfile = $$dirInfo{OutFile} || return 0;
     my $raf = $$dirInfo{RAF};       # (will be null for lower-level atoms)
     my $dataPt = $$dirInfo{DataPt}; # (will be null for top-level atoms)
@@ -894,16 +798,6 @@ sub WriteQuickTime($$$)
     my $createKeys = 0;
     my ($rtnVal, $rtnErr) = $dataPt ? (undef, undef) : (1, 0);
 
-    # check for Insta360 trailer at top level
-    if ($raf) {
-        my $pos = $raf->Tell();
-        if ($raf->Seek(-40, 2) and $raf->Read($buf2, 40) == 40 and
-            substr($buf2, 8) eq '8db42d694ccc418790edff439fe026bf')
-        {
-            $trailer = [ 'Insta360', $raf->Tell() - unpack('V',$buf2) ];
-        }
-        $raf->Seek($pos, 0) or return 0;
-    }
     if ($dataPt) {
         $raf = File::RandomAccess->new($dataPt);
     } else {
@@ -967,12 +861,6 @@ sub WriteQuickTime($$$)
     $tag = $lastTag = '';
 
     for (;;) {      # loop through all atoms at this level
-        $lastPos = $raf->Tell();
-        # stop processing if we reached a known trailer
-        if ($trailer and $lastPos >= $$trailer[1]) {
-            $errStr = "Corrupted $$trailer[0] trailer" if $lastPos != $$trailer[1];
-            last;
-        }
         $lastTag = $tag if $$tagTablePtr{$tag};    # keep track of last known tag
         if (defined $atomCount and --$atomCount < 0 and $dataPt) {
             # stop processing now and just copy the rest of the atom
@@ -987,8 +875,7 @@ sub WriteQuickTime($$$)
                 # --> hold this terminator to the end
                 $term = $hdr;
             } elsif ($n != 0) {
-                # warn unless this is 1-3 pad bytes
-                $et->Error("Unknown $n bytes at end of file", 1) if $n > 3 or $hdr ne "\0" x $n;
+                $et->Error("Unknown $n bytes at end of file", 1);
             }
             last;
         }
@@ -1006,8 +893,6 @@ sub WriteQuickTime($$$)
                 } elsif (not $et->Options('LargeFileSupport')) {
                     $et->Error('End of processing at large atom (LargeFileSupport not enabled)');
                     last;
-                } elsif ($et->Options('LargeFileSupport') eq '2') {
-                    $et->Warn('Processing large atom (LargeFileSupport is 2)');
                 }
             }
             $size = $hi * 4294967296 + $lo - 16;
@@ -1163,7 +1048,7 @@ sub WriteQuickTime($$$)
                 next;
             }
         }
-        undef $tagInfo if $tagInfo and $$tagInfo{AddedUnknown};
+        undef $tagInfo if $tagInfo and $$tagInfo{Unknown};
 
         if ($tagInfo and (not defined $$tagInfo{Writable} or $$tagInfo{Writable})) {
             my $subdir = $$tagInfo{SubDirectory};
@@ -1560,13 +1445,7 @@ sub WriteQuickTime($$$)
             $writeLast = ($writeLast || '') . $hdr . $buff;
         } else {
             # save position of this box in the output buffer
-#TODO do this:
-#TODO            my $bp = $boxPos{$tag} || ($boxPos{$tag} = [ ]);
-#TODO            push @$bp, length($$outfile), length($hdr) + length($buff);
-#TODO instead of this:
             $boxPos{$tag} = [ length($$outfile), length($hdr) + length($buff) ];
-#TODO then we have the positions of all the infe boxes -- we then only need
-#TODO to know the index of the box to edit if the encoding changes for one of them
             # copy the existing atom
             Write($outfile, $hdr, $buff) or $rtnVal=$rtnErr, $err=1, last;
         }
@@ -1576,15 +1455,13 @@ sub WriteQuickTime($$$)
         if (($lastTag eq 'mdat' or $lastTag eq 'moov') and not $dataPt and (not $$tagTablePtr{$tag} or
             ref $$tagTablePtr{$tag} eq 'HASH' and $$tagTablePtr{$tag}{Unknown}))
         {
-            # identify other known trailers
-            $buf2 = '';
-            $raf->Seek($lastPos,0) and $raf->Read($buf2,8);
-            if ($buf2 eq 'CCCCCCCC') {
-                $trailer = [ 'Kenwood', $lastPos ];
-            } elsif ($buf2 =~ /^(gpsa|gps0|gsen|gsea)...\0/s) {
-                $trailer = [ 'RIFF', $lastPos ];
+            my $nvTrail = $et->GetNewValueHash($Image::ExifTool::Extra{Trailer});
+            if ($$et{DEL_GROUP}{Trailer} or ($nvTrail and not ($$nvTrail{Value} and $$nvTrail{Value}[0]))) {
+                $errStr =~ s/ is too large.*//;
+                $et->Warn('Deleted unknown trailer with ' . lcfirst($errStr));
             } else {
-                $trailer = [ 'Unknown', $lastPos ];
+                $et->Warn('Unknown trailer with ' . lcfirst($errStr));
+                $et->Error('Use "-trailer=" to delete unknown trailer');
             }
         } else {
             $et->Error($errStr);
@@ -1697,26 +1574,27 @@ sub WriteQuickTime($$$)
             }
             my $subName = $$subdir{DirName} || $$tagInfo{Name};
             # QuickTime hierarchy is complex, so check full directory path before adding
+            my $buff;
             if ($createKeys and $curPath eq 'MOV-Movie' and $subName eq 'Meta') {
                 $et->VPrint(0, "  Creating Meta with mdta Handler and Keys\n");
                 # init Meta box for Keys tags with mdta Handler and empty Keys+ItemList
-                $buf2 = "\0\0\0\x20hdlr\0\0\0\0\0\0\0\0mdta\0\0\0\0\0\0\0\0\0\0\0\0" .
+                $buff = "\0\0\0\x20hdlr\0\0\0\0\0\0\0\0mdta\0\0\0\0\0\0\0\0\0\0\0\0" .
                         "\0\0\0\x10keys\0\0\0\0\0\0\0\0" .
                         "\0\0\0\x08ilst";
             } elsif ($createKeys and $curPath eq 'MOV-Movie-Meta') {
-                $buf2 = ($subName eq 'Keys' ? "\0\0\0\0\0\0\0\0" : '');
+                $buff = ($subName eq 'Keys' ? "\0\0\0\0\0\0\0\0" : '');
             } elsif ($subName eq 'Meta' and $$et{OPTIONS}{QuickTimeHandler}) {
                 $et->VPrint(0, "  Creating Meta with mdir Handler\n");
                 # init Meta box for ItemList tags with mdir Handler
-                $buf2 = "\0\0\0\x20hdlr\0\0\0\0\0\0\0\0mdir\0\0\0\0\0\0\0\0\0\0\0\0";
+                $buff = "\0\0\0\x20hdlr\0\0\0\0\0\0\0\0mdir\0\0\0\0\0\0\0\0\0\0\0\0";
             } else {
                 next unless $curPath eq $writePath and $$addDirs{$subName} and $$addDirs{$subName} eq $dirName;
-                $buf2 = '';  # write from scratch
+                $buff = '';  # write from scratch
             }
             my %subdirInfo = (
                 Parent   => $dirName,
                 DirName  => $subName,
-                DataPt   => \$buf2,
+                DataPt   => \$buff,
                 DirStart => 0,
                 HasData  => $$subdir{HasData},
                 OutFile  => $outfile,
@@ -2029,8 +1907,9 @@ sub WriteQuickTime($$$)
                 $result or $et->Error("Truncated mdat atom"), last;
             } else {
                 # mdat continues to end of file
-                while ($raf->Read($buf2, 65536)) {
-                    Write($outfile, $buf2) or $rtnVal = 0, last;
+                my $buff;
+                while ($raf->Read($buff, 65536)) {
+                    Write($outfile, $buff) or $rtnVal = 0, last;
                 }
             }
         }
@@ -2039,22 +1918,6 @@ sub WriteQuickTime($$$)
     # write the stuff that must come last
     Write($outfile, $writeLast) or $rtnVal = 0 if $writeLast;
 
-    # copy trailer if necessary
-    if ($rtnVal and $trailer) {
-        # are we deleting the trailer?
-        my $nvTrail = $et->GetNewValueHash($Image::ExifTool::Extra{Trailer});
-        if ($$et{DEL_GROUP}{Trailer} or ($nvTrail and not ($$nvTrail{Value} and $$nvTrail{Value}[0]))) {
-            $et->Warn("Deleted $$trailer[0] trailer", 1);
-        } elsif ($raf->Seek($$trailer[1])) {
-            $et->Warn(sprintf('Copying %s trailer from offset 0x%x', @$trailer), 1);
-            while ($raf->Read($buf2, 65536)) {
-                Write($outfile, $buf2) or $rtnVal = 0, last;
-            }
-        } else {
-            $rtnVal = 0;
-        }
-        $rtnVal or $et->Error("Error copying $$trailer[0] trailer");
-    }
     return $rtnVal;
 }
 

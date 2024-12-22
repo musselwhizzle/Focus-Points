@@ -94,7 +94,6 @@ my %insvDataLen = (
   # 0xb00 => 10,    # ? (Insta360 X3)
   # 0xd00 => 10,    # ? (Insta360 Ace Pro)
   # 0x1200 ?        # ? (Insta360 Ace Pro)
-  # 0x1600 ?        # ? (?)
 );
 
 # limit the default amount of data we read for some record types
@@ -110,7 +109,7 @@ my %insvLimit = (
         The tags below are extracted from timed metadata in QuickTime and other
         formats of video files when the ExtractEmbedded option is used.  Although
         most of these tags are combined into the single table below, ExifTool
-        currently reads 96 different types of timed GPS metadata from video files.
+        currently reads 74 different formats of timed GPS metadata from video files.
     },
     VARS => { NO_ID => 1 },
     GPSLatitude  => { PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")', RawConv => '$$self{FoundGPSLatitude} = 1; $val' },
@@ -144,7 +143,6 @@ my %insvLimit = (
     ExposureCompensation => { PrintConv => 'Image::ExifTool::Exif::PrintFraction($val)', Groups => { 2 => 'Camera' } },
     ISO          => { Groups => { 2 => 'Camera' } },
     CameraDateTime=>{ PrintConv => '$self->ConvertDateTime($val)', Groups => { 2 => 'Time' } },
-    DateTimeStamp =>{ PrintConv => '$self->ConvertDateTime($val)', Groups => { 2 => 'Time' } },
     VideoTimeStamp => { Groups => { 2 => 'Video' } },
     Accelerometer=> { Notes => '3-axis acceleration in units of g' },
     AccelerometerData => { },
@@ -340,22 +338,10 @@ my %insvLimit = (
         Groups => { 2 => 'Preview' },
         RawConv => '$self->ValidateImage(\$val,$tag)',
     },
-    djmd => { # (DJI AC003 Osmo Action 4 cam)
-        Name => 'DJIMetadata',
-        SubDirectory => { TagTable => 'Image::ExifTool::DJI::Protobuf' },
-    },
-    dbgi => { # (DJI AC003 Osmo Action 4 cam)
-        Name => 'DJIDebug',
-        Unknown => 2,
-        Notes => 'extracted only if Unknown option is 2 or greater',
-        SubDirectory => { TagTable => 'Image::ExifTool::DJI::Protobuf' },
-    },
     Unknown00 => { Unknown => 1 },
     Unknown01 => { Unknown => 1 },
     Unknown02 => { Unknown => 1 },
     Unknown03 => { Unknown => 1 },
-    M => { Name => 'Unknown_M', Unknown => 1 }, # (from LIGOGPSINFO)
-    H => { Name => 'Unknown_H', Unknown => 1 }, # (from LIGOGPSINFO)
 );
 
 # tags found in 'camm' type 0 timed metadata (ref 4)
@@ -600,8 +586,8 @@ my %insvLimit = (
     GROUPS => { 2 => 'Location' },
     FIRST_ENTRY => 0,
     NOTES => q{
-        Tags extracted from the tx3g sbtl timed metadata of Yuneec and Autel drones,
-        and subtitle text in some other videos.
+        Tags extracted from the tx3g sbtl timed metadata of Yuneec drones, and
+        subtitle text in some other videos.
     },
     Lat => {
         Name => 'GPSLatitude',
@@ -628,32 +614,6 @@ my %insvLimit = (
         PrintConv => '$self->ConvertDateTime($val)',
     },
     Text => { Groups => { 2 => 'Other' } },
-    # the following tags are extracted from Autel Evo II drone videos
-    GPSDateTime  => {
-        Groups => { 2 => 'Time' },
-        Description => 'GPS Date/Time',
-        PrintConv => '$self->ConvertDateTime($val)',
-    },
-    HomeLat => {
-        Name => 'GPSHomeLatitude',
-        RawConv => '$$self{FoundGPSLatitude} = 1; $val',
-        PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")',
-    },
-    HomeLon => {
-        Name => 'GPSHomeLongitude',
-        PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
-    },
-    ISO => { },
-    SHUTTER => {
-        Name => 'ExposureTime',
-        ValueConv => '1 / $val',
-        PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
-    },
-    'F-NUM' => {
-        Name => 'FNumber',
-        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
-    },
-    EV => 'ExposureCompensation',
 );
 
 %Image::ExifTool::QuickTime::INSV_MakerNotes = (
@@ -794,15 +754,6 @@ my %insvLimit = (
 );
 
 #------------------------------------------------------------------------------
-# Convert unsigned 32-bit integer to signed
-# Inputs: <none> (uses value in $_)
-# Returns: signed integer
-sub SignedInt32()
-{
-    return $_ < 0x80000000 ? $_ : $_ - 4294967296;
-}
-
-#------------------------------------------------------------------------------
 # Save information from keys in OtherSampleDesc directory for processing timed metadata
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 # Returns: 1 on success
@@ -903,7 +854,7 @@ sub FoundSomething($$;$$)
 #------------------------------------------------------------------------------
 # Approximate GPSDateTime value from sample time and CreateDate
 # Inputs: 0) ExifTool ref, 1) tag table ptr, 2) sample time (s)
-#         3) true if CreateDate is UTC
+#         3) true if CreateDate is at end of video, 4) flag if CreateDate is UTC
 # Notes: Uses ExifTool CreateDateAtEnd as flag to subtract video duration
 sub SetGPSDateTime($$$;$)
 {
@@ -914,9 +865,9 @@ sub SetGPSDateTime($$$;$)
         if ($$et{CreateDateAtEnd}) {        # adjust if CreateDate is at end of video
             return unless $$value{TimeScale} and $$value{Duration};
             $sampleTime -= $$value{Duration} / $$value{TimeScale};
-            $et->Warn('Approximating GPSDateTime as CreateDate - Duration + SampleTime', 1);
+            $et->WarnOnce('Approximating GPSDateTime as CreateDate - Duration + SampleTime', 1);
         } else {
-            $et->Warn('Approximating GPSDateTime as CreateDate + SampleTime', 1);
+            $et->WarnOnce('Approximating GPSDateTime as CreateDate + SampleTime', 1);
         }
         my $utc = $et->Options('QuickTimeUTC');
         $utc = $isUTC unless defined $utc;  # (allow QuickTimeUTC=0 to override $isUTC default)
@@ -1038,29 +989,8 @@ sub Process_text($$$;$)
             $tags{Text} = defined $tags{Text} ? $tags{Text} . "\$$tag$dat" : "\$$tag$dat";
         }
     }
-    if (%tags) {
-        unless ($tags{Accelerometer}) { # (probably unnecessary test)
-            # check for NextBase 622GW accelerometer data
-            # Example data (leading 2-byte length word has been stripped by ProcessSamples):
-            # 0000: 00 00 00 00 32 30 32 32 30 39 30 35 31 36 34 30 [....202209051640]
-            # 0010: 33 33 00 00 29 00 ba ff 48 ff 18 00 f2 07 5a ff [33..)...H.....Z.]
-            # 0020: 64 ff e8 ff 58 ff e8 ff c1 07 43 ff 41 ff d2 ff [d...X.....C.A...]
-            # 0030: 58 ff ea ff dc 07 50 ff 30 ff e0 ff 72 ff d8 ff [X.....P.0...r...]
-            # 0040: f5 07 51 ff 16 ff dc ff 6a ff ca ff 33 08 45 ff [..Q.....j...3.E.]
-            if ($$dataPt =~ /^\0{4}(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})\0\0.{2}/s) {
-                $tags{DateTimeStamp} = "$1:$2:$2 $4:$5:$6";
-                my $num = unpack('x20v', $$dataPt); # number of accelerometer readings
-                if ($num and $num * 12 + 22 < length $$dataPt) {
-                    $num *= 6;
-                    my @acc = unpack("x22v$num", $$dataPt);
-                    map { $_ = $_ - 0x10000 if $_ >= 0x8000 } @acc;
-                    $tags{AccelerometerData} = "@acc";
-                }
-            }
-        }
-        HandleTextTags($et, $tagTbl, \%tags);
-        return;
-    }
+    %tags and HandleTextTags($et, $tagTbl, \%tags), return;
+
     # check for enciphered binary GPS data
     # BlueSkySea:
     #   0000: 00 00 aa aa aa aa 54 54 98 9a 9b 93 9a 92 98 9a [......TT........]
@@ -1277,7 +1207,7 @@ sub ProcessSamples($)
                 ($startChunk, $samplesPerChunk, $descIdx) = @{shift @$stsc};
                 $nextChunk = $$stsc[0][0] if @$stsc;
             }
-            @$size < @$start + $samplesPerChunk and $et->Warn('Sample size error'), last;
+            @$size < @$start + $samplesPerChunk and $et->WarnOnce('Sample size error'), last;
             last unless defined $chunkStart and length $chunkStart;
             my $sampleStart = $chunkStart;
             my $chunkSize = 0;
@@ -1305,7 +1235,7 @@ Sample:     for ($i=0; ; ) {
             push @chunkSize, $chunkSize;
             ++$iChunk;
         }
-        @$start == @$size or $et->Warn('Incorrect sample start/size count'), return;
+        @$start == @$size or $et->WarnOnce('Incorrect sample start/size count'), return;
         # process as chunks if we are only interested in calculating hash
         if ($type eq 'soun' or $type eq 'vide') {
             $start = $stco;
@@ -1335,7 +1265,7 @@ Sample:     for ($i=0; ; ) {
         $hdrFmt = ($hdrLen == 4 ? 'N' : $hdrLen == 2 ? 'n' : 'C');
         require Image::ExifTool::H264;
     }
-
+    
     # loop through all samples
     for ($i=0; $i<@$start and $i<@$size; ++$i) {
 
@@ -1355,11 +1285,11 @@ Sample:     for ($i=0; ; ) {
             }
         }
         # read the sample data
-        $raf->Seek($$start[$i], 0) or $et->Warn("Seek error in $type data"), next;
+        $raf->Seek($$start[$i], 0) or $et->WarnOnce("Seek error in $type data"), next;
         my $buff;
         my $n = $raf->Read($buff, $size);
         unless ($n == $size) {
-            $et->Warn("Error reading $type data");
+            $et->WarnOnce("Error reading $type data");
             next unless $n;
             $size = $n;
         }
@@ -1441,7 +1371,7 @@ Sample:     for ($i=0; ; ) {
 
             if ($$tagTbl{$metaFormat}) {
                 my $tagInfo = $et->GetTagInfo($tagTbl, $metaFormat, \$buff);
-                if ($tagInfo and (not $$tagInfo{Unknown} or $$et{OPTIONS}{Unknown} >= $$tagInfo{Unknown})) {
+                if ($tagInfo) {
                     FoundSomething($et, $tagTbl, $time[$i], $dur[$i]);
                     $$et{ee} = $ee; # need ee information for 'keys'
                     $et->HandleTag($tagTbl, $metaFormat, undef,
@@ -1451,15 +1381,6 @@ Sample:     for ($i=0; ; ) {
                         TagInfo => $tagInfo,
                     );
                     delete $$et{ee};
-                    # synthesize GPSDateTime if necessary for djmd metadata
-                    if ($metaFormat eq 'djmd') {
-                        if (defined $$et{GPSLatitude} and defined $$et{GPSLongitude} and not $$et{GPSDateTime}) {
-                            SetGPSDateTime($et, $tagTbl, $time[$i], 1); # (NC)
-                        }
-                        delete $$et{GPSLatitude};
-                        delete $$et{GPSLongitude};
-                        delete $$et{GPSDateTime};
-                    }
                 } elsif ($metaFormat eq 'camm' and $buff =~ /^X/) {
                     # seen 'camm' metadata in this format (X/Y/Z acceleration and G force? + GPRMC + ?)
                     # "X0000.0000Y0000.0000Z0000.0000G0000.0000$GPRMC,000125,V,,,,,000.0,,280908,002.1,N*71~, 794021  \x0a"
@@ -1474,10 +1395,9 @@ Sample:     for ($i=0; ; ) {
         } elsif ($type eq 'gps ') { # (ie. GPSDataList tag)
 
             if ($buff =~ /^....freeGPS /s) {
-                # parse freeGPS data unless done already in brute-force scan
-                # (some videos don't reference all freeGPS info from 'gps ' table, eg. INNOV,
-                #  and some videos don't put 'gps ' data in mdat, eg XGODY 12" 4K Dashcam)
-                last if $$et{FoundGPSByScan};
+                # process by brute scan instead if ExtractEmbedded >= 3
+                # (some videos don't reference all freeGPS info from 'gps ' table, eg. INNOV)
+                last if $eeOpt >= 3;
                 # decode "freeGPS " data (Novatek and others)
                 ProcessFreeGPS($et, {
                     DataPt => \$buff,
@@ -1529,31 +1449,6 @@ sub ConvertLatLon($$)
 }
 
 #------------------------------------------------------------------------------
-# Decrypt Lucky data
-# Inputs: 0) string to decrypt, 1) encryption key
-# Returns: decrypted string
-my @luckyKeys = ('luckychip gps',  'customer ## gps');
-sub DecryptLucky($$) {
-    my ($str, $key) = @_;
-    my @str = unpack('C*', $str);
-    my @key = unpack('C*', $key);
-    my @enc = (0..255);
-    my ($i, $j, $k) = (0, 0, 0);
-    do {
-        $j = ($j + $enc[$i] + $key[$i % length($key)]) & 0xff;
-        @enc[$i,$j] = @enc[$j,$i];
-    } while (++$i < 256);
-    ($i, $j, $k) = (0, 0, 0);
-    do {
-        $j = ($j + 1) & 0xff;
-        $k = ($k + $enc[$j]) & 0xff;
-        @enc[$j,$k] = @enc[$k,$j];
-        $str[$i] ^= $enc[($enc[$j] + $enc[$k]) & 0xff];
-    } while (++$i < @str);
-    return pack('C*', @str);
-}
-
-#------------------------------------------------------------------------------
 # Process "freeGPS " data blocks
 # Inputs: 0) ExifTool ref, 1) dirInfo ref {DataPt,SampleTime,SampleDuration}, 2) tagTable ref
 # Returns: 1 on success (or 0 on unrecognized or "measurement-void" GPS data)
@@ -1563,7 +1458,7 @@ sub ProcessFreeGPS($$$)
     my ($et, $dirInfo, $tagTbl) = @_;
     my $dataPt = $$dirInfo{DataPt};
     my $dirLen = length $$dataPt;
-    my ($yr, $mon, $day, $hr, $min, $sec, $ss, $stat, $lbl, $ddd, $done);
+    my ($yr, $mon, $day, $hr, $min, $sec, $stat, $lbl, $ddd);
     my ($lat, $latRef, $lon, $lonRef, $spd, $trk, $alt, @acc, @xtra);
 
     return 0 if $dirLen < 82;
@@ -1668,152 +1563,72 @@ sub ProcessFreeGPS($$$)
         }
         if (defined $lat) {
             # extract accelerometer readings if GPS was valid
-            # and change to signed integer and divide by 256
-            @acc = map { SignedInt32 / 256 } unpack('x68V3', $$dataPt);
+            @acc = unpack('x68V3', $$dataPt);
+            # change to signed integer and divide by 256
+            map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 256 } @acc;
         }
 
-    } elsif ($$dataPt =~ /^.{37}\0\0\0A([NS])([EW])\0/s) {
+    } elsif ($$dataPt =~ /^.{37}\0\0\0A([NS])([EW])/s) {
 
+        $debug and $et->FoundTag(GPSType => 3);
+        # decode freeGPS from ViofoA119v3 dashcam (similar to Novatek GPS format)
+        # 0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
+        # 0010: 05 00 00 00 2f 00 00 00 03 00 00 00 13 00 00 00 [..../...........]
+        # 0020: 09 00 00 00 1b 00 00 00 41 4e 57 00 25 d1 99 45 [........ANW.%..E]
+        # 0030: f1 47 40 46 66 66 d2 41 85 eb 83 41 00 00 00 00 [.G@Fff.A...A....]
         ($latRef, $lonRef) = ($1, $2);
         ($hr,$min,$sec,$yr,$mon,$day) = unpack('x16V6', $$dataPt);
-        # test for base64-encoded and encrypted lucky gps strings
-        my ($notEnc, $notStr, $lt, $ln);
-        if (length($$dataPt) < 0x78) {
-            $notEnc = $notStr = 1;
-        } else {
-            $lt = substr($$dataPt, 0x2c, 20), # latitude
-            $ln = substr($$dataPt, 0x40, 20), # longitude
-            /^[A-Za-z0-9+\/]{8,20}={0,2}\0*$/ or $notEnc = 1, last foreach ($lt, $ln);
-            /^\d{1,5}\.\d+\0*$/ or $notStr = 1, last foreach ($lt, $ln);
+        if ($yr >= 2000) {
+            # Kenwood dashcam sometimes stores absolute year and local time
+            # (but sometimes year since 2000 and UTC time in same video!)
+            require Time::Local;
+            my $time = Image::ExifTool::TimeLocal($sec,$min,$hr,$day,$mon-1,$yr);
+            ($sec,$min,$hr,$day,$mon,$yr) = gmtime($time);
+            $yr += 1900;
+            ++$mon;
+            $et->WarnOnce('Converting GPSDateTime to UTC based on local time zone',1);
         }
-        if ($notEnc and $notStr) {
-
-            $debug and $et->FoundTag(GPSType => 3);
-            # decode freeGPS from ViofoA119v3 dashcam (similar to Novatek GPS format)
-            # 0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-            # 0010: 05 00 00 00 2f 00 00 00 03 00 00 00 13 00 00 00 [..../...........]
-            # 0020: 09 00 00 00 1b 00 00 00 41 4e 57 00 25 d1 99 45 [........ANW.%..E]
-            # 0030: f1 47 40 46 66 66 d2 41 85 eb 83 41 00 00 00 00 [.G@Fff.A...A....]
-            if ($yr >= 2000) {
-                # Kenwood dashcam sometimes stores absolute year and local time
-                # (but sometimes year since 2000 and UTC time in same video!)
-                require Time::Local;
-                my $time = Image::ExifTool::TimeLocal($sec,$min,$hr,$day,$mon-1,$yr);
-                ($sec,$min,$hr,$day,$mon,$yr) = gmtime($time);
-                $yr += 1900;
-                ++$mon;
-                $et->Warn('Converting GPSDateTime to UTC based on local time zone',1);
-            }
-            $lat = GetFloat($dataPt, 0x2c);
-            $lon = GetFloat($dataPt, 0x30);
-            $spd = GetFloat($dataPt, 0x34) * $knotsToKph;
-            $trk = GetFloat($dataPt, 0x38);
-            # (may be all zeros or int16u counting from 1 to 6 if not valid)
-            my $tmp = substr($$dataPt, 60, 12);
-            if ($tmp ne "\0\0\0\0\0\0\0\0\0\0\0\0" and $tmp ne "\x01\0\x02\0\x03\0\x04\0\x05\0\x06\0") {
-                @acc = map { SignedInt32 / 256 } unpack('V3', $tmp);
-            }
-
-        } else {
-
-            $debug and $et->FoundTag(GPSType => 4);
-            # decode freeGPS from E-ACE B44 dashcam
-            # 0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-            # 0010: 08 00 00 00 22 00 00 00 01 00 00 00 18 00 00 00 [...."...........]
-            # 0020: 08 00 00 00 10 00 00 00 41 4e 45 00 67 4e 69 69 [........ANE.gNii]
-            # 0030: 5a 38 4a 54 74 48 63 61 36 74 77 3d 00 00 00 00 [Z8JTtHca6tw=....]
-            # 0040: 68 74 75 69 5a 4d 4a 53 73 58 55 58 37 4e 6f 3d [htuiZMJSsXUX7No=]
-            # 0050: 00 00 00 00 64 3b ac 41 e1 3a 1d 43 2b 01 00 00 [....d;.A.:.C+...]
-            # 0060: fd ff ff ff 43 00 00 00 32 4a 37 31 50 70 55 48 [....C...2J71PpUH]
-            # 0070: 37 69 68 66 00 00 00 00 00 00 00 00 00 00 00 00 [7ihf............]
-            # (16-byte string at 0x68 is base64 encoded and encrypted 'luckychip' string)
-            $spd = GetFloat($dataPt, 0x54) * $knotsToKph;
-            $trk = GetFloat($dataPt, 0x58);
-            @acc = map SignedInt32, unpack('x92V3', $$dataPt);
-            # (accelerometer scaling is roughly 1G=250-300, but it varies depending on the axis,
-            #  so leave the values as raw.  The axes are positive acceleration up,left,forward)
-            if ($notEnc) { # (not encrypted)
-                ($lat = $lt) =~ s/\0+$//;
-                ($lon = $ln) =~ s/\0+$//;
-            } else {
-                # decode base64 strings
-                require Image::ExifTool::XMP;
-                $_ = ${Image::ExifTool::XMP::DecodeBase64($_)} foreach ($lt, $ln);
-                # try various keys to decrypt lat/lon
-                my ($i, $ch, $key) = (0, 'a', $luckyKeys[0]);
-                for (; $i<20; ++$i) {
-                    $i and ($key = $luckyKeys[1]) =~ s/#/$ch/g, ++$ch;
-                    ($lat = DecryptLucky($lt, $key)) =~ /^\d{1,4}\.\d+$/ or undef($lat), next;
-                    ($lon = DecryptLucky($ln, $key)) =~ /^\d{1,5}\.\d+$/ or undef($lon), next;
-                    last;
-                }
-                $lon or $et->Warn('Unknown encryption for latitude/longitude');
-            }
+        $lat = GetFloat($dataPt, 0x2c);
+        $lon = GetFloat($dataPt, 0x30);
+        $spd = GetFloat($dataPt, 0x34) * $knotsToKph; # (convert knots to km/h)
+        $trk = GetFloat($dataPt, 0x38);
+        # (may be all zeros or int16u counting from 1 to 6 if not valid)
+        my $tmp = substr($$dataPt, 60, 12);
+        if ($tmp ne "\0\0\0\0\0\0\0\0\0\0\0\0" and $tmp ne "\x01\0\x02\0\x03\0\x04\0\x05\0\x06\0") {
+            @acc = unpack('V3', $tmp);
+            map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 256 } @acc;
         }
 
-    } elsif ($$dataPt =~ /^(.{16}|.{48}|.{80})LIGOGPSINFO\0/s and length($$dataPt) >= length($1) + 0x84) {
+    } elsif ($$dataPt =~ /^.{21}\0\0\0A([NS])([EW])/s) {
 
-        $debug and $et->FoundTag(GPSType => 5);
-        my $pos = length $1;
-        # iiway s1 dual dash cam
-        #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-        #  0010: 4c 49 47 4f 47 50 53 49 4e 46 4f 00 00 00 00 05 [LIGOGPSINFO.....]
-        #  0020: 0a 00 00 00 23 23 23 23 6a 00 00 00 c0 20 20 20 [....####j....   ]
-        #  0030: 20 f0 12 10 12 22 e1 0e 10 12 2f 90 10 13 02 f2 [ ...."..../.....]
-        # ABASK A8 4K Dashcam (different scaling factor)
-        #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-        #  0010: 4c 49 47 4f 47 50 53 49 4e 46 4f 00 00 00 00 05 [LIGOGPSINFO.....]
-        #  0020: 00 00 00 00 23 23 23 23 69 00 00 00 c0 20 20 20 [....####i....   ]
-        #  0030: 20 f0 12 10 12 23 e5 0e 10 12 2f 99 10 11 02 f2 [ ....#..../.....]
-        # XGODY 12" 4K Dashcam
-        #  0000: 00 00 00 a8 66 72 65 65 47 50 53 20 98 00 00 00 [....freeGPS ....]
-        #  0010: 4c 49 47 4f 47 50 53 49 4e 46 4f 00 00 00 00 05 [LIGOGPSINFO.....]
-        #  0020: cd 61 00 00 23 23 23 23 6d 00 00 00 c1 ec 41 20 [.a..####m.....A ]
-        #  0030: 20 f0 12 10 12 24 e5 0e 10 11 2f 92 10 12 00 f6 [ ....$..../.....]
-        # Rexing dashcam V1GW-4K
-        #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-        #  0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
-        #  0020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
-        #  0030: 4c 49 47 4f 47 50 53 49 4e 46 4f 00 00 00 00 05 [LIGOGPSINFO.....]
-        #  0040: 01 00 00 00 23 23 23 23 73 00 00 00 c0 20 20 20 [....####s....   ]
-        #  0050: 20 f0 12 10 12 23 e5 0e 10 12 2f 95 10 12 01 f3 [ ....#..../.....]
-        #  0060: 16 18 10 26 b4 1a 10 04 f2 6e 18 12 20 f0 0e 11 [...&.....n.. ...]
-        #  0070: 13 22 b3 16 10 01 fb 76 18 10 24 fa 0e 11 10 22 [.".....v..$...."]
-        # Kingslim D4 dashcam
-        #  0000: 0a 00 00 00 0b 00 00 00 07 00 00 00 e5 07 00 00 [................]
-        #  0010: 06 00 00 00 03 00 00 00 41 4e 57 31 91 52 83 45 [........ANW1.R.E]
-        #  0020: 15 70 fe c5 29 5c c3 41 ae c7 af 42 00 00 d1 be [.p..)\.A...B....]
-        #  0030: 00 00 80 3b 00 00 2c 3e 00 00 00 00 00 00 00 00 [...;..,>........]
-        #  0040: 00 00 00 00 00 00 00 00 00 00 00 00 26 26 26 26 [............&&&&]
-        #  0050: 4c 49 47 4f 47 50 53 49 4e 46 4f 00 00 00 00 05 [LIGOGPSINFO.....]
-        #  0060: 01 00 00 00 23 23 23 23 75 00 00 00 c0 22 20 20 [....####u...."  ]
-        #  0070: 20 f0 12 10 12 21 e5 0e 10 12 2f 90 10 13 01 f2 [ ....!..../.....]
-        my %dirInfo = ( DataPt => $dataPt, DirStart => $pos, DirName => "LigoGPS_$pos" );
-        # (this is weak, but the only difference I could find between these 2 headers)
-        # (NOTE: ../testpics/gps_video/forum16229.mp4 uses this word for a counter!)
-        $$et{LigoGPSScale} = 3 if $pos == 16 and $$dataPt =~ /^.{12}\xf0\x03\0\0.{16}\0{4}/s;
-        ProcessLigoGPS($et, \%dirInfo, $tagTbl);
-        $done = 1;
-
-        # also... when offset is 0x50 (Kingslim), the GPS also exists in this format:
-        # ($latRef, $lonRef) = ($1, $2);
-        # ($hr,$min,$sec,$yr,$mon,$day) = unpack("V6", $$dataPt);
-        # # lat/lon aren't decoded properly, but spd,trk,acc are
-        # $lat = GetFloat($dataPt, 0x1c);
-        # $lon = GetFloat($dataPt, 0x20);
-        # $et->VPrint(0, sprintf("Raw lat/lon = %.9f %.9f\n", $lat, $lon));
-        # $et->Warn('GPSLatitude/Longitude encryption is not yet known, so these will be wrong');
-        # $lat = abs $lat;
-        # $lon = abs $lon;
-        # $spd = GetFloat($dataPt, 0x24) * $knotsToKph; # (convert knots to km/h)
-        # $trk = GetFloat($dataPt, 0x28);
-        # $acc[0] = GetFloat($dataPt, 0x2c);
-        # $acc[1] = GetFloat($dataPt, 0x30);
-        # $acc[2] = GetFloat($dataPt, 0x34);
+        $debug and $et->FoundTag(GPSType => 4);
+        # also decode 'gpmd' chunk from Kingslim D4 dashcam videos
+        # 0000: 0a 00 00 00 0b 00 00 00 07 00 00 00 e5 07 00 00 [................]
+        # 0010: 06 00 00 00 03 00 00 00 41 4e 57 31 91 52 83 45 [........ANW1.R.E]
+        # 0020: 15 70 fe c5 29 5c c3 41 ae c7 af 42 00 00 d1 be [.p..)\.A...B....]
+        # 0030: 00 00 80 3b 00 00 2c 3e 00 00 00 00 00 00 00 00 [...;..,>........]
+        # 0040: 00 00 00 00 00 00 00 00 00 00 00 00 26 26 26 26 [............&&&&]
+        # 0050: 4c 49 47 4f 47 50 53 49 4e 46 4f 00 00 00 00 05 [LIGOGPSINFO.....]
+        # 0060: 01 00 00 00 23 23 23 23 75 00 00 00 c0 22 20 20 [....####u...."  ]
+        # 0070: 20 f0 12 10 12 21 e5 0e 10 12 2f 90 10 13 01 f2 [ ....!..../.....]
+        ($latRef, $lonRef) = ($1, $2);
+        ($hr,$min,$sec,$yr,$mon,$day) = unpack("V6", $$dataPt);
+        # lat/lon aren't decoded properly, but spd,trk,acc are
+        $lat = GetFloat($dataPt, 0x1c);
+        $lon = GetFloat($dataPt, 0x20);
+        $et->VPrint(0, sprintf("Raw lat/lon = %.9f %.9f\n", $lat, $lon));
+        $et->WarnOnce('GPSLatitude/Longitude encryption is not yet known, so these will be wrong');
+        $lat = abs $lat;
+        $lon = abs $lon;
+        $spd = GetFloat($dataPt, 0x24) * $knotsToKph; # (convert knots to km/h)
+        $trk = GetFloat($dataPt, 0x28);
+        $acc[0] = GetFloat($dataPt, 0x2c);
+        $acc[1] = GetFloat($dataPt, 0x30);
+        $acc[2] = GetFloat($dataPt, 0x34);
 
     } elsif ($$dataPt =~ /^.{60}A\0{3}.{4}([NS])\0{3}.{4}([EW])\0{3}/s) {
 
-        $debug and $et->FoundTag(GPSType => 6);
+        $debug and $et->FoundTag(GPSType => 5);
         # decode freeGPS from Akaso dashcam
         # 0000: 00 00 80 00 66 72 65 65 47 50 53 20 60 00 00 00 [....freeGPS `...]
         # 0010: 78 2e 78 78 00 00 00 00 00 00 00 00 00 00 00 00 [x.xx............]
@@ -1842,12 +1657,12 @@ sub ProcessFreeGPS($$$)
             $trk -= 360 if $trk >= 360;
             undef @acc;
         } else {
-            @acc = map { SignedInt32 / 1000 } @acc; # (NC)
+            map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 1000 } @acc; # (NC)
         }
 
     } elsif ($$dataPt =~ /^.{60}4W`b]S</s and length($$dataPt) >= 140) {
 
-        $debug and $et->FoundTag(GPSType => 7);
+        $debug and $et->FoundTag(GPSType => 6);
         # 0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 01 00 00 [..@.freeGPS ....]
         # 0010: 5a 58 53 42 4e 58 59 53 00 00 00 00 00 00 00 00 [ZXSBNXYS........]
         # 0020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
@@ -1857,18 +1672,18 @@ sub ProcessFreeGPS($$$)
         # 0060: 42 3e 49 49 40 42 45 3c 55 3c 45 47 3e 45 43 41 [B>II@BE<U<EG>ECA]
         # decipher $GPRMC by subtracting 16 from each character value
         $_ = pack 'C*', map { $_>=16 and $_-=16 } unpack('x60C80', $$dataPt);
-        if (/[A-Z]{2}RMC,(\d{2})(\d{2})(\d+(\.\d*)?),A?,(\d*?\d{1,2}\.\d+),([NS]),(\d*?\d{1,2}\.\d+),([EW]),(\d*\.?\d*),(\d*\.?\d*),(\d{2})(\d{2})(\d+)/) {
-            ($yr,$mon,$day,$hr,$min,$sec,$lat,$latRef,$lon,$lonRef) = ($13,$12,$11,$1,$2,$3,$5,$6,$7,$8);
-            $yr += ($yr >= 70 ? 1900 : 2000);
-            $spd = $9 * $knotsToKph if length $9;
-            $trk = $10 if length $10;
-        } else {
-            $done = 1;
+        unless (/[A-Z]{2}RMC,(\d{2})(\d{2})(\d+(\.\d*)?),A?,(\d*?\d{1,2}\.\d+),([NS]),(\d*?\d{1,2}\.\d+),([EW]),(\d*\.?\d*),(\d*\.?\d*),(\d{2})(\d{2})(\d+)/) {
+            SetByteOrder($oldOrder);
+            return 0;
         }
+        ($yr,$mon,$day,$hr,$min,$sec,$lat,$latRef,$lon,$lonRef) = ($13,$12,$11,$1,$2,$3,$5,$6,$7,$8);
+        $yr += ($yr >= 70 ? 1900 : 2000);
+        $spd = $9 * $knotsToKph if length $9;
+        $trk = $10 if length $10;
 
     } elsif ($$dataPt =~ /^.{64}[\x01-\x0c]\0{3}[\x01-\x1f]\0{3}A[NS][EW]\0{5}/s) {
 
-        $debug and $et->FoundTag(GPSType => 8);
+        $debug and $et->FoundTag(GPSType => 7);
         # Akaso V1 dascham
         #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 78 00 00 00 [....freeGPS x...]
         #  0010: 59 6e 64 41 6b 61 73 6f 43 61 72 00 00 00 00 00 [YndAkasoCar.....]
@@ -1893,7 +1708,7 @@ sub ProcessFreeGPS($$$)
         ($hr,$min,$sec,$yr,$mon,$day,$stat,$latRef,$lonRef) =
             unpack('x48V6a1a1a1x1', $$dataPt);
 
-        $et->Warn('GPSLatitude/Longitude encryption is not yet known, so these will be wrong');
+        $et->WarnOnce('GPSLatitude/Longitude encryption is not yet known, so these will be wrong');
         # (see https://exiftool.org/forum/index.php?topic=11320.0)
 
         $spd = GetFloat($dataPt, 0x60);
@@ -1901,11 +1716,11 @@ sub ProcessFreeGPS($$$)
         $lat = GetDouble($dataPt, 0x50);    # latitude is here, but encrypted somehow
         $lon = GetDouble($dataPt, 0x58);    # longitude is here, but encrypted somehow
         $ddd = 1; # don't convert until we know what the format is
-        #my $serialNum = substr($$dataPt, 0x68, 20); # (confirmed)
+        #my $serialNum = substr($$dataPt, 0x68, 20);
 
     } elsif ($$dataPt =~ /^.{12}\xac\0\0\0.{44}(.{72})/s) {
 
-        $debug and $et->FoundTag(GPSType => 9);
+        $debug and $et->FoundTag(GPSType => 8);
         # EACHPAI dash cam
         #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 ac 00 00 00 [....freeGPS ....]
         #  0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
@@ -1917,18 +1732,19 @@ sub ProcessFreeGPS($$$)
         #  0070: 43 41 3c 40 42 40 46 42 40 3c 3c 3c 51 3a 47 46 [CA<@B@FB@<<<Q:GF]
         #  0080: 00 2a 36 35 00 00 00 00 00 00 00 00 00 00 00 00 [.*65............]
 
-        $et->Warn("Can't yet decrypt EACHPAI timed GPS", 1);
+        $et->WarnOnce("Can't yet decrypt EACHPAI timed GPS", 1);
         # (see https://exiftool.org/forum/index.php?topic=5095.msg61266#msg61266)
-        $done = 1;
+        SetByteOrder($oldOrder);
+        return 1;
 
-      #  my $time = pack 'C*', map { $_ ^= 0 } unpack 'C*', $1;
-      #  # bytes 7-12 are the timestamp in ASCII HHMMSS after xor-ing with 0x70
-      #  substr($time,7,6) = pack 'C*', map { $_ ^= 0x70 } unpack 'C*', substr($time,7,6);
-      #  # (other values are currently unknown)
+        my $time = pack 'C*', map { $_ ^= 0 } unpack 'C*', $1;
+        # bytes 7-12 are the timestamp in ASCII HHMMSS after xor-ing with 0x70
+        substr($time,7,6) = pack 'C*', map { $_ ^= 0x70 } unpack 'C*', substr($time,7,6);
+        # (other values are currently unknown)
 
     } elsif ($$dataPt =~ /^.{64}A([NS])([EW])\0/s) {
 
-        $debug and $et->FoundTag(GPSType => 10);
+        $debug and $et->FoundTag(GPSType => 9);
         # Vantrue S1 dashcam
         #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 78 00 00 00 [....freeGPS x...]
         #  0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
@@ -1940,21 +1756,21 @@ sub ProcessFreeGPS($$$)
         #  0070: 05 00 00 00 7f 00 00 00 07 01 00 00 00 00 00 00 [................]
         ($latRef, $lonRef) = ($1, $2);
         ($yr,$mon,$day,$hr,$min,$sec,@acc) = unpack('x68V6x20V3', $$dataPt);
-        if ($mon>=1 and $mon<=12 and $day>=1 and $day<=31) {
-            # (not sure about acc scaling)
-            @acc = map { SignedInt32 / 1000 } @acc;
-            $lon = GetFloat($dataPt, 0x5c);
-            $lat = GetFloat($dataPt, 0x60);
-            $spd = GetFloat($dataPt, 0x64) * $knotsToKph;
-            $trk = GetFloat($dataPt, 0x68);
-            $alt = GetFloat($dataPt, 0x6c);
-        } else {
-            $done = 1;
+        unless ($mon>=1 and $mon<=12 and $day>=1 and $day<=31) {
+            SetByteOrder($oldOrder);
+            return 0;
         }
+        # (not sure about acc scaling)
+        map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 1000 } @acc;
+        $lon = GetFloat($dataPt, 0x5c);
+        $lat = GetFloat($dataPt, 0x60);
+        $spd = GetFloat($dataPt, 0x64) * $knotsToKph;
+        $trk = GetFloat($dataPt, 0x68);
+        $alt = GetFloat($dataPt, 0x6c);
 
     } elsif (substr($$dataPt,0x45,3) eq 'ATC') {
 
-        $debug and $et->FoundTag(GPSType => 11);
+        $debug and $et->FoundTag(GPSType => 10);
         # header looks like this: (sample 1)
         #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 38 06 00 00 [....freeGPS 8...]
         #  0010: 49 51 53 32 30 31 33 30 33 30 36 42 00 00 00 00 [IQS20130306B....]
@@ -1995,7 +1811,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
             my $i;
             for ($i=0; $i<@dateMax; ++$i) {
                 next if $now[$i] <= $dateMax[$i];
-                $et->Warn('Invalid GPS date/time');
+                $et->WarnOnce('Invalid GPS date/time');
                 next ATCRec;    # ignore this record
             }
             # look for next ATC record in temporal sequence
@@ -2062,11 +1878,12 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
         }
         # save position of most recent record (needed when parsing the next freeGPS block)
         $$et{FreeGPS2}{RecentRecPos} = $lastRecPos;
-        $done = 1;
+        SetByteOrder($oldOrder);
+        return 1;
 
     } elsif ($$dataPt =~ /^.{60}A\0.{10}([NS])\0.{14}([EW])\0/s and $dirLen >= 0x88) {
 
-        $debug and $et->FoundTag(GPSType => 12);
+        $debug and $et->FoundTag(GPSType => 11);
         # header looks like this in my sample:
         #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 08 01 00 00 [....freeGPS ....]
         #  0010: 32 30 31 33 30 38 31 35 2e 30 31 00 00 00 00 00 [20130815.01.....]
@@ -2089,7 +1906,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
         # 0x7c - int32s[3] accelerometer * 1000
         ($latRef, $lonRef) = ($1, $2);
         ($hr,$min,$sec,$yr,$mon,$day,@acc) = unpack('x48V3x52V6', $$dataPt);
-        @acc = map { SignedInt32 / 1000 } @acc;
+        map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 1000 } @acc;
         $lat = GetDouble($dataPt, 0x40);
         $lon = GetDouble($dataPt, 0x50);
         $spd = GetDouble($dataPt, 0x60) * $knotsToKph;
@@ -2097,20 +1914,16 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
 
     } elsif ($$dataPt =~ /^.{16}A([NS])([EW])\0/s) {
 
-        $debug and $et->FoundTag(GPSType => 13);
+        $debug and $et->FoundTag(GPSType => 12);
         # INNOVV MP4 video (same format as INNOVV TS)
-        #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-        #  0010: 41 4e 45 00 e4 56 96 45 86 b1 ca 44 5c 8f e2 40 [ANE..V.E...D\..@]
-        #  0020: 33 33 58 43 c3 00 00 00 30 00 00 00 a0 fe ff ff [33XC....0.......]
-        #  0030: 41 4e 45 00 e3 56 96 45 82 b1 ca 44 5c 8f fa 40 [ANE..V.E...D\..@]
-        #  0040: c3 75 56 43 8c ff ff ff 8c 00 00 00 c3 fd ff ff [.uVC............]
-        while ($$dataPt =~ /(A[NS][EW]\0.{28})/sg) {
+        while ($$dataPt =~ /(A[NS][EW]\0.{28})/g) {
             my $dat = $1;
             $lat = abs(GetFloat(\$dat, 4)); # (abs just to be safe)
             $lon = abs(GetFloat(\$dat, 8)); # (abs just to be safe)
             $spd = GetFloat(\$dat, 12) * $knotsToKph;
             $trk = GetFloat(\$dat, 16);
-            @acc = map SignedInt32, unpack('x20V3', $dat);
+            @acc = unpack('x20V3', $dat);
+            map { $_ = $_ - 4294967296 if $_ >= 0x80000000 } @acc;
             ConvertLatLon($lat, $lon);
             $$et{DOC_NUM} = ++$$et{DOC_COUNT};
             $et->HandleTag($tagTbl, GPSLatitude  => $lat * (substr($dat,1,1) eq 'S' ? -1 : 1));
@@ -2119,35 +1932,12 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
             $et->HandleTag($tagTbl, GPSTrack     => $trk);
             $et->HandleTag($tagTbl, Accelerometer => "@acc");
         }
-        $done = 1;
-
-    } elsif ($$dataPt =~ /^.{20}[\0-\x18][\0-\x3b]{2}[\0-\x09]A([NS])([EW])/s) {
-
-        $debug and $et->FoundTag(GPSType => 14);
-        # XBHT motorcycle dashcam Model XB702
-        #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
-        #  0010: 00 17 05 11 0d 25 18 00 41 4e 45 64 83 3f 00 00 [.....%..ANEd.?..]
-        #  0020: 44 3d c5 02 48 6d ff 07 df 03 00 00 6b 00 00 00 [D=..Hm......k...]
-        #  0030: 00 00 00 00 00 17 05 11 0d 25 18 01 41 4e 45 64 [.........%..ANEd]
-        #  0040: 8b 3f 00 00 30 3d c5 02 50 6d ff 07 df 03 00 00 [.?..0=..Pm......]
-        while ($$dataPt =~ /(.{7}[\0-\x09]A[NS][EW].{25})/sg) {
-            my $dat = $1;
-            ($yr,$mon,$day,$hr,$min,$sec,$ss,$latRef,$lonRef,$lat,$lon,$spd) =
-                unpack('xC7xCCx5VVx4v', $dat);
-            $yr += 2000;  $lat /= 1e4;  $lon /= 1e4;
-            ConvertLatLon($lat, $lon);
-            $$et{DOC_NUM} = ++$$et{DOC_COUNT};
-            my $time = sprintf('%.4d:%.2d:%.2d %.2d:%.2d:%.2d.%d',$yr,$mon,$day,$hr,$min,$sec,$ss);
-            $et->HandleTag($tagTbl, GPSDateTime  => $time);
-            $et->HandleTag($tagTbl, GPSLatitude  => $lat * ($latRef eq 'S' ? -1 : 1));
-            $et->HandleTag($tagTbl, GPSLongitude => $lon * ($lonRef eq 'W' ? -1 : 1));
-            $et->HandleTag($tagTbl, GPSSpeed     => $spd);
-        }
-        $done = 1;
+        SetByteOrder($oldOrder);
+        return 1;
 
     } elsif ($$dataPt =~ /^.{28}A.{11}([NS]).{15}([EW])/s) {
 
-        $debug and $et->FoundTag(GPSType => 15);
+        $debug and $et->FoundTag(GPSType => 13);
         # Vantrue N4 dashcam
         #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 f0 03 00 00 [..@.freeGPS ....]
         #  0010: 0d 00 00 00 16 00 00 00 1e 00 00 00 41 00 00 00 [............A...]
@@ -2167,7 +1957,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
         $lon = abs(GetDouble($dataPt, 48)); # (abs just to be safe)
         $spd = GetDouble($dataPt, 64) * $knotsToKph;
         $trk = GetDouble($dataPt, 72);
-        @acc = map { SignedInt32 / 1000 } @acc; # (NC)
+        map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 1000 } @acc; # (NC)
         # (not necessary to read RMC sentence because we already have it all)
 
     } elsif ($$dataPt =~ /^.{72}A[NS][EW]\0/s) {
@@ -2204,7 +1994,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
         ($hr,$min,$sec,$yr,$mon,$day,$stat,$latRef,$lonRef) =
             unpack('x48V6a1a1a1x1V4', $$dataPt);
         if (substr($$dataPt, 16, 3) eq 'IQS') {
-            $debug and $et->FoundTag(GPSType => 16);
+            $debug and $et->FoundTag(GPSType => 14);
             # Type 3b (ref PH)
             # header looks like this in my sample:
             #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 4c 00 00 00 [....freeGPS L...]
@@ -2216,7 +2006,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
             $spd = Get32s($dataPt, 0x54) / 100 * $mpsToKph;
             $alt = GetFloat($dataPt, 0x58) / 1000; # (NC)
         } else {
-            $debug and $et->FoundTag(GPSType => 17);
+            $debug and $et->FoundTag(GPSType => 15);
             $lat = GetFloat($dataPt, 0x4c);
             $lon = GetFloat($dataPt, 0x50);
             $spd = GetFloat($dataPt, 0x54) * $knotsToKph;
@@ -2234,58 +2024,9 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
             }
         }
 
-    } elsif ($$dataPt =~ m<^.{23}(\d{4})/(\d{2})/(\d{2}) (\d{2}):(\d{2}):(\d{2}) [N|S]>s) {
-
-        $debug and $et->FoundTag(GPSType => 18);
-        # XGODY 12" 4K Dashcam
-        #  0000: 00 00 00 a8 66 72 65 65 47 50 53 20 98 00 00 00 [....freeGPS ....]
-        #  0010: 6e 6f 72 6d 61 6c 3a 32 30 32 34 2f 30 35 2f 32 [normal:2024/05/2]
-        #  0020: 32 20 30 32 3a 35 34 3a 32 39 20 4e 3a 34 32 2e [2 02:54:29 N:42.]
-        #  0030: 33 38 32 34 37 30 20 57 3a 38 33 2e 33 38 39 35 [382470 W:83.3895]
-        #  0040: 37 30 20 35 33 2e 36 20 6b 6d 2f 68 20 78 3a 2d [70 53.6 km/h x:-]
-        #  0050: 30 2e 30 32 20 79 3a 30 2e 39 39 20 7a 3a 30 2e [0.02 y:0.99 z:0.]
-        #  0060: 31 30 20 41 3a 32 36 39 2e 32 20 48 3a 32 34 35 [10 A:269.2 H:245]
-        #  0070: 2e 35 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [.5..............]
-        ($yr,$mon,$day,$hr,$min,$sec) = ($1,$2,$3,$4,$5,$6);
-        $$dataPt =~ s/\0+$//;   # remove trailing nulls
-        my @a = split ' ', substr($$dataPt,43);
-        $ddd = 1;
-        foreach (@a) {
-            unless (/^([A-Z]):([-+]?\d+(\.\d+)?)$/i) {
-                # (the "km/h" after spd is display units? because the value is stored in knots)
-                defined $lon and not defined $spd and /^\d+\.\d+$/ and $spd = $_ * $knotsToKph;
-                next;
-            }
-            ($1 eq 'N' or $1 eq 'S') and $lat = $2, $latRef = $1, next;
-            ($1 eq 'E' or $1 eq 'W') and $lon = $2, $lonRef = $1, next;
-            ($1 eq 'x' or $1 eq 'y' or $1 eq 'z') and push(@acc,$2), next;
-            $1 eq 'A' and $trk = $2, next; # (verified, but why 'A'?)
-            # seen 'H' - one might expect altitude ('H'eight), but it doesn't fit
-            # the sample data, so save all other information as an "Unknown_X" tag
-            $$tagTbl{$1} or AddTagToTable($tagTbl, $1, { Name => "Unknown_$1", Unknown => 1 });
-            push(@xtra, $1 => $2), next;
-        }
-
-    } elsif ($$dataPt =~ m/^.{30}A.{20}VV/) {
-
-        $debug and $et->FoundTag(GPSType => 19);
-        # 70mai A810 dashcam (note: no timestamps in the samples I have)
-        #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 ed 01 00 00 [..@.freeGPS ....]
-        #  0010: 03 00 ed 01 00 00 00 0f 00 00 70 08 00 00 41 66 [..........p...Af]
-        #  0020: 13 7d 1e 3c 11 dc 03 5d 01 00 00 01 00 00 00 23 [.}.<...].......#]
-        #  0030: 00 00 00 56 56 00 00 00 00 00 00 00 00 00 00 00 [...VV...........]
-        #  0040: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
-        SetByteOrder('II');
-        SetGPSDateTime($et, $tagTbl, $$dirInfo{SampleTime});
-        $lat = Get32s($dataPt, 31) / 1e5;
-        $lon = Get32s($dataPt, 35) / 1e5;
-        $spd = Get32s($dataPt, 43);  # (seems to be km/h but not confirmed)
-        # offset 475 - int16u=N string[N] - some sort of settings?:
-        # eg. "\x15\x00{pA:V,rA:V,sF:0,tF:2}"
-
     } else {
 
-        $debug and $et->FoundTag(GPSType => 20);
+        $debug and $et->FoundTag(GPSType => 16);
         # (look for binary GPS as stored by Nextbase 512G, ref PH)
         #  0000: 00 00 80 00 66 72 65 65 47 50 53 20 78 01 00 00 [....freeGPS x...]
         #  0010: 78 2e 78 78 00 00 00 00 00 00 00 00 00 00 00 00 [x.xx............]
@@ -2318,7 +2059,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
                     $day < 1 or $day > 31 or
                     $hr > 59 or $min > 59 or $sec > 600;
             # change lat/lon to signed integer and divide by 1e7
-            ($lat, $lon) = map { SignedInt32 / 1e7 } $lat, $lon;
+            map { $_ = $_ - 4294967296 if $_ >= 0x80000000; $_ /= 1e7 } $lat, $lon;
             $trk -= 0x10000 if $trk >= 0x8000;  # make it signed
             $trk /= 100;
             $trk += 360 if $trk < 0;
@@ -2331,14 +2072,14 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
             $et->HandleTag($tagTbl, GPSTrack     => $trk);
             last if $pos += 0x20 > length($$dataPt) - 0x1e;
         }
-        $done = 1;
+        SetByteOrder($oldOrder);
+        return $$et{DOC_NUM} ? 1 : 0;   # return 0 if nothing extracted
     }
-    SetByteOrder($oldOrder);
-    return $$et{DOC_NUM} ? 1 : 0 if $done;
-    return 0 if defined $yr and $mon < 1 or $mon > 12;  # quick sanity check
 #
 # save tag values extracted by above code
 #
+    SetByteOrder($oldOrder);
+    return 0 if defined $yr and $mon < 1 or $mon > 12;  # quick sanity check
     FoundSomething($et, $tagTbl, $$dirInfo{SampleTime}, $$dirInfo{SampleDuration});
     $sec = '0' . $sec unless $sec =~ /^\d{2}/;   # pad integer part of seconds to 2 digits
     if (defined $yr) {
@@ -2349,7 +2090,7 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
         my $time = sprintf('%.2d:%.2d:%sZ',$hr,$min,$sec);
         $et->HandleTag($tagTbl, GPSTimeStamp => $time);
     }
-    if (defined $lat and defined $lon) {
+    if (defined $lat) {
         # lat/long are in DDDMM.MMMM format unless $ddd is set
         ConvertLatLon($lat, $lon) unless $ddd;
         $et->HandleTag($tagTbl, GPSLatitude  => $lat * ($latRef eq 'S' ? -1 : 1));
@@ -2464,7 +2205,7 @@ sub ParseTag($$$)
 }
 
 #------------------------------------------------------------------------------
-# Process Yuneec 'tx3g' and Autel sbtl metadata (ref PH)
+# Process Yuneec 'tx3g' sbtl metadata (ref PH)
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 # Returns: 1 on success
 sub Process_tx3g($$$)
@@ -2472,49 +2213,13 @@ sub Process_tx3g($$$)
     my ($et, $dirInfo, $tagTablePtr) = @_;
     my $dataPt = $$dirInfo{DataPt};
     return 0 if length $$dataPt < 2;
+    pos($$dataPt) = 2;  # skip 2-byte length word
     $et->VerboseDir('tx3g', undef, length($$dataPt)-2);
-    my $text = substr($$dataPt, 2); # remove 2-byte length word
-    $et->HandleTag($tagTablePtr, 'Text', $text);
-    if ($text =~ /^HOME\(/) {
-        # --- sample text from Autel Evo II drone ---
-        # HOME(W: 109.318642, N: 40.769371) 2023-09-12 10:28:07
-        # GPS(W: 109.339287, N: 40.768574, 2371.76m)
-        # HDR ISO:100 SHUTTER:1000 EV:-0.7 F-NUM:1.8
-        # F.PRY (1.0\xc2\xb0, -3.7\xc2\xb0, -59.0\xc2\xb0), G.PRY (-51.1\xc2\xb0, 0.0\xc2\xb0, -58.9\xc2\xb0)
-        my $line;
-        foreach $line (split /\x0a/, $text) {
-            if ($line =~ /^HOME\(([EW]):\s*(\d+\.\d+),\s*([NS]):\s*(\d+\.\d+)\)\s*(.*)/) {
-                my ($lon, $lat, $time) = ($2, $4, $5);
-                $lon = -$lon if $1 eq 'W';
-                $lat = -$lat if $3 eq 'S';
-                $time =~ tr/-/:/; # (likely local time zone, but not confirmed)
-                $et->HandleTag($tagTablePtr, GPSDateTime => $time);
-                $et->HandleTag($tagTablePtr, HomeLat     => $lat);
-                $et->HandleTag($tagTablePtr, HomeLon     => $lon);
-            } elsif ($line =~ /^GPS\(([EW]):\s*(\d+\.\d+),\s*([NS]):\s*(\d+\.\d+),\s*(.*)m/) {
-                my ($lon, $lat, $alt) = ($2, $4, $5);
-                $lon = -$lon if $1 eq 'W';
-                $lat = -$lat if $3 eq 'S';
-                $et->HandleTag($tagTablePtr, Lat  => $lat);
-                $et->HandleTag($tagTablePtr, Lon  => $lon);
-                $et->HandleTag($tagTablePtr, Alt  => $alt);
-            } elsif ($line =~ /^F\.PRY\s*\((-?[\d.]+)\xc2\xb0,\s*(-?[\d.]+)\xc2\xb0,\s*(-?[\d.]+)\xc2\xb0/) {
-                $et->HandleTag($tagTablePtr, Yaw   => $1);
-                $et->HandleTag($tagTablePtr, Pitch => $2);
-                $et->HandleTag($tagTablePtr, Roll  => $3);
-                if ($line =~ /G\.PRY\s*\((-?[\d.]+)\xc2\xb0,\s*(-?[\d.]+)\xc2\xb0,\s*(-?[\d.]+)\xc2\xb0/) {
-                    $et->HandleTag($tagTablePtr, GimYaw   => $1);
-                    $et->HandleTag($tagTablePtr, GimPitch => $2);
-                    $et->HandleTag($tagTablePtr, GimRoll  => $3);
-                }
-            } else {
-                $et->HandleTag($tagTablePtr, $1, $2) while $line =~ /([-\w]+):([^:]*[^:\s])(\s|$)/sg;
-            }
-        }
-    } elsif ($text =~ /^\w{3} (\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2}:\d{2}) ?([-+])(\d{2}):?(\d{2})$/s) {
+    $et->HandleTag($tagTablePtr, 'Text', substr($$dataPt, 2));
+    if ($$dataPt =~ /^..\w{3} (\d{4})-(\d{2})-(\d{2}) (\d{2}:\d{2}:\d{2}) ?([-+])(\d{2}):?(\d{2})$/s) {
         $et->HandleTag($tagTablePtr, 'DateTime', "$1:$2:$3 $4$5$6:$7");
     } else {
-        $et->HandleTag($tagTablePtr, $1, $2) while $text =~ /(\w+):([^:]*[^:\s])(\s|$)/sg;
+        $et->HandleTag($tagTablePtr, $1, $2) while $$dataPt =~ /(\w+):([^:]*[^:\s])(\s|$)/sg;
     }
     return 1;
 }
@@ -2556,7 +2261,7 @@ sub Process_mebx($$$)
                 Size   => $len - 8,
             );
         } else {
-            $et->Warn('No key information for mebx ID ' . PrintableTagID($id,1));
+            $et->WarnOnce('No key information for mebx ID ' . PrintableTagID($id,1));
         }
     }
     return 1;
@@ -2679,7 +2384,7 @@ sub Process_gdat($$$)
 {
     my ($et, $dirInfo, $tagTbl) = @_;
     unless ($$et{OPTIONS}{ExtractEmbedded}) {
-        $et->Warn('Use the ExtractEmbedded option to extract timed GPSData',3);
+        $et->WarnOnce('Use the ExtractEmbedded option to extract timed GPSData',3);
         return 0;
     }
     my $dataPt = $$dirInfo{DataPt};
@@ -2723,227 +2428,18 @@ sub Process_nbmt($$$)
         $$et{DOC_NUM} = $$et{DOC_COUNT} + 1;
         delete $$et{UnknownTextCount};
         delete $$et{NoMoreTextDecoding};
-        $$et{SET_GROUP1} = 'Nextbase';
         Process_text($et, $dataPt, $tagTbl, 1);
-        delete $$et{SET_GROUP1};
         delete $$et{UnknownTextCount};
         delete $$et{NoMoreTextDecoding};
         delete $$et{DOC_NUM};
     } else {
-        $et->Warn('Use the ExtractEmbedded option to extract timed GPSData',3);
+        $et->WarnOnce('Use the ExtractEmbedded option to extract timed GPSData',3);
     }
     return 1;
 }
 
 #------------------------------------------------------------------------------
-# Un-do LIGOGPS fuzzing
-# Inputs: 0) fuzzed latitude, 1) fuzzed longitude, 2) scale factor
-# Returns: 0) latitude, 1) longitude
-sub UnfuzzLigoGPS($$$)
-{
-    my ($lat, $lon, $scl) = @_;
-    my $lat2 = int($lat / 10) * 10;
-    my $lon2 = int($lon / 10) * 10;
-    return($lat2 + ($lon - $lon2) * $scl, $lon2 + ($lat - $lat2) * $scl);
-}
-
-#------------------------------------------------------------------------------
-# Decrypt LIGOGPSINFO record (starting with "####")
-# Inputs: 0) encrypted GPS record incuding 8-byte header
-# Returns: decrypted record including 4-byte uint32 header, or undef on error
-sub DecryptLigoGPS($)
-{
-    my $str = shift;
-    my $num = unpack('x4V',$str);
-    return undef if $num < 4;
-    $num = 0x84 if $num > 0x84; # (be safe)
-    my @in = unpack("x8C$num",$str);
-    my @out;
-    while (@in) {
-        my $b = shift @in;
-        my $steeringBits = $b & 0xe0;
-        if ($steeringBits >= 0xc0) {
-            return undef if @in < 4;
-            push @out, (shift(@in) | $b & 0x01) ^ 0x20,
-                       (shift(@in) | $b & 0x02) ^ 0x20,
-                       (shift(@in) | $b & 0x0c) ^ 0x20,
-                        shift(@in) ^ 0x20 | $b & 0x30;
-        } elsif ($steeringBits >= 0x40) {
-            return undef if @in < 3;
-            if ($steeringBits == 0x40) {
-                push @out, 0x20,
-                           (shift(@in) | $b & 0x01) ^ 0x20,
-                           (shift(@in) | $b & 0x06) ^ 0x20,
-                           (shift(@in) | $b & 0x18) ^ 0x20;
-            } elsif ($steeringBits == 0x60) {
-                push @out, (shift(@in) | $b & 0x03) ^ 0x20,
-                           0x20,
-                           (shift(@in) | $b & 0x04) ^ 0x20,
-                           (shift(@in) | $b & 0x18) ^ 0x20;
-            } elsif ($steeringBits == 0x80) {
-                push @out, (shift(@in) | $b & 0x03) ^ 0x20,
-                           (shift(@in) | $b & 0x0c) ^ 0x20,
-                           0x20,
-                           (shift(@in) | $b & 0x10) ^ 0x20;
-            } else {
-                push @out, (shift(@in) | $b & 0x01) ^ 0x20,
-                           (shift(@in) | $b & 0x06) ^ 0x20,
-                           (shift(@in) | $b & 0x18) ^ 0x20,
-                           0x20;
-            }
-        } elsif ($steeringBits == 0x00) {
-            return undef if @in < 1;
-            push @out, shift(@in) | $b & 0x13;
-        } else {
-            return undef;   # (shouldn't happen)
-        }
-    }
-    return pack 'C*', @out;
-}
-
-#------------------------------------------------------------------------------
-# Decipher and parse LIGOGPSINFO record (starting with "####")
-# Inputs: 0) ExifTool ref, 1) enciphered string, 2) tag table ref
-# Returns: true if this looked like an enciphered string
-# Notes: handles contained tags, but may defer handling until full cipher is known
-sub DecipherLigoGPS($$$)
-{
-    my ($et, $str, $tagTbl) = @_;
-
-    # (enciphered characters must be in the range 0x30-0x5f ('0' - '_'))
-    $str =~ m[^####.{4}([0-_])[0-_]{3}/[0-_]{2}/[0-_]{2} ..([0-_])..([0-_]).([0-_]) ]s or return undef;
-    return undef unless $2 eq $3;   # (colons in time string must be the same)
-
-    my $cipherInfo = $$et{LigoCipher};
-    $cipherInfo or $cipherInfo = $$et{LigoCipher} = { cache => [ ], secs => [ ], two => -1 };
-    my $decipher = $$cipherInfo{decipher};
-    my $cache = $$cipherInfo{cache};
-
-    # determine the cipher code table based on the advancing 1's digit of seconds
-    unless ($decipher) {
-        push @$cache, $str;     # cache records until we can decipher them
-        my ($millennium, $colon) = ($1, $2);
-        # determine the Caesar cipher lookup table
-        # (only characters in range 0x30-0x5f are encrypted)
-        my $secs = $$cipherInfo{secs};
-        push @$secs, $4 unless @$secs and $${secs}[-1] eq $4;
-        $$cipherInfo{two} = $#$secs if $4 eq $millennium; # save index of enciphered '2'
-        return 1 if @$secs < 10; # must cache the data until we know all 10 digits
-        my $two = $$cipherInfo{two};        # (index of '2' in the array)
-        my %decipher = ( $colon => ':' );   # (':' is the time separator)
-        foreach (0..9) {
-            my $ch = $$secs[($_ + $two - 2 + 10) % 10];
-            if ($two < 0 or defined $decipher{$ch}) { # (must be a unique code for each digit)
-                @$cipherInfo{'secs','two'} = ([ ], -1); # reset and try again
-                $et->Warn('Hiccup while deciphering LIGOGPSINFO');
-                return 1;
-            }
-            $decipher{$ch} = chr($_ + 0x30);
-        }
-        # also know the lat/lon quadrant from the signs of the coordinates
-        if ($str =~ / ([0-_])$colon(-?).*? ([0-_])$colon(-?)/) {
-            @decipher{$1,$3} = ($2 ? 'S' : 'N', $4 ? 'W' : 'E');
-        }
-        # fill in unknown entries with '?' (only chars 0x30-0x5f are enciphered)
-        defined $decipher{$_} or $decipher{$_} = '?' foreach map(chr, 0x30..0x5f);
-        $decipher = $$cipherInfo{decipher} = \%decipher;
-        $str = shift @$cache;   # start deciphering at oldest cache entry
-    }
-
-    # apply reverse Caesar cipher and extract GPS information
-    do {
-        my $pre = substr($str, 4, 4);        # save second 4 bytes of header
-        ($str = substr($str,8)) =~ s/\0+$//; # remove 8-byte header and null padding
-        $str =~ s/([0-_])/$$decipher{$1}/g;  # decipher
-        if ($$et{OPTIONS}{Verbose} > 1) {
-            $et->VPrint(1, "$$et{INDENT}\(Deciphered: ".unpack('H8',$pre)." $str)\n");
-        }
-        # add back leading 4 bytes (int16u counter plus 2 unknown bytes), and parse
-        # (not fuzzed in my only sample when found in standard 'skip' atom)
-        ParseLigoGPS($et, "$pre$str", $tagTbl, $$et{LigoType} eq 'LigoGPSInfo');
-    } while $str = shift @$cache;
-
-    return 1;
-}
-
-#------------------------------------------------------------------------------
-# Parse decrypted/deciphered (but not defuzzed) LIGOGPSINFO record
-# (record starts with 4-byte int32u counter followed by date/time, etc)
-# Inputs: 0) ExifTool ref, 1) GPS string, 2) tag table ref, 3) not fuzzed
-# Returns: nothing
-sub ParseLigoGPS($$$;$)
-{
-    my ($et, $str, $tagTbl, $noFuzz) = @_;
-
-    # example string input
-    # "....2022/09/19 12:45:24 N:31.285065 W:124.759483 46.93 km/h x:-0.000 y:-0.000 z:-0.000"
-    unless ($str=~ /^.{4}(\S+ \S+)\s+([NS?]):(-?)([.\d]+)\s+([EW?]):(-?)([\.\d]+)\s+([.\d]+)/s) {
-        $et->Warn('LIGOGPSINFO format error');
-        return;
-    }
-    my ($time,$latRef,$latNeg,$lat,$lonRef,$lonNeg,$lon,$spd) = ($1,$2,$3,$4,$5,$6,$7,$8);
-    my %gpsScl = ( 1 => 1.524855137, 2 => 1.456027985, 3 => 1.15368 );
-    my $spdScl = $noFuzz ? $knotsToKph : 1.85407333;
-    $$et{DOC_NUM} = ++$$et{DOC_COUNT};
-    $time =~ tr(/)(:);
-    # convert from DDMM.MMMMMM to DD.DDDDDD if necessary
-    # (speed wasn't scaled in my 1 sample with this format)
-    $lat =~ /^\d{3}/ and ConvertLatLon($lat,$lon), $spdScl = 1;
-    unless ($noFuzz) { # unfuzz the coordinates if necessary
-        my $scl = $$et{OPTIONS}{LigoGPSScale} || $$et{LigoGPSScale} || 1;
-        $scl = $gpsScl{$scl} if $gpsScl{$scl};
-        ($lat, $lon) = UnfuzzLigoGPS($lat, $lon, $scl);
-    }
-    # a final sanity check
-    ($lat > 90 or $lon > 180) and $et->Warn('LIGOGPSINFO coordinates out of range'), return;
-    $$et{SET_GROUP1} = 'LIGO';
-    $et->HandleTag($tagTbl, 'GPSDateTime',  $time);
-    # (ignore N/S/E/W if coordinate is signed)
-    $et->HandleTag($tagTbl, 'GPSLatitude',  $lat * (($latNeg or $latRef eq 'S') ? -1 : 1));
-    $et->HandleTag($tagTbl, 'GPSLongitude', $lon * (($lonNeg or $lonRef eq 'W') ? -1 : 1));
-    $et->HandleTag($tagTbl, 'GPSSpeed',     $spd * $spdScl);
-    $et->HandleTag($tagTbl, 'GPSTrack', $1) if $str =~ /\bA:(\S+)/;
-    # (have a sample where tab is used to separate acc components)
-    $et->HandleTag($tagTbl, 'Accelerometer',"$1 $2 $3") if $str =~ /x:(\S+)\sy:(\S+)\sz:(\S+)/;
-    $et->HandleTag($tagTbl, 'M', $1) if $str =~ /\bM:(\S+)/;
-    $et->HandleTag($tagTbl, 'H', $1) if $str =~ /\bH:(\S+)/;
-    delete $$et{SET_GROUP1};
-}
-
-#------------------------------------------------------------------------------
-# Process LIGOGPSINFO data (non-JSON format)
-# Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
-#         3) 1=LIGOGPS lat/lon/spd weren't fuzzed
-# Returns: 1 on success
-sub ProcessLigoGPS($$$;$)
-{
-    my ($et, $dirInfo, $tagTbl, $noFuzz) = @_;
-    my $dataPt = $$dirInfo{DataPt};
-    my $pos = ($$dirInfo{DirStart} || 0) + 0x14;
-    my $cipherInfo = $$et{LigoCipher};
-    return undef if $pos > length $$dataPt;
-    $$et{LigoType} = $$dirInfo{DirName} || 'LigoGPS';
-    push @{$$et{PATH}}, $$et{LigoType} unless $$dirInfo{DirID};
-    # not fuzzed if header is "LIGOGPSINFO\0\0\0\0\x01" (BlueSkySeaDV688)
-    $noFuzz = 1 if substr($$dataPt, $pos-8, 4) eq "\0\0\0\x01";
-    $et->VerboseDir($$et{LigoType});
-    for (; $pos + 0x84 <= length($$dataPt); $pos+=0x84) {
-        my $dat = substr($$dataPt, $pos, 0x84);
-        $dat =~ /^####/ or next; # (have seen blank records filled with zeros, so keep trying)
-        # decipher if we already know the encryption
-        $cipherInfo and $$cipherInfo{decipher} and DecipherLigoGPS($et, $dat, $tagTbl) and next;
-        my $str = DecryptLigoGPS($dat);
-        defined $str or DecipherLigoGPS($et, $dat, $tagTbl), next;   # try to decipher
-        $et->VPrint(1, "$$et{INDENT}\(Decrypted: ",unpack('V',$str),' ',substr($str,4),")\n") if $$et{OPTIONS}{Verbose} > 1;
-        ParseLigoGPS($et, $str, $tagTbl, $noFuzz);
-    }
-    pop @{$$et{PATH}} unless $$dirInfo{DirID};
-    delete $$et{DOC_NUM};
-    return 1;
-}
-
-#------------------------------------------------------------------------------
-# Process LIGOGPSINFO JSON-format GPS (Yada RoadCam Pro 4K BT58189)
+# Process LIGOGPS JSON-format GPS from Yada RoadCam Pro 4K BT58189
 # Inputs: 0) ExifTool ref, 1) dirInfo ref, 2) tag table ref
 # Returns: 1 on success
 # Sample data (chained 512-byte records starting like this):
@@ -2954,14 +2450,13 @@ sub ProcessLigoGPS($$$;$)
 # 0040: 22 3a 20 22 32 30 32 33 22 2c 20 22 4d 6f 6e 74 [": "2023", "Mont]
 # 0050: 68 22 3a 20 22 31 32 22 2c 20 22 44 61 79 22 3a [h": "12", "Day":]
 # 0060: 20 22 32 38 22 2c 20 22 73 74 61 74 75 73 22 3a [ "28", "status":]
-sub ProcessLigoJSON($$$)
+sub ProcessLIGO_JSON($$$)
 {
     my ($et, $dirInfo, $tagTbl) = @_;
     my $dataPt = $$dirInfo{DataPt};
     my $dirLen = $$dirInfo{DirLen};
     require Image::ExifTool::Import;
     $et->VerboseDir('LIGO_JSON', undef, length($$dataPt));
-    $$et{SET_GROUP1} = 'LIGO';
     while ($$dataPt =~ /LIGOGPSINFO (\{.*?\})/g) {
         my $json = $1;
         my %dbase;
@@ -3011,12 +2506,11 @@ sub ProcessLigoJSON($$$)
             $et->HandleTag($tagTbl, GPSLongitude2 => $lon);
         }
         unless ($et->Options('ExtractEmbedded')) {
-            $et->Warn('Use the ExtractEmbedded option to extract all timed GPS',3);
+            $et->WarnOnce('Use the ExtractEmbedded option to extract all timed GPS',3);
             last;
         }
     }
     delete $$et{DOC_NUM};
-    delete $$et{SET_GROUP1};
     return 1;
 }
 
@@ -3059,7 +2553,7 @@ sub ProcessKenwood($$$)
         }
         $et->HandleTag($tagTbl, Accelerometer => "@acc") if @acc;
         unless ($et->Options('ExtractEmbedded')) {
-            $et->Warn('Use the ExtractEmbedded option to extract all timed GPS',3);
+            $et->WarnOnce('Use the ExtractEmbedded option to extract all timed GPS',3);
             last;
         }
     }
@@ -3156,53 +2650,6 @@ sub ProcessRIFFTrailer($$$)
     }
     delete $$et{DOC_NUM};
     SetByteOrder('MM');
-    return 1;
-}
-
-#------------------------------------------------------------------------------
-# Process Kenwood Dashcam trailer (forum16229)
-# Inputs: 0) ExifTool ref, 1) dirInfo ref, 2) tag table ref
-# Returns: 1 on success
-# Sample data (chained 512-byte records starting like this):
-# 0000:  43 43 43 43 43 43 43 43 43 43 43 43 43 43 47 50 [CCCCCCCCCCCCCCGP]
-# 0010:  53 44 41 54 41 2d 2d 32 30 32 34 30 37 31 31 31 [SDATA--202407111]
-# 0020:  32 30 34 31 32 4e 35 30 2e 36 31 32 33 38 36 30 [20412N50.6123860]
-# 0030:  36 37 37 45 38 2e 37 30 32 37 31 38 30 39 38 39 [677E8.7027180989]
-# 0040:  35 33 33 2e 30 30 30 30 30 30 30 30 30 30 30 30 [533.000000000000]
-# 0050:  2e 30 30 30 30 30 30 30 30 30 30 30 30 30 2e 30 [.0000000000000.0]
-# 0060:  31 39 39 39 39 39 39 39 35 35 33 2d 30 2e 30 39 [19999999553-0.09]
-# 0070:  30 30 30 30 30 30 33 35 37 2d 30 2e 31 34 30 30 [000000357-0.1400]
-# 0080:  30 30 30 30 30 35 39 47 50 53 44 41 54 41 2d 2d [0000059GPSDATA--]
-sub ProcessKenwoodTrailer($$$)
-{
-    my ($et, $dirInfo, $tagTbl) = @_;
-    my $raf = $$dirInfo{RAF};
-    my $buff;
-    # current file position is 8 bytes into the 14 C's, so test the next 6:
-    $raf->Read($buff, 14) and $buff eq 'CCCCCCCCCCCCCC' or return 0;
-    $et->VerboseDir('Kenwood trailer', undef, undef);
-    unless ($$et{OPTIONS}{ExtractEmbedded}) {
-        $et->Warn('Use the ExtractEmbedded option to extract timed GPSData from Kenwood trailer',3);
-        return 1;
-    }
-    while ($raf->Read($buff, 121) and $buff =~ /^GPSDATA--(\d{4})(\d{2})(\d{2})(\d{2})(\d{2})(\d{2})/) {
-        FoundSomething($et, $tagTbl);
-        $et->HandleTag($tagTbl, GPSDateTime => "$1:$2:$3 $4:$5:$6");
-        my $i = 9 + 14;
-        my ($val, @acc, $tag);
-        foreach $tag (qw(GPSLatitude GPSLongitude GPSSpeed unk acc acc acc)) {
-            $val = substr($buff, $i, 14); $i += 14;
-            next if $tag eq 'unk';
-            my $hemi;
-            $hemi = $1 if $val =~ s/^([NSEW])//;
-            $val =~ /^[-+]?\d+\.\d+$/ or next;
-            $tag eq 'acc' and push(@acc,$val), next;
-            $val = -$val if $hemi and ($hemi eq 'S' or $hemi eq 'W');
-            $et->HandleTag($tagTbl, $tag => $val);
-        }
-        $et->HandleTag($tagTbl, Accelerometer => "@acc") if @acc == 3;
-    }
-    delete $$et{DOC_NUM};
     return 1;
 }
 
@@ -3405,7 +2852,7 @@ sub ProcessTTAD($$$)
                 $et->HandleTag($tagTbl, "Unknown0$type" => "@a");
             }
         } else {
-            $et->Warn("Unknown TTAD record type $type",1);
+            $et->WarnOnce("Unknown TTAD record type $type",1);
         }
         # without -ee, stop after we find types 0,3,5 (ie. bitmask 0x29)
         $eeOpt or ($found & 0x29) != 0x29 or EEWarn($et), last;
@@ -3457,7 +2904,7 @@ sub ProcessInsta360($;$)
     }
     unless ($et->Options('ExtractEmbedded')) {
         # can arrive here when reading Insta360 trailer on JPEG image (INSP file)
-        $et->Warn('Use ExtractEmbedded option to extract timed metadata from Insta360 trailer',3);
+        $et->WarnOnce('Use ExtractEmbedded option to extract timed metadata from Insta360 trailer',3);
         return 1;
     }
 
@@ -3654,8 +3101,8 @@ sub ProcessCAMM($$$)
     my $rtnVal = 0;
     while ($pos + 4 < $end) {
         my $type = Get16u($dataPt, $pos + 2);
-        my $size = $size{$type} or $et->Warn("Unknown camm record type $type"), last;
-        $pos + $size > $end and $et->Warn("Truncated camm record $type"), last;
+        my $size = $size{$type} or $et->WarnOnce("Unknown camm record type $type"), last;
+        $pos + $size > $end and $et->WarnOnce("Truncated camm record $type"), last;
         my $tagTbl = GetTagTable("Image::ExifTool::QuickTime::camm$type");
         $$dirInfo{DirStart} = $pos;
         $$dirInfo{DirLen} = $size;
@@ -3879,7 +3326,6 @@ sub ScanMediaData($)
             }
             my $dirInfo = { DataPt => \$buff, DataPos => $pos + $dataPos, DirLen => $len };
             ProcessFreeGPS($et, $dirInfo, $tagTbl);
-            $$et{FoundGPSByScan} = 1;
         }
         $pos += $len;
         $buf2 = substr($buff, $len);

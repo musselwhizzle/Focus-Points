@@ -35,7 +35,7 @@ use Image::ExifTool::Sony;
 use Image::ExifTool::Validate;
 use Image::ExifTool::MacOS;
 
-$VERSION = '3.59';
+$VERSION = '3.55';
 @ISA = qw(Exporter);
 
 sub NumbersFirst($$);
@@ -98,8 +98,6 @@ my %tweakOrder = (
     GIMP    => 'Microsoft',
     DarwinCore => 'AFCP',
     MWG     => 'Shortcuts',
-    'FujiFilm::RAF' => 'FujiFilm::RAFHeader',
-    'FujiFilm::RAFData' => 'FujiFilm::RAF',
 );
 
 # list of all recognized Format strings
@@ -425,11 +423,11 @@ parameters, as well as proprietary information written by many camera
 models.  Tags with a question mark after their name are not extracted unless
 the L<Unknown|../ExifTool.html#Unknown> option is set.
 
-When writing video files, ExifTool creates both QuickTime and XMP tags by
-default, but the group may be specified to write one or the other
-separately.  If no location is specified, newly created QuickTime tags are
-added in the L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags>
-location if possible, otherwise in
+When writing, ExifTool creates both QuickTime and XMP tags by default, but
+the group may be specified to write one or the other separately.  If no
+location is specified, newly created QuickTime tags are added in the
+L<ItemList|Image::ExifTool::TagNames/QuickTime ItemList Tags> location if
+possible, otherwise in
 L<UserData|Image::ExifTool::TagNames/QuickTime UserData Tags>, and
 finally in L<Keys|Image::ExifTool::TagNames/QuickTime Keys Tags>,
 but this order may be changed by setting the PREFERRED level of the
@@ -480,7 +478,7 @@ the original size by padding with nulls if necessary.
 
 See
 L<https://developer.apple.com/library/archive/documentation/QuickTime/QTFF/>
-for the official QuickTime specification.
+for the official specification.
 },
     Photoshop => q{
 Photoshop tags are found in PSD and PSB files, as well as inside embedded
@@ -602,8 +600,7 @@ running ExifTool the old information may be removed permanently using the
     DNG => q{
 The main DNG tags are found in the EXIF table.  The tables below define only
 information found within structures of these main DNG tag values.  See
-L<https://helpx.adobe.com/camera-raw/digital-negative.html> for the official
-DNG specification.
+L<http://www.adobe.com/products/dng/> for the official DNG specification.
 },
     MPEG => q{
 The MPEG format doesn't specify any file-level meta information.  In lieu of
@@ -675,10 +672,7 @@ Camero.
 
 Use the API L<PrintCSV|../ExifTool.html#PrintCSV> option to output all timed
 PDR data in CSV format at greatly increased speed and with much lower memory
-usage.  This option prints the numerical values for each channel in CSV
-format, suitable for import into RaceRender.  In this output, the gear
-numbers for Neutral and Reverse are changed to -1 and -100 respectively for
-compatibility with RaceRender.
+usage.
 },
     PodTrailer => q{
 ~head1 NOTES
@@ -866,16 +860,10 @@ sub new
         }
         $noID = 1 if $isXMP or $short =~ /^(Shortcuts|ASF.*)$/ or $$vars{NO_ID};
         $hexID = $$vars{HEX_ID};
-        if ($$table{WRITE_PROC} and $$table{WRITE_PROC} eq \&Image::ExifTool::WriteBinaryData
-            and not $$table{CHECK_PROC})
-        {
-            warn("Binary table $tableName doesn't have a CHECK_PROC\n");
-        }
         my $processBinaryData = ($$table{PROCESS_PROC} and (
             $$table{PROCESS_PROC} eq \&Image::ExifTool::ProcessBinaryData or
             $$table{PROCESS_PROC} eq \&Image::ExifTool::Nikon::ProcessNikonEncrypted or
-            $$table{PROCESS_PROC} eq \&Image::ExifTool::Sony::ProcessEnciphered) or
-            $$table{VARS} and $$table{VARS}{IS_BINARY});
+            $$table{PROCESS_PROC} eq \&Image::ExifTool::Sony::ProcessEnciphered));
         if ($$vars{ID_LABEL} or $processBinaryData) {
             my $s = $$table{FORMAT} ? Image::ExifTool::FormatSize($$table{FORMAT}) || 1 : 1;
             $binaryTable = 1;
@@ -914,9 +902,6 @@ TagID:  foreach $tagID (@keys) {
                 @infoArray = GetTagInfoList($table,$tagID);
             }
             foreach $tagInfo (@infoArray) {
-                if ($binaryTable and $$tagInfo{Writable} and $$tagInfo{Writable} ne '1') {
-                    warn("$tableName $$tagInfo{Name} Writable should be 1, not $$tagInfo{Writable}\n");
-                }
                 my $name = $$tagInfo{Name};
                 if ($$tagInfo{WritePseudo}) {
                     push @writePseudo, $name;
@@ -1009,9 +994,6 @@ TagID:  foreach $tagID (@keys) {
                 if ($writable and not ($$table{WRITE_PROC} or $tableName =~ /Shortcuts/ or $writable eq '2')) {
                     undef $writable;
                 }
-                #if ($writable and $$tagInfo{Unknown} and $$table{GROUPS}{0} ne 'MakerNotes') {
-                #    warn "Warning: Writable Unknown tag - $short $name\n",
-                #}
                 # validate some characteristics of obvious date/time tags
                 my @g = $et->GetGroup($tagInfo);
                 if ($$tagInfo{List} and $g[2] eq 'Time' and $writable and not $$tagInfo{Protected} and
@@ -1257,7 +1239,7 @@ TagID:  foreach $tagID (@keys) {
                                     }
                                 } elsif ($$tagInfo{PrintString} or not /^[+-]?(?=\d|\.\d)\d*(\.\d*)?$/) {
                                     # translate unprintable values
-                                    if ($index =~ s/([\x00-\x1f\x7f-\xff])/sprintf("\\x%.2x",ord $1)/eg) {
+                                    if ($index =~ s/([\x00-\x1f\x80-\xff])/sprintf("\\x%.2x",ord $1)/eg) {
                                         $index = qq{"$index"};
                                     } else {
                                         $index = qq{'${index}'};

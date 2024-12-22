@@ -30,7 +30,7 @@ use strict;
 use vars qw($VERSION $AUTOLOAD);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.69';
+$VERSION = '1.67';
 
 sub ConvertTimecode($);
 sub ProcessSGLT($$$);
@@ -664,10 +664,6 @@ my %code2charset = (
         SubDirectory => { TagTable => 'Image::ExifTool::RIFF::Acidizer' },
     },
     guan => 'Guano', #forum14831
-    SEAL => {
-        Name => 'SEAL',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::SEAL' },
-    },
 );
 
 # the maker notes used by some digital cameras
@@ -1126,7 +1122,7 @@ my %code2charset = (
             Name => 'TextFormat',
             Condition => '$$self{RIFFStreamType} eq "txts"',
             Hidden => 1,
-            RawConv => '$self->Options("ExtractEmbedded") or $self->Warn("Use ExtractEmbedded option to extract timed text",3); undef',
+            RawConv => '$self->Options("ExtractEmbedded") or $self->WarnOnce("Use ExtractEmbedded option to extract timed text",3); undef',
         },
     ],
 );
@@ -2045,16 +2041,11 @@ sub ProcessRIFF($$)
             last unless $moviEnd;
             # we arrived here because there was a problem parsing the movie data
             # so seek to the end to continue processing
-            if ($moviEnd > 0x7fffffff) {
-                unless ($et->Options('LargeFileSupport')) {
-                    $et->Warn('Possibly corrupt LIST_movi data');
-                    $et->Warn('Stopped parsing at large LIST_movi chunk (LargeFileSupport not set)');
-                    undef $err;
-                    last;
-                }
-                if ($et->Options('LargeFileSupport') eq '2') {
-                    $et->Warn('Processing large chunk (LargeFileSupport is 2)');
-                }
+            if ($moviEnd > 0x7fffffff and not $et->Options('LargeFileSupport')) {
+                $et->Warn('Possibly corrupt LIST_movi data');
+                $et->Warn('Stopped parsing at large LIST_movi chunk (LargeFileSupport not set)');
+                undef $err;
+                last;
             }
             if ($validate) {
                 # (must actually try to read something after seeking to detect error)
@@ -2124,8 +2115,7 @@ sub ProcessRIFF($$)
         my $tagInfo = $$tagTbl{$tag};
         # (in LIST_movi chunk: ##db = uncompressed DIB, ##dc = compressed DIB, ##wb = audio data)
         if ($tagInfo or (($verbose or $unknown) and $tag !~ /^(data|idx1|LIST_movi|RIFF|\d{2}(db|dc|wb))$/)) {
-            $raf->Read($buff, $len2) >= $len or $err=1, next;
-            length($buff) == $len2 or $et->Warn("No padding on odd-sized $tag chunk");
+            $raf->Read($buff, $len2) == $len2 or $err=1, next;
             if ($hash and $isImageData{$tag}) {
                 $hash->add($buff);
                 $et->VPrint(0, "$$et{INDENT}(ImageDataHash: '${tag}' chunk, $len2 bytes)\n");
@@ -2169,15 +2159,10 @@ sub ProcessRIFF($$)
                 $moviEnd = $raf->Tell() + $len2;
                 next; # parse into movi chunk
             } elsif (not $rewind) {
-                if ($len > 0x7fffffff) {
-                    unless ($et->Options('LargeFileSupport')) {
-                        $tag =~ s/([\0-\x1f\x7f-\xff])/sprintf('\\x%.2x',ord $1)/eg;
-                        $et->Warn("Stopped parsing at large $tag chunk (LargeFileSupport not set)");
-                        last;
-                    }
-                    if ($et->Options('LargeFileSupport') eq '2') {
-                        $et->Warn('Processing large chunk (LargeFileSupport is 2)');
-                    }
+                if ($len > 0x7fffffff and not $et->Options('LargeFileSupport')) {
+                    $tag =~ s/([\0-\x1f\x7f-\xff])/sprintf('\\x%.2x',ord $1)/eg;
+                    $et->Warn("Stopped parsing at large $tag chunk (LargeFileSupport not set)");
+                    last;
                 }
                 if ($validate and $len2) {
                     # (must actually try to read something after seeking to detect error)

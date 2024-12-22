@@ -14,7 +14,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Import;
 
-$VERSION = '1.09';
+$VERSION = '1.08';
 
 sub ProcessJSON($$);
 sub ProcessTag($$$$%);
@@ -92,7 +92,8 @@ sub ProcessTag($$$$%)
             return unless $et->Options('Struct') > 1;
         }
         # support hashes with ordered keys
-        foreach (Image::ExifTool::OrderedKeys($val)) {
+        my @keys = $$val{_ordered_keys_} ? @{$$val{_ordered_keys_}} : sort keys %$val;
+        foreach (@keys) {
             my $tg = $tag . ((/^\d/ and $tag =~ /\d$/) ? '_' : '') . ucfirst;
             $tg =~ s/([^a-zA-Z])([a-z])/$1\U$2/g;
             ProcessTag($et, $tagTablePtr, $tg, $$val{$_}, %flags, Flat => 1);
@@ -154,7 +155,7 @@ sub ProcessJSON($$)
 
     # extract tags from JSON database
     foreach $key (sort keys %database) {
-        foreach $tag (Image::ExifTool::OrderedKeys($database{$key})) {
+        foreach $tag (sort keys %{$database{$key}}) {
             my $val = $database{$key}{$tag};
             # (ignore SourceFile if generated automatically by ReadJSON)
             next if $tag eq 'SourceFile' and defined $val and $val eq '*';

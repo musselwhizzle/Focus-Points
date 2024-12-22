@@ -19,7 +19,7 @@ use strict;
 use vars qw($VERSION %ttLang);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.11';
+$VERSION = '1.10';
 
 sub ProcessOTF($$);
 
@@ -188,9 +188,6 @@ my %ttCharset = (
     },
     name => {
         SubDirectory => { TagTable => 'Image::ExifTool::Font::Name' },
-    },
-    C2PA => {
-        SubDirectory => { TagTable => 'Image::ExifTool::Jpeg2000::Main', Start => 20 },
     },
     PFM  => {
         Name => 'PFMHeader',
@@ -392,12 +389,10 @@ sub ProcessOTF($$)
     $$et{INDENT} .= '| ';
     $et->VerboseDir('TrueType', $numTables) if $verbose;
 
-    my %processTag = ( name => 1, C2PA => 1 );  # tags to process (skip all others)
-
     for ($pos=0; $pos<$len; $pos+=16) {
-        # look for tags to process
+        # look for 'name' table
         my $tag = substr($tbl, $pos, 4);
-        next unless $processTag{$tag} or $verbose;
+        next unless $tag eq 'name' or $verbose;
         my $offset = Get32u(\$tbl, $pos + 8);
         my $size   = Get32u(\$tbl, $pos + 12);
         unless ($raf->Seek($offset+$base, 0) and $raf->Read($buff, $size) == $size) {
@@ -405,20 +400,14 @@ sub ProcessOTF($$)
             next;
         }
         if ($verbose) {
-            $tag =~ s/([\0-\x1f\x7f-\xff])/sprintf('\x%.2x',ord $1)/ge;
+            $tag =~ s/([\0-\x1f\x80-\xff])/sprintf('\x%.2x',ord $1)/ge;
             my $str = sprintf("%s%d) Tag '%s' (offset 0x%.4x, %d bytes)\n",
                               $$et{INDENT}, $pos/16, $tag, $offset, $size);
             $et->VPrint(0, $str);
             $et->VerboseDump(\$buff, Addr => $offset) if $verbose > 2;
-            next unless $processTag{$tag};
+            next unless $tag eq 'name';
         }
         next unless $size >= 8;
-        unless ($tag eq 'name') {
-            my $tagTablePtr = GetTagTable('Image::ExifTool::Font::Main');
-            $et->HandleTag($tagTablePtr, $tag, undef, DataPt => \$buff, Size => length($buff));
-            next;
-        }
-        # process the 'name' tag
         my $entries = Get16u(\$buff, 2);
         my $recEnd = 6 + $entries * 12;
         if ($recEnd > $size) {

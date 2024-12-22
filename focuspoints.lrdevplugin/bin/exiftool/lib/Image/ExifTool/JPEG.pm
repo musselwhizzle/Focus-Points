@@ -11,7 +11,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.38';
+$VERSION = '1.36';
 
 sub ProcessOcad($$$);
 sub ProcessJPEG_HDR($$$);
@@ -87,11 +87,6 @@ sub ProcessJPEG_HDR($$$);
         Name => 'InfiRayVersion',
         Condition => '$$valPt =~ /^....IJPEG\0/s',
         SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Version' },
-      }, {
-        Name => 'UniformResourceName',
-        Groups => { 1 => 'APP2' },
-        Condition => '$$valPt =~ /^urn:/',
-        Notes => 'used in Apple HDR images',
       }, {
         Name => 'PreviewImage',
         Condition => '$$valPt =~ /^(|QVGA\0|BGTH)\xff\xd8\xff\xdb/',
@@ -233,10 +228,6 @@ sub ProcessJPEG_HDR($$$);
         Name => 'InfiRayIsothermal',
         Condition => '$$self{HasIJPEG}',
         SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Isothermal' },
-      }, {
-        Name => 'SEAL',
-        Condition => '$$valPt =~ /^SEAL\0/',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::SEAL' },
     }],
     APP9 => [{
         Name => 'MediaJukebox',
@@ -246,31 +237,17 @@ sub ProcessJPEG_HDR($$$);
         Name => 'InfiRaySensor',
         Condition => '$$self{HasIJPEG}',
         SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Sensor' },
-      }, {
-        Name => 'SEAL',
-        Condition => '$$valPt =~ /^SEAL\0/',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::SEAL' },
     }],
-    APP10 => [{
+    APP10 => {
         Name => 'Comment',
         Condition => '$$valPt =~ /^UNICODE\0/',
         Notes => 'PhotoStudio Unicode comment',
-      }, {
-        Name => 'HDRGainCurve', #PH (NC)
-        Condition => '$$valPt =~ /^AROT\0\0.{4}/s',
-        Groups => { 1 => 'APP10', 2 => 'Image' },
-        ValueConv => q{
-            my $n = unpack('x6N', $val);
-            return '<truncated AROT data>' if length($val)-6 < $n * 4;
-            my $str = join ' ', unpack("x10V$n", $val);
-            return \$str;
-        },
-    }],
+    },
     APP11 => [{
         Name => 'JPEG-HDR',
         Condition => '$$valPt =~ /^HDR_RI /',
         SubDirectory => { TagTable => 'Image::ExifTool::JPEG::HDR' },
-      }, {
+    },{
         Name => 'JUMBF',
         Condition => '$$valPt =~ /^JP/',
         SubDirectory => { TagTable => 'Image::ExifTool::Jpeg2000::Main' },
