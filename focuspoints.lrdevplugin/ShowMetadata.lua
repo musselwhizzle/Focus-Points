@@ -14,14 +14,11 @@
   limitations under the License.
 --]]
 
-local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
 local LrDialogs = import 'LrDialogs'
-local LrView = import 'LrView'
 local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
 
 require "MetaDataDialog"
@@ -39,6 +36,7 @@ local function showDialog()
     --https://forums.adobe.com/thread/359790
 
     LrFunctionContext.callWithContext("function", function(dialogContext)
+      local column1, column2, column1Length, column2Length, numLines
 
         LrFunctionContext.callWithContext("function2", function(dialogContext2)
           local dialogScope = LrDialogs.showModalProgressDialog {
@@ -139,7 +137,7 @@ function createParts(metaData)
   local parts = {}
   local num = 1;
 
-  function createPart(label, value)
+  local function createPart(label, value)
     local p = {}
     p.label = LrStringUtils.trimWhitespace(label)
     p.value = LrStringUtils.trimWhitespace(value)
