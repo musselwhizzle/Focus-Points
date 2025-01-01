@@ -15,20 +15,22 @@
 --]]
 local LrView = import "LrView"
 local LrPrefs = import "LrPrefs"
-local LrDialogs = import "LrDialogs"
+local LrShell = import "LrShell"
+
 
 local bind = LrView.bind
+
+require "Utils"
 
 FocusPointPrefs = {}
 
 function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
-  local enableMogrifySettings =  true
 
   if prefs.screenScaling == nil then
 	prefs.screenScaling = 1.0
   end
-  
+
   return {
   {
     title = "Screen Scaling (only for Windows)",
@@ -42,7 +44,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           { title = "100%", value = 1.0},
           { title = "125%", value = 0.8},
           { title = "150%", value = 0.67},
-          { title = "175%", value = 0.57},  
+          { title = "175%", value = 0.57},
           { title = "200%", value = 0.5},
         }
       },
@@ -64,6 +66,17 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           { title = "Debug", value = "DEBUG"},
         }
       },
+      viewFactory:static_text {
+          title     = 'Plugin log:',
+  				alignment = 'right',
+  				fill_horizontal = 1,
+      },
+      viewFactory:push_button {
+  				title 		= "Show file",
+  				action 		= function()
+  					LrShell.revealInShell(getlogFileName())
+  				end,
+			},
     },
   },
   {
