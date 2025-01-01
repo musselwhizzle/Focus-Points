@@ -38,7 +38,7 @@ return {
   },
 
   -- Allow invokation from "File -> Plugin Extras" menu as well
-  -- ref issue #169	
+  -- ref issue #169
   LrExportMenuItems = {
     {
       title = "Show Focus Point",
@@ -53,9 +53,11 @@ return {
     },
   },
 
-	VERSION = { major=0, minor=0, revision=1, build=1, },
+	VERSION = { major=1, minor=9, revision=1, build=0, },
 
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
+
+  LrInitPlugin = 'FocusPointsInitialize.lua',
 }
 
 --[[
