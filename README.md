@@ -5,6 +5,22 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 <img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
 
+Current Release
+--------
+### V2.0.0, updated January 6, 2025
+
+* Fix a problem on Windows, where the plug-in would stop with an error message on every first call of Show Focus Point for an image.
+* Olympus/OM-System: revert to display of center dot focus point
+  * Issue #144 and related fix was nonsense. For Olympus/OM cameras, the only useful EXIF information related to focus point is AFPointSelected. Drawing a box around this point has no added meaning in terms of focusing, but it helps to recognize / find the point more easily on the image.
+* Added support for Nikon Z30, Z fc, Z5, Z6 II, Z7 II (based on existing  implementation for Z50, Z6, Z7)
+* Improved log-file handling: the plug-in log file 
+  * can be accessed from Lightroom Plug-in Manager 
+  * will be deleted upon each start of Lightroom / plug-in reload
+  * has been renamed from "LibraryLogger.log" to "FocusPoints.log" 
+* Includes exiftool 13.10 
+* Plug-in updates and releases now follow a numbering scheme to keep track of versions and changes. The plug-in version number can be found on the plug-in page in Lightroom's Plug-in Manager. Numbering starts with V2.0.0
+
+For history of versions and changes as well as planned, future improvements see [changelog.](docs/changelog.md)
 
 
 Supported Cameras
@@ -14,8 +30,8 @@ Supported Cameras
   * 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 70D, 80D, 7D, 5D, etc, 
   * Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
 * Nikon 
-  * D7100, D7200, D700, D800 (possibly D810 and D800E), D5500, D5300, D5200, D300
-  * Z50, Z6, Z7
+  * DSLR: D7100, D7200, D700, D800 (possibly D810 and D800E), D5500, D5300, D5200, D300
+  * Mirrorless: Z30, Z50, Z fc, Z5, Z6, Z6 II, Z7, Z7 II
 * Sony E-Mount cameras
   * all full frame bodies beginning with &alpha;7 III resp. &alpha;7R II
   * APS-C
