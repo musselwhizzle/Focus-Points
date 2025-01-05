@@ -15,28 +15,56 @@
 --]]
 
 
-local LrSystemInfo = import 'LrSystemInfo'
-local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
-local LrDialogs = import 'LrDialogs'
-local LrView = import 'LrView'
-local LrTasks = import 'LrTasks'
-local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrLogger = import 'LrLogger'
 local LrStringUtils = import "LrStringUtils"
 local LrPrefs = import "LrPrefs"
--- BEGIN MOD - Add Metadata filter
 local LrShell = import "LrShell"
--- END MOD - Add Metadata filter
 
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
-local myLogger = LrLogger( 'libraryLogger' )
-myLogger:enable( "logfile" )
+--[[----------------------------------------------------------------------------
+-- Use the SDK's LrLogger infrastructure to log the plugin's execution to the
+-- file "FocusPoints.log" in LrC's log folder (see note below).
+------------------------------------------------------------------------------]]
 
-isDebug = false
+logName  = "FocusPoints"
+myLogger = LrLogger(logName)
+myLogger:enable("logfile")
+
+--[[
+-- Retrieves the full path name of the plugin log file.
+-- (to support access to file via Plugin Manager dialog)
+--
+-- LrC 14 logs interface note (Oct 2024):
+-- We (Adobe) have changed the log file location for the LrLogger interface.
+-- The timestamps are no longer appended to the folders. The updated locations are:
+-- Win: C:\Users\<user>\AppData\Local\Adobe\Lightroom\Logs\LrClassicLogs\
+-- Mac: /Users/<user>/Library/Logs/Adobe/Lightroom/LrClassicLogs/
+--
+-- Before LrC 14, plugin logfiles have been stored under Documents/LrClassicLogs
+-- on both WIN and MAC computers.
+--]]
+function getlogFileName()
+  local userHome = LrPathUtils.getStandardFilePath("home")
+  local logFolder
+  if (LrApplication.versionTable().major < 14) then
+    if (WIN_ENV) then
+      logFolder = "\\Documents\\LrClassicLogs\\"
+    else
+      logFolder = "/Documents/LrClassicLogs/"
+    end
+  else
+    if (WIN_ENV) then
+        logFolder = "\\AppData\\Local\\Adobe\\Lightroom\\Logs\\LrClassicLogs\\"
+      else
+        logFolder = "/Library/Logs/Adobe/Lightroom/LrClassicLogs/"
+    end
+  end
+  return LrPathUtils.child(userHome, LrPathUtils.child(logFolder, logName .. ".log"))
+end
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
