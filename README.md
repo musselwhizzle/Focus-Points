@@ -7,7 +7,7 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 Current Release
 --------
-### V2.0.0, updated January 5, 2025
+### V2.0.0 updated January 5, 2025
 
 * Fix a problem on Windows, where the plug-in would stop with an error message on every first call of Show Focus Point for an image.
 * Olympus/OM-System: revert to display of center dot
