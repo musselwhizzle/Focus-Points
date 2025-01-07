@@ -22,6 +22,8 @@ Current Release
 
 For history of versions and changes as well as planned, future improvements see [changelog.](docs/changelog.md)
 
+[Download release](https://github.com/musselwhizzle/Focus-Points/releases/tag/v2.0.0)
+
 
 Supported Cameras
 --------
