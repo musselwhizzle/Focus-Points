@@ -8,7 +8,7 @@
 # Revisions:    Nov. 12/2003 - P. Harvey Created
 #               (See html/history.html for revision history)
 #
-# Legal:        Copyright (c) 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+# Legal:        Copyright (c) 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 #               This library is free software; you can redistribute it and/or
 #               modify it under the same terms as Perl itself.
 #------------------------------------------------------------------------------
@@ -29,7 +29,7 @@ use vars qw($VERSION $RELEASE @ISA @EXPORT_OK %EXPORT_TAGS $AUTOLOAD @fileTypes
             %jpegMarker %specialTags %fileTypeLookup $testLen $exeDir
             %static_vars $advFmtSelf);
 
-$VERSION = '13.10';
+$VERSION = '13.15';
 $RELEASE = '';
 @ISA = qw(Exporter);
 %EXPORT_TAGS = (
@@ -154,10 +154,10 @@ sub ReadValue($$$;$$$);
     Matroska::StdTag MOI MXF DV Flash Flash::FLV Real::Media Real::Audio
     Real::Metafile Red RIFF AIFF ASF WTV DICOM FITS XISF MIE JSON HTML XMP::SVG
     Palm Palm::MOBI Palm::EXTH Torrent EXE EXE::PEVersion EXE::PEString
-    EXE::MachO EXE::PEF EXE::ELF EXE::AR EXE::CHM LNK Font VCard Text
-    VCard::VCalendar VCard::VNote RSRC Rawzor ZIP ZIP::GZIP ZIP::RAR ZIP::RAR5
-    RTF OOXML iWork ISO FLIR::AFF FLIR::FPF MacOS MacOS::MDItem
-    FlashPix::DocTable
+    EXE::DebugRSDS EXE::DebugNB10 EXE::Misc EXE::MachO EXE::PEF EXE::ELF EXE::AR
+    EXE::CHM LNK Font VCard Text VCard::VCalendar VCard::VNote RSRC Rawzor ZIP
+    ZIP::GZIP ZIP::RAR ZIP::RAR5 RTF OOXML iWork ISO FLIR::AFF FLIR::FPF MacOS
+    MacOS::MDItem FlashPix::DocTable
 );
 
 # alphabetical list of current Lang modules
@@ -1126,6 +1126,7 @@ my @availableOptions = (
     [ 'GeoMinSats',       undef,  'geotag minimum satellites' ],
     [ 'GeoSpeedRef',      undef,  'geotag GPSSpeedRef' ],
     [ 'GlobalTimeShift',  undef,  'apply time shift to all extracted date/time values' ],
+    [ 'GPSQuadrant',      undef,  'quadrant for GPS if not otherwise known' ],
     [ 'Group#',           undef,  'return tags for specified groups in family #' ],
     [ 'HexTagIDs',        0,      'use hex tag ID\'s in family 7 group names' ],
     [ 'HtmlDump',         0,      'HTML dump (0-3, higher # = bigger limit)' ],
@@ -2500,6 +2501,7 @@ sub Options($$;@)
             }
         } elsif ($param =~ /^(IgnoreTags|IgnoreGroups)$/) {
             if (defined $newVal) {
+                ref $newVal eq 'HASH' and $$options{$param} = $newVal, next;
                 # parse list from delimited string if necessary
                 my @ignoreList = (ref $newVal eq 'ARRAY') ? @$newVal : ($newVal =~ /[-\w?*:#]+/g);
                 ExpandShortcuts(\@ignoreList) if $param eq 'IgnoreTags';
@@ -6894,6 +6896,8 @@ sub IdentifyTrailer($;$)
             $type = 'Insta360';
         } elsif ($buff =~ m(\0{6}/NIKON APP$)) {
             $type = 'NikonApp';
+        } elsif ($buff =~ /\xff{4}\x1b\*9HWfu\x84\x93\xa2\xb1$/) {
+            $type = 'Vivo';
         }
         last;
     }
@@ -6906,7 +6910,8 @@ sub IdentifyTrailer($;$)
 # Inputs: 0) ExifTool object ref, 1) DirInfo ref:
 # - requires RAF and DirName
 # - OutFile is a scalar reference for writing
-# - scans from current file position if ScanForAFCP is set
+# - scans from current file position for each trailer if ScanForTrailer is set
+#   (current file position is just after JPEG EOF for a JPEG image)
 # Returns: 1 if trailer was processed or couldn't be processed (or written OK)
 #          0 if trailer was recognized but offsets need fixing (or write error)
 # - DirName, DirLen, DataPos, Offset, Fixup and OutFile are updated
@@ -6952,7 +6957,7 @@ sub ProcessTrailers($$)
         # read or write this trailer
         # (proc takes Offset as positive offset from end of trailer to end of file,
         #  and returns DataPos and DirLen, and Fixup if applicable, and updates
-        #  OutFile when writing)
+        #  OutFile when writing.  Returns < 0 if we must scan for this trailer)
         no strict 'refs';
         my $result = &$proc($self, $dirInfo);
         use strict 'refs';
@@ -7362,7 +7367,7 @@ sub ProcessJPEG($$;$)
             # and scan for AFCP if necessary
             my $fromEnd = 0;
             if ($trailInfo) {
-                $$trailInfo{ScanForAFCP} = 1;   # scan now if necessary
+                $$trailInfo{ScanForTrailer} = 1;   # scan now if necessary
                 $self->ProcessTrailers($trailInfo);
                 # save offset from end of file to start of first trailer
                 $fromEnd = $$trailInfo{Offset};
@@ -7562,6 +7567,19 @@ sub ProcessJPEG($$;$)
                 $$self{SkipData} = \@skipData if @skipData;
                 # extract the EXIF information (it is in standard TIFF format)
                 $self->ProcessTIFF(\%dirInfo) or $self->Warn('Malformed APP1 EXIF segment');
+                # scan for Vivo HiddenData if necessary
+                if ($$self{Make} eq 'vivo' and
+                    # (stored as UserComment by some models)
+                    not ($$self{VALUE}{UserComment} and $$self{VALUE}{UserComment} =~ /^filter:/) and
+                    $$dataPt =~ /(filter: .*?; \n)\0/sg)
+                {
+                    if ($htmlDump) {
+                        my $n = length($1) + 1;
+                        $self->HDump($segPos+pos($$dataPt)-$n, $n, '[Vivo HiddenData]', undef, 0x08);
+                    }
+                    my $tbl = GetTagTable('Image::ExifTool::Vivo::Main');
+                    $self->HandleTag($tbl, HiddenData => $1);
+                }
                 # avoid looking for preview unless necessary because it really slows
                 # us down -- only look for it if we found pointer, and preview is
                 # outside EXIF, and PreviewImage is specifically requested
@@ -8376,7 +8394,11 @@ sub DoProcessTIFF($$;$)
         # save a copy of the EXIF data
         my $dirStart = $$dirInfo{DirStart} || 0;
         my $dirLen = $$dirInfo{DirLen} || (length($$dataPt) - $dirStart);
-        $$self{EXIF_DATA} = substr($$dataPt, $dirStart, $dirLen);
+        if ($dirLen > 0 or not $outfile) {
+            $$self{EXIF_DATA} = substr($$dataPt, $dirStart, $dirLen);
+        } else {
+            delete $$self{EXIF_DATA}; # create from scratch;
+        }
         $self->VerboseDir('TIFF') if $$self{OPTIONS}{Verbose} and length($$self{INDENT}) > 2;
     } elsif ($outfile) {
         delete $$self{EXIF_DATA};  # create from scratch
@@ -8535,7 +8557,7 @@ sub DoProcessTIFF($$;$)
         if ($raf) {
             my $trailInfo = IdentifyTrailer($raf);
             if ($trailInfo) {
-                $$trailInfo{ScanForAFCP} = 1;   # scan to find AFCP if necessary
+                $$trailInfo{ScanForTrailer} = 1;   # scan to find AFCP if necessary
                 $self->ProcessTrailers($trailInfo);
             }
             # dump any other known trailer (eg. A100 RAW Data)
@@ -8640,7 +8662,7 @@ sub DoProcessTIFF($$;$)
             last unless $trailInfo;
             my $tbuf = '';
             $$trailInfo{OutFile} = \$tbuf;  # rewrite trailer(s)
-            $$trailInfo{ScanForAFCP} = 1;   # scan for AFCP if necessary
+            $$trailInfo{ScanForTrailer} = 1;   # scan for AFCP if necessary
             # rewrite all trailers to buffer
             unless ($self->ProcessTrailers($trailInfo)) {
                 undef $trailInfo;

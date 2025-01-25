@@ -15,6 +15,8 @@ my %movMap = (
     QuickTime => 'ItemList',    # (default location for QuickTime tags)
     ItemList  => 'Meta',        # MOV-Movie-UserData-Meta-ItemList
     Keys      => 'Movie',       # MOV-Movie-Meta-Keys !! (hack due to different Meta location)
+    AudioKeys => 'Track',       # MOV-Movie-Track-Meta-Keys !!
+    VideoKeys => 'Track',       # MOV-Movie-Track-Meta-Keys !!
     Meta      => 'UserData',
     XMP       => 'UserData',    # MOV-Movie-UserData-XMP
     Microsoft => 'UserData',    # MOV-Movie-UserData-Microsoft
@@ -29,6 +31,8 @@ my %mp4Map = (
     QuickTime => 'ItemList',    # (default location for QuickTime tags)
     ItemList  => 'Meta',        # MOV-Movie-UserData-Meta-ItemList
     Keys      => 'Movie',       # MOV-Movie-Meta-Keys !! (hack due to different Meta location)
+    AudioKeys => 'Track',       # MOV-Movie-Track-Meta-Keys !!
+    VideoKeys => 'Track',       # MOV-Movie-Track-Meta-Keys !!
     Meta      => 'UserData',
     UserData  => 'Movie',       # MOV-Movie-UserData
     Microsoft => 'UserData',    # MOV-Movie-UserData-Microsoft
@@ -374,6 +378,9 @@ sub WriteNextbase($$$)
 # Write Meta Keys to add/delete entries as necessary ('mdta' handler) (ref PH)
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 # Returns: updated keys box data
+# Note: Residual entries may be left in the 'keys' directory when deleting tags
+#       with language codes because the language code(s) are not known until the
+#       corresponding ItemList entry(s) are processed
 sub WriteKeys($$$)
 {
     my ($et, $dirInfo, $tagTablePtr) = @_;
@@ -383,13 +390,14 @@ sub WriteKeys($$$)
     my $outfile = $$dirInfo{OutFile};
     my ($tag, %done, %remap, %info, %add, $i);
 
+    my $keysGrp = $avType{$$et{MediaType}} ? "$avType{$$et{MediaType}}Keys" : 'Keys';
     $dirLen < 8 and $et->Warn('Short Keys box'), $dirLen = 8, $$dataPt = "\0" x 8;
-    if ($$et{DEL_GROUP}{Keys}) {
+    if ($$et{DEL_GROUP}{$keysGrp}) {
         $dirLen = 8;    # delete all existing keys
         # deleted keys are identified by a zero entry in the Remap lookup
         my $n = Get32u($dataPt, 4);
         for ($i=1; $i<=$n; ++$i) { $remap{$i} = 0; }
-        $et->VPrint(0, "  [deleting $n Keys entr".($n==1 ? 'y' : 'ies')."]\n");
+        $et->VPrint(0, "  [deleting $n $keysGrp entr".($n==1 ? 'y' : 'ies')."]\n");
         ++$$et{CHANGED};
     }
     my $pos = 8;
@@ -425,7 +433,7 @@ sub WriteKeys($$$)
                     }
                     unless ($dontDelete) {
                         # delete this key
-                        $et->VPrint(1, "$$et{INDENT}\[deleting Keys entry $index '${tag}']\n");
+                        $et->VPrint(1, "$$et{INDENT}\[deleting $keysGrp entry $index '${tag}']\n");
                         $pos += $len;
                         $remap{$index++} = 0;
                         ++$$et{CHANGED};
@@ -455,7 +463,7 @@ sub WriteKeys($$$)
         # add new entry to 'keys' data
         my $val = $id =~ /^com\./ ? $id : "com.apple.quicktime.$id";
         $newData .= Set32u(8 + length($val)) . 'mdta' . $val;
-        $et->VPrint(1, "$$et{INDENT}\[adding Keys entry $newIndex '${id}']\n");
+        $et->VPrint(1, "$$et{INDENT}\[adding $keysGrp entry $newIndex '${id}']\n");
         $add{$newIndex++} = $tagInfo;
         ++$$et{CHANGED};
     }
@@ -470,7 +478,7 @@ sub WriteKeys($$$)
     #   Info  - Keys tag information, based on old index value
     #   Add   - Keys items deleted, based on old index value
     #   Num   - Number of items in edited Keys box
-    $$et{Keys} = { Remap => \%remap, Info => \%info, Add => \%add, Num => $num };
+    $$et{$keysGrp} = { Remap => \%remap, Info => \%info, Add => \%add, Num => $num };
 
     return $newData;    # return updated Keys box
 }
@@ -556,6 +564,7 @@ sub WriteItemInfo($$$)
             }
         }
         my ($hdr, $subTable, $proc);
+        my $strt = 0;
         if ($name eq 'EXIF') {
             if (not length $buff) {
                 # create EXIF from scratch
@@ -565,6 +574,7 @@ sub WriteItemInfo($$$)
                 $hdr = '';
             } elsif (length($buff) >= 4 and length($buff) >= 4 + unpack('N',$buff)) {
                 $hdr = substr($buff, 0, 4 + unpack('N',$buff));
+                $strt = length $hdr;
             } else {
                 $et->Warn('Invalid Exif header');
                 next;
@@ -578,8 +588,8 @@ sub WriteItemInfo($$$)
         my %dirInfo = (
             DataPt   => \$buff,
             DataLen  => length $buff,
-            DirStart => length $hdr,
-            DirLen   => length($buff) - length $hdr,
+            DirStart => $strt,
+            DirLen   => length($buff) - $strt,
         );
         my $changed = $$et{CHANGED};
         my $newVal = $et->WriteDirectory(\%dirInfo, $subTable, $proc);
@@ -881,7 +891,7 @@ sub WriteQuickTime($$$)
     $et or return 1;    # allow dummy access to autoload this package
     my ($mdat, @mdat, @mdatEdit, $edit, $track, $outBuff, $co, $term, $delCount);
     my (%langTags, $canCreate, $delGrp, %boxPos, %didDir, $writeLast, $err, $atomCount);
-    my ($tag, $lastTag, $lastPos, $errStr, $trailer, $buf2);
+    my ($tag, $lastTag, $lastPos, $errStr, $trailer, $buf2, $keysGrp, $keysPath);
     my $outfile = $$dirInfo{OutFile} || return 0;
     my $raf = $$dirInfo{RAF};       # (will be null for lower-level atoms)
     my $dataPt = $$dirInfo{DataPt}; # (will be null for top-level atoms)
@@ -915,15 +925,26 @@ sub WriteQuickTime($$$)
 
     $raf->Seek($dirStart, 1) if $dirStart;  # skip header if it exists
 
+    if ($avType{$$et{MediaType}}) {
+        # (note: these won't be correct now if we haven't yet processed the Media box,
+        # but in this case they won't be needed until after we set them properly below)
+        ($keysGrp, $keysPath) = ("$avType{$$et{MediaType}}Keys", 'MOV-Movie-Track');
+    } else {
+        ($keysGrp, $keysPath) = ('Keys', 'MOV-Movie');
+    }
     my $curPath = join '-', @{$$et{PATH}};
     my ($dir, $writePath) = ($dirName, $dirName);
     $writePath = "$dir-$writePath" while defined($dir = $$et{DirMap}{$dir});
     # hack to create Keys directories if necessary (its containing Meta is in a different location)
-    if ($$addDirs{Keys} and $curPath =~ /^MOV-Movie(-Meta)?$/) {
+    if (($$addDirs{Keys} and $curPath =~ /^MOV-Movie(-Meta)?$/)) {
         $createKeys = 1;    # create new Keys directories
-    } elsif ($curPath eq 'MOV-Movie-Meta-ItemList') {
+    } elsif (($$addDirs{AudioKeys} or $$addDirs{VideoKeys}) and $curPath =~ /^MOV-Movie-Track(-Meta)?$/) {
+        $createKeys = -1;   # (must wait until MediaType is known)
+    } elsif (($curPath eq 'MOV-Movie-Meta-ItemList') or
+             ($curPath eq 'MOV-Movie-Track-Meta-ItemList' and $avType{$$et{MediaType}}))
+    {
         $createKeys = 2;    # create new Keys tags
-        my $keys = $$et{Keys};
+        my $keys = $$et{$keysGrp};
         if ($keys) {
             # add new tag entries for existing Keys tags, now that we know their ID's
             # - first make lookup to convert Keys tagInfo ref to index number
@@ -931,7 +952,7 @@ sub WriteQuickTime($$$)
             foreach $index (keys %{$$keys{Info}}) {
                 $keysInfo{$$keys{Info}{$index}} = $index if $$keys{Remap}{$index};
             }
-            my $keysTable = GetTagTable('Image::ExifTool::QuickTime::Keys');
+            my $keysTable = GetTagTable("Image::ExifTool::QuickTime::$keysGrp");
             my $newKeysTags = $et->GetNewTagInfoHash($keysTable);
             foreach (keys %$newKeysTags) {
                 my $tagInfo = $$newKeysTags{$_};
@@ -960,7 +981,8 @@ sub WriteQuickTime($$$)
     }
     if ($curPath eq $writePath or $createKeys) {
         $canCreate = 1;
-        $delGrp = $$et{DEL_GROUP}{$dirName};
+        # (must check the appropriate Keys delete flag if this is a Keys ItemList)
+        $delGrp = $$et{DEL_GROUP}{$createKeys ? $keysGrp : $dirName};
     }
     $atomCount = $$tagTablePtr{VARS}{ATOM_COUNT} if $$tagTablePtr{VARS};
 
@@ -1078,12 +1100,12 @@ sub WriteQuickTime($$$)
                 last;
             }
         }
-        # save the handler type for this track
-        if ($tag eq 'hdlr' and length $buff >= 12) {
-            my $hdlr = substr($buff,8,4);
-            $$et{HandlerType} = $hdlr if $hdlr =~ /^(vide|soun)$/;
+        # save the handler type of the track media
+        if ($tag eq 'hdlr' and length $buff >= 12 and
+            @{$$et{PATH}} and $$et{PATH}[-1] eq 'Media')
+        {
+            $$et{MediaType} = substr($buff,8,4);
         }
-
         # if this atom stores offsets, save its location so we can fix up offsets later
         # (are there any other atoms that may store absolute file offsets?)
         if ($tag =~ /^(stco|co64|iloc|mfra|moof|sidx|saio|gps |CTBO|uuid)$/) {
@@ -1128,11 +1150,11 @@ sub WriteQuickTime($$$)
         &{$$tagInfo{WriteHook}}($buff,$et) if $tagInfo and $$tagInfo{WriteHook};
 
         # allow numerical tag ID's (ItemList entries defined by Keys)
-        if (not $tagInfo and $dirName eq 'ItemList' and $$et{Keys}) {
+        if (not $tagInfo and $dirName eq 'ItemList' and $$et{$keysGrp}) {
             $keysIndex = unpack('N', $tag);
-            my $newIndex = $$et{Keys}{Remap}{$keysIndex};
+            my $newIndex = $$et{$keysGrp}{Remap}{$keysIndex};
             if (defined $newIndex) {
-                $tagInfo = $$et{Keys}{Info}{$keysIndex};
+                $tagInfo = $$et{$keysGrp}{Info}{$keysIndex};
                 unless ($newIndex) {
                     if ($tagInfo) {
                         $et->VPrint(1,"    - Keys:$$tagInfo{Name}");
@@ -1172,7 +1194,7 @@ sub WriteQuickTime($$$)
             if ($subdir) {  # process atoms in this container from a buffer in memory
 
                 if ($tag eq 'trak') {
-                    undef $$et{HandlerType};  # init handler type for this track
+                    $$et{MediaType} = '';  # init media type for this track
                     delete $$et{AssumedDataRef};
                 }
                 my $subName = $$subdir{DirName} || $$tagInfo{Name};
@@ -1241,10 +1263,13 @@ sub WriteQuickTime($$$)
                     $$et{CHANGED} = $oldChanged;
                     undef $newData;
                 }
-                if ($tag eq 'trak' and $$et{AssumedDataRef}) {
-                    my $grp = $$et{CUR_WRITE_GROUP} || $dirName;
-                    $et->Error("Can't locate data reference to update offsets for $grp");
-                    delete $$et{AssumedDataRef};
+                if ($tag eq 'trak') {
+                    $$et{MediaType} = '';     # reset media type at end of track
+                    if ($$et{AssumedDataRef}) {
+                        my $grp = $$et{CUR_WRITE_GROUP} || $dirName;
+                        $et->Error("Can't locate data reference to update offsets for $grp");
+                        delete $$et{AssumedDataRef};
+                    }
                 }
                 $$et{CUR_WRITE_GROUP} = $oldWriteGroup;
                 SetByteOrder('MM');
@@ -1540,7 +1565,7 @@ sub WriteQuickTime($$$)
             }
             if ($msg) {
                 # (allow empty sample description for non-audio/video handler types, eg. 'url ', 'meta')
-                if ($$et{HandlerType}) {
+                if ($$et{MediaType}) {
                     my $grp = $$et{CUR_WRITE_GROUP} || $parent;
                     $et->Error("$msg for $grp");
                     return $rtnErr;
@@ -1593,7 +1618,16 @@ sub WriteQuickTime($$$)
     }
     $et->VPrint(0, "  [deleting $delCount $dirName tag".($delCount==1 ? '' : 's')."]\n") if $delCount;
 
-    $createKeys &= ~0x01 unless $$addDirs{Keys};   # (Keys may have been written)
+    # can finally set necessary variables for creating Video/AudioKeys tags
+    if ($createKeys < 0) {
+        if ($avType{$$et{MediaType}}) {
+            $createKeys = 1;
+            ($keysGrp, $keysPath) = ("$avType{$$et{MediaType}}Keys", 'MOV-Movie-Track');
+        } else {
+            $canCreate = 0;
+        }
+    }
+    $createKeys &= ~0x01 unless $$addDirs{$keysGrp};   # (Keys may have been written)
 
     # add new directories/tags at this level if necessary
     if ($canCreate and (exists $$et{EDIT_DIRS}{$dirName} or $createKeys)) {
@@ -1604,13 +1638,13 @@ sub WriteQuickTime($$$)
         my ($tag, $index);
         # add Keys tags if necessary
         if ($createKeys) {
-            if ($curPath eq 'MOV-Movie') {
+            if ($curPath eq $keysPath) {
                 # add Meta for Keys if necessary
                 unless ($didDir{meta}) {
                     $$dirs{meta} = $Image::ExifTool::QuickTime::Movie{meta};
                     push @addTags, 'meta';
                 }
-            } elsif ($curPath eq 'MOV-Movie-Meta') {
+            } elsif ($curPath eq "$keysPath-Meta") {
                 # special case for Keys Meta -- reset directories and start again
                 undef @addTags;
                 $dirs = { };
@@ -1619,10 +1653,10 @@ sub WriteQuickTime($$$)
                     $$dirs{$_} = $Image::ExifTool::QuickTime::Meta{$_};
                     push @addTags, $_;
                 }
-            } elsif ($curPath eq 'MOV-Movie-Meta-ItemList' and $$et{Keys}) {
-                foreach $index (sort { $a <=> $b } keys %{$$et{Keys}{Add}}) {
+            } elsif ($curPath eq "$keysPath-Meta-ItemList" and $$et{$keysGrp}) {
+                foreach $index (sort { $a <=> $b } keys %{$$et{$keysGrp}{Add}}) {
                     my $id = Set32u($index);
-                    $$newTags{$id} = $$et{Keys}{Add}{$index};
+                    $$newTags{$id} = $$et{$keysGrp}{Add}{$index};
                     push @addTags, $id;
                 }
             } else {
@@ -1634,8 +1668,7 @@ sub WriteQuickTime($$$)
         foreach $tag (@addTags) {
             my $tagInfo = $$dirs{$tag} || $$newTags{$tag};
             next if defined $$tagInfo{CanCreate} and not $$tagInfo{CanCreate};
-            next if defined $$tagInfo{HandlerType} and
-                (not $$et{HandlerType} or $$et{HandlerType} ne $$tagInfo{HandlerType});
+            next if defined $$tagInfo{MediaType} and $$et{MediaType} ne $$tagInfo{MediaType};
             my $subdir = $$tagInfo{SubDirectory};
             unless ($subdir) {
                 my $nvHash = $et->GetNewValueHash($tagInfo);
@@ -1697,13 +1730,13 @@ sub WriteQuickTime($$$)
             }
             my $subName = $$subdir{DirName} || $$tagInfo{Name};
             # QuickTime hierarchy is complex, so check full directory path before adding
-            if ($createKeys and $curPath eq 'MOV-Movie' and $subName eq 'Meta') {
+            if ($createKeys and $curPath eq $keysPath and $subName eq 'Meta') {
                 $et->VPrint(0, "  Creating Meta with mdta Handler and Keys\n");
                 # init Meta box for Keys tags with mdta Handler and empty Keys+ItemList
                 $buf2 = "\0\0\0\x20hdlr\0\0\0\0\0\0\0\0mdta\0\0\0\0\0\0\0\0\0\0\0\0" .
                         "\0\0\0\x10keys\0\0\0\0\0\0\0\0" .
                         "\0\0\0\x08ilst";
-            } elsif ($createKeys and $curPath eq 'MOV-Movie-Meta') {
+            } elsif ($createKeys and $curPath eq "$keysPath-Meta") {
                 $buf2 = ($subName eq 'Keys' ? "\0\0\0\0\0\0\0\0" : '');
             } elsif ($subName eq 'Meta' and $$et{OPTIONS}{QuickTimeHandler}) {
                 $et->VPrint(0, "  Creating Meta with mdir Handler\n");
@@ -1752,8 +1785,8 @@ sub WriteQuickTime($$$)
                 }
             }
             # add only once (must delete _after_ call to WriteDirectory())
-            # (Keys is a special case, and will be removed after Meta is processed)
-            delete $$addDirs{$subName} unless $subName eq 'Keys';
+            # (Keys tags are a special case, and are handled separately)
+            delete $$addDirs{$subName} unless $createKeys;
         }
     }
     # write HEIC metadata after top-level 'meta' box has been processed if editing this information
@@ -1779,9 +1812,9 @@ sub WriteQuickTime($$$)
             # (could report a file if editing nothing when it contained an empty Meta atom)
             # ++$$et{CHANGED};
         }
-        if ($curPath eq 'MOV-Movie-Meta') {
-            delete $$addDirs{Keys}; # prevent creation of another Meta for Keys tags
-            delete $$et{Keys};
+        if ($curPath eq "$keysPath-Meta") {
+            delete $$addDirs{$keysGrp}; # prevent creation of another Meta for Keys tags
+            delete $$et{$keysGrp};
         }
     }
 
@@ -2109,6 +2142,7 @@ sub WriteMOV($$)
     $raf->Seek(0,0);
 
     # write the file
+    $$et{MediaType} = '';
     $$dirInfo{Parent} = '';
     $$dirInfo{DirName} = 'MOV';
     $$dirInfo{ChunkOffset} = [ ]; # (just to be safe)
@@ -2134,7 +2168,7 @@ QuickTime-based file formats like MOV and MP4.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.
