@@ -11,7 +11,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 
-$VERSION = '1.38';
+$VERSION = '1.39';
 
 sub ProcessOcad($$$);
 sub ProcessJPEG_HDR($$$);
@@ -347,6 +347,10 @@ sub ProcessJPEG_HDR($$$);
         Name => 'Samsung',
         Condition => '$$valPt =~ /QDIOBS$/',
         SubDirectory => { TagTable => 'Image::ExifTool::Samsung::Trailer' },
+      }, {
+        Name => 'Vivo',
+        Condition => '$$valPt =~ /^(streamdata|vivo\{")/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Vivo::Main' },
       }, {
         Name => 'EmbeddedVideo',
         Notes => 'extracted only when ExtractEmbedded option is used',
@@ -791,7 +795,7 @@ segments are included in the Image::ExifTool module itself.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

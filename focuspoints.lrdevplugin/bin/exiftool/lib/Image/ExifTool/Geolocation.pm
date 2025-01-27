@@ -71,7 +71,7 @@ package Image::ExifTool::Geolocation;
 use strict;
 use vars qw($VERSION $geoDir $altDir $dbInfo);
 
-$VERSION = '1.08';  # (this is the module version number, not the database version)
+$VERSION = '1.09';  # (this is the module version number, not the database version)
 
 my $debug; # set to output processing time for testing
 
@@ -463,7 +463,7 @@ sub GetAltNames($;$)
 sub Geolocate($;$)
 {
     my ($arg, $opts) = @_;
-    my ($city, @exact, %regex, @multiCity, $other, $idx, @cargs, $useLastFound);
+    my ($city, @exact, %regex, @multiCity, $other, $idx, @cargs);
     my ($minPop, $minDistU, $minDistC, @matchParms, @coords, %fcOK, $both);
     my ($pop, $maxDist, $multi, $fcodes, $altNames, @startTime);
 
@@ -594,8 +594,16 @@ Entry:  for (; $i<@cityList; ++$i) {
         }
         @startTime and printf("= Processing time: %.3f sec\n", Time::HiRes::tv_interval(\@startTime));
         if (%lastFound) {
-            @coords == 2 and $useLastFound = 1, last; # continue to use coords with last city matches
+            last if @coords == 2;   # continue to use coords with last city matches
             scalar(keys %lastFound) > 200 and warn("Too many matching cities\n"), return();
+            # return nearby cities if "num=" is used and only one match found
+            if ($num > 1 and scalar(keys %lastFound) == 1) {
+                my ($i) = keys %lastFound;
+                my @entry = GetEntry($i);
+                @coords = @entry[8,9];
+                SortDatabase('Latitude');   # (make sure we are sorted by latitude)
+                last;
+            }
             unless (@lastByPop) {
                 @lastByPop = sort { $lastFound{$b} cmp $lastFound{$a} or $cityList[$a] cmp $cityList[$b] } keys %lastFound;
             }
@@ -777,7 +785,7 @@ on the first call.
 
 Sort database in specified order.
 
-    Image::ExifTool::Geolocation::ReadDatabase('City');
+    Image::ExifTool::Geolocation::SortDatabase('City');
 
 =over 4
 
@@ -924,9 +932,10 @@ to the argument list:
               both to determine the closest city matching the specified
               name(s) instead of using GPS only.
 
-   'num=##' - When the search includes GPS coordinates, return the nearest
-              ## cities instead of just the closest one.  Returned cities
-              are in the order from nearest to farthest.
+   'num=##' - When the search includes GPS coordinates, or when a single
+              city is matched by name, return the nearest ## cities instead
+              of just the closest or named one.  Returned cities are in the
+              order from nearest to farthest.
 
 See L<https://exiftool.org/geolocation.html#Read> for more details.
 
@@ -1006,7 +1015,7 @@ the input arguments of the AddEntry method.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.  The associated database files are

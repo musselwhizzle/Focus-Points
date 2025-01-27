@@ -138,11 +138,12 @@ my %rawType = (
 # 2) any dependencies must be added to %excludeGroups
 my @delGroups = qw(
     Adobe AFCP APP0 APP1 APP2 APP3 APP4 APP5 APP6 APP7 APP8 APP9 APP10 APP11 APP12
-    APP13 APP14 APP15 CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix FotoStation
-    GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC ItemList JFIF
-    Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft MIE MPF Nextbase NikonApp
-    NikonCapture PDF PDF-update PhotoMechanic Photoshop PNG PNG-pHYs PrintIM
-    QuickTime RMETA RSRC SEAL SubIFD Trailer UserData XML XML-* XMP XMP-*
+    APP13 APP14 APP15 AudioKeys CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
+    FotoStation GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC
+    ItemList JFIF Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft MIE MPF
+    Nextbase NikonApp NikonCapture PDF PDF-update PhotoMechanic Photoshop PNG
+    PNG-pHYs PrintIM QuickTime RMETA RSRC SEAL SubIFD Trailer UserData VideoKeys
+    Vivo XML XML-* XMP XMP-*
 );
 # family 2 group names that we can delete
 my @delGroup2 = qw(
@@ -1297,12 +1298,13 @@ sub SetNewValuesFromFile($$;@)
         foreach (qw(ByteUnit Charset CharsetEXIF CharsetFileName CharsetID3 CharsetIPTC
                     CharsetPhotoshop Composite DateFormat Debug EncodeHangs Escape ExtendedXMP
                     ExtractEmbedded FastScan Filter FixBase Geolocation GeolocAltNames
-                    GeolocFeature GeolocMinPop GeolocMaxDist GlobalTimeShift HexTagIDs
-                    IgnoreGroups IgnoreMinorErrors IgnoreTags ImageHashType Lang
-                    LargeFileSupport LigoGPSScale ListItem ListSep MDItemTags MissingTagValue
-                    NoPDFList NoWarning Password PrintConv QuickTimeUTC RequestTags SaveFormat
-                    SavePath ScanForXMP StructFormat SystemTags TimeZone Unknown UserParam
-                    Validate WindowsLongPath WindowsWideFile XAttrTags XMPAutoConv))
+                    GeolocFeature GeolocMinPop GeolocMaxDist GlobalTimeShift GPSQuadrant
+                    HexTagIDs IgnoreGroups IgnoreMinorErrors IgnoreTags ImageHashType Lang
+                    LargeFileSupport LigoGPSScale ListItem ListSep MDItemTags
+                    MissingTagValue NoPDFList NoWarning Password PrintConv QuickTimeUTC
+                    RequestTags SaveFormat SavePath ScanForXMP StructFormat SystemTags
+                    TimeZone Unknown UserParam Validate WindowsLongPath WindowsWideFile
+                    XAttrTags XMPAutoConv))
         {
             $srcExifTool->Options($_ => $$options{$_});
         }
@@ -2822,7 +2824,10 @@ sub GetAllGroups($;$)
 
     my %allGroups;
     # add family 1 groups not in tables
-    $family == 1 and map { $allGroups{$_} = 1 } qw(Garmin);
+    no warnings; # (avoid "possible attempt to put comments in qw()")
+    $family == 1 and map { $allGroups{$_} = 1 } qw(Garmin AudioItemList AudioUserData
+        VideoItemList VideoUserData Track#Keys Track#ItemList Track#UserData);
+    use warnings;
     # loop through all tag tables and get all group names
     while (@tableNames) {
         my $table = GetTagTable(pop @tableNames);
@@ -5228,7 +5233,7 @@ sub Set64u(@)
 {
     my $val = $_[0];
     my $hi = int($val / 4294967296);
-    my $lo = Set32u($val - $hi * 4294967296);
+    my $lo = Set32u($val - $hi * 4294967296); # NOTE: subject to round-off errors!
     $hi = Set32u($hi);
     $val = GetByteOrder() eq 'MM' ? $hi . $lo : $lo . $hi;
     $_[1] and substr(${$_[1]}, $_[2], length($val)) = $val;
@@ -6102,7 +6107,7 @@ sub WriteJPEG($$)
                 my $tbuf = '';
                 $raf->Seek(-length($buff), 1);  # seek back to just after EOI
                 $$trailInfo{OutFile} = \$tbuf;  # rewrite the trailer
-                $$trailInfo{ScanForAFCP} = 1;   # scan if necessary
+                $$trailInfo{ScanForTrailer} = 1;# scan if necessary
                 $self->ProcessTrailers($trailInfo) or undef $trailInfo;
             }
             if (not $oldOutfile) {
@@ -6987,7 +6992,7 @@ sub SetFileTime($$;$$$$)
                 $mtime = $m unless defined $mtime;
                 $success = eval { utime($atime, $mtime, $file) } if defined $atime and defined $mtime;
             }
-            $self->Warn('Error opening file for update') unless $success;
+            $self->Warn('Error updating file time') unless $success;
             return $success;
         }
         $saveFile = $file;
@@ -7376,7 +7381,7 @@ used routines.
 
 =head1 AUTHOR
 
-Copyright 2003-2024, Phil Harvey (philharvey66 at gmail.com)
+Copyright 2003-2025, Phil Harvey (philharvey66 at gmail.com)
 
 This library is free software; you can redistribute it and/or modify it
 under the same terms as Perl itself.

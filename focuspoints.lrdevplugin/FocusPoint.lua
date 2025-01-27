@@ -17,6 +17,7 @@
 local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
+local LrApplicationView = import 'LrApplicationView'
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
@@ -37,8 +38,23 @@ local function showDialog()
     local photoView = nil
     local dialogScope = nil
     local rendererTable = nil
-    
-    -- throw up this dialog as soon as possible as it blocks input which keeps the plugin from potentially launching 
+    local switchedToLibrary = nil
+
+    -- only on WIN (issue #199):
+    -- when launched in Develop module switch to Library to enforce that a preview of the image is available
+    -- must switch to loupe view because only in this view previews will be rendered
+    -- perform module switch as early as possible to give Library time to create a preview if none exists
+    if WIN_ENV then
+      local moduleName = LrApplicationView.getCurrentModuleName()
+      if moduleName == "develop" then
+        LrApplicationView.switchToModule("library")
+        LrApplicationView.showView("loupe")
+        switchedToLibrary = true
+        LrTasks.sleep(2.5)  -- timing-specific; might need to be increased on certain systems. Perhaps make it configurable?
+      end
+    end
+
+    -- throw up this dialog as soon as possible as it blocks input which keeps the plugin from potentially launching
     -- twice if clicked on really quickly
     -- let the renderer build the view now and show progress dialog
     LrFunctionContext.callWithContext("innerContext", function(dialogContext)
@@ -50,7 +66,7 @@ local function showDialog()
         functionContext = dialogContext,
       }
       dialogScope:setIndeterminate()
-      
+
       if (targetPhoto:checkPhotoAvailability()) then
         local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
         rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
@@ -59,21 +75,21 @@ local function showDialog()
           if photoView == nil then
             errorMsg = "No Focus-Point information found"
           end
-        else 
+        else
           errorMsg = "Unmapped points renderer"
         end
-      else 
+      else
         errorMsg = "Photo is not available. Make sure hard drives are attached and try again"
       end
     end)
     LrTasks.sleep(0) -- this actually closes the dialog. go figure.
-  
+
     -- by displaying the error outside of the dialogContext, it allows the progress dialog to close
     if (errorMsg ~= nil) then
       LrDialogs.message(errorMsg, nil, nil)
       return
     end
-    
+
     if (dialogScope:isCanceled() or photoView == nil) then
       return
     end
@@ -86,7 +102,11 @@ local function showDialog()
       contents = FocusPointDialog.createDialog(targetPhoto, photoView)
     }
     rendererTable.cleanup()
-    
+
+    if WIN_ENV and switchedToLibrary then
+      LrApplicationView.switchToModule("develop")
+    end
+
   end)
 end
 
