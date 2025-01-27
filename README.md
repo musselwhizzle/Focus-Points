@@ -7,22 +7,18 @@ A plugin for Lightroom to show which focus point was active when the picture was
 
 Current Release
 --------
-### V2.0.0 updated January 6, 2025
-
-* Fix a problem on Windows, where the plug-in would stop with an error message on every first call of Show Focus Point for an image. (#189)
-* Olympus/OM-System: revert to display of center dot (#144) 
-  * Issue #144 and related fix was nonsense. For Olympus/OM cameras, the only useful EXIF information related to focus point is AFPointSelected. Drawing a box around this point has no added meaning in terms of focusing, but it helps to recognize / find the point more easily on the image.
-* Added support for Nikon Z30, Z fc, Z5, Z6 II, Z7 II (#192, based on existing  implementation for Z50, Z6, Z7)
-* Improved log-file handling (#193): the plug-in log file now  
-  * can be accessed from Lightroom Plug-in Manager 
-  * will be deleted upon each start of Lightroom / plug-in reload
-  * has been renamed from "LibraryLogger.log" to "FocusPoints.log" 
-* Includes exiftool 13.10 (#188)
-* Plug-in updates and releases now follow a numbering scheme to keep track of versions and changes (#190). The plug-in version number can be found on the plug-in page in Lightroom's Plug-in Manager. Numbering starts with V2.0.0
+## V2.1.0, January 27, 2025
+* Full support of Nikon Z series (except Z50ii and Zf):
+  * Z5, Z6, Z6ii, Z6iii (#198 ), Z7, Z7ii, Z8, Z9, Z30, Z50, Z fc - CAF and PDAF focus points
+  * Z50ii, Z f - currently only CAF focus points (missing PDAF test files!)
+* Includes exiftool 13.15 (required for #198)
+* Windows: Fix an issue with blurry images / error message when launched in Develop module #199
+  - When launched in Develop module the plugin switches to Library loupe view so that a preview can be generated if none exists. 
+  - Plugin returns to Develop after its window has been closed.
 
 For history of versions and changes as well as planned, future improvements see [changelog.](docs/changelog.md)
 
-[Download release](https://github.com/musselwhizzle/Focus-Points/releases/tag/v2.0.0)
+[Download release](https://github.com/musselwhizzle/Focus-Points/releases/tag/v2.1.0)
 
 
 Supported Cameras
@@ -31,9 +27,11 @@ Supported Cameras
   * all EOS and point and shoots. 
   * 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 70D, 80D, 7D, 5D, etc, 
   * Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
-* Nikon 
+* Nikon
   * DSLR: D7100, D7200, D700, D800 (possibly D810 and D800E), D5500, D5300, D5200, D300
-  * Mirrorless: Z30, Z50, Z fc, Z5, Z6, Z6 II, Z7, Z7 II
+  * Mirrorless (Z series):
+    * Z5, Z6, Z6ii, Z6iii, Z7, Z7ii, Z8, Z9, Z30, Z50, Z fc - CAF and PDAF focus points
+    * Z50ii, Z f - currently only CAF focus points (missing PDAF test files!)
 * Sony E-Mount cameras
   * all full frame bodies beginning with &alpha;7 III resp. &alpha;7R II
   * APS-C
