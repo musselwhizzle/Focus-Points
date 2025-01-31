@@ -15,8 +15,8 @@ information (_makenotes_) included.
 
 Note: exiftool comes as part of the plugin package and does not need to be installed separately. 
 
-The plugin will not be able to show focus points for image files that don't have makernotes included. 
-For this it is important to understand that Lightroom does not read or keep makernotes when importing files.
+The plugin will not be able to show focus points for image files that don't have makernotes included.<br> 
+For this it is important to understand that Lightroom does not read or keep makernotes when importing files.<br>
 Whenever a separate image file is created from the original, there is a risk that makernotes will not
 be present in this file and the plugin does not have the required inputs to work.
 
@@ -38,6 +38,12 @@ Other cases where the Focus Points plugin will not be able to display meaningful
 
 
 ## 2. Display of Focus Points
+The subchapters in this section describe in more detail which focus point features are supported by the plugin for individual camera makers and specific lines or models. This can be different colors for different statuses (e.g. focus point selected, in focus, inactive), or face/subject detection frames. The level to which features can be supported ultimately depends on the availability of corresponding data in EXIF maker notes.
+
+Even if certain data is stored by a camera maker it doesn't mean at the same time that it's "available". 
+Makernotes is a proprietary metadata section that contains manufacturer-specific information that is not standardized across different brands. Camera makers can use this information to diagnose camera issues, for instance.
+
+The Focus Points plugin fully relies on what [exiftool](https://exiftool.org/) is able to decode and display. Which in turn doesn't fall from the sky, but it's a collaborative effort by camera owners worlwide that are willing to contribute and [go where no man has gone before](https://exiftool.org/#boldly) and decode the unknown.      
 
 ## 2.1 Nikon
 
@@ -45,6 +51,10 @@ to be updated after release of V2.2
 
 ## 2.2 Canon
 
-## 2.3 Sony
+to be updated after release of V2.x
 
-More to follow...
+## 2.3 Sony
+to be updated after release of V2.x
+
+Plus more chapters for Fuji, Pentax, Olympus, Panasonic and others...
+

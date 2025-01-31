@@ -3,7 +3,7 @@ Focus Points
 
 A plugin for Lightroom Classic (LrC) to show which focus point was active when the picture was taken.
 
-See [Scope and Limitations](docs/Focus%20Points.md) for more detailed information relevant to users.
+See [Scope and Limitations](docs/Focus%20Points.md) for detailed information relevant to users.
 
 <img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
 
