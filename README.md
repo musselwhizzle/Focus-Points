@@ -1,7 +1,9 @@
 Focus Points
 =======
 
-A plugin for Lightroom to show which focus point was active when the picture was taken.
+A plugin for Lightroom Classic (LrC) to show which focus point was active when the picture was taken.
+
+See [Scope and Limitations](docs/Focus Points.md#Scope and Limitations) for more detailed information relevant to users.
 
 <img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
 
@@ -57,9 +59,9 @@ Supported Cameras
 Installing
 --------
 **Installation steps**
-1. Use the green button in this webpage called "Clone or download".
+1. Download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
 2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
-3. Move this folder to where you'd normally kept your Lightroom plugins.
+3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step)" 
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
    or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
@@ -87,6 +89,7 @@ The information is fetched (by Phil Harvey's exiftool) directly from the image f
 
 <img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
 
+<!--
 Adding your own camera
 --------
 It's very likely your camera is already supported. So try the plugin first before doing anything. :)
@@ -113,7 +116,7 @@ If 2 or more cameras share a common points mapping, simplying add that to the li
 Known Issues
 --------
 1. Not compatible if photo was edited in Photoshop. 3rd party tools often remove the necessary metadata from the image. 
-
+-->
 
 Contributing as a Developer
 --------
