@@ -51,7 +51,10 @@ function PointsRendererFactory.createRenderer(photo)
   logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
 
   -- normalize the camera names. Pentax can be called multiple things
-  if (string.find(cameraMake, "ricoh imaging company", 1, true) or string.find(cameraMake, "pentax", 1, true)) then
+  if (string.find(cameraMake, "ricoh imaging company", 1, true)
+          or string.find(cameraMake, "pentax", 1, true)
+          -- since K-3, tested with K-3, K-1, K-1 Mark II. cameraMake is too unspecific, therefor we test against cameraModel as well
+          or (string.find(cameraMake, "ricoh", 1, true) and string.find(cameraModel, "pentax", 1, true))) then
     cameraMake = "pentax"
   end
 
