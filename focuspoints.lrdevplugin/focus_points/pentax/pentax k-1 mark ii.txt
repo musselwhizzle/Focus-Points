@@ -1,5 +1,5 @@
--- Pentax K-1
--- Submitted by: roguephysicist, musselwhizzle
+-- Pentax K-1 Mark II
+-- Submitted by: sto3014 (as a copy of pentax k-1 mark ii.txt)
 -- 36.4 MP, 7360x4912
 -- AF System: 33 point
 -- Coordinates represent the CENTER of the AF point
