@@ -36,9 +36,8 @@ Examples, for which focus point display works on image files created based on or
 Other cases where the Focus Points plugin will not be able to display meaningful information:
 
 * the picture has been taken by focusing on the main subject, then panning the camera to get the desired composition   
-
-***
-
+<br>
+<br>
 ## 2. Overview and Basic Operation
 This secction explains how the plugin is used.
 
@@ -49,10 +48,9 @@ Library module:<br>
 "Library -> Plug-in Extras -> Focus Point" 
 
 Develop module:<br>
-"File -> Plug-in Extras -> Focus Point"
-
----
-
+"File -> Plug-in Extras -> Focus Point"<br>
+<br>
+<br>
 <b>User interface (single image operation):</b>
 
 <img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
@@ -78,10 +76,9 @@ this will be indicated by a message in red letters:
 
 <img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
 
-After the window is closed (by clicking "OK" or pressing <Enter> or <Esc>) the user is back in LrC UI.  
-
----
-
+After the window is closed (by clicking "OK" or pressing <Enter> or <Esc>) the user is back in LrC UI.
+<br>
+<br>
 <b>User interface (multi-image operation):</b>
 
 When run on a selection of photos, the user interface of Focus Point Viewer offers two additional buttons
