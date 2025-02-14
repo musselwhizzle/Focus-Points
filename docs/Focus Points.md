@@ -9,9 +9,9 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 
 **Principle of operation:** <br>
 The plugin uses [exiftool](https://exiftool.org/) to retrieve metadata from the image file. 
-Autofocus related information is extracted from EXIF metadata and is processed to visualize the focus points. 
-In order for this to work, the plugin requires an image file that still has camera maker specific metadata 
-information (_makenotes_) included.
+Autofocus related information is extracted from EXIF metadata and is processed to visualize the focus 
+points. In order for this to work, the plugin requires an image file that still has camera maker 
+specific metadata information (_makenotes_) included.
 
 Note: exiftool comes as part of the plugin package and does not need to be installed separately. 
 
@@ -26,7 +26,8 @@ Examples, for which focus points cannot be displayed:
 - HDR DNG files created in Lightroom
 
 For external applications that take a RAW file as input when started from Lightroom, 
-the plugin may work on the resulting file imported into Lightroom, if the application leaves makernotes intact. 
+the plugin may work on the resulting file imported into Lightroom, if the application leaves makernotes 
+intact. 
 
 Examples, for which focus point display works on image files created based on original files:  
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
@@ -34,7 +35,7 @@ Examples, for which focus point display works on image files created based on or
 
 Other cases where the Focus Points plugin will not be able to display meaningful information:
 
-* the picture has been taken by focusing on the main subject, then panning the camera to get the desire composition   
+* the picture has been taken by focusing on the main subject, then panning the camera to get the desired composition   
 
 
 ## 2. Overview and Basic Operation
@@ -49,13 +50,45 @@ Library module:<br>
 Develop module:<br>
 "File -> Plug-in Extras -> Focus Point"
 
-User interface:
+***
+
+<b>User interface (single image operation):</b>
 
 <img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
 
-When run on a selection of photos, the user interface of Focus Point Viewer is slightly different from single image operation  
+The window is split in two parts. The photo view with visualized focus points and display of selected 
+metadata information that is relevant for assessing the photo with respect to focus results.<br>
+The metadata section comprises three groups:
+- Image information (from LrC)
+- Camera settings (from LrC)
+- Focus information (from EXIF maker notes)
 
-<img src="../screens/BasicOperation2.jpg" alt="User Interface (Multi-image) " style="width: 600px;"/>
+As both image information and camera settings come from the LrC catalog, this information is present 
+for every photo. Focus information is only present for those photos where the corresponding image file
+has the full metadata. See [Scope and Limitations](docs/Focus%20Points.md) for more detailed information.
+
+If focus information is present for the photo and focus points have been detected this is indicated by a message 
+highlighted in green.
+
+In case focus information is missing or no focus points have been detected (e.g. for manually focused photos)
+this will be indicated by a message in red letters:
+
+<img src="../screens/BasicOperation2.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+
+<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+
+After the window is closed (by clicking "OK" or pressing <Enter> or <Esc>) the user is back in LrC UI.  
+
+***
+
+<b>User interface (multi-image operation):</b>
+
+When run on a selection of photos, the user interface of Focus Point Viewer offers two additional buttons
+that enable the user to move forwards and backwards within the series of selected photos.
+
+The window can be closed by clicking "Exit" or pressing <Enter> or <Esc>.
+
+<img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### 2.2 Metadata Viewer
