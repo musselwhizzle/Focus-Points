@@ -402,6 +402,7 @@ my %sLocationDetails = (
     STRUCT_NAME => 'LocationDetails',
     NAMESPACE   => 'Iptc4xmpExt',
     GROUPS      => { 2 => 'Location' },
+    NOTES => 'Note that the GPS elements of this structure are in the "exif" namespace.',
     Identifier  => { List => 'Bag', Namespace => 'xmp' },
     City        => { },
     CountryCode => { },
@@ -420,6 +421,7 @@ my %sLocationDetails = (
         PrintConvInv => '$val=~s/\s*m$//;$val',
     },
     GPSAltitudeRef  => {
+        Namespace => 'exif',
         Writable => 'integer',
         PrintConv => {
             OTHER => sub {
@@ -1995,7 +1997,8 @@ my %sACDSeeRegionStruct = (
                         Struct => {
                             STRUCT_NAME => 'DeviceItem',
                             NAMESPACE => { Item => 'http://ns.google.com/photos/dd/1.0/item/' },
-                            Mime    => { },
+                            # use this as a key to process Google trailer
+                            Mime    => { RawConv => '$$self{ProcessGoogleTrailer} = $val' },
                             Length  => { Writable => 'integer' },
                             Padding => { Writable => 'integer' },
                             DataURI => { },
@@ -2149,7 +2152,7 @@ my %sACDSeeRegionStruct = (
                     STRUCT_NAME => 'Item',
                     # (use 'GItem' to avoid conflict with Google Device Container Item)
                     NAMESPACE => { GItem => 'http://ns.google.com/photos/1.0/container/item/'},
-                    Mime     => { },
+                    Mime    => { RawConv => '$$self{ProcessGoogleTrailer} = $val' },
                     Semantic => { },
                     Length   => { Writable => 'integer' },
                     Label    => { },

@@ -107,7 +107,7 @@ local function exportToDisk(photo, xSize, ySize)
   end)
   if not done then
   -- busy wait for (asynchronous) callback to complete
-    while not done do LrTasks.sleep (0.1) end
+    while not done do LrTasks.sleep (0.2) end
   end
 end
 
@@ -142,45 +142,50 @@ local function buildDrawParams(focuspointsTable)
   local para
   local sw
   local color
-
   local params = '-fill none '
-  for i, fpPoint in ipairs(focuspointsTable) do
-    if fpPoint.template.center ~= nil then
-      local x = math.floor(tonumber(fpPoint.points.center.x))
-      local y = math.floor(tonumber(fpPoint.points.center.y))
-      para = '-stroke red -fill red -draw \"circle ' ..x .. ',' .. y .. ' ' .. x+3 .. ',' .. y  .. '\" -fill none '
-      logDebug('buildCmdLine', '[' .. i .. '] ' .. para )
-      params = params .. para
-    end
-    if fpPoint.template.corner ~= nil then
-      sw, color = mapIconToStrokewidthAndColor(fpPoint.template.corner.fileTemplate)
-      para = '-strokewidth ' .. sw .. ' -stroke ' .. color .. ' '
-      local tlx = math.floor(tonumber(fpPoint.points.tl.x))
-      local tly = math.floor(tonumber(fpPoint.points.tl.y))
-      local brx = math.floor(tonumber(fpPoint.points.br.x))
-      local bry = math.floor(tonumber(fpPoint.points.br.y))
-      -- normalize
-      if tlx > brx and ( fpPoint.rotation == 0 or fpPoint.rotation == 360) then
-        local x = tlx
-        tlx = brx
-        brx = x
+
+  if (focuspointsTable ~= nil) then
+    for i, fpPoint in ipairs(focuspointsTable) do
+      if fpPoint.template.center ~= nil then
+        local x = math.floor(tonumber(fpPoint.points.center.x))
+        local y = math.floor(tonumber(fpPoint.points.center.y))
+        para = '-stroke red -fill red -draw \"circle ' ..x .. ',' .. y .. ' ' .. x+3 .. ',' .. y  .. '\" -fill none '
+        logDebug('buildCmdLine', '[' .. i .. '] ' .. para )
+        params = params .. para
       end
-      if fpPoint.rotation == 0 or fpPoint.rotation == 360 then
-        para = para .. '-draw \"roundRectangle ' .. tlx .. ',' .. tly .. ' ' .. brx .. ',' .. bry .. ' 1,1\" '
-      else
-        local trx = math.floor(tonumber(fpPoint.points.tr.x))
-        local try = math.floor(tonumber(fpPoint.points.tr.y))
-        local blx = math.floor(tonumber(fpPoint.points.bl.x))
-        local bly = math.floor(tonumber(fpPoint.points.bl.y))
-        para = para .. '-draw \"polyline ' .. trx .. ',' .. try .. ' ' .. tlx .. ',' .. tly .. ' '
+      if fpPoint.template.corner ~= nil then
+        sw, color = mapIconToStrokewidthAndColor(fpPoint.template.corner.fileTemplate)
+        para = '-strokewidth ' .. sw .. ' -stroke ' .. color .. ' '
+        local tlx = math.floor(tonumber(fpPoint.points.tl.x))
+        local tly = math.floor(tonumber(fpPoint.points.tl.y))
+        local brx = math.floor(tonumber(fpPoint.points.br.x))
+        local bry = math.floor(tonumber(fpPoint.points.br.y))
+        -- normalize
+        if tlx > brx and ( fpPoint.rotation == 0 or fpPoint.rotation == 360) then
+          local x = tlx
+          tlx = brx
+          brx = x
+        end
+        if fpPoint.rotation == 0 or fpPoint.rotation == 360 then
+          para = para .. '-draw \"roundRectangle ' .. tlx .. ',' .. tly .. ' ' .. brx .. ',' .. bry .. ' 1,1\" '
+        else
+          local trx = math.floor(tonumber(fpPoint.points.tr.x))
+          local try = math.floor(tonumber(fpPoint.points.tr.y))
+          local blx = math.floor(tonumber(fpPoint.points.bl.x))
+          local bly = math.floor(tonumber(fpPoint.points.bl.y))
+          para = para .. '-draw \"polyline ' .. trx .. ',' .. try .. ' ' .. tlx .. ',' .. tly .. ' '
                   .. blx .. ',' .. bly .. ' ' .. brx .. ',' .. bry .. ' ' .. trx .. ',' .. try .. '\" '
+        end
+        logDebug('buildCmdLine', '[' .. i .. '] ' .. para .. ' ' .. fpPoint.template.corner.fileTemplate)
+        params = params .. para
       end
-      logDebug('buildCmdLine', '[' .. i .. '] ' .. para .. ' ' .. fpPoint.template.corner.fileTemplate)
-      params = params .. para
     end
+    return params
+  else
+    return nil
   end
-  return params
 end
+
 
 --[[
 -- Create a temprory disk impage for the given Lightroom catalog photo.
@@ -201,7 +206,9 @@ end
 --]]
 function MogrifyUtils.drawFocusPoints(focuspointsTable)
   local params = buildDrawParams(focuspointsTable)
-  mogrifyExecute(params, true)
+  if params ~= nil then
+    mogrifyExecute(params, true)
+  end
 end
 
 

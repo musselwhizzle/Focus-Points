@@ -11,7 +11,7 @@ use strict;
 use warnings;
 require 5.004;
 
-my $version = '13.15';
+my $version = '13.18';
 
 # add our 'lib' directory to the include list BEFORE 'use Image::ExifTool'
 my $exePath;
@@ -1404,7 +1404,8 @@ for (;;) {
                 # add geotag/geosync/geolocate commands first
                 unshift @newValues, pop @newValues;
                 if (lc $2 eq 'geotag' and (not defined $addGeotime or $addGeotime) and length $val) {
-                    $addGeotime = ($1 || '') . 'Geotime<DateTimeOriginal#';
+                    $addGeotime = [ ($1 || '') . 'Geotime<DateTimeOriginal#',
+                                    ($1 || '') . 'Geotime<SubSecDateTimeOriginal#' ];
                 }
             }
         }
@@ -1522,7 +1523,7 @@ if (($tagOut or defined $diff) and ($csv or $json or %printFmt or $tabFormat or 
 }
 
 if ($csv and $csv eq 'CSV' and not $isWriting) {
-    undef $json;    # (not compatible)
+    $json = 0;    # (not compatible)
     if ($textOut) {
         Warn "Sorry, -w may not be combined with -csv\n";
         $rtnVal = 1;
@@ -1667,8 +1668,9 @@ if (@newValues) {
     # assume -geotime value if -geotag specified without -geotime
     if ($addGeotime) {
         AddSetTagsFile($setTagsFile = '@') unless $setTagsFile and $setTagsFile eq '@';
-        push @{$setTags{$setTagsFile}}, $addGeotime;
-        $verbose and print $vout qq{Argument "-$addGeotime" is assumed\n};
+        push @{$setTags{$setTagsFile}}, @$addGeotime;
+        my @a = map qq("-$_"), @$addGeotime;
+        $verbose and print $vout 'Arguments ',join(' and ', @a)," are assumed\n";
     }
     my %setTagsIndex;
     # add/delete option lookup
@@ -2401,6 +2403,7 @@ sub GetImageInfo($$)
                 ($g2, $same) = ($g, 0);
                 # build list of all tags in the new group of the diff file
                 @groupTags2 = ();
+                push @groupTags2, $tag2 if defined $tag2;
                 foreach $t2 (@found2) {
                     $done2{$t2} or $g ne $et2->GetGroup($t2, $showGroup) or push @groupTags2, $t2;
                 }

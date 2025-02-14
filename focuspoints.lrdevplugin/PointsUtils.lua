@@ -29,7 +29,7 @@ function PointsUtils.readFromFile(folder, filename)
   -- replace special character.  '*' is an invalid char on windows file systems
   file = string.gsub(file, "*", "_a_")
   logDebug("PointsUtils", "readFromFile: " .. file)
-  
+
   if (LrFileUtils.exists(file) ~= false) then
     local data = LrFileUtils.readFile(file)
     return data
@@ -44,34 +44,37 @@ function PointsUtils.readIntoTable(folder, filename)
   local data = PointsUtils.readFromFile(folder, filename)
   if (data == nil) then return nil end
   for i in string.gmatch(data, "[^\\\n]+") do
-    p = splitToKeyValue(i, "=")
-    if p ~= nil then
-      
-      -- variable or focus point name
-      local pointName = p.key
-      pointName = LrStringUtils.trimWhitespace(pointName)
-      
-      -- variable value
-      local value = LrStringUtils.trimWhitespace(p.value)
-      value = string.gsub(value, "{", "")
-      value = string.gsub(value, "}", "")
-      value = LrStringUtils.trimWhitespace(p.value)
-      local dataPoints = splitTrim(value, ",")
-      
-      local points = {}
-      for i in pairs(dataPoints) do
-        local item = dataPoints[i]
-        item = string.gsub(item, "[^0-9]", "")
-        item = LrStringUtils.trimWhitespace(item)
-        points[i] = item
-      end
-      
-      --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
+    -- skip comment lines
+    if i:match("^%s*%-%-") == nil then
+      local p = splitToKeyValue(i, "=")
+      if p ~= nil then
 
-      if (pointName == "focusPointDimens") then
-        focusPointDimens = points
-      else
-        focusPoints[pointName] = points
+        -- variable or focus point name
+        local pointName = p.key
+        pointName = LrStringUtils.trimWhitespace(pointName)
+
+        -- variable value
+        local value = LrStringUtils.trimWhitespace(p.value)
+        value = string.gsub(value, "{", "")
+        value = string.gsub(value, "}", "")
+        value = LrStringUtils.trimWhitespace(p.value)
+        local dataPoints = splitTrim(value, ",")
+
+        -- parse the single value items: x, y, [h, w]
+        local points = {}
+        for i in pairs(dataPoints) do
+          local item = dataPoints[i]
+          item = string.gsub(item, "[^0-9]", "")
+          item = LrStringUtils.trimWhitespace(item)
+          points[i] = item
+        end
+
+        --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
+        if (pointName == "focusPointDimens") then
+          focusPointDimens = points
+        else
+          focusPoints[pointName] = points
+        end
       end
     end
   end

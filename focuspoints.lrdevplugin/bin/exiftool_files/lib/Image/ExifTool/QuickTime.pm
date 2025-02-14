@@ -48,7 +48,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 
-$VERSION = '3.10';
+$VERSION = '3.12';
 
 sub ProcessMOV($$;$);
 sub ProcessKeys($$$);
@@ -510,7 +510,7 @@ my %hashBox = ( vide => { %eeStd }, soun => { %eeStd } );
 # used, but others have been checked against all available sample files and may be
 # useful in the future if the names are used for different boxes on other locations)
 my %eeBox = (
-    # (note: vide is only processed if specific atoms exist in the VideoSampleDesc)
+    # (note: vide is only processed if specific atoms exist in the VisualSampleDesc)
     vide => { %eeStd, JPEG => 'stsd' },
     text => { %eeStd },
     meta => { %eeStd },
@@ -1005,7 +1005,7 @@ my %userDefined = (
     NOTES => 'Tags used in QTIF QuickTime Image Files.',
     idsc => {
         Name => 'ImageDescription',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ImageDesc' },
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::VisualSampleDesc' },
     },
     idat => {
         Name => 'ImageData',
@@ -1014,158 +1014,6 @@ my %userDefined = (
     iicc => {
         Name => 'ICC_Profile',
         SubDirectory => { TagTable => 'Image::ExifTool::ICC_Profile::Main' },
-    },
-);
-
-# image description data block
-%Image::ExifTool::QuickTime::ImageDesc = (
-    PROCESS_PROC => \&ProcessHybrid,
-    VARS => { ID_LABEL => 'ID/Index' },
-    GROUPS => { 2 => 'Image' },
-    FORMAT => 'int16u',
-    2 => {
-        Name => 'CompressorID',
-        Format => 'string[4]',
-# not very useful since this isn't a complete list and name is given below
-#        # ref http://developer.apple.com/mac/library/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
-#        PrintConv => {
-#            cvid => 'Cinepak',
-#            jpeg => 'JPEG',
-#           'smc '=> 'Graphics',
-#           'rle '=> 'Animation',
-#            rpza => 'Apple Video',
-#            kpcd => 'Kodak Photo CD',
-#           'png '=> 'Portable Network Graphics',
-#            mjpa => 'Motion-JPEG (format A)',
-#            mjpb => 'Motion-JPEG (format B)',
-#            SVQ1 => 'Sorenson video, version 1',
-#            SVQ3 => 'Sorenson video, version 3',
-#            mp4v => 'MPEG-4 video',
-#           'dvc '=> 'NTSC DV-25 video',
-#            dvcp => 'PAL DV-25 video',
-#           'gif '=> 'Compuserve Graphics Interchange Format',
-#            h263 => 'H.263 video',
-#            tiff => 'Tagged Image File Format',
-#           'raw '=> 'Uncompressed RGB',
-#           '2vuY'=> "Uncompressed Y'CbCr, 3x8-bit 4:2:2 (2vuY)",
-#           'yuv2'=> "Uncompressed Y'CbCr, 3x8-bit 4:2:2 (yuv2)",
-#            v308 => "Uncompressed Y'CbCr, 8-bit 4:4:4",
-#            v408 => "Uncompressed Y'CbCr, 8-bit 4:4:4:4",
-#            v216 => "Uncompressed Y'CbCr, 10, 12, 14, or 16-bit 4:2:2",
-#            v410 => "Uncompressed Y'CbCr, 10-bit 4:4:4",
-#            v210 => "Uncompressed Y'CbCr, 10-bit 4:2:2",
-#            hvc1 => 'HEVC', #PH
-#        },
-    },
-    10 => {
-        Name => 'VendorID',
-        Format => 'string[4]',
-        RawConv => 'length $val ? $val : undef',
-        PrintConv => \%vendorID,
-        SeparateTable => 'VendorID',
-    },
-  # 14 - ("Quality" in QuickTime docs) ??
-    16 => 'SourceImageWidth',
-    17 => 'SourceImageHeight',
-    18 => { Name => 'XResolution',  Format => 'fixed32u' },
-    20 => { Name => 'YResolution',  Format => 'fixed32u' },
-  # 24 => 'FrameCount', # always 1 (what good is this?)
-    25 => {
-        Name => 'CompressorName',
-        Format => 'string[32]',
-        # (sometimes this is a Pascal string, and sometimes it is a C string)
-        RawConv => q{
-            $val=substr($val,1,ord($1)) if $val=~/^([\0-\x1f])/ and ord($1)<length($val);
-            length $val ? $val : undef;
-        },
-    },
-    41 => 'BitDepth',
-#
-# Observed offsets for child atoms of various CompressorID types:
-#
-#   CompressorID  Offset  Child atoms
-#   -----------   ------  ----------------
-#   avc1          86      avcC, btrt, colr, pasp, fiel, clap, svcC
-#   mp4v          86      esds, pasp
-#   s263          86      d263
-#
-    btrt => {
-        Name => 'BitrateInfo',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Bitrate' },
-    },
-    # Reference for fiel, colr, pasp, clap:
-    # https://developer.apple.com/library/mac/technotes/tn2162/_index.html#//apple_ref/doc/uid/DTS40013070-CH1-TNTAG9
-    fiel => {
-        Name => 'VideoFieldOrder',
-        ValueConv => 'join(" ", unpack("C*",$val))',
-        PrintConv => [{
-            1 => 'Progressive',
-            2 => '2:1 Interlaced',
-        }],
-    },
-    colr => {
-        Name => 'ColorRepresentation',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ColorRep' },
-    },
-    pasp => {
-        Name => 'PixelAspectRatio',
-        ValueConv => 'join(":", unpack("N*",$val))',
-    },
-    clap => {
-        Name => 'CleanAperture',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::CleanAperture' },
-    },
-    avcC => {
-        # (see http://thompsonng.blogspot.ca/2010/11/mp4-file-format-part-2.html)
-        Name => 'AVCConfiguration',
-        Unknown => 1,
-        Binary => 1,
-    },
-    JPEG => { # (found in CR3 images; used as a flag to identify JpgFromRaw 'vide' stream)
-        Name => 'JPEGInfo',
-        # (4 bytes all zero)
-        Unknown => 1,
-        Binary => 1,
-    },
-    # hvcC - HEVC configuration
-    # svcC - 7 bytes: 00 00 00 00 ff e0 00
-    # esds - elementary stream descriptor
-    # d263
-    gama => { Name => 'Gamma', Format => 'fixed32u' },
-    # mjqt - default quantization table for MJPEG
-    # mjht - default Huffman table for MJPEG
-    # csgm ? (seen in hevc video)
-    CMP1 => { # Canon CR3
-        Name => 'CMP1',
-        SubDirectory => { TagTable => 'Image::ExifTool::Canon::CMP1' },
-    },
-    CDI1 => { # Canon CR3
-        Name => 'CDI1',
-        SubDirectory => {
-            TagTable => 'Image::ExifTool::Canon::CDI1',
-            Start => 4,
-        },
-    },
-    # JPEG - 4 bytes all 0 (Canon CR3)
-    # free - (Canon CR3)
-#
-# spherical video v2 stuff (untested)
-#
-    st3d => {
-        Name => 'Stereoscopic3D',
-        Format => 'int8u',
-        ValueConv => '$val =~ s/.* //; $val', # (remove leading version/flags bytes?)
-        PrintConv => {
-            0 => 'Monoscopic',
-            1 => 'Stereoscopic Top-Bottom',
-            2 => 'Stereoscopic Left-Right',
-            3 => 'Stereoscopic Stereo-Custom',
-            4 => 'Stereoscopic Right-Left',
-        },
-    },
-    sv3d => {
-        Name => 'SphericalVideo',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::sv3d' },
     },
 );
 
@@ -2227,7 +2075,7 @@ my %userDefined = (
         ValueConvInv => 'pack("H*",$val)',
     },
     # SETT? 12 bytes (Hero4)
-    # MUID? 32 bytes (Hero4, starts with serial number hash)
+    MUID => { Name => 'MediaUID', ValueConv => 'unpack("H*", $val)' },
     # HMMT? 404 bytes (Hero4, all zero)
     # BCID? 26 bytes (Hero5, all zero), 36 bytes GoPro Max
     # GUMI? 16 bytes (Hero5)
@@ -3001,7 +2849,9 @@ my %userDefined = (
     colr => [{
         Name => 'ICC_Profile',
         Condition => '$$valPt =~ /^(prof|rICC)/',
-        Permanent => 0, # (in QuickTime, this writes a zero-length box instead of deleting)
+        # (don't do this because Apple Preview won't display an HEIC with a 0-length profile)
+        # Permanent => 0, # (in QuickTime, this writes a zero-length box instead of deleting)
+        Permanent => 1,
         SubDirectory => {
             TagTable => 'Image::ExifTool::ICC_Profile::Main',
             Start => 4,
@@ -3522,7 +3372,11 @@ my %userDefined = (
 #
     '----' => {
         Name => 'iTunesInfo',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::iTunesInfo' },
+        Deletable => 1, # (deletable via 'iTunes' group)
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::iTunesInfo',
+            DirName => 'iTunes', # (necessary for group 'iTunes' delete)
+        },
     },
     aART => { Name => 'AlbumArtist', Groups => { 2 => 'Author' } },
     covr => { Name => 'CoverArt',    Groups => { 2 => 'Preview' }, Binary => 1 },
@@ -7320,10 +7174,10 @@ my %userDefined = (
                 ProcessProc => \&ProcessSampleDesc,
             },
         },{
-            Name => 'VideoSampleDesc',
+            Name => 'VisualSampleDesc',
             Condition => '$$self{HandlerType} and $$self{HandlerType} eq "vide"',
             SubDirectory => {
-                TagTable => 'Image::ExifTool::QuickTime::ImageDesc',
+                TagTable => 'Image::ExifTool::QuickTime::VisualSampleDesc',
                 ProcessProc => \&ProcessSampleDesc,
             },
         },{
@@ -7459,6 +7313,7 @@ my %userDefined = (
         # see this link for print conversions (not complete):
         # https://github.com/yannickcr/brooser/blob/master/php/librairies/getid3/module.audio-video.quicktime.php
     },
+  # 14 - int16u DataReferenceIndex
     20 => { #PH
         Name => 'AudioVendorID',
         Condition => '$$self{AudioFormat} ne "mp4s"',
@@ -7521,6 +7376,252 @@ my %userDefined = (
     # adrm - AAX DRM atom? 148 bytes
     # aabd - AAX unknown 17kB (contains 'aavd' strings)
     # dapa - ? 203 bytes
+);
+
+# video and image sample description data block
+%Image::ExifTool::QuickTime::VisualSampleDesc = (
+    PROCESS_PROC => \&ProcessHybrid,
+    VARS => { ID_LABEL => 'ID/Index' },
+    GROUPS => { 2 => 'Image' },
+    FORMAT => 'int16u',
+    2 => {
+        Name => 'CompressorID',
+        Format => 'string[4]',
+# not very useful since this isn't a complete list and name is given below
+#        # ref http://developer.apple.com/mac/library/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html
+#        PrintConv => {
+#            cvid => 'Cinepak',
+#            jpeg => 'JPEG',
+#           'smc '=> 'Graphics',
+#           'rle '=> 'Animation',
+#            rpza => 'Apple Video',
+#            kpcd => 'Kodak Photo CD',
+#           'png '=> 'Portable Network Graphics',
+#            mjpa => 'Motion-JPEG (format A)',
+#            mjpb => 'Motion-JPEG (format B)',
+#            SVQ1 => 'Sorenson video, version 1',
+#            SVQ3 => 'Sorenson video, version 3',
+#            mp4v => 'MPEG-4 video',
+#           'dvc '=> 'NTSC DV-25 video',
+#            dvcp => 'PAL DV-25 video',
+#           'gif '=> 'Compuserve Graphics Interchange Format',
+#            h263 => 'H.263 video',
+#            tiff => 'Tagged Image File Format',
+#           'raw '=> 'Uncompressed RGB',
+#           '2vuY'=> "Uncompressed Y'CbCr, 3x8-bit 4:2:2 (2vuY)",
+#           'yuv2'=> "Uncompressed Y'CbCr, 3x8-bit 4:2:2 (yuv2)",
+#            v308 => "Uncompressed Y'CbCr, 8-bit 4:4:4",
+#            v408 => "Uncompressed Y'CbCr, 8-bit 4:4:4:4",
+#            v216 => "Uncompressed Y'CbCr, 10, 12, 14, or 16-bit 4:2:2",
+#            v410 => "Uncompressed Y'CbCr, 10-bit 4:4:4",
+#            v210 => "Uncompressed Y'CbCr, 10-bit 4:2:2",
+#            hvc1 => 'HEVC', #PH
+#        },
+    },
+  # 7 - int16u DataReferenceIndex
+    10 => {
+        Name => 'VendorID',
+        Format => 'string[4]',
+        RawConv => 'length $val ? $val : undef',
+        PrintConv => \%vendorID,
+        SeparateTable => 'VendorID',
+    },
+  # 14 - ("Quality" in QuickTime docs) ??
+    16 => 'SourceImageWidth',
+    17 => 'SourceImageHeight',
+    18 => { Name => 'XResolution',  Format => 'fixed32u' },
+    20 => { Name => 'YResolution',  Format => 'fixed32u' },
+  # 24 => 'FrameCount', # always 1 (what good is this?)
+    25 => {
+        Name => 'CompressorName',
+        Format => 'string[32]',
+        # (sometimes this is a Pascal string, and sometimes it is a C string)
+        RawConv => q{
+            $val=substr($val,1,ord($1)) if $val=~/^([\0-\x1f])/ and ord($1)<length($val);
+            length $val ? $val : undef;
+        },
+    },
+    41 => 'BitDepth',
+#
+# Observed offsets for child atoms of various CompressorID types:
+#
+#   CompressorID  Offset  Child atoms
+#   -----------   ------  ----------------
+#   avc1          86      avcC, btrt, colr, pasp, fiel, clap, svcC
+#   mp4v          86      esds, pasp
+#   s263          86      d263
+#
+    btrt => {
+        Name => 'BitrateInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Bitrate' },
+    },
+    # Reference for fiel, colr, pasp, clap:
+    # https://developer.apple.com/library/mac/technotes/tn2162/_index.html#//apple_ref/doc/uid/DTS40013070-CH1-TNTAG9
+    fiel => {
+        Name => 'VideoFieldOrder',
+        ValueConv => 'join(" ", unpack("C*",$val))',
+        PrintConv => [{
+            1 => 'Progressive',
+            2 => '2:1 Interlaced',
+        }],
+    },
+    colr => {
+        Name => 'ColorRepresentation',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::ColorRep' },
+    },
+    pasp => {
+        Name => 'PixelAspectRatio',
+        ValueConv => 'join(":", unpack("N*",$val))',
+    },
+    clap => {
+        Name => 'CleanAperture',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::CleanAperture' },
+    },
+    avcC => {
+        # (see http://thompsonng.blogspot.ca/2010/11/mp4-file-format-part-2.html)
+        Name => 'AVCConfiguration',
+        Unknown => 1,
+        Binary => 1,
+    },
+    JPEG => { # (found in CR3 images; used as a flag to identify JpgFromRaw 'vide' stream)
+        Name => 'JPEGInfo',
+        # (4 bytes all zero)
+        Unknown => 1,
+        Binary => 1,
+    },
+    # hvcC - HEVC configuration
+    # svcC - 7 bytes: 00 00 00 00 ff e0 00
+    # esds - elementary stream descriptor
+    # d263
+    gama => { Name => 'Gamma', Format => 'fixed32u' },
+    # mjqt - default quantization table for MJPEG
+    # mjht - default Huffman table for MJPEG
+    # csgm ? (seen in hevc video)
+    CMP1 => { # Canon CR3
+        Name => 'CMP1',
+        SubDirectory => { TagTable => 'Image::ExifTool::Canon::CMP1' },
+    },
+    CDI1 => { # Canon CR3
+        Name => 'CDI1',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::Canon::CDI1',
+            Start => 4,
+        },
+    },
+    # JPEG - 4 bytes all 0 (Canon CR3)
+    # free - (Canon CR3)
+#
+# spherical video v2 stuff (untested)
+#
+    st3d => {
+        Name => 'Stereoscopic3D',
+        Format => 'int8u',
+        ValueConv => '$val =~ s/.* //; $val', # (remove leading version/flags bytes?)
+        PrintConv => {
+            0 => 'Monoscopic',
+            1 => 'Stereoscopic Top-Bottom',
+            2 => 'Stereoscopic Left-Right',
+            3 => 'Stereoscopic Stereo-Custom',
+            4 => 'Stereoscopic Right-Left',
+        },
+    },
+    sv3d => {
+        Name => 'SphericalVideo',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::sv3d' },
+    },
+);
+
+# MP4 hint sample description box (ref 5)
+# (ref https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html#//apple_ref/doc/uid/TP40000939-CH205-SW1)
+%Image::ExifTool::QuickTime::HintSampleDesc = (
+    PROCESS_PROC => \&ProcessHybrid,
+    VARS => { ID_LABEL => 'ID/Index' },
+    NOTES => 'MP4 hint sample description.',
+    4  => { Name => 'HintFormat', Format => 'undef[4]' },
+  # 14 - int16u DataReferenceIndex
+    16 => { Name => 'HintTrackVersion', Format => 'int16u' },
+  # 18 - int16u LastCompatibleHintTrackVersion
+    20 => { Name => 'MaxPacketSize', Format => 'int32u' },
+#
+# Observed offsets for child atoms of various HintFormat types:
+#
+#   HintFormat   Offset  Child atoms
+#   -----------  ------  ----------------
+#   "rtp "       24      tims
+#
+    tims => { Name => 'RTPTimeScale',               Format => 'int32u' },
+    tsro => { Name => 'TimestampRandomOffset',      Format => 'int32u' },
+    snro => { Name => 'SequenceNumberRandomOffset', Format => 'int32u' },
+);
+
+# MP4 metadata sample description box
+%Image::ExifTool::QuickTime::MetaSampleDesc = (
+    PROCESS_PROC => \&ProcessHybrid,
+    NOTES => 'MP4 metadata sample description.',
+    4 => {
+        Name => 'MetaFormat',
+        Format => 'undef[4]',
+        RawConv => '$$self{MetaFormat} = $val',
+    },
+    8 => { # starts at 8 for MetaFormat eq 'camm', and 17 for 'mett'
+        Name => 'MetaType',
+        Format => 'undef[$size-8]',
+        # may start at various locations!
+        RawConv => '$$self{MetaType} = ($val=~/(application[^\0]+)/ ? $1 : undef)',
+    },
+#
+# Observed offsets for child atoms of various MetaFormat types:
+#
+#   MetaFormat   Offset  Child atoms
+#   -----------  ------  ----------------
+#   mebx         24      keys,btrt,lidp,lidl
+#   fdsc         -       -
+#   gpmd         -       -
+#   rtmd         -       -
+#   CTMD         -       -
+#
+   'keys' => { #PH (iPhone7+ hevc)
+        Name => 'Keys',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Keys',
+            ProcessProc => \&ProcessMetaKeys,
+        },
+    },
+    btrt => {
+        Name => 'BitrateInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Bitrate' },
+    },
+);
+
+# MP4 generic sample description box
+%Image::ExifTool::QuickTime::OtherSampleDesc = (
+    PROCESS_PROC => \&ProcessHybrid,
+    4 => {
+        Name => 'OtherFormat',
+        Format => 'undef[4]',
+        RawConv => '$$self{MetaFormat} = $val', # (yes, use MetaFormat for this too)
+    },
+    24 => {
+        Condition => '$$self{MetaFormat} eq "tmcd"',
+        Name => 'PlaybackFrameRate', # (may differ from recorded FrameRate eg. ../pics/FujiFilmX-H1.mov)
+        Format => 'rational64u',
+    },
+#
+# Observed offsets for child atoms of various OtherFormat types:
+#
+#   OtherFormat  Offset  Child atoms
+#   -----------  ------  ----------------
+#   avc1         86      avcC
+#   mp4a         36      esds
+#   mp4s         16      esds
+#   tmcd         34      name
+#   data         -       -
+#
+    ftab => { Name => 'FontTable',  Format => 'undef', ValueConv => 'substr($val, 5)' },
+    name => { Name => 'OtherName',  Format => 'undef', ValueConv => 'substr($val, 4)' },
+    mrlh => { Name => 'MarlinHeader',    SubDirectory => { TagTable => 'Image::ExifTool::GM::mrlh' } },
+    mrlv => { Name => 'MarlinValues',    SubDirectory => { TagTable => 'Image::ExifTool::GM::mrlv' } },
+    mrld => { Name => 'MarlinDictionary',SubDirectory => { TagTable => 'Image::ExifTool::GM::mrld' } },
 );
 
 # AMR decode config box (ref 3)
@@ -7944,99 +8045,6 @@ my %userDefined = (
     mode => 'ModeFlags', #PH (?) 0x04 is HD flag (https://compilr.com/heksesang/requiem-mac/UnDrm.java)
     # sing - seen 4 zeros
     # hi32 - seen "00 00 00 04"
-);
-
-# MP4 hint sample description box (ref 5)
-# (ref https://developer.apple.com/library/mac/documentation/QuickTime/QTFF/QTFFChap3/qtff3.html#//apple_ref/doc/uid/TP40000939-CH205-SW1)
-%Image::ExifTool::QuickTime::HintSampleDesc = (
-    PROCESS_PROC => \&ProcessHybrid,
-    VARS => { ID_LABEL => 'ID/Index' },
-    NOTES => 'MP4 hint sample description.',
-    4  => { Name => 'HintFormat', Format => 'undef[4]' },
-    # 14 - int16u DataReferenceIndex
-    16 => { Name => 'HintTrackVersion', Format => 'int16u' },
-    # 18 - int16u LastCompatibleHintTrackVersion
-    20 => { Name => 'MaxPacketSize', Format => 'int32u' },
-#
-# Observed offsets for child atoms of various HintFormat types:
-#
-#   HintFormat   Offset  Child atoms
-#   -----------  ------  ----------------
-#   "rtp "       24      tims
-#
-    tims => { Name => 'RTPTimeScale',               Format => 'int32u' },
-    tsro => { Name => 'TimestampRandomOffset',      Format => 'int32u' },
-    snro => { Name => 'SequenceNumberRandomOffset', Format => 'int32u' },
-);
-
-# MP4 metadata sample description box
-%Image::ExifTool::QuickTime::MetaSampleDesc = (
-    PROCESS_PROC => \&ProcessHybrid,
-    NOTES => 'MP4 metadata sample description.',
-    4 => {
-        Name => 'MetaFormat',
-        Format => 'undef[4]',
-        RawConv => '$$self{MetaFormat} = $val',
-    },
-    8 => { # starts at 8 for MetaFormat eq 'camm', and 17 for 'mett'
-        Name => 'MetaType',
-        Format => 'undef[$size-8]',
-        # may start at various locations!
-        RawConv => '$$self{MetaType} = ($val=~/(application[^\0]+)/ ? $1 : undef)',
-    },
-#
-# Observed offsets for child atoms of various MetaFormat types:
-#
-#   MetaFormat   Offset  Child atoms
-#   -----------  ------  ----------------
-#   mebx         24      keys,btrt,lidp,lidl
-#   fdsc         -       -
-#   gpmd         -       -
-#   rtmd         -       -
-#   CTMD         -       -
-#
-   'keys' => { #PH (iPhone7+ hevc)
-        Name => 'Keys',
-        SubDirectory => {
-            TagTable => 'Image::ExifTool::QuickTime::Keys',
-            ProcessProc => \&ProcessMetaKeys,
-        },
-    },
-    btrt => {
-        Name => 'BitrateInfo',
-        SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::Bitrate' },
-    },
-);
-
-# MP4 generic sample description box
-%Image::ExifTool::QuickTime::OtherSampleDesc = (
-    PROCESS_PROC => \&ProcessHybrid,
-    4 => {
-        Name => 'OtherFormat',
-        Format => 'undef[4]',
-        RawConv => '$$self{MetaFormat} = $val', # (yes, use MetaFormat for this too)
-    },
-    24 => {
-        Condition => '$$self{MetaFormat} eq "tmcd"',
-        Name => 'PlaybackFrameRate', # (may differ from recorded FrameRate eg. ../pics/FujiFilmX-H1.mov)
-        Format => 'rational64u',
-    },
-#
-# Observed offsets for child atoms of various OtherFormat types:
-#
-#   OtherFormat  Offset  Child atoms
-#   -----------  ------  ----------------
-#   avc1         86      avcC
-#   mp4a         36      esds
-#   mp4s         16      esds
-#   tmcd         34      name
-#   data         -       -
-#
-    ftab => { Name => 'FontTable',  Format => 'undef', ValueConv => 'substr($val, 5)' },
-    name => { Name => 'OtherName',  Format => 'undef', ValueConv => 'substr($val, 4)' },
-    mrlh => { Name => 'MarlinHeader',    SubDirectory => { TagTable => 'Image::ExifTool::GM::mrlh' } },
-    mrlv => { Name => 'MarlinValues',    SubDirectory => { TagTable => 'Image::ExifTool::GM::mrlv' } },
-    mrld => { Name => 'MarlinDictionary',SubDirectory => { TagTable => 'Image::ExifTool::GM::mrld' } },
 );
 
 # MP4 data information box (ref 5)
@@ -9664,6 +9672,43 @@ sub ProcessMetaKeys($$$)
 }
 
 #------------------------------------------------------------------------------
+# Identify trailers at specified offset from end of file
+# Inputs: 0) RAF reference, 1) Offset from end of file
+# Returns: Array ref to first trailer in linked list: 0) name of trailer,
+#          1) absolute offset to start of this trailer, 2) trailer length,
+#          3) ref to next trailer. Or undef if no trailer found, or error string on error
+# - file position is returned to its original location
+sub IdentifyTrailers($)
+{
+    my $raf = shift;
+    my ($trailer, $nextTrail, $buff, $type, $len);
+    my $pos = $raf->Tell();
+    my $offset = 0; # positive offset back from end of file
+    while ($raf->Seek(-40-$offset, 2) and $raf->Read($buff, 40) == 40) {
+        if (substr($buff, 8) eq '8db42d694ccc418790edff439fe026bf') {
+            ($type, $len) = ('Insta360', unpack('V',$buff));
+        } elsif ($buff =~ /\&\&\&\&(.{4})$/) {
+            ($type, $len) = ('LigoGPS', Get32u(\$buff, 36));
+        } elsif ($buff =~ /~\0\x04\0zmie~\0\0\x06.{4}([\x10\x18])(\x04)$/s or
+                 $buff =~ /~\0\x04\0zmie~\0\0\x0a.{8}([\x10\x18])(\x08)$/s)
+        {
+            my $oldOrder = GetByteOrder();
+            SetByteOrder($1 eq "\x10" ? 'MM' : 'II');
+            $type = 'MIE';
+            $len = ($2 eq "\x04") ? Get32u(\$buff, 34) : Get64u(\$buff, 30);
+            SetByteOrder($oldOrder);
+        } else {
+            last;
+        }
+        $trailer = [ $type , $raf->Tell() - $len, $len, $nextTrail ];
+        $nextTrail = $trailer;
+        $offset += $len;
+    }
+    $raf->Seek($pos,0) or return 'Seek error';
+    return $trailer;
+}
+
+#------------------------------------------------------------------------------
 # Process a QuickTime atom
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) optional tag table ref
 # Returns: 1 on success
@@ -9710,17 +9755,10 @@ sub ProcessMOV($$;$)
     }
     ($size, $tag) = unpack('Na4', $buff);
     my $fast = $$et{OPTIONS}{FastScan} || 0;
-    # check for Insta360 or LIGOGPSINFO trailer
+    # check for Insta360, LIGOGPSINFO or MIE trailer
     if ($topLevel and not $fast) {
-        my $pos = $raf->Tell();
-        if ($raf->Seek(-40, 2) and $raf->Read($buff, 40) == 40) {
-            if (substr($buff, 8) eq '8db42d694ccc418790edff439fe026bf') {
-                $trailer = [ 'Insta360', $raf->Tell() - unpack('V',$buff) ];
-            } elsif ($buff =~ /\&\&\&\&(.{4})$/) {
-                $trailer = [ 'LigoGPS', $raf->Tell() - Get32u(\$buff, 36) ];
-            }
-        }
-        $raf->Seek($pos,0) or return 0;
+        $trailer = IdentifyTrailers($raf);
+        $trailer and not ref $trailer and $et->Warn($trailer), return 0;
     }
     if ($dataPt) {
         $verbose and $et->VerboseDir($$dirInfo{DirName});
@@ -9822,6 +9860,7 @@ sub ProcessMOV($$;$)
             $size -= 8;
         }
         if ($validate) {
+            $et->Warn("Invalid 'wide' atom size") if $tag eq 'wide' and $size;
             $$et{ValidatePath} or $$et{ValidatePath} = { };
             my $path = join('-', @{$$et{PATH}}, $tag);
             $path =~ s/-Track-/-$$et{SET_GROUP1}-/ if $$et{SET_GROUP1};
@@ -10318,7 +10357,7 @@ ItemID:         foreach $id (reverse sort { $a <=> $b } keys %$items) {
         last if $dirEnd and $dataPos >= $dirEnd; # (note: ignores last value if 0 bytes)
         $lastPos = $raf->Tell() + $dirBase;
         if ($trailer and $lastPos >= $$trailer[1]) {
-            $et->Warn(sprintf('%s trailer at offset 0x%x', @$trailer), 1);
+            $et->Warn(sprintf('%s trailer at offset 0x%x (%d bytes)', @$trailer[0..2]), 1);
             last;
         }
         $raf->Read($buff, 8) == 8 or last;
@@ -10369,11 +10408,12 @@ QTLang: foreach $tag (@{$$et{QTLang}}) {
     # process item information now that we are done processing its 'meta' container
     HandleItemInfo($et) if $topLevel or $dirID eq 'meta';
 
-    # process LigoGPS trailer now if it exists and we haven't already processed it
-    if ($trailer and $$trailer[0] eq 'LigoGPS' and $lastPos <= $$trailer[1] and
-        $raf->Seek($$trailer[1]) and $raf->Read($buff, 8) == 8 and $buff =~ /skip$/)
-    {
-        if ($ee) {
+    # process linked list of trailers
+    for (; $trailer; $trailer=$$trailer[3]) {
+        next if $lastPos > $$trailer[1];    # skip if we have already processed this as an atom
+        last unless $raf->Seek($$trailer[1], 0);
+        if ($$trailer[0] eq 'LigoGPS' and $raf->Read($buff, 8) == 8 and $buff =~ /skip$/) {
+            $ee or $et->Warn('Use the ExtractEmbedded option to decode timed GPS',3), next;
             my $len = Get32u(\$buff, 0) - 16;
             if ($len > 0 and $raf->Read($buff, $len) == $len and $buff =~ /^LIGOGPSINFO\0/) {
                 my $tbl = GetTagTable('Image::ExifTool::QuickTime::Stream');
@@ -10382,8 +10422,14 @@ QTLang: foreach $tag (@{$$et{QTLang}}) {
             } else {
                 $et->Warn('Unrecognized data in LigoGPS trailer');
             }
-        } else {
-            $et->Warn('Use the ExtractEmbedded option to decode timed GPS',3);
+        } elsif ($$trailer[0] eq 'Insta360' and $ee) {
+            # process Insta360 trailer if it exists
+            $raf->Seek(0, 2) or $et->Warn('Seek error'), last;
+            my $offset = $raf->Tell() - $$trailer[1] - $$trailer[2];
+            ProcessInsta360($et, { RAF => $raf, DirName => $$trailer[0], Offset => $offset });
+        } elsif ($$trailer[0] eq 'MIE') {
+            require Image::ExifTool::MIE;
+            Image::ExifTool::MIE::ProcessMIE($et, { RAF => $raf, DirName => 'MIE', Trailer => 1 });
         }
     }
     # brute force scan for metadata embedded in media data

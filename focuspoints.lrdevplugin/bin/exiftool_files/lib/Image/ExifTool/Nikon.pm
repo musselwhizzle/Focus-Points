@@ -65,7 +65,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 use Image::ExifTool::XMP;
 
-$VERSION = '4.40';
+$VERSION = '4.43';
 
 sub LensIDConv($$$);
 sub ProcessNikonAVI($$$);
@@ -1370,6 +1370,25 @@ my %retouchValues = ( #PH
     54 => 'Low Key', # (S3500)
 );
 
+# AF points for models with 11 focus points (eg. D3400)
+my %afPoints11 = (
+    0 => '(none)',
+    0x7ff => 'All 11 Points',
+    BITMASK => {
+        0 => 'Center',
+        1 => 'Top',
+        2 => 'Bottom',
+        3 => 'Mid-left',
+        4 => 'Mid-right',
+        5 => 'Upper-left',
+        6 => 'Upper-right',
+        7 => 'Lower-left',
+        8 => 'Lower-right',
+        9 => 'Far Left',
+        10 => 'Far Right',
+    },
+);
+
 # AF point indices for models with 51 focus points, eg. D3 (ref JD/PH)
 #        A1  A2  A3  A4  A5  A6  A7  A8  A9
 #    B1  B2  B3  B4  B5  B6  B7  B8  B9  B10  B11
@@ -1546,167 +1565,61 @@ my %afPoints81 = (
      17 => 'H6',  34 => 'G7',  51 => 'F8',  68 => 'A9',
 );
 
-# AF point indices for 209 focus point(single-point AF) cameras equipped with Expeed 7 processor eg. Z50ii).  Single-point AF array is 11 rows x 19 columns.  (ref 28)
+# AF point indices for 209/231 focus point(single-point AF) cameras equipped with Expeed 7 processor eg. Z50ii).  Single-point AF array is 11 rows x 19 columns.  (ref 28)
 # - Auto Area AF has 2 additional columns available and provides 231 focus points. Uses 11 rows (A-K) and 21 columns (1-21), center is F11
-my %afPoints209 = (
-      1 => 'A1',    22 => 'B1',    43 => 'C1',   64 => 'D1',     85 => 'E1',   106 => 'F1',   127 => 'G1',   148 => 'H1',
-      2 => 'A2',    23 => 'B2',    44 => 'C2',   65 => 'D2',     86 => 'E2',   107 => 'F2',   128 => 'G2',   149 => 'H2',
-      3 => 'A3',    24 => 'B3',    45 => 'C3',   66 => 'D3',     87 => 'E3',   108 => 'F3',   129 => 'G3',   150 => 'H3',
-      4 => 'A4',    25 => 'B4',    46 => 'C4',   67 => 'D4',     88 => 'E4',   109 => 'F4',   130 => 'G4',   151 => 'H4',
-      5 => 'A5',    26 => 'B5',    47 => 'C5',   68 => 'D5',     89 => 'E5',   110 => 'F5',   131 => 'G5',   152 => 'H5',
-      6 => 'A6',    27 => 'B6',    48 => 'C6',   69 => 'D6',     90 => 'E6',   111 => 'F6',   132 => 'G6',   153 => 'H6',
-      7 => 'A7',    28 => 'B7',    49 => 'C7',   70 => 'D7',     91 => 'E7',   112 => 'F7',   133 => 'G7',   154 => 'H7',
-      8 => 'A8',    29 => 'B8',    50 => 'C8',   71 => 'D8',     92 => 'E8',   113 => 'F8',   134 => 'G8',   155 => 'H8',
-      9 => 'A9',    30 => 'B9',    51 => 'C9',   72 => 'D9',     93 => 'E9',   114 => 'F9',   135 => 'G9',   156 => 'H9',
-     10 => 'A10',   31 => 'B10',   52 => 'C10',  73 => 'D10',    94 => 'E10',  115 => 'F10',  136 => 'G10',  157 => 'H10',
-     11 => 'A11',   32 => 'B11' ,  53 => 'C11',  74 => 'D11',    95 => 'E11',  116 => 'F11',  137 => 'G11',  158 => 'H11',
-     12 => 'A12',   33 => 'B12' ,  54 => 'C12',  75 => 'D12',    96 => 'E12',  117 => 'F12',  138 => 'G12',  159 => 'H12',
-     13 => 'A13',   34 => 'B13' ,  55 => 'C13',  76 => 'D13',    97 => 'E13',  118 => 'F13',  139 => 'G13',  160 => 'H13',
-     14 => 'A14',   35 => 'B14' ,  56 => 'C14',  77 => 'D14',    98 => 'E14',  119 => 'F14',  140 => 'G14',  161 => 'H14',
-     15 => 'A15',   36 => 'B15',   57 => 'C15',  78 => 'D15',    99 => 'E15',  120 => 'F15',  141 => 'G15',  162 => 'H15',
-     16 => 'A16',   37 => 'B16' ,  58 => 'C16',  79 => 'D16',   100 => 'E16',  121 => 'F16',  142 => 'G16',  163 => 'H16',
-     17 => 'A17',   38 => 'B17',   59 => 'C17',  80 => 'D17',   101 => 'E17',  122 => 'F17',  143 => 'G17',  164 => 'H17',
-     18 => 'A18',   39 => 'B18',   60 => 'C18',  81 => 'D18',   102 => 'E18',  123 => 'F18',  144 => 'G18',  165 => 'H18',
-     19 => 'A19',   40 => 'B19',   61 => 'C19',  82 => 'D19',   103 => 'E19',  124 => 'F19',  145 => 'G19',  166 => 'H19',
-     20 => 'A20',   41 => 'B20',   62 => 'C20',  83 => 'D20',   104 => 'E20',  125 => 'F20',  146 => 'G20',  167 => 'H20',
-     21 => 'A21',   42 => 'B21',   63 => 'C21',  84 => 'D21',   105 => 'E21',  126 => 'F21',  147 => 'G21',  168 => 'H21',
+my @afPoints231 = (qw(
+    A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21
+    B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21
+    C1 C2 C3 C4 C5 C6 C7 C8 C9 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 C21
+    D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D21
+    E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21
+    F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21
+    G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13 G14 G15 G16 G17 G18 G19 G20 G21
+    H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21
+    I1 I2 I3 I4 I5 I6 I7 I8 I9 I10 I11 I12 I13 I14 I15 I16 I17 I18 I19 I20 I21
+    J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13 J14 J15 J16 J17 J18 J19 J20 J21
+    K1 K2 K3 K4 K5 K6 K7 K8 K9 K10 K11 K12 K13 K14 K15 K16 K17 K18 K19 K20 K21
+));
 
-    169 => 'I1',   190 => 'J1',   211 => 'K1',
-    170 => 'I2',   191 => 'J2',   212 => 'K2',
-    171 => 'I3',   192 => 'J3',   213 => 'K3',
-    172 => 'I4',   193 => 'J4',   214 => 'K4',
-    173 => 'I5',   194 => 'J5',   215 => 'K5',
-    174 => 'I6',   195 => 'J6',   216 => 'K6',
-    175 => 'I7',   196 => 'J7',   217 => 'K7',
-    176 => 'I8',   197 => 'J8',   218 => 'K8',
-    177 => 'I9',   198 => 'J9',   219 => 'K9',
-    178 => 'I10',  199 => 'J10',  220 => 'K10',
-    179 => 'I11',  200 => 'J11',  221 => 'K11',
-    180 => 'I12',  201 => 'J12',  222 => 'K12',
-    181 => 'I13',  202 => 'J13',  223 => 'K13',
-    182 => 'I14',  203 => 'J14',  224 => 'K14',
-    183 => 'I15',  204 => 'J15',  225 => 'K15',
-    184 => 'I16',  205 => 'J16',  226 => 'K16',
-    185 => 'I17',  206 => 'J17',  227 => 'K17',
-    186 => 'I18',  207 => 'J18',  228 => 'K18',
-    187 => 'I19',  208 => 'J19',  229 => 'K19',
-    188 => 'I20',  209 => 'J20',  230 => 'K20',
-    189 => 'I21',  210 => 'J21',  231 => 'K21',
-);
-
-# AF point indices for 273 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z6iii and Zf).  Single-point AF array is 13 rows x 21 columns  (ref 28)
+# AF point indices for 273/299 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z6iii and Zf).  Single-point AF array is 13 rows x 21 columns  (ref 28)
 # - Auto Area AF has 2 additional columns available and provides 299 focus points. Uses 13 rows (A-M) and 23 columns (1-23), center is G12
 #
-my %afPoints273 = (
-      1 => 'A1',    24 => 'B1',    47 => 'C1',   70 => 'D1',     93 => 'E1',   116 => 'F1',   139 => 'G1',   162 => 'H1',
-      2 => 'A2',    25 => 'B2',    48 => 'C2',   71 => 'D2',     94 => 'E2',   117 => 'F2',   140 => 'G2',   163 => 'H2',
-      3 => 'A3',    26 => 'B3',    49 => 'C3',   72 => 'D3',     95 => 'E3',   118 => 'F3',   141 => 'G3',   164 => 'H3',
-      4 => 'A4',    27 => 'B4',    50 => 'C4',   73 => 'D4',     96 => 'E4',   119 => 'F4',   142 => 'G4',   165 => 'H4',
-      5 => 'A5',    28 => 'B5',    51 => 'C5',   74 => 'D5',     97 => 'E5',   120 => 'F5',   143 => 'G5',   166 => 'H5',
-      6 => 'A6',    29 => 'B6',    52 => 'C6',   75 => 'D6',     98 => 'E6',   121 => 'F6',   144 => 'G6',   167 => 'H6',
-      7 => 'A7',    30 => 'B7',    53 => 'C7',   76 => 'D7',     99 => 'E7',   122 => 'F7',   145 => 'G7',   168 => 'H7',
-      8 => 'A8',    31 => 'B8',    54 => 'C8',   77 => 'D8',    100 => 'E8',   123 => 'F8',   146 => 'G8',   169 => 'H8',
-      9 => 'A9',    32 => 'B9',    55 => 'C9',   78 => 'D9',    101 => 'E9',   124 => 'F9',   147 => 'G9',   170 => 'H9',
-     10 => 'A10',   33 => 'B10',   56 => 'C10',  79 => 'D10',   102 => 'E10',  125 => 'F10',  148 => 'G10',  171 => 'H10',
-     11 => 'A11',   34 => 'B11' ,  57 => 'C11',  80 => 'D11',   103 => 'E11',  126 => 'F11',  149 => 'G11',  172 => 'H11',
-     12 => 'A12',   35 => 'B12' ,  58 => 'C12',  81 => 'D12',   104 => 'E12',  127 => 'F12',  150 => 'G12',  173 => 'H12',
-     13 => 'A13',   36 => 'B13' ,  59 => 'C13',  82 => 'D13',   105 => 'E13',  128 => 'F13',  151 => 'G13',  174 => 'H13',
-     14 => 'A14',   37 => 'B14' ,  60 => 'C14',  83 => 'D14',   106 => 'E14',  129 => 'F14',  152 => 'G14',  175 => 'H14',
-     15 => 'A15',   38 => 'B15',   61 => 'C15',  84 => 'D15',   107 => 'E15',  130 => 'F15',  153 => 'G15',  176 => 'H15',
-     16 => 'A16',   39 => 'B16' ,  62 => 'C16',  85 => 'D16',   108 => 'E16',  131 => 'F16',  154 => 'G16',  177 => 'H16',
-     17 => 'A17',   40 => 'B17',   63 => 'C17',  86 => 'D17',   109 => 'E17',  132 => 'F17',  155 => 'G17',  178 => 'H17',
-     18 => 'A18',   41 => 'B18',   64 => 'C18',  87 => 'D18',   110 => 'E18',  133 => 'F18',  156 => 'G18',  179 => 'H18',
-     19 => 'A19',   42 => 'B19',   65 => 'C19',  88 => 'D19',   111 => 'E19',  134 => 'F19',  157 => 'G19',  180 => 'H19',
-     20 => 'A20',   43 => 'B20',   66 => 'C20',  89 => 'D20',   112 => 'E20',  135 => 'F20',  158 => 'G20',  181 => 'H20',
-     21 => 'A21',   44 => 'B21',   67 => 'C21',  90 => 'D21',   113 => 'E21',  136 => 'F21',  159 => 'G21',  182 => 'H21',
-     22 => 'A22',   45 => 'B22',   68 => 'C22',  91 => 'D22',   114 => 'E22',  137 => 'F22',  160 => 'G22',  183 => 'H22',
-     23 => 'A23',   46 => 'B23',   69 => 'C23',  92 => 'D23',   115 => 'E23',  138 => 'F23',  161 => 'G23',  184 => 'H23',
+my @afPoints299 = (qw(
+    A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21 A22 A23
+    B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23
+    C1 C2 C3 C4 C5 C6 C7 C8 C9 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 C21 C22 C23
+    D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D21 D22 D23
+    E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 E22 E23
+    F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21 F22 F23
+    G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13 G14 G15 G16 G17 G18 G19 G20 G21 G22 G23
+    H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23
+    I1 I2 I3 I4 I5 I6 I7 I8 I9 I10 I11 I12 I13 I14 I15 I16 I17 I18 I19 I20 I21 I22 I23
+    J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13 J14 J15 J16 J17 J18 J19 J20 J21 J22 J23
+    K1 K2 K3 K4 K5 K6 K7 K8 K9 K10 K11 K12 K13 K14 K15 K16 K17 K18 K19 K20 K21 K22 K23
+    L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 L13 L14 L15 L16 L17 L18 L19 L20 L21 L22 L23
+    M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23
+));
 
-    185 => 'I1',   208 => 'J1',   231 => 'K1',   254 => 'L1',   277 => 'M1',
-    186 => 'I2',   209 => 'J2',   232 => 'K2',   255 => 'L2',   278 => 'M2',
-    187 => 'I3',   210 => 'J3',   233 => 'K3',   256 => 'L3',   279 => 'M3',
-    188 => 'I4',   211 => 'J4',   234 => 'K4',   257 => 'L4',   280 => 'M4',
-    189 => 'I5',   212 => 'J5',   235 => 'K5',   258 => 'L5',   281 => 'M5',
-    190 => 'I6',   213 => 'J6',   236 => 'K6',   259 => 'L6',   282 => 'M6',
-    191 => 'I7',   214 => 'J7',   237 => 'K7',   260 => 'L7',   283 => 'M7',
-    192 => 'I8',   215 => 'J8',   238 => 'K8',   261 => 'L8',   284 => 'M8',
-    193 => 'I9',   216 => 'J9',   239 => 'K9',   262 => 'L9',   285 => 'M9',
-    194 => 'I10',  217 => 'J10',  240 => 'K10',  263 => 'L10',  286 => 'M10',
-    195 => 'I11',  218 => 'J11',  241 => 'K11',  264 => 'L11',  287 => 'M11',
-    196 => 'I12',  219 => 'J12',  242 => 'K12',  265 => 'L12',  288 => 'M12',
-    197 => 'I13',  220 => 'J13',  243 => 'K13',  266 => 'L13',  289 => 'M13',
-    198 => 'I14',  221 => 'J14',  244 => 'K14',  267 => 'L14',  290 => 'M14',
-    199 => 'I15',  222 => 'J15',  245 => 'K15',  268 => 'L15',  291 => 'M15',
-    200 => 'I16',  223 => 'J16',  246 => 'K16',  269 => 'L16',  292 => 'M16',
-    201 => 'I17',  224 => 'J17',  247 => 'K17',  270 => 'L17',  293 => 'M17',
-    202 => 'I18',  225 => 'J18',  248 => 'K18',  271 => 'L18',  294 => 'M18',
-    203 => 'I19',  226 => 'J19',  249 => 'K19',  272 => 'L19',  295 => 'M19',
-    204 => 'I20',  227 => 'J20',  250 => 'K20',  273 => 'L20',  296 => 'M20',
-    205 => 'I21',  228 => 'J21',  251 => 'K21',  274 => 'L21',  297 => 'M21',
-    206 => 'I22',  229 => 'J22',  252 => 'K22',  275 => 'L22',  298 => 'M22',
-    208 => 'I23',  230 => 'J23',  253 => 'K23',  276 => 'L23',  299 => 'M23',
-);
-
-# AF point indices for 493 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z8 and Z9).  Single-point AF array is 17 rows x 29 columns  (ref 28)
-# - Auto Area AF uses 15 of the 17 rows (A-Q) and 27 of the 29 columns (1-27), center is H14 (405 of the 493 focus points can be used by Auto-area AF)
+# AF point indices for 405/493 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z8 and Z9).  Single-point AF array is 17 rows x 29 columns  (ref 28)
+# - Auto Area AF uses 15 of the 17 rows (A-O) and 27 of the 29 columns (1-27), center is H14 (405 of the 493 focus points can be used by Auto-area AF)
 #
-my %afPoints493 = (
-      1 => 'A1',    28 => 'B1',    55 => 'C1',   82 => 'D1',    109 => 'E1',   136 => 'F1',   163 => 'G1',   190 => 'H1',
-      2 => 'A2',    29 => 'B2',    56 => 'C2',   83 => 'D2',    110 => 'E2',   137 => 'F2',   164 => 'G2',   191 => 'H2',
-      3 => 'A3',    30 => 'B3',    57 => 'C3',   84 => 'D3',    111 => 'E3',   138 => 'F3',   165 => 'G3',   192 => 'H3',
-      4 => 'A4',    31 => 'B4',    58 => 'C4',   85 => 'D4',    112 => 'E4',   139 => 'F4',   166 => 'G4',   193 => 'H4',
-      5 => 'A5',    32 => 'B5',    59 => 'C5',   86 => 'D5',    113 => 'E5',   140 => 'F5',   167 => 'G5',   194 => 'H5',
-      6 => 'A6',    33 => 'B6',    60 => 'C6',   87 => 'D6',    114 => 'E6',   141 => 'F6',   168 => 'G6',   195 => 'H6',
-      7 => 'A7',    34 => 'B7',    61 => 'C7',   88 => 'D7',    115 => 'E7',   142 => 'F7',   169 => 'G7',   196 => 'H7',
-      8 => 'A8',    35 => 'B8',    62 => 'C8',   89 => 'D8',    116 => 'E8',   143 => 'F8',   170 => 'G8',   197 => 'H8',
-      9 => 'A9',    36 => 'B9',    63 => 'C9',   90 => 'D9',    117 => 'E9',   144 => 'F9',   171 => 'G9',   198 => 'H9',
-     10 => 'A10',   37 => 'B10',   64 => 'C10',  91 => 'D10',   118 => 'E10',  145 => 'F10',  172 => 'G10',  199 => 'H10',
-     11 => 'A11',   38 => 'B11' ,  65 => 'C11',  92 => 'D11',   119 => 'E11',  146 => 'F11',  173 => 'G11',  200 => 'H11',
-     12 => 'A12',   39 => 'B12' ,  66 => 'C12',  93 => 'D12',   120 => 'E12',  147 => 'F12',  174 => 'G12',  201 => 'H12',
-     13 => 'A13',   40 => 'B13' ,  67 => 'C13',  94 => 'D13',   121 => 'E13',  148 => 'F13',  175 => 'G13',  202 => 'H13',
-     14 => 'A14',   41 => 'B14' ,  68 => 'C14',  95 => 'D14',   122 => 'E14',  149 => 'F14',  176 => 'G14',  203 => 'H14',
-     15 => 'A15',   42 => 'B15',   69 => 'C15',  96 => 'D15',   123 => 'E15',  150 => 'F15',  177 => 'G15',  204 => 'H15',
-     16 => 'A16',   43 => 'B16' ,  70 => 'C16',  97 => 'D16',   124 => 'E16',  151 => 'F16',  178 => 'G16',  205 => 'H16',
-     17 => 'A17',   44 => 'B17',   71 => 'C17',  98 => 'D17',   125 => 'E17',  152 => 'F17',  179 => 'G17',  206 => 'H17',
-     18 => 'A18',   45 => 'B18',   72 => 'C18',  99 => 'D18',   126 => 'E18',  153 => 'F18',  180 => 'G18',  207 => 'H18',
-     19 => 'A19',   46 => 'B19',   73 => 'C19',  100 => 'D19',  127 => 'E19',  154 => 'F19',  181 => 'G19',  208 => 'H19',
-     20 => 'A20',   47 => 'B20',   74 => 'C20',  101 => 'D20',  128 => 'E20',  155 => 'F20',  182 => 'G20',  209 => 'H20',
-     21 => 'A21',   48 => 'B21',   75 => 'C21',  102 => 'D21',  129 => 'E21',  156 => 'F21',  183 => 'G21',  210 => 'H21',
-     22 => 'A22',   49 => 'B22',   76 => 'C22',  103 => 'D22',  130 => 'E22',  157 => 'F22',  184 => 'G22',  211 => 'H22',
-     23 => 'A23',   50 => 'B23',   77 => 'C23',  104 => 'D23',  131 => 'E23',  158 => 'F23',  185 => 'G23',  212 => 'H23',
-     24 => 'A24',   51 => 'B24',   78 => 'C24',  105 => 'D24',  132 => 'E24',  159 => 'F24',  186 => 'G24',  213 => 'H24',
-     25 => 'A25',   52 => 'B25',   79 => 'C25',  106 => 'D25',  133 => 'E25',  160 => 'F25',  187 => 'G25',  214 => 'H25',
-     26 => 'A26',   53 => 'B26',   80 => 'C26',  107 => 'D26',  134 => 'E26',  161 => 'F26',  188 => 'G26',  215 => 'H26',
-     27 => 'A27',   54 => 'B27',   81 => 'C27',  108 => 'D27',  135 => 'E27',  162 => 'F27',  189 => 'G27',  216 => 'H27',
-
-    217 => 'I1',   244 => 'J1',   271 => 'K1',   298 => 'L1',   325 => 'M1',   352 => 'N1',   379 => 'O1',
-    218 => 'I2',   245 => 'J2',   272 => 'K2',   299 => 'L2',   326 => 'M2',   353 => 'N2',   380 => 'O2',
-    219 => 'I3',   246 => 'J3',   273 => 'K3',   300 => 'L3',   327 => 'M3',   354 => 'N3',   381 => 'O3',
-    220 => 'I4',   247 => 'J4',   274 => 'K4',   301 => 'L4',   328 => 'M4',   355 => 'N4',   382 => 'O4',
-    221 => 'I5',   248 => 'J5',   275 => 'K5',   302 => 'L5',   329 => 'M5',   356 => 'N5',   383 => 'O5',
-    222 => 'I6',   249 => 'J6',   276 => 'K6',   303 => 'L6',   330 => 'M6',   357 => 'N6',   384 => 'O6',
-    223 => 'I7',   250 => 'J7',   277 => 'K7',   304 => 'L7',   331 => 'M7',   358 => 'N7',   385 => 'O7',
-    224 => 'I8',   251 => 'J8',   278 => 'K8',   305 => 'L8',   332 => 'M8',   359 => 'N8',   386 => 'O8',
-    225 => 'I9',   252 => 'J9',   279 => 'K9',   306 => 'L9',   333 => 'M9',   360 => 'N9',   387 => 'O9',
-    226 => 'I10',  253 => 'J10',  280 => 'K10',  307 => 'L10',  334 => 'M10',  361 => 'N10',  388 => 'O10',
-    227 => 'I11',  254 => 'J11',  281 => 'K11',  308 => 'L11',  335 => 'M11',  362 => 'N11',  389 => 'O11',
-    228 => 'I12',  255 => 'J12',  282 => 'K12',  309 => 'L12',  336 => 'M12',  363 => 'N12',  390 => 'O12',
-    229 => 'I13',  256 => 'J13',  283 => 'K13',  310 => 'L13',  337 => 'M13',  364 => 'N13',  391 => 'O13',
-    230 => 'I14',  257 => 'J14',  284 => 'K14',  311 => 'L14',  338 => 'M14',  365 => 'N14',  392 => 'O14',
-    231 => 'I15',  258 => 'J15',  285 => 'K15',  312 => 'L15',  339 => 'M15',  366 => 'N15',  393 => 'O15',
-    232 => 'I16',  259 => 'J16',  286 => 'K16',  313 => 'L16',  340 => 'M16',  367 => 'N16',  394 => 'O16',
-    233 => 'I17',  260 => 'J17',  287 => 'K17',  314 => 'L17',  341 => 'M17',  368 => 'N17',  395 => 'O17',
-    234 => 'I18',  261 => 'J18',  288 => 'K18',  315 => 'L18',  342 => 'M18',  369 => 'N18',  396 => 'O18',
-    235 => 'I19',  262 => 'J19',  289 => 'K19',  316 => 'L19',  343 => 'M19',  370 => 'N19',  397 => 'O19',
-    236 => 'I20',  263 => 'J20',  290 => 'K20',  317 => 'L20',  344 => 'M20',  371 => 'N20',  398 => 'O20',
-    237 => 'I21',  264 => 'J21',  291 => 'K21',  318 => 'L21',  345 => 'M21',  372 => 'N21',  399 => 'O21',
-    238 => 'I22',  265 => 'J22',  292 => 'K22',  319 => 'L22',  346 => 'M22',  373 => 'N22',  400 => 'O22',
-    239 => 'I23',  266 => 'J23',  293 => 'K23',  320 => 'L23',  347 => 'M23',  374 => 'N23',  401 => 'O23',
-    240 => 'I24',  267 => 'J24',  294 => 'K24',  321 => 'L24',  348 => 'M24',  375 => 'N24',  402 => 'O24',
-    241 => 'I25',  268 => 'J25',  295 => 'K25',  322 => 'L25',  349 => 'M25',  376 => 'N25',  403 => 'O25',
-    242 => 'I26',  269 => 'J26',  296 => 'K26',  323 => 'L26',  350 => 'M26',  377 => 'N26',  404 => 'O26',
-    243 => 'I27',  270 => 'J27',  297 => 'K27',  324 => 'L27',  351 => 'M27',  378 => 'N27',  405 => 'O27',
-);
+my @afPoints405 = (qw(
+    A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21 A22 A23 A24 A25 A26 A27
+    B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23 B24 B25 B26 B27
+    C1 C2 C3 C4 C5 C6 C7 C8 C9 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 C21 C22 C23 C24 C25 C26 C27
+    D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D21 D22 D23 D24 D25 D26 D27
+    E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 E22 E23 E24 E25 E26 E27
+    F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21 F22 F23 F24 F25 F26 F27
+    G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13 G14 G15 G16 G17 G18 G19 G20 G21 G22 G23 G24 G25 G26 G27
+    H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27
+    I1 I2 I3 I4 I5 I6 I7 I8 I9 I10 I11 I12 I13 I14 I15 I16 I17 I18 I19 I20 I21 I22 I23 I24 I25 I26 I27
+    J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13 J14 J15 J16 J17 J18 J19 J20 J21 J22 J23 J24 J25 J26 J27
+    K1 K2 K3 K4 K5 K6 K7 K8 K9 K10 K11 K12 K13 K14 K15 K16 K17 K18 K19 K20 K21 K22 K23 K24 K25 K26 K27
+    L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 L13 L14 L15 L16 L17 L18 L19 L20 L21 L22 L23 L24 L25 L26 L27
+    M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27
+    N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 N13 N14 N15 N16 N17 N18 N19 N20 N21 N22 N23 N24 N25 N26 N27
+    O1 O2 O3 O4 O5 O6 O7 O8 O9 O10 O11 O12 O13 O14 O15 O16 O17 O18 O19 O20 O21 O22 O23 O24 O25 O26 O27
+));
 
 my %cropHiSpeed = ( #IB
     0 => 'Off',
@@ -3118,7 +3031,6 @@ my %base64coord = (
         Condition => '$$valPt =~ /^040[012]/',
         SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0400' },
     },{ #JD
-        # (expeed 5 processor cameras are version 0101, expeed 6 are version 03xx)
         Name => 'AFInfo2',
         # (this structure may be byte swapped when rewritten by CaptureNX)
         SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2' },
@@ -4134,23 +4046,7 @@ my %base64coord = (
         Name => 'AFPointsInFocus',
         Format => 'int16u',
         PrintConvColumns => 2,
-        PrintConv => {
-            0 => '(none)',
-            0x7ff => 'All 11 Points',
-            BITMASK => {
-                0 => 'Center',
-                1 => 'Top',
-                2 => 'Bottom',
-                3 => 'Mid-left',
-                4 => 'Mid-right',
-                5 => 'Upper-left',
-                6 => 'Upper-right',
-                7 => 'Lower-left',
-                8 => 'Lower-right',
-                9 => 'Far Left',
-                10 => 'Far Right',
-            },
-        },
+        PrintConv => \%afPoints11,
     },
 );
 
@@ -4161,7 +4057,6 @@ my %base64coord = (
     DATAMEMBER => [ 0, 4, 6 ],
     NOTES => "These tags are written by Nikon DSLR's which have the live view feature.",
     0 => {
-        # (expeed 5 processor cameras are version 0101, expeed 6 are version 03xx)
         Name => 'AFInfo2Version',
         Format => 'undef[4]',
         Writable => 0,
@@ -4623,7 +4518,7 @@ my %base64coord = (
     0x1c => [
         { #PH
             Name => 'ContrastDetectAFInFocus',
-            Condition => '$$self{AFInfo2Version} eq "0100"',
+            Condition => '$$self{AFInfo2Version} eq "0100" and $$self{ContrastDetectAF}',
             PrintConv => { 0 => 'No', 1 => 'Yes' },
         },{ #PH (D500, see forum11190)
             Name => 'AFPointsSelected',
@@ -4633,6 +4528,11 @@ my %base64coord = (
             ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
             PrintConv => sub { PrintAFPoints(shift, \%afPoints153); },
             PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153); },
+        },{ #PH (D3400) (NC "selected")
+            Name => 'AFPointsSelected',
+            Condition => '$$self{AFInfo2Version} eq "0101" and $$self{PhaseDetectAF} == 2',
+            Format => 'int16u',
+            PrintConv => \%afPoints11,
         },
     ],
     # 0x1d - always zero (with or without live view)
@@ -4681,6 +4581,14 @@ my %base64coord = (
             ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
             PrintConv => sub { PrintAFPoints(shift, \%afPoints153); },
             PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153); },
+        },{ #PH (D7500) (NC "in focus")
+            Name => 'AFPointsInFocus',
+            Condition => '$$self{AFInfo2Version} eq "0101" and $$self{PhaseDetectAF} == 1',
+            Format => 'undef[7]',
+            ValueConv => 'join(" ", unpack("H2"x7, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints51); },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51); },
         },
     ],
     0x31 => { #28 (Z7)
@@ -4745,6 +4653,16 @@ my %base64coord = (
                 9 => 'Upper-right',
                 10 => 'Lower-right',
                 11 => 'Far Right',
+            },
+        },
+        {
+            Name => 'PrimaryAFPoint',
+            Condition => '$$self{PhaseDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
+            PrintConvColumns => 5,
+            PrintConv => {
+                0 => '(none)',
+                %afPoints51,
+                1 => 'C6 (Center)',
             },
         },
         {
@@ -4843,26 +4761,26 @@ my %base64coord = (
         Notes => 'either AFPointsUsed or AFAreaX/YPosition will be set, but not both',
         ValueConv => 'join(" ", unpack("H2"x51, $val))',
         ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints493); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints493); },
+        PrintConv => sub { PrintAFPoints(shift, \@afPoints405); },
+        PrintConvInv => sub { PrintAFPointsInv(shift, \@afPoints405); },
     },{
         Name => 'AFPointsUsed', # Z6iii and Zf (AFInfo2Version 0401)
         Condition => '$$self{Model} =~ /^NIKON (Z6_3|Z f)\b/i and ($$self{AFAreaModeUsed} == 197 or $$self{AFAreaModeUsed} == 207)',
-        Format => 'undef[35]',
-        ValueConv => 'join(" ", unpack("H2"x35, $val))',
+        Format => 'undef[38]',
+        ValueConv => 'join(" ", unpack("H2"x38, $val))',
         ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints273); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints273); },
+        PrintConv => sub { PrintAFPoints(shift, \@afPoints299); },
+        PrintConvInv => sub { PrintAFPointsInv(shift, \@afPoints299); },
     },{
         Name => 'AFPointsUsed', # Z50ii (AFInfo2Version 0402)
         Condition => '$$self{Model} =~ /^NIKON Z50_2\b/i and ($$self{AFAreaModeUsed} == 197 or $$self{AFAreaModeUsed} == 207)',
-        Format => 'undef[27]',
-        ValueConv => 'join(" ", unpack("H2"x27, $val))',
+        Format => 'undef[29]',
+        ValueConv => 'join(" ", unpack("H2"x29, $val))',
         ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints209); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints209); },
+        PrintConv => sub { PrintAFPoints(shift, \@afPoints231); },
+        PrintConvInv => sub { PrintAFPointsInv(shift, \@afPoints231); },
     }],
-    0x3e => {
+    62 => {
         Name => 'AFImageWidth',
         Format => 'int16u',
     },
@@ -5712,6 +5630,8 @@ my %nikonFocalConversions = (
             45 => 'Nikkor Z 600mm f/6.3 VR S', #28
             46 => 'Nikkor Z 135mm f/1.8 S Plena', #28
             48 => 'Nikkor Z 28-400mm f/4-8 VR', #30
+            51 => 'Nikkor Z 35mm f/1.4', #28
+            52 => 'Nikkor Z 50mm f/1.4', #28
             2305 => 'Laowa FFII 10mm F2.8 C&D Dreamer', #30
             32768 => 'Nikkor Z 400mm f/2.8 TC VR S TC-1.4x', #28
             32769 => 'Nikkor Z 600mm f/4 TC VR S TC-1.4x', #28
@@ -9071,10 +8991,20 @@ my %nikonFocalConversions = (
         },
         {
             Name => 'MenuSettingsOffsetZ9v4',
-            Notes => 'Firmware versions 4.0 and later',
+            Condition => '$$self{FirmwareVersion} and $$self{FirmwareVersion} lt "05.01"',
+            Notes => 'Firmware versions 4.x and 5.0',
             Format => 'int32u',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ9v4',
+                Start => '$dirStart + $val',
+            },
+        },
+        {
+            Name => 'MenuSettingsOffsetZ9v4',
+            Notes => 'Firmware versions 4.x and 5.0',
+            Format => 'int32u',
+            SubDirectory => {
+                TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ9v5',
                 Start => '$dirStart + $val',
             },
         },
@@ -10585,12 +10515,13 @@ my %nikonFocalConversions = (
     #1936 FocusPointDisplayOption3DTrackingColor CSa11-d 0=> 'White', 1= => 'Red'
 );
 
+# firmware version 4.x menu settings (ref 28)
 %Image::ExifTool::Nikon::MenuSettingsZ9v4  = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     DATAMEMBER => [ 154, 204, 208, 248, 328, 444, 548, 554, 570, 596 ],
     IS_SUBDIR => [ 847 ],
-    NOTES => 'These tags are used by the Z9 firmware 4.0.0 and 4.1.0',
+    NOTES => 'These tags are used by the Z9 firmware 4.0.0 and 4.1.0.',
     72 => {
         Name => 'HighFrameRate',        #CH and C30/C60/C120 but not CL
         PrintConv => \%highFrameRateZ9,
@@ -10894,6 +10825,318 @@ my %nikonFocalConversions = (
     2068 => { Name => 'PlaybackButtonPlaybackMode',  %buttonsZ9},     #CSf2
     2070 => { Name => 'BracketButtonPlaybackMode',   %buttonsZ9},     #CSf2
     2072 => { Name => 'FlashModeButtonPlaybackMode', %buttonsZ9},     #CSf2
+);
+
+# menu settings for the Z9 with firmware version 5.1 (ref 28)
+%Image::ExifTool::Nikon::MenuSettingsZ9v5  = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    DATAMEMBER => [ 158, 208, 212, 252, 332, 448, 552, 558, 574, 600 ],
+    IS_SUBDIR => [ 851 ],
+    NOTES => 'These tags are used by the Z9 firmware 5.1.',
+    72 => {
+        Name => 'HighFrameRate',        #CH and C30/C60/C120 but not CL
+        PrintConv => \%highFrameRateZ9,
+    },
+    158 => {
+        Name => 'MultipleExposureMode',
+        RawConv => '$$self{MultipleExposureMode} = $val',
+        PrintConv => \%multipleExposureModeZ9,
+    },
+    160 => {Name => 'MultiExposureShots', Condition => '$$self{MultipleExposureMode} != 0'},  #range 2-9
+    208 => {
+        Name => 'Intervals',
+        Format => 'int32u',
+        RawConv => '$$self{IntervalShootingIntervals} = $val',
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',     #not valid for C30/C60/C120
+    },
+    212 => {
+        Name => 'ShotsPerInterval',
+        Format => 'int32u',
+        RawConv => '$$self{IntervalShootingShotsPerInterval} = $val',
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',     #not valid for C30/C60/C120
+    },
+    252 => {
+        Name => 'FocusShiftNumberShots',    #1-300
+        RawConv => '$$self{FocusShiftNumberShots} = $val',
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
+    },
+    256 => {
+        Name => 'FocusShiftStepWidth',     #1(Narrow) to 10 (Wide)
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
+    },
+    260 => {
+        Name => 'FocusShiftInterval',
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
+        PrintConv => '$val == 1? "1 Second" : sprintf("%.0f Seconds",$val)',
+    },
+    264 => {
+        Name => 'FocusShiftExposureLock',
+        Unknown => 1,
+        PrintConv => \%offOn,
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
+    },
+    294 => { Name => 'PhotoShootingMenuBank', PrintConv => \%banksZ9 },
+    296 => { Name => 'ExtendedMenuBanks',     PrintConv => \%offOn }, # single tag from both Photo & Video menus
+    332 => { Name => 'PhotoShootingMenuBankImageArea', RawConv => '$$self{ImageArea} = $val', PrintConv => \%imageAreaZ9 },
+    #338  JPGCompression     0 => 'Size Priority', 1 => 'Optimal Quality',
+    346 => { Name => 'AutoISO', PrintConv => \%offOn },
+    348 => {
+        Name => 'ISOAutoHiLimit',
+        Format => 'int16u',
+        Unknown => 1,
+        ValueConv => '($val-104)/8',
+        ValueConvInv => '8 * ($val + 104)',
+        PrintConv => \%iSOAutoHiLimitZ7,
+    },
+    350 => {
+        Name => 'ISOAutoFlashLimit',
+        Format => 'int16u',
+        Unknown => 1,
+        ValueConv => '($val-104)/8',
+        ValueConvInv => '8 * ($val + 104)',
+        PrintConv => \%iSOAutoHiLimitZ7,
+    },
+    358 => {
+        Name => 'ISOAutoShutterTime', # shutter speed is 2 ** (-$val/24)
+        ValueConv => '$val / 8',
+        Format => 'int16s',
+        PrintConv => \%iSOAutoShutterTimeZ9,
+    },
+    440 => { Name => 'MovieVignetteControl',    PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
+    442 => { Name => 'DiffractionCompensation', PrintConv => \%offOn }, # value can be set from both the Photo Shoot Menu and the Video Shooting Menu
+    444 => { Name => 'FlickerReductionShooting',PrintConv => \%offOn },
+    448 => {
+        Name => 'FlashControlMode', # this and nearby tag values for flash may be set from either the Photo Shooting Menu or using the Flash unit menu
+        RawConv => '$$self{FlashControlMode} = $val',
+        PrintConv => \%flashControlModeZ7,
+    },
+    450 => {
+        Name => 'FlashMasterCompensation',
+        Format => 'int8s',
+        Unknown => 1,
+        ValueConv => '$val/6',
+        ValueConvInv => '6 * $val',
+        PrintConv => '$val ? sprintf("%+.1f",$val) : 0',
+        PrintConvInv => '$val',
+    },
+    454 => {
+        Name => 'FlashGNDistance',
+        Condition => '$$self{FlashControlMode} == 2',
+        Unknown => 1,
+        ValueConv => '$val + 3',
+        PrintConv => \%flashGNDistance,
+    },
+    458 => {
+        Name => 'FlashOutput',   # range[0,24]  with 0=>Full; 1=>50%; then decreasing flash power in 1/3 stops to 0.39% (1/256 full power). also found in FlashInfoUnknown at offset 0x0a (with different mappings)
+        Condition => '$$self{FlashControlMode} >= 3',
+        Unknown => 1,
+        ValueConv => '2 ** (-$val/3)',
+        ValueConvInv => '$val>0 ? -3*log($val)/log(2) : 0',
+        PrintConv => '$val>0.99 ? "Full" : sprintf("%.1f%%",$val*100)',
+        PrintConvInv => '$val=~/(\d+)/ ? $1/100 : 1',
+    },
+    #466 flash wireless control 0=> 'Off' 1=> 'Optical AWL'
+    #468 => { Name => 'FlashRemoteControl',  PrintConv => \%flashRemoteControlZ7,  Unknown => 1 },
+    #480 => { Name => 'FlashWirelessOption', PrintConv => \%flashWirelessOptionZ7, Unknown => 1 },
+    552 => { Name => 'AFAreaMode', RawConv => '$$self{AFAreaMode} = $val', PrintConv => \%aFAreaModeZ9},
+    554 => { Name => 'VRMode',   PrintConv => \%vRModeZ9},
+    558 => {
+        Name => 'BracketSet',
+        RawConv => '$$self{BracketSet} = $val',
+        PrintConv => \%bracketSetZ9,
+    },
+    560 => {
+        Name => 'BracketProgram',
+        Condition => '$$self{BracketSet} < 3',
+        Notes => 'AE and/or Flash Bracketing',
+        PrintConv => \%bracketProgramZ9,
+    },
+    562 => {
+        Name => 'BracketIncrement',
+        Condition => '$$self{BracketSet} < 3',
+        Notes => 'AE and/or Flash Bracketing',
+        PrintConv => \%bracketIncrementZ9,
+    },
+    574 => { Name => 'HDR',                   RawConv => '$$self{HDR} = $val', PrintConv => \%multipleExposureModeZ9 },
+    580 => { Name => 'SecondarySlotFunction', PrintConv => \%secondarySlotFunctionZ9 },
+    586 => { Name => 'HDRLevel',              Condition => '$$self{HDR} ne 0', PrintConv => \%hdrLevelZ8 },
+    590 => { Name => 'Slot2JpgSize',          PrintConv => { 0 => 'Large (8256x5504)', 1 => 'Medium (6192x4128)', 2 => 'Small (4128x2752)' }, Unknown => 1},
+    596 => { Name => 'DXCropAlert',           PrintConv => \%offOn },
+    598 => { Name => 'SubjectDetection',      PrintConv => \%subjectDetectionZ9 },
+    600 => {
+        Name => 'DynamicAFAreaSize',
+        Condition => '$$self{AFAreaMode} == 2',
+        RawConv => '$$self{DynamicAFAreaSize} = $val',
+        PrintConv => \%dynamicAfAreaModesZ9,
+    },
+    640 => { Name => 'HighFrequencyFlickerReduction', PrintConv => \%offOn, Unknown => 1 }, # new with firmware 3.0
+    650 => {
+        Name => 'MovieImageArea',
+        Unknown => 1,
+        Mask => 0x01, # without the mask 4 => 'FX'  5 => DX   only the 2nd Z-series field encountered with a mask.
+        PrintConv => \%imageAreaZ9b,
+    },
+    660 => { Name => 'MovieType', PrintConv => \%movieTypeZ9, Unknown => 1 },
+    662 => {
+        Name => 'MovieISOAutoHiLimit',
+        Format => 'int16u',
+        Unknown => 1,
+        ValueConv => '($val-104)/8',
+        ValueConvInv => '8 * ($val + 104)',
+        PrintConv => \%iSOAutoHiLimitZ7,
+    },
+    664 => { Name => 'MovieISOAutoControlManualMode', PrintConv => \%offOn, Unknown => 1 },
+    666 => {
+        Name => 'MovieISOAutoManualMode',
+        Format => 'int16u',
+        Unknown => 1,
+        ValueConv => '($val-104)/8',
+        ValueConvInv => '8 * ($val + 104)',
+        PrintConv => \%iSOAutoHiLimitZ7,
+    },
+    740 => { Name => 'MovieActiveD-Lighting',      PrintConv => \%activeDLightingZ7, Unknown => 1 },
+    742 => { Name => 'MovieHighISONoiseReduction', PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
+    748 => { Name => 'MovieFlickerReduction',      PrintConv => \%movieFlickerReductionZ9 },
+    750 => { Name => 'MovieMeteringMode',          PrintConv => \%meteringModeZ7, Unknown => 1 },
+    752 => { Name => 'MovieFocusMode',             PrintConv => \%focusModeZ7, Unknown => 1 },
+    754 => { Name => 'MovieAFAreaMode',            PrintConv => \%aFAreaModeZ9 },
+    756 => { Name => 'MovieVRMode',                PrintConv => \%vRModeZ9, Unknown => 1 },
+    760 => { Name => 'MovieElectronicVR',          PrintConv => \%offOn, Unknown => 1 }, # distinct from MoveieVRMode
+    762 => { Name => 'MovieSoundRecording',        PrintConv => { 0 => 'Off', 1 => 'Auto', 2 => 'Manual' }, Unknown => 1 },
+    764 => { Name => 'MicrophoneSensitivity',      Unknown => 1 }, # 1-20
+    766 => { Name => 'MicrophoneAttenuator',       PrintConv => \%offOn, Unknown => 1 }, # distinct from MoveieVRMode
+    768 => { Name => 'MicrophoneFrequencyResponse',PrintConv => { 0 => 'Wide Range', 1 => 'Vocal Range' }, Unknown => 1 },
+    770 => { Name => 'WindNoiseReduction',         PrintConv =>  \%offOn, Unknown => 1 },
+    792 => { Name => 'MovieToneMap',               PrintConv => \%movieToneMapZ9, Unknown => 1 },
+    798 => { Name => 'MovieFrameSize',             PrintConv => \%movieFrameSizeZ9, Unknown => 1 },
+    800 => { Name => 'MovieFrameRate',             PrintConv => \%movieFrameRateZ7, Unknown => 1 },
+    806 => { Name => 'MicrophoneJackPower',        PrintConv => \%offOn, Unknown => 1 },
+    807 => { Name => 'MovieDXCropAlert',           PrintConv => \%offOn, Unknown => 1 },
+    808 => { Name => 'MovieSubjectDetection',      PrintConv => \%subjectDetectionZ9, Unknown => 1 },
+    816 => { Name => 'MovieHighResZoom',           PrintConv =>  \%offOn, Unknown => 1 },
+    851 => {
+        Name => 'CustomSettingsZ9v4',
+        Format => 'undef[632]',
+        SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ9v4' },
+    },
+    1502 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
+    1504 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    1510 => { Name => 'MonitorBrightness',  PrintConv => \%monitorBrightnessZ9, Unknown => 1 },        # settings: -5 to +5.  Added with firmware 3.0:  Lo1, Lo2, Hi1, Hi2
+    1532 => { Name => 'AFFineTune',         PrintConv => \%offOn, Unknown => 1 },
+    1536 => { Name => 'NonCPULens1FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},  #should probably hide altogther if $val is 0
+    1540 => { Name => 'NonCPULens2FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1542 => { Name => 'NonCPULens3FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1548 => { Name => 'NonCPULens4FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1552 => { Name => 'NonCPULens5FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1556 => { Name => 'NonCPULens6FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1560 => { Name => 'NonCPULens7FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1564 => { Name => 'NonCPULens8FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1568 => { Name => 'NonCPULens9FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1572 => { Name => 'NonCPULens10FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1576 => { Name => 'NonCPULens11FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1580 => { Name => 'NonCPULens12FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1584 => { Name => 'NonCPULens13FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1588 => { Name => 'NonCPULens14FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1592 => { Name => 'NonCPULens15FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1596 => { Name => 'NonCPULens16FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1600 => { Name => 'NonCPULens17FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1604 => { Name => 'NonCPULens18FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1608 => { Name => 'NonCPULens19FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1612 => { Name => 'NonCPULens20FocalLength', Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
+    1616 => { Name => 'NonCPULens1MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},  #non-CPU aperture interface, values and storage differ from the Z8
+    1620 => { Name => 'NonCPULens2MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1624 => { Name => 'NonCPULens3MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1628 => { Name => 'NonCPULens4MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1632 => { Name => 'NonCPULens5MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1636 => { Name => 'NonCPULens6MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1640 => { Name => 'NonCPULens7MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1644 => { Name => 'NonCPULens8MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1648 => { Name => 'NonCPULens9MaxAperture',  Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1652 => { Name => 'NonCPULens10MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1656 => { Name => 'NonCPULens11MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1660 => { Name => 'NonCPULens12MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1664 => { Name => 'NonCPULens13MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1668 => { Name => 'NonCPULens14MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1672 => { Name => 'NonCPULens15MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1676 => { Name => 'NonCPULens16MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1680 => { Name => 'NonCPULens17MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1684 => { Name => 'NonCPULens18MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1688 => { Name => 'NonCPULens19MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1692 => { Name => 'NonCPULens20MaxAperture', Format => 'int16s', PrintConv => 'sprintf("f/%.1f",$val/100)', Unknown => 1},
+    1708 => { Name => 'HDMIOutputResolution', PrintConv => \%hDMIOutputResolutionZ9 },
+    1721 => { Name => 'SetClockFromLocationData', PrintConv => \%offOn, Unknown => 1 },
+    1728 => { Name => 'AirplaneMode',       PrintConv => \%offOn, Unknown => 1 },
+    1729 => { Name => 'EmptySlotRelease',   PrintConv => { 0 => 'Disable Release', 1 => 'Enable Release' }, Unknown => 1 },
+    1764 => { Name => 'EnergySavingMode',   PrintConv => \%offOn, Unknown => 1 },
+    1788 => { Name => 'RecordLocationData', PrintConv => \%offOn, Unknown => 1 },
+    1792 => { Name => 'USBPowerDelivery',   PrintConv => \%offOn, Unknown => 1 },
+    1801 => { Name => 'SensorShield',       PrintConv => { 0 => 'Stays Open', 1 => 'Closes' }, Unknown => 1 },
+    1866 => {
+        Name => 'AutoCapturePreset',
+        PrintConv => {
+            0 => '1',
+            1 => '2',
+            2 => '3',
+            3 => '4',
+            4 => '5',
+        },
+    },
+    1868 => {
+        Name => 'FocusShiftAutoReset',
+        Unknown => 1,
+        PrintConv => \%offOn,
+        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
+    },
+    1926 => { #CSd4-a
+        Name => 'PreReleaseBurstLength',
+        PrintConv => {
+            0 => 'None',
+            1 => '0.3 Sec',
+            2 => '0.5 Sec',
+            3 => '1 Sec',
+        },
+    },
+    1928 => { #CSd4-b
+        Name => 'PostReleaseBurstLength',
+        PrintConv => {
+            0 => '1 Sec',
+            1 => '2 Sec',
+            2 => '3 Sec',
+            3 => 'Max',
+        },
+    },
+    1942 => { Name => 'VerticalISOButton',           %buttonsZ9},    #CSf2
+    1944 => { Name => 'ExposureCompensationButton',  %buttonsZ9},    #CSf2
+    1946 => { Name => 'ISOButton',                   %buttonsZ9},    #CSf2
+    2006 => { Name => 'ViewModeShowEffectsOfSettings', PrintConv => { 0=>'Always', 1=> 'Only When Flash Not Used'}, Unknown => 1 },     #CSd9-a
+    2008 => { Name => 'DispButton',                  %buttonsZ9},    #CSf2
+    2052 => {  #CSd6
+        Name => 'ExposureDelay',
+        Format => 'fixed32u',
+        PrintConv => '$val ? sprintf("%.1f sec",$val/1000) : "Off"',
+    },
+    2056 => {  #CSf2-m3
+        Name => 'CommandDialFrameAdvanceZoom',
+        Condition => '$$self{FirmwareVersion} and $$self{FirmwareVersion} ge "05.00"',
+        PrintConv => \%dialsFrameAdvanceZoomPositionZ9,
+        Unknown => 1
+    },
+    2058 => {  #CSf2-n3
+        Name => 'SubCommandDialFrameAdvanceZoom',
+        Condition => '$$self{FirmwareVersion} and $$self{FirmwareVersion} ge "05.00"',
+        PrintConv => \%dialsFrameAdvanceZoomPositionZ9,
+        Unknown => 1
+    },
+    2060 => { Name => 'PlaybackButton',  %buttonsZ9},     #CSf2
+    2062 => { Name => 'WBButton',        %buttonsZ9},     #CSf2
+    2064 => { Name => 'BracketButton',   %buttonsZ9},     #CSf2
+    2066 => { Name => 'FlashModeButton', %buttonsZ9},     #CSf2
+    2068 => { Name => 'LensFunc1ButtonPlaybackMode', %buttonsZ9},     #CSf2
+    2070 => { Name => 'LensFunc2ButtonPlaybackMode', %buttonsZ9},     #CSf2
+    2072 => { Name => 'PlaybackButtonPlaybackMode',  %buttonsZ9},     #CSf2
+    2074 => { Name => 'BracketButtonPlaybackMode',   %buttonsZ9},     #CSf2
+    2076 => { Name => 'FlashModeButtonPlaybackMode', %buttonsZ9},     #CSf2
 );
 
 # Flash information (ref JD)
@@ -12231,7 +12474,6 @@ my %nikonFocalConversions = (
             3 => 'On (Required)',
         },
     },
-    #0x10  Degree of radial distortion correction polynomial? (always 4? - decodes for the first 3 coefficients follow, the 4th at 0x2c/0x30 seems to always be 0)
     0x14 => {
         Name => 'RadialDistortionCoefficient1',
         Format => 'rational64s',
@@ -13289,7 +13531,7 @@ sub ProcessNikonAVI($$$)
 #------------------------------------------------------------------------------
 # Print conversion for Nikon AF points
 # Inputs: 0) value to convert (as a string of hex bytes),
-#         1) lookup for AF point bit number (starting at 1)
+#         1) lookup for AF point bit number (starting at 1), or array ref
 sub PrintAFPoints($$)
 {
     my ($val, $afPoints) = @_;
@@ -13301,7 +13543,7 @@ sub PrintAFPoints($$)
         next unless $dat[$i];
         for ($j=0; $j<8; ++$j) {
             next unless $dat[$i] & (1 << $j);
-            my $point = $$afPoints{$i*8 + $j + 1};
+            my $point = ref $afPoints eq 'HASH' ? $$afPoints{$i*8+$j+1} : $$afPoints[$i*8+$j];
             push @points, $point if defined $point;
         }
     }
@@ -13316,17 +13558,21 @@ sub PrintAFPoints($$)
 
 #------------------------------------------------------------------------------
 # Inverse print conversion for AF points
-# Inputs: 0) AF point string, 1) AF point lookup
+# Inputs: 0) AF point string, 1) AF point hash or array ref
 # Returns: AF point data as a string of hex bytes
 sub PrintAFPointsInv($$)
 {
     my ($val, $afPoints) = @_;
     my @points = ($val =~ /[A-Za-z]\d+/g);
-    my $size = int((scalar(keys %$afPoints) + 7) / 8);
+    my $size = int((scalar(ref $afPoints eq 'HASH' ? keys %$afPoints : @$afPoints) + 7) / 8);
     my @dat = (0) x $size;
     if (@points) {
         my (%bitNum, $point);
-        $bitNum{$$afPoints{$_}} = $_ foreach keys %$afPoints; # build reverse lookup
+        if (ref $afPoints eq 'HASH') {
+            $bitNum{$$afPoints{$_}} = $_ foreach keys %$afPoints; # build reverse lookup
+        } else {
+            $bitNum{$$afPoints[$_]} = $_ + 1 foreach 0..$#$afPoints;
+        }
         foreach $point (@points) {
             my $bitNum = $bitNum{uc $point} or next;
             my $byte = int(($bitNum - 1) / 8);

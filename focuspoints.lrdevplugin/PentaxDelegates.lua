@@ -16,16 +16,16 @@
 
 --[[
   A collection of delegate functions to be passed into the DefaultPointRenderer
-  for Pentax cameras. 
-  
-  **Note: 
-  Unlike other point delegates, this point delegates shows all in-active focus points. I'm 
+  for Pentax cameras.
+
+  **Note:
+  Unlike other point delegates, this point delegates shows all in-active focus points. I'm
   not sure what the means for the other delegates. Perhaps I'll update them. Perhaps I'll update this file.
 
   Notes:
   * Back focus button sets AFPointsInFocus to 'None' regardless of point
     selection mode (sucks). AFPointSelected is set correctly with either button.
-  * For phase detection AF, the coordinates taken from the point map represent 
+  * For phase detection AF, the coordinates taken from the point map represent
     the center of each AF point.
 
   2017.03.29 - roguephysicist: works for Pentax K-50 with both phase and contrast detection
@@ -38,8 +38,6 @@ require "Utils"
 
 PentaxDelegates = {}
 
-PentaxDelegates.focusPointsMap = nil
-PentaxDelegates.focusPointDimen = nil
 
 function PentaxDelegates.getAfPoints(photo, metaData)
   local focusMode = ExifUtils.findFirstMatchingValue(metaData, { "Focus Mode" })
@@ -76,26 +74,29 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     afPointsInFocus = splitTrim(afPointsInFocus, ",")
     afPointsInFocus = PentaxDelegates.fixCenter(afPointsInFocus)
   end
-    
+
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {}
   }
 
-  for key,value in pairs(PentaxDelegates.focusPointsMap) do
-    local pointsMap = PentaxDelegates.focusPointsMap[key]
+  local focusPointsMap, focusPointDimens = PointsUtils.readIntoTable(DefaultDelegates.cameraMake,
+                                                           DefaultDelegates.cameraModel .. ".txt")
+
+  for key,value in pairs(focusPointsMap) do
+    local pointsMap = focusPointsMap[key]
     local x = pointsMap[1]
     local y = pointsMap[2]
     local width
     local height
-    if (#pointsMap > 2) then 
-      width = pointsMap[3] 
+    if (#pointsMap > 2) then
+      width = pointsMap[3]
       height = pointsMap[4]
-    else 
-      width = PentaxDelegates.focusPointDimen[1]
-      height = PentaxDelegates.focusPointDimen[2]
+    else
+      width  = focusPointDimens[1]
+      height = focusPointDimens[2]
     end
-    
+
     local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
     local isInFocus = arrayKeyOf(afPointsInFocus, key) ~= nil
     local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
@@ -106,7 +107,7 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     elseif isSelected then
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
     end
-    
+
     table.insert(result.points, {
       pointType = pointType,
       x = x,
@@ -114,7 +115,7 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
       width = width,
       height = height
     })
-    
+
   end
   return result
 end
@@ -124,10 +125,14 @@ end
   liveview mode returns typical points table
 --]]
 function PentaxDelegates.getAfPointsContrast(photo, metaData)
-  local imageSize = ExifUtils.findFirstMatchingValue(metaData, { "Default Crop Size" })
-    imageSize = splitTrim(imageSize, " ")
+  -- local imageSize = ExifUtils.findFirstMatchingValue(metaData, { "Default Crop Size" })
+  -- imageSize = splitTrim(imageSize, " ")
     -- Can image size be obtained from lightroom directly? Or is accessing the metadata faster?
-  
+    -- !!! DefaultCropSize not found in most test files !?!?
+  local w, h = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+  local imageSize = {w, h}
+
+
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {}
@@ -139,8 +144,8 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
     faceDetectSize = splitTrim(faceDetectSize, " ")
   local facesDetected = ExifUtils.findFirstMatchingValue(metaData, { "Faces Detected" })
     facesDetected = tonumber(facesDetected)
-  
-  if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then 
+
+  if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then
     local faces = {}
     for face=1,facesDetected do
       local facePosition = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Position" })

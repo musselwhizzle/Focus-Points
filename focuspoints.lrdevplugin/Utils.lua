@@ -135,6 +135,21 @@ function stringToKeyValue(str, delim)
   return r
 end
 
+
+function get_nth_word(str, n, delimiter)
+    delimiter = delimiter or ";" -- Default to semicolon if not provided
+    local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
+    local count = 0
+    for word in string.gmatch(str, pattern) do
+        count = count + 1
+        if count == n then
+            return word:match("^%s*(.-)%s*$") -- Trim leading/trailing spaces
+        end
+    end
+    return nil -- Return nil if n is out of range
+end
+
+
 --[[
 -- Logging functions. You are provided 5 levels of logging. Wisely choose the level of the message you want to report
 -- to prevent to much messages.

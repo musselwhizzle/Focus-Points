@@ -29,18 +29,18 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
-  local contentWidth = appWidth * .7
-  local contentHeight = appHeight * .7
+  local contentWidth = appWidth * .75
+  local contentHeight = appHeight * .75
 
   if (WIN_ENV == true) then
     if prefs.screenScaling == nil or prefs.screenScaling == 0 then
    	  prefs.screenScaling = 1
     end
-    logDebug('calculatePhotoDimens', prefs.screenScaling ) 
+    logDebug('calculatePhotoDimens', prefs.screenScaling )
     contentWidth = contentWidth * prefs.screenScaling
     contentHeight = contentHeight * prefs.screenScaling
   end
-  
+
   local photoWidth
   local photoHeight
   if (w > h) then
@@ -62,25 +62,34 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
 
 end
 
-function FocusPointDialog.createDialog(targetPhoto, photoView)
-  local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-  local myView = nil
+function FocusPointDialog.createDialog(targetPhoto, photoView, infoView)
+  -- local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+  local myView
+  local f = LrView.osFactory()
 
-  -- temporary for dev'ing
-  local developSettings = targetPhoto:getDevelopSettings()
-  
-  local viewFactory = LrView.osFactory()
-  local myText = viewFactory:static_text {
-    title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
+  -- view for photo with focus point visualization
+  local column1 = f:column {
+    photoView
   }
-      
-  local column = viewFactory:column {
-    photoView, myText,
-  }
-  
-  myView = viewFactory:view {
-    column,  
-  }
+
+  -- view for textual information on image, camera settings and AF information
+  if infoView ~= nil then
+    local column2 = f:column {
+      infoView,
+    }
+    local row = f:row {
+      column1, column2
+    }
+    myView = f:view {
+      row,
+    }
+  else
+    -- if infoView is not (yet) supported for a specific make, only include the photoView
+    myView = f:view {
+      column1,
+    }
+  end
+
   return myView
-  
+
 end

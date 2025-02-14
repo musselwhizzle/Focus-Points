@@ -24,13 +24,15 @@ require "DefaultDelegates"
 require "CanonDelegates"
 require "FujifilmDelegates"
 require "NikonDelegates"
+require "NikonDuplicates"
 require "OlympusDelegates"
 require "PanasonicDelegates"
 require "AppleDelegates"
 require "PentaxDelegates"
-require "NikonDuplicates"
 require "SonyDelegates"
 require "SonyRX10M4Delegates"
+require "ExifUtils"
+
 
 local LrErrors = import 'LrErrors'
 
@@ -58,88 +60,77 @@ function PointsRendererFactory.createRenderer(photo)
     cameraMake = "pentax"
   end
 
+  -- Nikon
   if (string.find(cameraMake, "nikon", 1, true)) then
     cameraMake = "nikon corporation"
-  end
-
-  -- some cameras have the same mapping as other camera
-  -- check the cameraModel and switch it to a known map if it's a duplicate
-  if (cameraMake == "nikon corporation") then
+    -- some cameras have the same mapping as other camera
+    -- check the cameraModel and switch it to a known map if it's a duplicate
     local duplicateModel = NikonDuplicates[cameraModel]
     if (duplicateModel ~= nil) then
       cameraModel = duplicateModel
     end
   end
 
+  -- Olympus and OM Digital share the same exact makernotes structures
+  if (string.find(cameraMake, "om digital solutions", 1, true)
+  or (string.find(cameraMake, "olympus", 1, true))) then
+    cameraMake = "olympus"
+  end
+
+  logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
+  logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
+
+  -- for use in make specific Delegates, to avoid repeatedly normalization
+  DefaultDelegates.cameraMake  = cameraMake
+  DefaultDelegates.cameraModel = cameraModel
+
   logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
   logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
 
   if (cameraMake == "fujifilm") then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = FujifilmDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAfPoints    = FujifilmDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetFocusInfo  = FujifilmDelegates.getFocusInfo
+
   elseif (cameraMake == "canon") then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = CanonDelegates.getAfPoints
+
   elseif (cameraMake == "apple") then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = AppleDelegates.getAfPoints
+
   elseif (cameraMake == "sony") then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
     if (cameraModel == "DSC-RX10M4") then
     	DefaultPointRenderer.funcGetAfPoints = SonyRX10M4Delegates.getAfPoints
-    else DefaultPointRenderer.funcGetAfPoints = SonyDelegates.getAfPoints
+    else
+        DefaultPointRenderer.funcGetAfPoints = SonyDelegates.getAfPoints
     end
+
   elseif (cameraMake == "nikon corporation") then
-    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
-    DefaultDelegates.focusPointsMap = pointsMap
-    DefaultDelegates.focusPointDimen = pointDimen
-    DefaultPointRenderer.funcGetAfPoints = NikonDelegates.getAfPoints
-  elseif (string.find(cameraMake, "olympus", 1, true)) then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints
-  elseif (string.find(cameraMake, "om digital solutions", 1, true)) then  -- to support new camera maker OMDS (OM-1, OM-5), ref #162, 168
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
-    DefaultPointRenderer.funcGetAfPoints = OlympusDelegates.getAfPoints   -- for OM-1, same logic applies as for Olympus cameras
+    DefaultPointRenderer.funcGetAfPoints   = NikonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = NikonDelegates.getImageInfo
+    DefaultPointRenderer.funcGetCameraInfo = NikonDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo  = NikonDelegates.getFocusInfo
+
+
+  elseif (cameraMake == "olympus") then
+    DefaultPointRenderer.funcGetAfPoints   = OlympusDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = OlympusDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo  = OlympusDelegates.getFocusInfo
+
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
-    DefaultDelegates.focusPointsMap = nil     -- unused
-    DefaultDelegates.focusPointDimen = nil    -- unused
     DefaultPointRenderer.funcGetAfPoints = PanasonicDelegates.getAfPoints
+
   elseif (cameraMake == "pentax") then
-    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
-    PentaxDelegates.focusPointsMap = pointsMap
-    PentaxDelegates.focusPointDimen = pointDimen
     DefaultPointRenderer.funcGetAfPoints = PentaxDelegates.getAfPoints
+
   else
-    local pointsMap, pointDimen = PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
-    DefaultDelegates.focusPointsMap = pointsMap
-    DefaultDelegates.focusPointDimen = pointDimen
-    DefaultPointRenderer.funcGetAfPoints = DefaultDelegates.getAfPoints
+    LrErrors.throwUserError("Camera brand '" .. cameraMake .."' not supported")
   end
+
+  DefaultDelegates.metaData = ExifUtils.readMetaDataAsTable(photo)
 
   return DefaultPointRenderer
 end
 
---[[
-  Method to get the focus point maps from the text files. The params
-  passed in may be changed from what the camera reports. For instance, if the camera is a Nikon D7100
-  the cameraModel will be passed as "nikon d7200" since they share the same
-  focus point map.
-
-  cameraMake - make of the camera
-  cameraModel - make of the camera
---]]
-function PointsRendererFactory.getFocusPoints(photo, cameraMake, cameraModel)
-  local focusPoints, focusPointDimens = PointsUtils.readIntoTable(cameraMake, cameraModel .. ".txt")
-
-  if (focusPoints == nil) then
-    return "No (or incorrect) mapping found at: \n" .. cameraMake .. "/" .. cameraModel .. ".txt"
-  else
-    return focusPoints, focusPointDimens
-  end
-end

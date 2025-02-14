@@ -17,14 +17,32 @@
 --[[
   Maps out which cameras have the same focus point maps as others.
   NikonDuplicates["d7100"] = "d7200" means that the D7100 has the same mapping
-  as the D7200, and the D7200 text file will be used. 
+  as the D7200, and the D7200 text file will be used.
 --]]
 NikonDuplicates = {}
 
-NikonDuplicates["nikon d7100"] = "nikon d7200"
+NikonDuplicates["nikon d3"]    = "nikon d700"
+NikonDuplicates["nikon d3s"]   = "nikon d700"
+
+NikonDuplicates["nikon d4s"]   = "nikon d4"
+
+NikonDuplicates["nikon d5s"]   = "nikon d5"
+
+NikonDuplicates["nikon d300s"] = "nikon d300"
+
+NikonDuplicates["nikon d610"]  = "nikon d600"
 
 NikonDuplicates["nikon d800e"] = "nikon d800"
-NikonDuplicates["nikon d810"] = "nikon d800"
+NikonDuplicates["nikon d810"]  = "nikon d800"
 
+NikonDuplicates["nikon d5600"] = "nikon d5500"
 NikonDuplicates["nikon d5300"] = "nikon d5500"
 NikonDuplicates["nikon d5200"] = "nikon d5500"
+
+NikonDuplicates["nikon z 6_2"] = "nikon z 6"
+
+NikonDuplicates["nikon z 7_2"] = "nikon z 7"
+
+NikonDuplicates["nikon z 8"]   = "nikon z 9"
+
+NikonDuplicates["nikon z fc"]  = "nikon z 30"
