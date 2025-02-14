@@ -37,6 +37,7 @@ Other cases where the Focus Points plugin will not be able to display meaningful
 
 * the picture has been taken by focusing on the main subject, then panning the camera to get the desired composition   
 
+***
 
 ## 2. Overview and Basic Operation
 This secction explains how the plugin is used.
@@ -50,7 +51,7 @@ Library module:<br>
 Develop module:<br>
 "File -> Plug-in Extras -> Focus Point"
 
-***
+---
 
 <b>User interface (single image operation):</b>
 
@@ -79,7 +80,7 @@ this will be indicated by a message in red letters:
 
 After the window is closed (by clicking "OK" or pressing <Enter> or <Esc>) the user is back in LrC UI.  
 
-***
+---
 
 <b>User interface (multi-image operation):</b>
 
