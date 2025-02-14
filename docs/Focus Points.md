@@ -76,7 +76,7 @@ this will be indicated by a message in red letters:
 
 <img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
 
-After the window is closed (by clicking "OK" or pressing <Enter> or <Esc>) the user is back in LrC UI.
+After the window is closed (by clicking "OK" or pressing \<Enter> or \<Esc>) the user is back in LrC UI.
 <br>
 <br>
 <b>User interface (multi-image operation):</b>
@@ -84,7 +84,7 @@ After the window is closed (by clicking "OK" or pressing <Enter> or <Esc>) the u
 When run on a selection of photos, the user interface of Focus Point Viewer offers two additional buttons
 that enable the user to move forwards and backwards within the series of selected photos.
 
-The window can be closed by clicking "Exit" or pressing <Enter> or <Esc>.
+The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc>.
 
 <img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
