@@ -51,7 +51,7 @@ Develop module:<br>
 
 User interface:
 
-<img src="screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="screens/BasicOperation1.png" alt="User Interface (Single image)" style="width: 200px;"/>
 
 When run on a selection of photos, the user interface of Focus Point Viewer is slightly different from single image operation  
 
