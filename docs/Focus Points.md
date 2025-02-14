@@ -102,7 +102,16 @@ The Focus Points plugin fully relies on what [exiftool](https://exiftool.org/) i
 
 ## 3.1 Nikon
 
-to be updated after release of V2.2
+The logic for interpreting Nikon-specific autofocus data has been adapted to match the focus point display 
+of NX Studio and Capture NX-D. While this is not rocket science for Nikon Z, it has been a challenge for Nikon 
+DSLRs. Nikon used to store different kind of focus point information in different places, making it difficult
+for the people maintaining exiftool to figure out the relevant information and name it consistently.
+I would like to take this opportunity to thank Warren Hatch for his great support in deciphering and correctly
+interpreting the Nikon AF information! 
+
+
+
+
 
 ## 3.2 Canon
 
