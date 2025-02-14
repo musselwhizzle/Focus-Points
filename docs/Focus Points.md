@@ -37,7 +37,6 @@ Other cases where the Focus Points plugin will not be able to display meaningful
 
 * the picture has been taken by focusing on the main subject, then panning the camera to get the desired composition
 <br>
-<br>
 
 ## 2. Overview and Basic Operation
 This secction explains how the plugin is used.
