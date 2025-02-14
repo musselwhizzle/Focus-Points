@@ -131,7 +131,7 @@ local function showDialog()
           accessoryView = f:row {
             spacing = 0,     -- removes uniform spacing; we control it manually
             f:push_button {
-              title = "⯇ Previous image",
+              title = string.char(0xe2, 0x97, 0x80) .. " Previous image",
               action = function(button)
                 -- set index to previous image, wrap around at beginning of list
                 current =  (current - 2) % #selectedPhotos + 1
@@ -140,7 +140,7 @@ local function showDialog()
             },
             f:spacer { width = 20 },    -- space before the next button
             f:push_button {
-              title = "Next image ⯈",
+              title = "Next image " .. string.char(0xe2, 0x96, 0xb6),
               action = function(button)
                 -- set index to next image, wrap around at end of list
                 current = (current % #selectedPhotos) + 1

@@ -31,7 +31,7 @@ Future Improvements
 
 * add recent / popular Nikon DSLR models (D850 etc.)
 * verify (and if needed fix) and document support of recent models (priority on Canon and Sony)
-* all supported brands and models: add face detection as far as EXIF data support this (eg. this is not supported for Nikon Z)
+* all supported brands and models: add face detection as far as EXIF data support this (e.g. this is not supported for Nikon Z)
    
 ### 3.0 Improved focus point display
 * Add relevant shooting settings and autofocus parameters to have all relevant data in one place to assess the focusing result for an image. E.g.:

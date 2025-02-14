@@ -9,14 +9,27 @@ See [Scope and Limitations](docs/Focus%20Points.md) for detailed information rel
 
 Current Release
 --------
-## V2.1.0, January 27, 2025
-* Full support of Nikon Z series (except Z50ii and Zf):
-  * Z5, Z6, Z6ii, Z6iii (#198 ), Z7, Z7ii, Z8, Z9, Z30, Z50, Z fc - CAF and PDAF focus points
-  * Z50ii, Z f - currently only CAF focus points (missing PDAF test files!)
-* Includes exiftool 13.15 (required for #198)
-* Windows: Fix an issue with blurry images / error message when launched in Develop module #199
-  - When launched in Develop module the plugin switches to Library loupe view so that a preview can be generated if none exists. 
-  - Plugin returns to Develop after its window has been closed.
+## V2.2.0, February 14, 2025 (Pre-release)
+* Support of Nikon cameras
+  * Mirrorless: full support of Z series (all models)
+  * DSLRs: support of all models with 39 or more autofocus points: 
+    - D3, D3s, D3x D4, D4s, D5, D6, Df
+    - D300, D300S, D500, D600, D610, D700, D750, D780, D800, D810, D850
+    - D5200, D5300, D5500, D5600,  D7000, D7100, D7200, D7500
+    
+
+* Multi-image operation (basic)<br> 
+The plugin can be run on a selection of multiple photos in Lightroom. The selection is handled as a series of individual photos. The user can move forwards and backwards within the series.
+Current implementation is basic and will be improved towards a seamless UI experience in future releases.
+
+
+* Display of camera settings and focus information<br>
+The plugin windows is extended by a textual presentation of relevant information along with the focus point view to support assessment of focus results.
+  * General camera settings are implemented for all supported brands.
+  * Focus information is currently only implemented for Nikon, Olympus, Fuji.
+
+
+* Includes exiftool 13.18
 
 For history of versions and changes as well as planned, future improvements see [changelog.](docs/changelog.md)
 
@@ -25,15 +38,16 @@ For history of versions and changes as well as planned, future improvements see 
 
 Supported Cameras
 --------
+* Nikon
+  * Mirrorless: full support of Z series (all models)
+  * DSLRs: support of all models with 39 or more autofocus points: 
+    - D3, D3s, D3x D4, D4s, D5, D6, Df
+    - D300, D300S, D500, D600, D610, D700, D750, D780, D800, D810, D850
+    - D5200, D5300, D5500, D5600,  D7000, D7100, D7200, D7500
 * Canon cameras 
   * all EOS and point and shoots. 
   * 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 70D, 80D, 7D, 5D, etc, 
   * Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
-* Nikon
-  * DSLR: D7100, D7200, D700, D800 (possibly D810 and D800E), D5500, D5300, D5200, D300
-  * Mirrorless (Z series):
-    * Z5, Z6, Z6ii, Z6iii, Z7, Z7ii, Z8, Z9, Z30, Z50, Z fc - CAF and PDAF focus points
-    * Z50ii, Z f - currently only CAF focus points (missing PDAF test files!)
 * Sony E-Mount cameras
   * all full frame bodies beginning with &alpha;7 III resp. &alpha;7R II
   * APS-C

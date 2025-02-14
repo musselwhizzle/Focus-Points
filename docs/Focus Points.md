@@ -37,7 +37,31 @@ Other cases where the Focus Points plugin will not be able to display meaningful
 * the picture has been taken by focusing on the main subject, then panning the camera to get the desire composition   
 
 
-## 2. Display of Focus Points
+## 2. Overview and Basic Operation
+This secction explains how the plugin is used.
+
+### 2.1 Focus Point Viewer
+Once the plugin has been installed, it can be invoked with one or more photos selected:
+
+Library module:<br> 
+"Library -> Plug-in Extras -> Focus Point" 
+
+Develop module:<br>
+"File -> Plug-in Extras -> Focus Point"
+
+User interface:
+
+<img src="screens/Basic operation 1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+
+When run on a selection of photos, the user interface of Focus Point Viewer is slightly different from single image operation  
+
+<img src="screens/Basic operation 2.jpg" alt="User Interface (Multi-image) " style="width: 600px;"/>
+
+
+### 2.2 Metadata Viewer
+to be documented
+
+## 3. Display of Focus Points
 The subchapters in this section describe in more detail which focus point features are supported by the plugin for individual camera makers and specific lines or models. This can be different colors for different statuses (e.g. focus point selected, in focus, inactive), or face/subject detection frames. The level to which features can be supported ultimately depends on the availability of corresponding data in EXIF maker notes.
 
 Even if certain data is stored by a camera maker it doesn't mean at the same time that it's "available". 
@@ -45,15 +69,15 @@ Makernotes is a proprietary metadata section that contains manufacturer-specific
 
 The Focus Points plugin fully relies on what [exiftool](https://exiftool.org/) is able to decode and display. Which in turn doesn't fall from the sky, but it's a collaborative effort by camera owners worlwide that are willing to contribute and [go where no man has gone before](https://exiftool.org/#boldly) and decode the unknown.      
 
-## 2.1 Nikon
+## 3.1 Nikon
 
 to be updated after release of V2.2
 
-## 2.2 Canon
+## 3.2 Canon
 
 to be updated after release of V2.x
 
-## 2.3 Sony
+## 3.3 Sony
 to be updated after release of V2.x
 
 Plus more chapters for Fuji, Pentax, Olympus, Panasonic and others...

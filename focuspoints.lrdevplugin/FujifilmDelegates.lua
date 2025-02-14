@@ -230,7 +230,7 @@ function FujifilmDelegates.getFocusInfo(photo, props, metaData)
   -- helper function to add information whether focus points have been found or not
   local function addFocusPointsStatus()
     if (FujifilmDelegates.focusPointsDetected) then
-      return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system>"}}
+      return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 0.5, 0), font="<system>"}}
     else
       return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
     end
