@@ -30,7 +30,6 @@ require "PanasonicDelegates"
 require "AppleDelegates"
 require "PentaxDelegates"
 require "SonyDelegates"
-require "SonyRX10M4Delegates"
 require "ExifUtils"
 
 
@@ -88,23 +87,20 @@ function PointsRendererFactory.createRenderer(photo)
   logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
 
   if (cameraMake == "fujifilm") then
-    DefaultPointRenderer.funcGetAfPoints    = FujifilmDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetAfPoints   = FujifilmDelegates.getAfPoints
     DefaultPointRenderer.funcGetFocusInfo  = FujifilmDelegates.getFocusInfo
 
   elseif (cameraMake == "canon") then
-    DefaultPointRenderer.funcGetAfPoints = CanonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAfPoints   = CanonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetFocusInfo  = CanonDelegates.getFocusInfo
 
   elseif (cameraMake == "apple") then
-    DefaultPointRenderer.funcGetAfPoints = AppleDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAfPoints   = AppleDelegates.getAfPoints
+    DefaultPointRenderer.funcGetFocusInfo  = AppleDelegates.getFocusInfo
 
   elseif (cameraMake == "sony") then
-    if (cameraModel == "DSC-RX10M4") then
-    	DefaultPointRenderer.funcGetAfPoints = SonyRX10M4Delegates.getAfPoints
-    else
-        DefaultPointRenderer.funcGetAfPoints = SonyDelegates.getAfPoints
-    end
+    DefaultPointRenderer.funcGetAfPoints   = SonyDelegates.getAfPoints
+    DefaultPointRenderer.funcGetFocusInfo  = SonyDelegates.getFocusInfo
 
   elseif (cameraMake == "nikon corporation") then
     DefaultPointRenderer.funcGetAfPoints   = NikonDelegates.getAfPoints
@@ -112,18 +108,18 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultPointRenderer.funcGetCameraInfo = NikonDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = NikonDelegates.getFocusInfo
 
-
   elseif (cameraMake == "olympus") then
     DefaultPointRenderer.funcGetAfPoints   = OlympusDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
     DefaultPointRenderer.funcGetCameraInfo = OlympusDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = OlympusDelegates.getFocusInfo
 
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
-    DefaultPointRenderer.funcGetAfPoints = PanasonicDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAfPoints   = PanasonicDelegates.getAfPoints
+    DefaultPointRenderer.funcGetFocusInfo  = PanasonicDelegates.getFocusInfo
 
   elseif (cameraMake == "pentax") then
-    DefaultPointRenderer.funcGetAfPoints = PentaxDelegates.getAfPoints
+    DefaultPointRenderer.funcGetAfPoints   = PentaxDelegates.getAfPoints
+    DefaultPointRenderer.funcGetFocusInfo  = PentaxDelegates.getFocusInfo
 
   else
     LrErrors.throwUserError("Camera brand '" .. cameraMake .."' not supported")
@@ -133,4 +129,3 @@ function PointsRendererFactory.createRenderer(photo)
 
   return DefaultPointRenderer
 end
-

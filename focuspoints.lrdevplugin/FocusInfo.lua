@@ -18,13 +18,11 @@
   This object is responsible for creating the textual info view next to focus point display.
 --]]
 
-
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
-local LrErrors = import 'LrErrors'
 
 require "DefaultPointRenderer"
-a = require "affine"
+a = require "affine"                -- #TODO what is the purpose of affine?
 
 FocusInfo = {}
 
@@ -44,10 +42,14 @@ FocusInfo.metaValueNA               = "N/A"
 
 
 --[[
-   -- get maker specific information (if implemented)
+  @@public table, table, table FocusInfo.getMakerInfo(table photo, table props)
+   ----
+   For each of the three view sections (image, settings, focus) collect maker specific information
+   Specific information on image and camera settings will be appended, focus information will be completely filled
+   Result:  imageInfo, cameraInfo, focusInfo
 --]]
 function FocusInfo.getMakerInfo(photo, props)
-    local f = LrView.osFactory()
+  local f = LrView.osFactory()
 
   -- get maker specific image information, if any
   local imageInfo
@@ -67,7 +69,6 @@ function FocusInfo.getMakerInfo(photo, props)
 
   -- get focus information which is always maker specific
   local focusInfo
-
   if (DefaultPointRenderer.funcGetFocusInfo ~= nil) then
     focusInfo = DefaultPointRenderer.funcGetFocusInfo(photo, props, DefaultDelegates.metaData)
   else
@@ -78,6 +79,36 @@ function FocusInfo.getMakerInfo(photo, props)
 end
 
 --[[
+  @@public table FocusInfo.afInfoMissing(table metaData, string afInfoSectionKey)
+  ----
+  Checks if AF info section is present in metadata. Returns a view entry with an error message if not
+--]]
+function FocusInfo.afInfoMissing(metaData, afInfoSectionKey)
+  local f = LrView.osFactory()
+  local result
+  result = ExifUtils.findValue(metaData, afInfoSectionKey)
+  if not result then
+    return f:column{f:static_text{ title = "Focus info missing from file!", text_color=LrColor("red"), font="<system/bold>"}}
+  end
+  return nil
+end
+
+--[[
+  @@public table FocusInfo.FocusPointsStatus(boolean focusPointsDeteced)
+  ----
+  Returns a view entry stating whether focus points have been found or not
+--]]
+  -- helper function to add information whether focus points have been found or not
+function FocusInfo.FocusPointsStatus(focusPointsDeteced)
+  local f = LrView.osFactory()
+  if focusPointsDeteced then
+    return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system>"}}
+  else
+    return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
+  end
+end
+
+--[[ #TODO
   -- helper function to simplify adding items row-by-row
 --]]
 function FocusInfo.addInfo(title, key, photo, props)
@@ -111,7 +142,7 @@ function FocusInfo.addInfo(title, key, photo, props)
   end
 end
 
---[[
+--[[ #TODO
 --]]
 function FocusInfo.createInfoView(photo, props)
   local f = LrView.osFactory()

@@ -18,7 +18,6 @@ local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
-local LrSystemInfo = import "LrSystemInfo"
 local LrUUID = import "LrUUID"
 
 ExifUtils = {}
@@ -100,7 +99,7 @@ end
 -- return value of the tag
 --]]
 function ExifUtils.findValue(metaDataTable, exifTag)
-  local exifValue = nil
+  local exifValue
 
   if exifTag == nil then
     return
@@ -130,21 +129,24 @@ end
 -- return 1. value of the first key match, 2. which key was used
 --]]
 function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
-  local exifValue = nil
-
-  for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
-    exifValue = metaDataTable[value]
-
-  if (exifValue ~= nil) and
-     (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
-      logInfo("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
-      return exifValue, key
+  local exifValue
+  local keystr = table.concat(keys, " ")
+  if keys then
+    for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
+      exifValue = metaDataTable[value]
+      if exifValue and (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
+        logInfo("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
+        return exifValue, key
+      else
+        logInfo("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
+        return nil
+      end
     end
+  else
+    return nil
   end
-
-  logInfo("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
-  return nil
 end
+
 
 function ExifUtils.filterInput(str)
   local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");

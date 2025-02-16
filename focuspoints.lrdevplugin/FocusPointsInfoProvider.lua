@@ -19,4 +19,3 @@ require 'FocusPointPrefs'
 return {
   sectionsForBottomOfDialog = FocusPointPrefs.genSectionsForBottomOfDialog,
 }
-

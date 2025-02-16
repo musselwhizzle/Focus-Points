@@ -21,15 +21,20 @@
 
 local LrStringUtils = import "LrStringUtils"
 local LrView = import 'LrView'
-local LrColor = import 'LrColor'
+local LrPrefs =  import 'LrPrefs'
 
+require "FocusPointPrefs"
+require "FocusPointDialog"
 require "Utils"
 
 FujifilmDelegates = {}
 
 FujifilmDelegates.focusPointsDetected = false
 
--- relevant Metadata tag names
+-- Tag which indicates that makernotes / AF section is present
+FujifilmDelegates.metaKeyAfInfoSection               = "Fuji Flash Mode"
+
+-- relevant metadata tag names
 FujifilmDelegates.metaKeyFocusMode                   = "Focus Mode 2"
 FujifilmDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 FujifilmDelegates.metaKeyAfSPriority                 = "AF-S Priority"
@@ -39,16 +44,18 @@ FujifilmDelegates.metaKeyAfCSetting                  = "AF-C Setting"
 FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
-FujifilmDelegates.metaKeyfujiFlashMode               = "Fuji Flash Mode"
 
+-- relevant metadata values
 FujifilmDelegates.metaValueNA                        = "N/A"
 
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 --[[
 -- metaData - the metadata as read by exiftool
 --]]
 function FujifilmDelegates.getAfPoints(photo, metaData)
-  local focusPoint = ExifUtils.findValue(metaData,  "Focus Pixel")
+  FujifilmDelegates.focusPointsDetected = false
+  local focusPoint = ExifUtils.findValue(metaData, "Focus Pixel")
   if focusPoint == nil then
     return nil
   end
@@ -59,8 +66,8 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     return nil
   end
 
-  local imageWidth = ExifUtils.findValue(metaData,  "Exif Image Width" )
-  local imageHeight = ExifUtils.findValue(metaData,  "Exif Image Height" )
+  local imageWidth = ExifUtils.findValue(metaData, "Exif Image Width")
+  local imageHeight = ExifUtils.findValue(metaData, "Exif Image Height")
   if imageWidth == nil or imageHeight == nil then
     return nil
   end
@@ -71,15 +78,23 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
 
   logInfo("Fujifilm", "AF points detected at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
 
+  local pointType
+  if prefs.focusBoxSize ~= FocusPointPrefs.focusBoxSize[1] then
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_CENTER
+  else
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
+  end
+
+  local afAreaWidth, afAreaHeight = FocusPointDialog.getFocusPointDimens(photo)
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+        pointType = pointType,
         x = x * xScale,
         y = y * yScale,
-        width = 300,
-        height = 300
+        width = afAreaWidth,
+        height = afAreaHeight,
       }
     }
   }
@@ -220,33 +235,25 @@ end
   end
 
 --[[
-  public table getFocuInfo(table photo, table props, table metaData)
+  @@public table FujifilmDelegates.getFocusInfo(table photo, table info, table metaData)
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
 function FujifilmDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- helper function to add information whether focus points have been found or not
-  local function addFocusPointsStatus()
-    if (FujifilmDelegates.focusPointsDetected) then
-      return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 0.5, 0), font="<system>"}}
-    else
-      return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
-    end
-  end
-
-  -- first check if makernotes AF section is present in metadata
-  if (ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyfujiFlashMode) == nil) then
-    -- if not we can immediately stop
-    return f:column{f:static_text{ title = "Focus info missing from file!", text_color=LrColor("red"), font="<system/bold>"}}
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, FujifilmDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
   end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      addFocusPointsStatus(),
+      FocusInfo.FocusPointsStatus(FujifilmDelegates.focusPointsDetected),
       FujifilmDelegates.addInfo("Focus Mode",                       FujifilmDelegates.metaKeyFocusMode                    , props, metaData),
       FujifilmDelegates.addInfo("AF Area Mode",                     FujifilmDelegates.metaKeyAfAreaMode                   , props, metaData),
       FujifilmDelegates.addInfo("Pre AF",                           FujifilmDelegates.metaKeyPreAf                        , props, metaData),

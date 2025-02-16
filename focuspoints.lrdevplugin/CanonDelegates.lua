@@ -19,10 +19,14 @@
   the camera is Canon
 --]]
 
-local LrStringUtils = import "LrStringUtils"
+local LrView = import "LrView"
 require "Utils"
 
 CanonDelegates = {}
+
+CanonDelegates.focusPointsDetected = false
+
+CanonDelegates.metaKeyAfInfoSection = "Canon Firmware Version"
 
 --[[
 -- metaData - the metadata as read by exiftool
@@ -32,6 +36,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
 
   local imageWidth
   local imageHeight
+
+  CanonDelegates.focusPointsDetected = false
 
   if cameraModel == "canon eos 5d" then   -- For some reason for this camera, the AF Image Width/Height has to be replaced by Canon Image Width/Height
     imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Canon Image Width", "Exif Image Width" })
@@ -106,7 +112,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
     yDirection = 1
   end
 
-  for key,value in pairs(afAreaXPositions) do
+  for key, _ in pairs(afAreaXPositions) do
     local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everithing is referenced from the center,
     local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
     local width = 0
@@ -142,5 +148,32 @@ function CanonDelegates.getAfPoints(photo, metaData)
       })
     end
   end
+  CanonDelegates.focusPointsDetected = true
   return result
+end
+
+
+--[[
+  @@public table CanonDelegates.getFocusInfo(table photo, table info, table metaData)
+  ----
+  Constructs and returns the view to display the items in the "Focus Information" group
+--]]
+function CanonDelegates.getFocusInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, CanonDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
+  end
+
+  -- Create the "Focus Information" section
+  local focusInfo = f:column {
+      fill = 1,
+      spacing = 2,
+      FocusInfo.FocusPointsStatus(CanonDelegates.focusPointsDetected),
+      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      }
+  return focusInfo
 end

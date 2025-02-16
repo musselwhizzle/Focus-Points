@@ -27,7 +27,7 @@ MogrifyUtils = { }    -- class
 local fileName
 local mogrifyPath
 
--- local helper functions
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 --[[
 -- Call mogrify with 'params'
@@ -55,7 +55,6 @@ local function mogrifyExecute(params, script)
     LrErrors.throwUserError("Error calling 'mogrify.exe' Please check plugin configuration")
   end
   if script then
-    local prefs = LrPrefs.prefsForPlugin( nil )
     if prefs.loggingLevel ~= "DEBUG" then
       -- keep temporary script file for log level DEBUG
       LrFileUtils.delete(scriptName)
@@ -129,6 +128,12 @@ end
 local function mapIconToStrokewidthAndColor(name)
   local sw = 2
   local color = string.match(name, 'assets/imgs/corner/(%a+)/.*')
+  if not color then
+    color = string.match(name, 'assets/imgs/center/(%a+)/.*')
+  end
+  if (string.lower(color) == "red") then
+    color = prefs.focusBoxColor
+  end
   if string.match(name, 'fat') == 'fat' then
     sw = 3
   end
@@ -147,9 +152,10 @@ local function buildDrawParams(focuspointsTable)
   if (focuspointsTable ~= nil) then
     for i, fpPoint in ipairs(focuspointsTable) do
       if fpPoint.template.center ~= nil then
+        sw, color = mapIconToStrokewidthAndColor(fpPoint.template.center.fileTemplate)
         local x = math.floor(tonumber(fpPoint.points.center.x))
         local y = math.floor(tonumber(fpPoint.points.center.y))
-        para = '-stroke red -fill red -draw \"circle ' ..x .. ',' .. y .. ' ' .. x+3 .. ',' .. y  .. '\" -fill none '
+        para = '-stroke ' .. color .. ' -fill ' .. color .. ' -draw \"circle ' ..x .. ',' .. y .. ' ' .. x+3 .. ',' .. y  .. '\" -fill none '
         logDebug('buildCmdLine', '[' .. i .. '] ' .. para )
         params = params .. para
       end

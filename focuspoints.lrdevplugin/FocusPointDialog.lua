@@ -15,20 +15,34 @@
 --]]
 
 local LrSystemInfo = import 'LrSystemInfo'
-local LrApplication = import 'LrApplication'
 local LrView = import 'LrView'
-local LrColor = import 'LrColor'
 local LrPrefs = import 'LrPrefs'
 
 require "Utils"
 
 FocusPointDialog = {}
+
+FocusPointDialog.PhotoWidth  = 0
+FocusPointDialog.PhotoHeight = 0
+
+
 local prefs = LrPrefs.prefsForPlugin( nil )
+
+function FocusPointDialog.getFocusPointDimens(targetPhoto)
+  return FocusPointDialog.PhotoWidth * prefs.focusBoxSize,
+         FocusPointDialog.PhotoWidth * prefs.focusBoxSize
+end
+
 
 function FocusPointDialog.calculatePhotoDimens(targetPhoto)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
+
+  -- store for use with drawing variable sized focus boxes around 'focus pixels'
+  FocusPointDialog.PhotoWidth  = w
+  FocusPointDialog.PhotoHeight = h
+
   local contentWidth = appWidth * .75
   local contentHeight = appHeight * .75
 
@@ -58,6 +72,7 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
         photoHeight = h/w * photoWidth
     end
   end
+
   return photoWidth, photoHeight
 
 end

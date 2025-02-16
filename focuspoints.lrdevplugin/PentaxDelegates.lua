@@ -31,28 +31,41 @@
   2017.03.29 - roguephysicist: works for Pentax K-50 with both phase and contrast detection
 --]]
 
-local LrStringUtils = import "LrStringUtils"
 local LrErrors = import 'LrErrors'
+local LrView = import "LrView"
 require "Utils"
 
 
 PentaxDelegates = {}
 
+PentaxDelegates.focusPointsDetected = false
+
+PentaxDelegates.metaKeyAfInfoSection = "Pentax Version"
+
 
 function PentaxDelegates.getAfPoints(photo, metaData)
-  local focusMode = ExifUtils.findFirstMatchingValue(metaData, { "Focus Mode" })
-  focusMode = splitTrim(focusMode, " ")
-  local result = nil
-  if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
-    result = PentaxDelegates.getAfPointsPhase(photo, metaData)
-  elseif focusMode[1] == "Contrast-detect" then
-    result = PentaxDelegates.getAfPointsContrast(photo, metaData)
-  elseif focusMode[1] == "Manual" then
-    LrErrors.throwUserError("Manual focus: no useful focusing information found.")
-  else
-    LrErrors.throwUserError("Could not determine the focus mode of the camera.")
-  end
+  PentaxDelegates.focusPointsDetected = false
+
+  local result
+  local focusMode = splitTrim(ExifUtils.findValue(metaData, "Focus Mode"), " ")
+
+  if focusMode then
+    if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
+      result = PentaxDelegates.getAfPointsPhase(photo, metaData)
+    elseif focusMode[1] == "Contrast-detect" then
+      result = PentaxDelegates.getAfPointsContrast(photo, metaData)
+  --[[
+    elseif focusMode == "Manual" then
+      LrErrors.throwUserError("Manual focus: no useful focusing information found.")
+    else
+      LrErrors.throwUserError("Could not determine the focus mode of the camera.")
+    end
+  --]]
+    else
+      result = nil
+    end
   return result
+  end
 end
 
 --[[
@@ -60,6 +73,7 @@ end
 -- metaData - the metadata as read by exiftool
 --]]
 function PentaxDelegates.getAfPointsPhase(photo, metaData)
+
   local afPointsSelected = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
   if afPointsSelected == nil then
     afPointsSelected = {}
@@ -108,6 +122,8 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
     end
 
+    PentaxDelegates.focusPointsDetected = true
+
     table.insert(result.points, {
       pointType = pointType,
       x = x,
@@ -131,8 +147,6 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
     -- !!! DefaultCropSize not found in most test files !?!?
   local w, h = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
   local imageSize = {w, h}
-
-
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {}
@@ -145,20 +159,44 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
   local facesDetected = ExifUtils.findFirstMatchingValue(metaData, { "Faces Detected" })
     facesDetected = tonumber(facesDetected)
 
-  if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then
-    local faces = {}
-    for face=1,facesDetected do
-      local facePosition = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Position" })
-        facePosition = splitTrim(facePosition, " ")
-      local faceSize = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Size" })
-        faceSize = splitTrim(faceSize, " ")
-      faces[face] = {facePosition, faceSize}
+  if contrastAfMode then
+    if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then
+      local faces = {}
+      for face=1,facesDetected do
+        local facePosition = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Position" })
+          facePosition = splitTrim(facePosition, " ")
+        local faceSize = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Size" })
+          faceSize = splitTrim(faceSize, " ")
+        faces[face] = {facePosition, faceSize}
 
-      local afAreaXPosition = faces[face][1][1]*imageSize[1]/faceDetectSize[1]
-      local afAreaYPosition = faces[face][1][2]*imageSize[2]/faceDetectSize[2]
-      local afAreaWidth = faces[face][2][1]*imageSize[1]/faceDetectSize[1]
-      local afAreaHeight = faces[face][2][2]*imageSize[2]/faceDetectSize[2]
+        local afAreaXPosition = faces[face][1][1]*imageSize[1]/faceDetectSize[1]
+        local afAreaYPosition = faces[face][1][2]*imageSize[2]/faceDetectSize[2]
+        local afAreaWidth = faces[face][2][1]*imageSize[1]/faceDetectSize[1]
+        local afAreaHeight = faces[face][2][2]*imageSize[2]/faceDetectSize[2]
 
+        PentaxDelegates.focusPointsDetected = true
+        if afAreaWidth > 0 and afAreaHeight > 0 then
+          table.insert(result.points, {
+            pointType = DefaultDelegates.POINTTYPE_FACE,
+            x = afAreaXPosition,
+            y = afAreaYPosition,
+            width = afAreaWidth,
+            height = afAreaHeight
+          })
+        end
+      end
+    elseif (contrastAfMode[1] == "Face Detect AF" and facesDetected == 0) then
+      LrErrors.throwUserError("Face Detect AF mode enabled, but no faces detected.")
+    else -- 'Automatic Tracking AF', 'Fixed Center', 'AF Select'
+      local contrastDetectArea = ExifUtils.findFirstMatchingValue(metaData, { "Contrast Detect AF Area" })
+        contrastDetectArea = splitTrim(contrastDetectArea, " ")
+
+      local afAreaXPosition = (contrastDetectArea[1]+0.5*contrastDetectArea[3])*imageSize[1]/faceDetectSize[1]
+      local afAreaYPosition = (contrastDetectArea[2]+0.5*contrastDetectArea[4])*imageSize[2]/faceDetectSize[2]
+      local afAreaWidth = contrastDetectArea[3]*imageSize[1]/faceDetectSize[1]
+      local afAreaHeight = contrastDetectArea[4]*imageSize[2]/faceDetectSize[2]
+
+      PentaxDelegates.focusPointsDetected = true
       if afAreaWidth > 0 and afAreaHeight > 0 then
         table.insert(result.points, {
           pointType = DefaultDelegates.POINTTYPE_FACE,
@@ -168,26 +206,6 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
           height = afAreaHeight
         })
       end
-    end
-  elseif (contrastAfMode[1] == "Face Detect AF" and facesDetected == 0) then
-    LrErrors.throwUserError("Face Detect AF mode enabled, but no faces detected.")
-  else -- 'Automatic Tracking AF', 'Fixed Center', 'AF Select'
-    local contrastDetectArea = ExifUtils.findFirstMatchingValue(metaData, { "Contrast Detect AF Area" })
-      contrastDetectArea = splitTrim(contrastDetectArea, " ")
-
-    local afAreaXPosition = (contrastDetectArea[1]+0.5*contrastDetectArea[3])*imageSize[1]/faceDetectSize[1]
-    local afAreaYPosition = (contrastDetectArea[2]+0.5*contrastDetectArea[4])*imageSize[2]/faceDetectSize[2]
-    local afAreaWidth = contrastDetectArea[3]*imageSize[1]/faceDetectSize[1]
-    local afAreaHeight = contrastDetectArea[4]*imageSize[2]/faceDetectSize[2]
-
-    if afAreaWidth > 0 and afAreaHeight > 0 then
-      table.insert(result.points, {
-        pointType = DefaultDelegates.POINTTYPE_FACE,
-        x = afAreaXPosition,
-        y = afAreaYPosition,
-        width = afAreaWidth,
-        height = afAreaHeight
-      })
     end
   end
   return result
@@ -201,4 +219,30 @@ function PentaxDelegates.fixCenter(points)
     end
   end
   return points
+end
+
+
+--[[
+  @@public table PentaxDelegates.getFocusInfo(table photo, table info, table metaData)
+  ----
+  Constructs and returns the view to display the items in the "Focus Information" group
+--]]
+function PentaxDelegates.getFocusInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, PentaxDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
+  end
+
+  -- Create the "Focus Information" section
+  local focusInfo = f:column {
+      fill = 1,
+      spacing = 2,
+      FocusInfo.FocusPointsStatus(PentaxDelegates.focusPointsDetected),
+      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      }
+  return focusInfo
 end

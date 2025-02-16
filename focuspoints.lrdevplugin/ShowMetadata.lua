@@ -151,22 +151,3 @@ function createParts(metaData)
   end
   return parts
 end
-
-
---[[
--- Original code has a problem with entries that contain filenames with backslash, eg in Photoshop "History" entry.
--- Rewritten using the logic of ExifUtils.readMetaDataAsTable() that seems to work very well
-function createParts(metaData)
-  local parts = {}
-  local num = 1;
-  for i in string.gmatch(metaData, "[^\\\n]+") do
-    logDebug("ShowMetadata", "i = " .. i)
-    p = stringToKeyValue(i, ":")
-    if p ~= nil then
-      parts[num] = p
-      num = num+1
-    end
-  end
-  return parts
-end
---]]

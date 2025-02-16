@@ -33,20 +33,24 @@ TODO: Verify math by comparing focus point locations with in-camera views.
 
 --]]
 
-local LrStringUtils = import "LrStringUtils"
 local LrErrors = import 'LrErrors'
+local LrView = import "LrView"
 require "Utils"
 
 PanasonicDelegates = {}
+
+PanasonicDelegates.focusPointsDetected = false
+
+PanasonicDelegates.metaKeyAfInfoSection = "Panasonic Exif Version"
 
 --[[
 -- metaData - the metadata as read by exiftool
 --]]
 function PanasonicDelegates.getAfPoints(photo, metaData)
   -- find selected AF point
+  PanasonicDelegates.focusPointsDetected = false
   local focusPoint = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Position" })
   if focusPoint == nil then
-    LrErrors.throwUserError("Unsupported Panasonic Camera or 'AF Point Position' metadata tag not found.")
     return nil
   end
 
@@ -81,6 +85,32 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
       }
     }
   }
-
+  PanasonicDelegates.focusPointsDetected = true
   return result
+end
+
+
+--[[
+  @@public table PanasonicDelegates.getFocusInfo(table photo, table info, table metaData)
+  ----
+  Constructs and returns the view to display the items in the "Focus Information" group
+--]]
+function PanasonicDelegates.getFocusInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, PanasonicDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
+  end
+
+  -- Create the "Focus Information" section
+  local focusInfo = f:column {
+      fill = 1,
+      spacing = 2,
+      FocusInfo.FocusPointsStatus(PanasonicDelegates.focusPointsDetected),
+      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      }
+  return focusInfo
 end

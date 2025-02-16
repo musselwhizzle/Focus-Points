@@ -157,6 +157,3 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
   return result
 
 end
---[[
--- END MOD - Add Metadata filter
---]]

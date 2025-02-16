@@ -18,8 +18,6 @@
   A collection of delegate functions to be passed into the DefaultPointRenderer.
 --]]
 
-local LrStringUtils = import "LrStringUtils"
-local LrErrors = import 'LrErrors'
 require "Utils"
 
 DefaultDelegates = {}
@@ -27,6 +25,8 @@ DefaultDelegates.cameraMake = nil
 DefaultDelegates.cameraModel = nil
 DefaultDelegates.metaData = nil
 
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX = "af_focus_box"                  -- draw simple box around the focus point pixel
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_CENTER = "af_focus_box_center"    -- same, but with dot in the center
 DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = "af_selected_infocus"    -- The AF-point is selected and in focus
 DefaultDelegates.POINTTYPE_AF_USED = "af_used"                            -- The AF-point is used to focus image (Nikon)
 DefaultDelegates.POINTTYPE_AF_INFOCUS = "af_infocus"                      -- The AF-point is in focus
@@ -35,6 +35,22 @@ DefaultDelegates.POINTTYPE_AF_INACTIVE = "af_inactive"                    -- The
 DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A face has been detected
 DefaultDelegates.POINTTYPE_CROP = "crop"                                  -- A crop has been detected
 DefaultDelegates.pointTemplates = {
+  af_focus_box = {
+    corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/red/small_fat_%s.png", anchorX = 23, anchorY = 23 },
+    bigToSmallTriggerDist = 100,
+    minCornerDist = 10,
+    angleStep = 5
+  },
+  af_focus_box_center = {
+    center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/center/red/small.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/red/small_fat_%s.png", anchorX = 23, anchorY = 23 },
+    bigToSmallTriggerDist = 100,
+    minCornerDist = 10,
+    angleStep = 5
+  },
   af_selected_infocus = {
     center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
     center_small = { fileTemplate = "assets/imgs/center/red/small.png", anchorX = 23, anchorY = 23 },

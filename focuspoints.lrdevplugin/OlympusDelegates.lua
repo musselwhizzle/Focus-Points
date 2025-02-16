@@ -40,17 +40,22 @@ TODO: Verify math by comparing focus point locations with in-camera views.
 --]]
 
 local LrErrors = import 'LrErrors'
-local LrView = import 'LrView'
-local LrColor = import 'LrColor'
+local LrView =   import 'LrView'
+local LrPrefs =  import 'LrPrefs'
 
-
+require "FocusPointPrefs"
+require "FocusPointDialog"
 require "Utils"
+
 
 OlympusDelegates = {}
 
 OlympusDelegates.focusPointsDetected = false
 
--- relevant Metadata tag names
+-- Tag which indicates that makernotes / AF section is present
+OlympusDelegates.metaKeyAfInfoSection       = "Focus Info Version"
+
+-- relevant metadata tag names
 OlympusDelegates.metaKeyFocusMode           = "Focus Mode"
 OlympusDelegates.metaKeyAfSearch            = "AF Search"
 OlympusDelegates.metaKeySubjectTrackingMode = "AI Subject Tracking Mode"
@@ -62,14 +67,18 @@ OlympusDelegates.metaKeyHyperfocalDistance  = "Hyperfocal Distance"
 OlympusDelegates.metaKeyReleasePriority     = "Release Priority"
 OlympusDelegates.metaKeyAfPointDetails      = "AF Point Details"
 
+-- relevant metadata values
 OlympusDelegates.metaValueNA                = "N/A"
 
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 --[[
 -- metaData - the metadata as read by exiftool
 --]]
 function OlympusDelegates.getAfPoints(photo, metaData)
   -- find selected AF point
+   OlympusDelegates.focusPointsDetected = false
+
   local focusPoint = ExifUtils.findValue(metaData, "AF Point Selected")
   if focusPoint == nil then
     -- expected information missing - handle on upper layers
@@ -93,27 +102,19 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
   logDebug("Olympus", "FocusXY: " .. x .. ", " .. y)
 
-  -- determine size of bounding box of AF area in image pixels
-  local afArea = ExifUtils.findValue(metaData, "AF Areas" )
-  local afAreaX1, afAreaY1, afAreaX2, afAreaY2 = string.match(afArea, "%((%d+),(%d+)%)%-%((%d+),(%d+)%)" )
-  local afAreaWidth = 300
-  local afAreaHeight = 300
-
-  if afAreaX1 ~= nil and afAreaY1 ~= nil and afAreaX2 ~= nil and afAreaY2 ~= nil then
-      afAreaWidth = math.abs(tonumber(afAreaX2) - tonumber(afAreaX1)) * tonumber(orgPhotoWidth) / 255
-      afAreaHeight = math.abs(tonumber(afAreaY2) - tonumber(afAreaY1)) * tonumber(orgPhotoHeight) / 255
+  local pointType
+  if prefs.focusBoxSize ~= FocusPointPrefs.focusBoxSize[1] then
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_CENTER
+  else
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
   end
 
-  afAreaWidth = math.abs(0) * tonumber(orgPhotoWidth) / 255
-  afAreaHeight = math.abs(0) * tonumber(orgPhotoHeight) / 255
-
-  logDebug("Olympus", "Focus Area: " .. afArea .. ", " .. afAreaX1 .. ", " .. afAreaY1 .. ", " .. afAreaX2 .. ", " .. afAreaY2 .. ", " .. afAreaWidth .. ", " .. afAreaHeight )
-
+  local afAreaWidth, afAreaHeight = FocusPointDialog.getFocusPointDimens(photo)
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED,
+        pointType = pointType,
         x = x,
         y = y,
         width = afAreaWidth,
@@ -198,7 +199,7 @@ function OlympusDelegates.getFocusMode(focusModeValue)
   end
   if (#f >= 3) then
     if (f[3] == "Live View Magnification Frame") then
-      m = m .. " (Live View)"
+      m = m .. " (Live View Magnification)"
     else
       m = m .. " (" .. f[3] .. ")"
     end
@@ -231,33 +232,25 @@ end
 
 
 --[[
-  public table getFocuInfo(table photo, table props, table metaData)
+  @@public table OlympusDelegates.getFocusInfo(table photo, table info, table metaData)
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
 function OlympusDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- helper function to add information whether focus points have been found or not
-  local function addFocusPointsStatus()
-    if (OlympusDelegates.focusPointsDetected) then
-      return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system>"}}
-    else
-      return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
-    end
-  end
-
-  -- first check if makernotes AF section is present in metadata
-  if (ExifUtils.findValue(metaData, "Focus Info Version") == nil) then
-    -- if not we can immediately stop
-    return f:column{f:static_text{ title = "Focus info missing from file!", text_color=LrColor("red"), font="<system/bold>"}}
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, OlympusDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
   end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      addFocusPointsStatus(),
+      FocusInfo.FocusPointsStatus(OlympusDelegates.focusPointsDetected),
       OlympusDelegates.addInfo("Focus Mode",            OlympusDelegates.metaKeyFocusMode,           props, metaData),
       OlympusDelegates.addInfo("AF Search",             OlympusDelegates.metaKeyAfSearch,            props, metaData),
       OlympusDelegates.addInfo("Subject Tracking",      OlympusDelegates.metaKeySubjectTrackingMode, props, metaData),

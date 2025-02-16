@@ -21,7 +21,6 @@
 
 local LrErrors = import 'LrErrors'
 local LrView = import 'LrView'
-local LrColor = import 'LrColor'
 
 
 require "Utils"
@@ -30,9 +29,12 @@ NikonDelegates = {}
 
 NikonDelegates.focusPointsDetected = false
 
--- relevant Metadata tag names
-NikonDelegates.metaKeyPhaseDetectAF      = "Phase Detect AF"
+-- Tag which indicates that makernotes / AF section is present
+NikonDelegates.metaKeyAfInfoSection      = "AF Info 2 Version"
+
+-- relevant metadata tag names
 NikonDelegates.metaKeyAfInfoVersion      = "AF Info 2 Version"
+NikonDelegates.metaKeyPhaseDetectAF      = "Phase Detect AF"
 NikonDelegates.metaKeyAfAreaMode         = "AF Area Mode"
 NikonDelegates.metaKeyAfPointsUsed       = "AF Points Used"
 NikonDelegates.metaKeyAfPointsSelected   = "AF Points Selected"
@@ -49,10 +51,11 @@ NikonDelegates.metaKeyPhaseDetect        = "Phase Detect AF"
 NikonDelegates.metaKeyFocusDistance      = "Focus Distance"
 NikonDelegates.metaKeyDepthOfField       = "Depth Of Field"
 NikonDelegates.metaKeyHyperfocalDistance = "Hyperfocal Distance"
-NikonDelegates.metaKeyAfCPriority        = "AF-C Priority Sel"
-NikonDelegates.metaKeyAfSPriority        = " AF-S Priority Sel"
+NikonDelegates.metaKeyAfCPriority        = { "AF-C Priority Sel", "AF-C Priority Selection" }
+NikonDelegates.metaKeyAfSPriority        = "AF-S Priority Sel", "AF-S Priority Selection"
 NikonDelegates.metaKeyShootingMode       = "Shooting Mode"
 
+-- relevant metadata values
 NikonDelegates.metaValueNA               = "N/A"
 
 
@@ -64,6 +67,7 @@ NikonDelegates.metaValueNA               = "N/A"
 --]]
 function NikonDelegates.getAfPoints(photo, metaData)
   -- look for CAF information first
+  NikonDelegates.focusPointsDetected = false
   local result = NikonDelegates.getCAfPoints(metaData)
   if (result == nil) then
      -- if CAF is not present, check PDAF information
@@ -404,6 +408,8 @@ end
 function NikonDelegates.addInfo(title, key, props, metaData)
   local f = LrView.osFactory()
 
+  if not key then return nil end
+
   -- Creates and populates the property corresponding to metadata key
   local function populateInfo(key)
     local result = ExifUtils.findValue(metaData, key)
@@ -429,13 +435,15 @@ function NikonDelegates.addInfo(title, key, props, metaData)
     -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
     return f:row{}
   elseif (props[key] == "AF-C") then
+    local afPriority = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
     return f:column{
       fill = 1, spacing = 2, result,
-      NikonDelegates.addInfo("AF-C Priority", NikonDelegates.metaKeyAfCPriority, props, metaData) }
+      NikonDelegates.addInfo("AF-C Priority", afPriority, props, metaData) }
   elseif (props[key] == "AF-S") then
+    local afPriority = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
     return f:column{
       fill = 1, spacing = 2, result,
-      NikonDelegates.addInfo("AF-S Priority", NikonDelegates.metaKeyAfSPriority, props, metaData) }
+      NikonDelegates.addInfo("AF-S Priority", afPriority, props, metaData) }
   else
     -- add row as composed
     return result
@@ -491,26 +499,18 @@ end
 function NikonDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- helper function to add information whether focus points have been found or not
-  local function addFocusPointsStatus()
-    if (NikonDelegates.focusPointsDetected) then
-      return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system>"}}
-    else
-      return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
-    end
-  end
-
-    -- first check if makernotes AF section is present in metadata
-  if (ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfInfoVersion) == nil) then
-    -- if not we can immediately stop
-    return f:column{f:static_text{ title = "Focus info missing from file!", text_color=LrColor("red"), font="<system/bold>"}}
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, NikonDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
   end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      addFocusPointsStatus(),
+      FocusInfo.FocusPointsStatus(NikonDelegates.focusPointsDetected),
       NikonDelegates.addInfo("Focus Mode",            NikonDelegates.metaKeyFocusMode,          props, metaData),
       NikonDelegates.addInfo("Focus Result",          NikonDelegates.metaKeyFocusResult,        props, metaData),
       NikonDelegates.addInfo("AF Area Mode",          NikonDelegates.metaKeyAfAreaMode,         props, metaData),

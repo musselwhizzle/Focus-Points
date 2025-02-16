@@ -37,19 +37,6 @@ DefaultPointRenderer.funcGetAfInfo   = nil
 
 
 --[[
--- to be commented
---]]
-function DefaultPointRenderer.createInfoView(photo, info)
-  local infoView
-
-  -- create the view containing image information and camera settings
---  infoView = FocusInfo.getInfo(photo, info )
-
-  return infoView
-end
-
-
---[[
 -- Returns a LrView.osFactory():view containg all needed icons to draw the points returned by DefaultPointRenderer.funcGetAfPoints
 -- photo - the selected catalog photo
 -- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
@@ -59,7 +46,7 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
   local fpTable = DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
   local viewFactory = LrView.osFactory()
 
-  local photoView, tmpView, overlayViews
+  local photoView, overlayViews
 
   if fpTable == nil then
 --    return photoView
