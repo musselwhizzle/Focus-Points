@@ -88,6 +88,32 @@ The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc>.
 
 <img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
+#### 2.1.1 Configuration and Settings
+
+Selecting Focus Point Viewer in the list of installed plugins display the plugin settings page:    
+
+<img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+
+**Screen Scaling**
+Windows only: Select the display scaling factor. In order to avoid that the plugin window gets 
+bigger than the size of the screen this setting should be same or similar to the Windows configuration
+(Settings -> Display -> Scale). The default is 100%. 
+
+**Viewing Options**
+
+_Size of focus box for 'focus pixel' points_  
+Depending on the camera maker, focus points can have dimension (width and height), forming a focus box. 
+Some makers represent focus points by a single 'focus pixel'. To accomplish visibility, focus pixels will 
+be represented by a focus box. You can choose whether the box shall be small or medium/large with a center dot.  
+
+_Color of in-focus points_  
+You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
+
+**Logging**
+In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went
+wrong. Use these controls to set the logging level (Info, Warning, Error, Debug) and open a log file that 
+has just been created.
+
 
 ### 2.2 Metadata Viewer
 to be documented
@@ -109,16 +135,70 @@ for the people maintaining exiftool to figure out the relevant information and n
 I would like to take this opportunity to thank Warren Hatch for his great support in deciphering and correctly
 interpreting the Nikon AF information! 
 
+### 3.1.1 Nikon DSLR
+
+Nikon DSLRs usually feature two autofocus systems. A high performance phase detect autofocus (PDAF) and
+a slower contrast autofocus when using live view.
+
+Position and size of PDAF focus points are determined by the individual sensor AF layout of the camera model.
+PDAF points cover only a portion of the frame. For DSLRs with their limited focus coverage, the entire matrix
+of focus points is visualized along with the in-focus point.
+
+Single Area shot:
+
+<img src="../screens/Nikon 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Group Area shot:
+
+<img src="../screens/Nikon 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+For Contrast AF, the size of the focus "point" (it's usually rather a big box) varies, depending on the shooting
+conditions:
+
+<img src="../screens/Nikon 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
+### 3.1.2 Nikon Mirrorless
 
+Nikon Mirrorless cameras feature a hybrid autofocus system, where PDAF and CAF cooperate to achieve fast and 
+precise focus. While earlier models like the Z6 produced a fair amount of images with PDAF results, those
+images become rare in modern cameras like the Z9, with CAF technology getting more capable.
+
+Contrast AF:
+
+<img src="../screens/Nikon 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+
+Phase Detect AF (PDAF):
+
+<img src="../screens/Nikon 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 ## 3.2 Canon
 
-to be updated after release of V2.x
+V2.5 - to do
 
 ## 3.3 Sony
-to be updated after release of V2.x
 
-Plus more chapters for Fuji, Pentax, Olympus, Panasonic and others...
+to be updated with release of V2.6
 
+## 3.4 Fuji
+
+V2.5 - to do
+
+## 3.5 Olympus / OMSystem
+
+V2.5 - to do
+
+## 3.6 Panasonic
+
+to be updated with release of V2.6
+
+
+## 3.7 Pentax
+
+to be updated with release of V2.6
+
+
+## 3.7 Apple
+
+to be updated with release of V2.6

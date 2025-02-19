@@ -2,35 +2,49 @@ Change history and planned improvements
 =======
 
 ## V2.5.0, February 2025
+New features and changes:
+ 
 * Improved user interface
   * Multi-image processing: select multiple images in Lightroom before starting the plugin
-  * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results 
+  * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results
     * Autofocus details currently implemented for Nikon, Canon, Fuji, Olympus
     * Sony, Panasonic, Pentax and Apple will follow in the next release(s) 
+  * User can choose focus box color and for focus 'pixel' points also box size
+  
+
+* exiftool 13.19
+ 
+
+* Comprehensive user documentation
 
 
-* Nikon:
-  * Mirrorless: support of entire Z-series
-  * Support of DSLRs with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020)
+Supported cameras:
+
+* Nikon
+  * Mirrorless: entire Z-series
+  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020)
 
   
 * Canon
-  * Mirrorless: support of entire R-series
-  * DSLR: support entire model range (starting from EOS-1D Mark II in 2004)
+  * Mirrorless: entire R-series
+  * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
   * Powershot models after xxxx
 
  
 * Fuji
-  * support of X-series (from X100 in 2011 up to X-H2S)
-  * support of GFX-series
+  * X-series (from X100 in 2011 up to X-H2S today)
+  * GFX-series
 
 
 * Olympus / OM System
-  * DSLR: support of E-5, E-420, E-520, E-620
-  * Mirrorless: support of entire E-M series, OM-1, OM-3, OM-5
+  * DSLR: E-5, E-420, E-520, E-620
+  * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
   
- 
-* exiftool 13.19
+
+* Sony, Pentax, Panasonic, Apple 
+  * Display of focus points and supported models are unchanged with respect to previous plugin versions
+  * Display of basic image information and camera settings
+  * Upcoming releases: Review of focus point logic. Display of advanced camera settings and focus information 
 
 
 ## V2.1.0, January 27, 2025
