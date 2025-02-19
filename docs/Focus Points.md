@@ -53,7 +53,7 @@ Develop module:<br>
 <br>
 <b>User interface (single image operation):</b>
 
-<img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+<img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 The window is split in two parts. The photo view with visualized focus points and display of selected 
 metadata information that is relevant for assessing the photo with respect to focus results.<br>
@@ -72,9 +72,9 @@ highlighted in green.
 In case focus information is missing or no focus points have been detected (e.g. for manually focused photos)
 this will be indicated by a message in red letters:
 
-<img src="../screens/BasicOperation2.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+<img src="../screens/BasicOperation2.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
-<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 After the window is closed (by clicking "OK" or pressing \<Enter> or \<Esc>) the user is back in LrC UI.
 <br>
@@ -86,13 +86,13 @@ that enable the user to move forwards and backwards within the series of selecte
 
 The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc>.
 
-<img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
 
 #### 2.1.1 Configuration and Settings
 
 Selecting Focus Point Viewer in the list of installed plugins display the plugin settings page:    
 
-<img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+<img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 **Screen Scaling**
 Windows only: Select the display scaling factor. In order to avoid that the plugin window gets 
