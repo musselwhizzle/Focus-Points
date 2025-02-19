@@ -120,7 +120,7 @@ function NikonDelegates.getCAfPoints(metaData)
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = DefaultDelegates.POINTTYPE_AF_USED,
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
         x = afAreaXPosition,
         y = afAreaYPosition,
         width = afAreaWidth,
@@ -251,7 +251,7 @@ function NikonDelegates.getPDAfPoints(metaData)
 
   -- add the active focus points
   if (focusPointsTable ~= nil) then
-    NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_USED, focusPointsTable)
+    NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_FOCUS_BOX, focusPointsTable)
     NikonDelegates.focusPointsDetected = true
   end
 

@@ -46,6 +46,12 @@ FujifilmDelegates.metaKeyAfCSetting                  = "AF-C Setting"
 FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
+FujifilmDelegates.metaKeyCropMode                    = "Crop Mode"
+FujifilmDelegates.metaKeyDriveMode                   = "Drive Mode"
+FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
+FujifilmDelegates.metaKeySequenceNumber              = "Sequence Number"
+FujifilmDelegates.metaKeyImageStabilization          = "Image Stabilization"
+
 
 -- relevant metadata values
 FujifilmDelegates.metaValueNA                        = "N/A"
@@ -79,6 +85,9 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local yScale = orgPhotoHeight / imageHeight
 
   logInfo("Fujifilm", "AF points detected at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
+
+  -- the only real focus point is this - the below code just checks for visualization frames
+  FujifilmDelegates.focusPointsDetected = true
 
   local result = DefaultPointRenderer.createFocusPixelBox(x*xScale, y*yScale)
 
@@ -164,8 +173,6 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
       end
     end
   end
-
-  FujifilmDelegates.focusPointsDetected = true
   return result
 end
 
@@ -224,10 +231,15 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- compose the row to be added
-  local result = f:row {
+  local result = f:row {fill = 1,
                    f:column{f:static_text{title = title .. ":", font="<system>"}},
                    f:spacer{fill_horizontal = 1},
-                   f:column{f:static_text{title = wrapText(props[key], 25), alignment = "right", font="<system>"}}}
+                   f:column{
+                     f:static_text{
+                       title = wrapText(props[key], 30),
+  --                     alignment = "right",
+                       font="<system>"}}
+                  }
   -- decide if and how to add it
   if (props[key] == FujifilmDelegates.metaValueNA) then
     -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
@@ -240,11 +252,62 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
     return f:column{
       fill = 1, spacing = 2, result,
       FujifilmDelegates.addInfo("AF-S Priority", FujifilmDelegates.metaKeyAfSPriority, props, metaData) }
+  elseif (key == FujifilmDelegates.metaKeyDriveSpeed) then
+    return f:column{
+      fill = 1, spacing = 2, result,
+      FujifilmDelegates.addInfo("Sequence Number", FujifilmDelegates.metaKeySequenceNumber, props, metaData) }
   else
     -- add row as composed
     return result
   end
 end
+
+
+--[[
+  @@public table function FujifilmDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  -- if any, otherwise return an empty column
+--]]
+function FujifilmDelegates.getImageInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local imageInfo
+  if true then
+    imageInfo = f:column {
+      fill = 1,
+      spacing = 2,
+      FujifilmDelegates.addInfo("Crop mode", FujifilmDelegates.metaKeyCropMode, props, metaData),
+    }
+  else
+    imageInfo = f:column{}
+  end
+  return imageInfo
+end
+
+
+--[[
+  @@public table function FujifilmDelegates.getCameraInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  -- if any, otherwise return an empty column
+--]]
+function FujifilmDelegates.getCameraInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local cameraInfo
+  -- append maker specific entries to the "Camera Settings" section
+  if true then
+    cameraInfo = f:column {
+      fill = 1,
+      spacing = 2,
+
+      FujifilmDelegates.addInfo("Image Stabilization", FujifilmDelegates.metaKeyImageStabilization, props, metaData),
+      FujifilmDelegates.addInfo("Drive Mode", FujifilmDelegates.metaKeyDriveMode, props, metaData),
+      FujifilmDelegates.addInfo("Drive Speed", FujifilmDelegates.metaKeyDriveSpeed, props, metaData),
+    }
+  else
+    cameraInfo = f:column{}
+  end
+  return cameraInfo
+end
+
 
 --[[
   @@public table FujifilmDelegates.getFocusInfo(table photo, table info, table metaData)

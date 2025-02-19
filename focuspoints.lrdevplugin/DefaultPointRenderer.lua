@@ -319,7 +319,7 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
     end
   end
 
-  local fileName = string.format(iconFileTemplate, fileRotationStr)
+  local fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
   logDebug("createPointView", "fileName: " .. fileName)
 
   local viewFactory = LrView.osFactory()

@@ -91,8 +91,8 @@ function PointsRendererFactory.createRenderer(photo)
   -- initialize the function pointers for handling the current image (in a series)
   if (cameraMake == "fujifilm") then
     DefaultPointRenderer.funcGetAfPoints   = FujifilmDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetImageInfo  = FujifilmDelegates.getImageInfo
+    DefaultPointRenderer.funcGetCameraInfo = FujifilmDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = FujifilmDelegates.getFocusInfo
 
   elseif (cameraMake == "canon") then

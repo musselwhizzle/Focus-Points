@@ -136,27 +136,6 @@ function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
   return nil
 end
 
---[[
-function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
-  local exifValue
-  if keys then
-    local keystr = table.concat(keys, " ")
-    for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
-      exifValue = metaDataTable[value]
-      if exifValue and (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
-        logInfo("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
-        return exifValue, keys[key]
-      else
-        logInfo("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
-        return nil
-      end
-    end
-  else
-    return nil
-  end
-end
---]]
-
 
 function ExifUtils.filterInput(str)
   local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");

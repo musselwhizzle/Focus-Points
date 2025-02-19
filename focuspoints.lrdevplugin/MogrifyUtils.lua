@@ -29,6 +29,17 @@ local mogrifyPath
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
+-- Map base colors for focus box to specific color tones to be used by Mogrify
+MogrifyUtils.colorMap = {
+  red     = "red",
+  green   = "green1",
+  blue    = "blue",
+  yellow  = "yellow",
+  white   = "white",
+  grey    = "grey",
+  black   = "black",
+}
+
 --[[
 -- Call mogrify with 'params'
 -- Raises a LrError in case of an execution error
@@ -126,17 +137,20 @@ end
 -- Get color and strokewith from the icon name
 --]]
 local function mapIconToStrokewidthAndColor(name)
+  -- strokewidth:
   local sw = 2
-  local color = string.match(name, 'assets/imgs/corner/(%a+)/.*')
-  if not color then
-    color = string.match(name, 'assets/imgs/center/(%a+)/.*')
-  end
-  if (string.lower(color) == "red") then
-    color = prefs.focusBoxColor
-  end
   if string.match(name, 'fat') == 'fat' then
     sw = 3
   end
+  -- color:
+  -- if filename contains color placeholder, fill with user-defined color setting
+  local nameWithColor = string.format(name, prefs.focusBoxColor, "0")
+  local color = string.match(nameWithColor, 'assets/imgs/corner/(%a+)/.*')
+  if not color then
+    color = string.match(nameWithColor, 'assets/imgs/center/(%a+)/.*')
+  end
+  -- map base color to Mogrify specific tone
+  color = MogrifyUtils.colorMap[color]
   return sw, color
 end
 

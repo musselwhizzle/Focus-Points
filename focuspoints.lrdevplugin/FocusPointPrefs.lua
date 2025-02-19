@@ -88,12 +88,12 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           width = 65,
           items = {
             { title = "Red",   value = "red" },
-            { title = "Green", value = "green1" },
+            { title = "Green", value = "green" },
             { title = "Blue",  value = "blue" },
           }
         },
         viewFactory:static_text {
-          title = 'Color of focus box (currently Windows only)',
+          title = 'Color for in-focus points',
           -- alignment = 'left',
         },
       }

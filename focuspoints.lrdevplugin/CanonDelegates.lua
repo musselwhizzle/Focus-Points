@@ -163,7 +163,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
       CanonDelegates.focusPointsDetected = true
     elseif isSelected then
-      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
+      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED    -- de facto not used in this code - DPP doesn't show them!
     end
 
     if width > 0 and height > 0 then
