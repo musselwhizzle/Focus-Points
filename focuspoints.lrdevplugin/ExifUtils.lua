@@ -99,28 +99,23 @@ end
 -- return value of the tag
 --]]
 function ExifUtils.findValue(metaDataTable, exifTag)
-  local exifValue
-
-  if exifTag == nil then
-    return
-  end
-
-  for t, v in pairs(metaDataTable) do
-    -- allow for matches where the beginning of the tag in the table is identical with exifTag
-    if (t:sub(1, #exifTag) == exifTag) then
-        exifValue = v
+  if exifTag then
+    for t, v in pairs(metaDataTable) do
+      -- search for exact match
+      if (t == exifTag) then
+        -- even though we don't return them as a result, we'll log (none) and n/a entries
+        logInfo("ExifUtils", "Searching for " .. exifTag .. " -> " .. v)
+        if v and (string.lower(v) ~= "(none)") and (string.lower(v) ~= "n/a") then
+          -- this is the only way out with a result!
+          return v
+        end
+      end
     end
+    logInfo("ExifUtils", "Searching for " .. exifTag .. " returned nothing")
   end
-
-  if (exifValue ~= nil) and
-     (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
-    logInfo("ExifUtils", "Searching for " .. exifTag .. " -> " .. exifValue)
-    return exifValue
-  end
-
-  logInfo("ExifUtils", "Searching for " .. exifTag .. " returned nothing")
   return nil
 end
+
 
 -- Returns the first value of "keys" that could be found within the metaDataTable table
 -- Ignores nil and "(none)" as valid values
@@ -130,13 +125,27 @@ end
 --]]
 function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
   local exifValue
-  local keystr = table.concat(keys, " ")
+  for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
+    exifValue = metaDataTable[value]
+    if exifValue and (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
+      logInfo("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
+      return exifValue, keys[key]
+    end
+  end
+  logInfo("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
+  return nil
+end
+
+--[[
+function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
+  local exifValue
   if keys then
+    local keystr = table.concat(keys, " ")
     for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
       exifValue = metaDataTable[value]
       if exifValue and (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
         logInfo("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
-        return exifValue, key
+        return exifValue, keys[key]
       else
         logInfo("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
         return nil
@@ -146,6 +155,7 @@ function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
     return nil
   end
 end
+--]]
 
 
 function ExifUtils.filterInput(str)

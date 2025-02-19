@@ -22,7 +22,6 @@ local LrView = import 'LrView'
 local LrColor = import 'LrColor'
 
 require "DefaultPointRenderer"
-a = require "affine"                -- #TODO what is the purpose of affine?
 
 FocusInfo = {}
 
@@ -79,6 +78,44 @@ function FocusInfo.getMakerInfo(photo, props)
 end
 
 --[[
+  @@public table FocusInfo.errorMessage(string errorMessage)
+  ----
+  Creates an error message text to be added to the current section
+--]]
+function FocusInfo.errorMessage(message)
+  local f = LrView.osFactory()
+  return f:column{
+    f:static_text{
+      title = message,
+      text_color=LrColor("red"),
+      font="<system/bold>"}
+  }
+end
+
+
+--[[
+  @@public table FocusInfo.addSpace()
+  ----
+  Adds a spacer between the current entry and the next one
+--]]
+function FocusInfo.addSpace()
+  local f = LrView.osFactory()
+    return f:spacer{height = 2}
+end
+
+
+--[[
+  @@public table FocusInfo.addSeparator()
+  ----
+  Adds a separator line between the current entry and the next one
+--]]
+function FocusInfo.addSeparator()
+  local f = LrView.osFactory()
+    return f:separator{ fill_horizontal = 1 }
+end
+
+
+--[[
   @@public table FocusInfo.afInfoMissing(table metaData, string afInfoSectionKey)
   ----
   Checks if AF info section is present in metadata. Returns a view entry with an error message if not
@@ -88,7 +125,7 @@ function FocusInfo.afInfoMissing(metaData, afInfoSectionKey)
   local result
   result = ExifUtils.findValue(metaData, afInfoSectionKey)
   if not result then
-    return f:column{f:static_text{ title = "Focus info missing from file!", text_color=LrColor("red"), font="<system/bold>"}}
+    return FocusInfo.errorMessage("Focus info missing from file")
   end
   return nil
 end
@@ -102,7 +139,7 @@ end
 function FocusInfo.FocusPointsStatus(focusPointsDeteced)
   local f = LrView.osFactory()
   if focusPointsDeteced then
-    return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system>"}}
+    return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system/bold>"}}
   else
     return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
   end
@@ -135,7 +172,7 @@ function FocusInfo.addInfo(title, key, photo, props)
   -- decide if and how to add it
   if (props[key] == FocusInfo.metaValueNA) then
     -- we won't display any "N/A" entries - return "blank"
-    return f:row{}
+    return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
   else
     -- add row as composed
     return result

@@ -52,7 +52,7 @@ local function mogrifyExecute(params, script)
   local stat = LrTasks.execute( '\"' .. cmdline .. '\"' )
   if stat ~= 0 then
     logError('mogrifyDraw', 'Error calling: ' .. cmdline )
-    LrErrors.throwUserError("Error calling 'mogrify.exe' Please check plugin configuration")
+    LrErrors.throwUserError(getFileName(photo) .. "Error calling 'mogrify.exe' Please check plugin configuration")
   end
   if script then
     if prefs.loggingLevel ~= "DEBUG" then
@@ -90,7 +90,7 @@ local function exportToDisk(photo, xSize, ySize)
   local thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, errorMsg)
     if data == nil then
       logError('exportToDisk', 'No thumbnail data')
-      LrErrors.throwUserError("Export to disk failed. No thumbnail data received.")
+      LrErrors.throwUserError(getFileName(photo) .. "Export to disk failed. No thumbnail data received.")
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
@@ -241,7 +241,7 @@ function MogrifyUtils.cleanup()
     local resultOK, errorMsg  = LrFileUtils.delete( fileName )
     if errorMsg ~= nil then
       logError('MogrifyUtils.cleanup', errMsg)
-      LrErrors.throwUserError("Deletion of temporary file failed: " ..  errMsg)
+      LrErrors.throwUserError(getFileName(photo) .. "Deletion of temporary file failed: " ..  errMsg)
     end
   end
 end

@@ -34,7 +34,8 @@ TODO: Verify math by comparing focus point locations with in-camera views.
 --]]
 
 local LrErrors = import 'LrErrors'
-local LrView = import "LrView"
+local LrView   = import 'LrView'
+
 require "Utils"
 
 PanasonicDelegates = {}
@@ -56,14 +57,14 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
 
   local focusX, focusY = string.match(focusPoint, "0(%.%d+) 0(%.%d+)")
   if focusX == nil or focusY == nil then
-      LrErrors.throwUserError("Focus point not found in 'AF Point Position' metadata tag")
+      LrErrors.throwUserError(getFileName(photo) .. "Focus point not found in 'AF Point Position' metadata tag")
       return nil
   end
   logDebug("Panasonic", "Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   if orgPhotoWidth == nil or orgPhotoHeight == nil then
-      LrErrors.throwUserError("Metadata has no Dimensions")
+      LrErrors.throwUserError(getFileName(photo) .. "Unable to retrieve current photo size from Lightroom")
       return nil
   end
   logDebug("Panasonic", "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX) .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY))
@@ -73,20 +74,8 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   local y = tonumber(orgPhotoHeight) * tonumber(focusY)
   logDebug("Panasonic", "FocusXY: " .. x .. ", " .. y)
 
-  local result = {
-    pointTemplates = DefaultDelegates.pointTemplates,
-    points = {
-      {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
-        x = x,
-        y = y,
-        width = 300,
-        height = 300
-      }
-    }
-  }
   PanasonicDelegates.focusPointsDetected = true
-  return result
+  return DefaultPointRenderer.createFocusPixelBox(x, y)
 end
 
 
@@ -110,7 +99,7 @@ function PanasonicDelegates.getFocusInfo(photo, props, metaData)
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(PanasonicDelegates.focusPointsDetected),
-      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      f:row {f:static_text {title = "Details not yet implemented", font="<system>"}}
       }
   return focusInfo
 end

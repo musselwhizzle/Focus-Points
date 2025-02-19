@@ -285,3 +285,8 @@ function openFileInApp(filename)
   end
 end
 -- END MOD - Add Metadata filter
+
+
+function getFileName(photo)
+  return photo:getFormattedMetadata( "fileName" ) .. ":\n\n"
+end

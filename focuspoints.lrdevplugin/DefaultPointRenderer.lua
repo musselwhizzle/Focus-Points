@@ -23,11 +23,15 @@
 local LrView = import 'LrView'
 local LrErrors = import 'LrErrors'
 local LrApplication = import 'LrApplication'
+local LrPrefs = import 'LrPrefs'
+
 
 require "MogrifyUtils"
 require "ExifUtils"
 -- require "FocusInfo"
 a = require "affine"
+
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 DefaultPointRenderer = {}
 
@@ -167,7 +171,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
       local template = pointsTable.pointTemplates[point.pointType]
       if template == nil then
         logError("DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found.")
-        LrErrors.throwUserError("Point template " .. point.pointType .. " could not be found.")
+        LrErrors.throwUserError(getFileName(photo) .. "Unexpected point type " .. point.pointType)
         return nil
       end
 
@@ -427,4 +431,47 @@ function DefaultPointRenderer.getShotOrientation(photo, metaData)
   end
 
   return 0
+end
+
+--[[
+  @@public table DefaultPointRenderer.createFocusPixelBox(x, y)
+  ----
+  According to current viewing option settings, determines shape and size of focus box to be drawn around focus pixel
+--]]
+function DefaultPointRenderer.createFocusPixelBox(x, y)
+  local pointType, size
+
+  if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+  else
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+  end
+
+  size = math.min(FocusPointDialog.PhotoWidth, FocusPointDialog.PhotoHeight) * prefs.focusBoxSize
+
+  return {
+    pointTemplates = DefaultDelegates.pointTemplates,
+    points = {
+      {
+        pointType = pointType,
+        x = x,
+        y = y,
+        width  = size,
+        height = size
+      }
+    }
+  }
+end
+
+
+function DefaultPointRenderer.getAfPointsUnknown(photo, metaData)
+  return nil
+end
+
+function DefaultPointRenderer.getCameraInfoUnknown(photo, metaData)
+  return FocusInfo.errorMessage("Camera information not present")
+end
+
+function DefaultPointRenderer.getFocusInfoUnknown(photo, metaData)
+  return FocusInfo.errorMessage("Unknown")
 end

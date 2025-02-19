@@ -38,10 +38,19 @@ require "Utils"
 
 PentaxDelegates = {}
 
+PentaxDelegates.supportedModels = {
+    "k-1 mark ii", "k-1", "k-3 ii", "k-3", "k-3_relative",
+    "k-5 ii s", "k-5 ii", "k-5",
+    "k-7", "k-30", "k-50", "k-70", "k-500",
+    "k-r", "k-s1", "k-s2", "k-x",
+    "k10d", "k20d", "k100d super", "k100d",
+    "k110d", "k200d", "kp",
+    "_a_ist d", "_a_ist ds", "_a_ist ds2"
+}
+
 PentaxDelegates.focusPointsDetected = false
 
 PentaxDelegates.metaKeyAfInfoSection = "Pentax Version"
-
 
 function PentaxDelegates.getAfPoints(photo, metaData)
   PentaxDelegates.focusPointsDetected = false
@@ -97,6 +106,11 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
   local focusPointsMap, focusPointDimens = PointsUtils.readIntoTable(DefaultDelegates.cameraMake,
                                                            DefaultDelegates.cameraModel .. ".txt")
 
+  if (focusPointsMap == nil) then
+    -- model not supported
+    return
+  end
+
   for key,value in pairs(focusPointsMap) do
     local pointsMap = focusPointsMap[key]
     local x = pointsMap[1]
@@ -116,13 +130,14 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
     if isInFocus and isSelected then
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
+      PentaxDelegates.focusPointsDetected = true
     elseif isInFocus then
       pointType = DefaultDelegates.POINTTYPE_AF_INFOCUS
+      PentaxDelegates.focusPointsDetected = true
     elseif isSelected then
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
+      PentaxDelegates.focusPointsDetected = true
     end
-
-    PentaxDelegates.focusPointsDetected = true
 
     table.insert(result.points, {
       pointType = pointType,
@@ -161,6 +176,7 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
 
   if contrastAfMode then
     if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then
+-- #FIXME   or (contrastAfMode[1] == "Auto"           and facesDetected > 0)then
       local faces = {}
       for face=1,facesDetected do
         local facePosition = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Position" })
@@ -186,7 +202,7 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
         end
       end
     elseif (contrastAfMode[1] == "Face Detect AF" and facesDetected == 0) then
-      LrErrors.throwUserError("Face Detect AF mode enabled, but no faces detected.")
+      LrErrors.throwUserError(getFileName(photo) .. "Face Detect AF mode enabled, but no faces detected.")
     else -- 'Automatic Tracking AF', 'Fixed Center', 'AF Select'
       local contrastDetectArea = ExifUtils.findFirstMatchingValue(metaData, { "Contrast Detect AF Area" })
         contrastDetectArea = splitTrim(contrastDetectArea, " ")
@@ -196,15 +212,17 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
       local afAreaWidth = contrastDetectArea[3]*imageSize[1]/faceDetectSize[1]
       local afAreaHeight = contrastDetectArea[4]*imageSize[2]/faceDetectSize[2]
 
-      PentaxDelegates.focusPointsDetected = true
-      if afAreaWidth > 0 and afAreaHeight > 0 then
-        table.insert(result.points, {
-          pointType = DefaultDelegates.POINTTYPE_FACE,
-          x = afAreaXPosition,
-          y = afAreaYPosition,
-          width = afAreaWidth,
-          height = afAreaHeight
-        })
+      if (afAreaWidth ~= 0) and (afAreaHeight ~= 0) then
+        PentaxDelegates.focusPointsDetected = true
+        if afAreaWidth > 0 and afAreaHeight > 0 then
+          table.insert(result.points, {
+            pointType = DefaultDelegates.POINTTYPE_FACE,
+            x = afAreaXPosition,
+            y = afAreaYPosition,
+            width = afAreaWidth,
+            height = afAreaHeight
+          })
+        end
       end
     end
   end
@@ -223,12 +241,34 @@ end
 
 
 --[[
+  @@public boolean PentaxDelegates.modelSupported(model)
+  ----
+  Checks whether the camera model is supported or not
+--]]
+function PentaxDelegates.modelSupported(currentModel)
+  local m = string.match(string.lower(currentModel), "pentax (.+)")
+  for _, model in ipairs(PentaxDelegates.supportedModels) do
+    if m == model then
+      return true
+    end
+  end
+  return false
+end
+
+
+--[[
   @@public table PentaxDelegates.getFocusInfo(table photo, table info, table metaData)
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
 function PentaxDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
+  
+  -- Check if the current camera model is supported
+  if not PentaxDelegates.modelSupported(DefaultDelegates.cameraModel) then
+    -- if not, finish this section with an error message
+    return FocusInfo.errorMessage("Camera model not supported")
+  end
 
   -- Check if makernotes AF section is (still) present in metadata of file
   local errorMessage = FocusInfo.afInfoMissing(metaData, PentaxDelegates.metaKeyAfInfoSection)
@@ -242,7 +282,7 @@ function PentaxDelegates.getFocusInfo(photo, props, metaData)
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(PentaxDelegates.focusPointsDetected),
-      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      f:row {f:static_text {title = "Details not yet implemented", font="<system>"}}
       }
   return focusInfo
 end

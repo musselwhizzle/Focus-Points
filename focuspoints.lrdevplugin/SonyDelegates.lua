@@ -73,7 +73,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
       pointTemplates = DefaultDelegates.pointTemplates,
       points = {
         {
-          pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+          pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
           x = x * xScale,
           y = y * yScale,
           width = focusLocationSize * xScale,
@@ -180,7 +180,7 @@ function getAfPointsRX10M4(photo, metaData)
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
       {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT,
         x = x*xScale - (pdafPointSize/2),
         y = y*yScale - (pdafPointSize/2),
         width = pdafPointSize,
@@ -259,7 +259,7 @@ function SonyDelegates.getFocusInfo(photo, props, metaData)
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(SonyDelegates.focusPointsDetected),
-      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      f:row {f:static_text {title = "Details not yet implemented", font="<system>"}}
       }
   return focusInfo
 end

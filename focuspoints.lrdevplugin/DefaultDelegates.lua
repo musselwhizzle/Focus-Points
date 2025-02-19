@@ -25,16 +25,34 @@ DefaultDelegates.cameraMake = nil
 DefaultDelegates.cameraModel = nil
 DefaultDelegates.metaData = nil
 
-DefaultDelegates.POINTTYPE_AF_FOCUS_BOX = "af_focus_box"                  -- draw simple box around the focus point pixel
-DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_CENTER = "af_focus_box_center"    -- same, but with dot in the center
-DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = "af_selected_infocus"    -- The AF-point is selected and in focus
-DefaultDelegates.POINTTYPE_AF_USED = "af_used"                            -- The AF-point is used to focus image (Nikon)
-DefaultDelegates.POINTTYPE_AF_INFOCUS = "af_infocus"                      -- The AF-point is in focus
-DefaultDelegates.POINTTYPE_AF_SELECTED = "af_selected"                    -- The AF-point is selected but not in focus
-DefaultDelegates.POINTTYPE_AF_INACTIVE = "af_inactive"                    -- The AF-point is inactive
-DefaultDelegates.POINTTYPE_FACE = "face"                                  -- A face has been detected
-DefaultDelegates.POINTTYPE_CROP = "crop"                                  -- A crop has been detected
+DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL      = "af_focus_pixel"        -- Small box around focus point pixel
+DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX  = "af_focus_pixel_box"    -- Medium/large box with center dot
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX        = "af_focus_box"          -- Box according to EXIF subject area
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT    = "af_focus_box_dot"      -- same, but with center dot
+DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = "af_selected_infocus"   -- AF-point is selected and in focus
+DefaultDelegates.POINTTYPE_AF_USED             = "af_used"               -- AF-point is used to focus image (Nikon)
+DefaultDelegates.POINTTYPE_AF_INFOCUS          = "af_infocus"            -- AF-point is in focus
+DefaultDelegates.POINTTYPE_AF_SELECTED         = "af_selected"           -- AF-point is selected but not in focus
+DefaultDelegates.POINTTYPE_AF_INACTIVE         = "af_inactive"           -- AF-point is inactive
+DefaultDelegates.POINTTYPE_FACE                = "face"                  -- Face has been detected
+DefaultDelegates.POINTTYPE_CROP                 = "crop"                 -- Crop has been detected
 DefaultDelegates.pointTemplates = {
+  af_focus_pixel = {
+    corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/red/small_fat_%s.png", anchorX = 23, anchorY = 23 },
+    bigToSmallTriggerDist = 100,
+    minCornerDist = 10,
+    angleStep = 5
+  },
+  af_focus_pixel_box = {
+    center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/center/red/small.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/red/small_fat_%s.png", anchorX = 23, anchorY = 23 },
+    bigToSmallTriggerDist = 100,
+    minCornerDist = 10,
+    angleStep = 5
+  },
   af_focus_box = {
     corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/red/small_fat_%s.png", anchorX = 23, anchorY = 23 },
@@ -42,7 +60,7 @@ DefaultDelegates.pointTemplates = {
     minCornerDist = 10,
     angleStep = 5
   },
-  af_focus_box_center = {
+  af_focus_box_dot = {
     center = { fileTemplate = "assets/imgs/center/red/normal.png", anchorX = 23, anchorY = 23 },
     center_small = { fileTemplate = "assets/imgs/center/red/small.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/corner/red/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
@@ -77,8 +95,8 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
   af_selected = {
-    corner = { fileTemplate = "assets/imgs/corner/red/normal_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/corner/red/small_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/black/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5

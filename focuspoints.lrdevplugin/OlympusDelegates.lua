@@ -18,30 +18,31 @@
   A collection of delegate functions to be passed into the DefaultPointRenderer when
   the camera is Olympus
 
-  Assume that focus point metadata look like:
-
-    AF Areas                        : (118,32)-(137,49)
+  For Olympus (since 2008) and OMDS cameras, focus point metadata looks like this:
+  
     AF Point Selected               : (50%,15%) (50%,15%)
-
+    AF Areas                        : (118,32)-(137,49)
+  
     Where:
         AF Point Selected appears to be % of photo from upper left corner (X%, Y%)
         AF Areas appears to be focus box as coordinates relative to 0..255 from upper left corner (x,y)
 
-  2017-01-06 - MJ - Test for 'AF Point Selected' in Metadata, assume it's good if found
-                    Add basic errorhandling if not found
-  2017-01-07 - MJ Use 'AF Areas' tag to size focus box
-                    Note that on cameras where it is possible to change the size of the focus box,
-                    I.E - E-M1, the metadata doesn't show the true size, so all focus boxes will be
-                    the same size.
-  2017-01-07 - MJ Fix math bug in rotated images
-
-TODO: Verify math by comparing focus point locations with in-camera views.
-
+    In contrast to the original implementation AF Areas information will no longer be used, since it
+    has no practical relevance. Olympus/OM AF Points do not have a dimension, it's just a pixel.
+    For focus 'pixel' points the plugin offers three different box sizes (small, medium, large) for
+    better visibility of the focus point.
+    
+    When using the AF Point Selected values given in percentage format, there can be small deviations of the
+    focus point position when compare with Olympus/OM Workspace. This is due to the fact, that the percentage
+    string is an exiftool simplification of the actual information which is given as rational number.
+    The deviations are the result of rounding errors (0.5% ~ 26px at long edge)
+    
+    A future version of the plugin may use exiftool in stay-open mode. This would allow to avoid creating and
+    searching a complete textual list of metadata and perform targeted queries of the required tags.
 --]]
 
 local LrErrors = import 'LrErrors'
-local LrView =   import 'LrView'
-local LrPrefs =  import 'LrPrefs'
+local LrView   = import 'LrView'
 
 require "FocusPointPrefs"
 require "FocusPointDialog"
@@ -50,12 +51,13 @@ require "Utils"
 
 OlympusDelegates = {}
 
+-- To trigger display whether focus points have been detected or not
 OlympusDelegates.focusPointsDetected = false
 
 -- Tag which indicates that makernotes / AF section is present
 OlympusDelegates.metaKeyAfInfoSection       = "Focus Info Version"
 
--- relevant metadata tag names
+-- AF relevant metadata tag names
 OlympusDelegates.metaKeyFocusMode           = "Focus Mode"
 OlympusDelegates.metaKeyAfSearch            = "AF Search"
 OlympusDelegates.metaKeySubjectTrackingMode = "AI Subject Tracking Mode"
@@ -66,82 +68,75 @@ OlympusDelegates.metaKeyDepthOfField        = "Depth Of Field"
 OlympusDelegates.metaKeyHyperfocalDistance  = "Hyperfocal Distance"
 OlympusDelegates.metaKeyReleasePriority     = "Release Priority"
 OlympusDelegates.metaKeyAfPointDetails      = "AF Point Details"
+OlympusDelegates.metaKeyAfPointSelected     = "AF Point Selected"
 
 -- relevant metadata values
 OlympusDelegates.metaValueNA                = "N/A"
 
-local prefs = LrPrefs.prefsForPlugin( nil )
 
 --[[
--- metaData - the metadata as read by exiftool
+  @@public table OlympusDelegates.getAfPoints(table photo, table metaData)
+  ----
+  Get the autofocus points from metadata
 --]]
 function OlympusDelegates.getAfPoints(photo, metaData)
-  -- find selected AF point
+
    OlympusDelegates.focusPointsDetected = false
 
-  local focusPoint = ExifUtils.findValue(metaData, "AF Point Selected")
-  if focusPoint == nil then
-    -- expected information missing - handle on upper layers
+  -- Fetch focus point info
+  local focusPoint = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyAfPointSelected)
+  if not focusPoint then
+    -- no focus points found - handled on upper layers
     return nil
   end
 
+  -- Extract the coordinates (in percent of image dimensions)
   local focusX, focusY = string.match(focusPoint, "%((%d+)%%,(%d+)")
-  if focusX == nil or focusY == nil then
+  if not focusX or not focusY then
     return nil
   end
   logDebug("Olympus", "Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
 
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  if orgPhotoWidth == nil or orgPhotoHeight == nil then
-      LrErrors.throwUserError("Metadata has no Dimensions")
+  if not orgPhotoWidth or not orgPhotoHeight then
+      LrErrors.throwUserError(getFileName(photo) .. "Unable to retrieve current photo size from Lightroom")
       return nil
   end
-  logDebug("Olympus", "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX)/100 .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
+  logDebug("Olympus", "Focus px: " .. tonumber(orgPhotoWidth ) * tonumber(focusX)/100 .. ","
+                                                    .. tonumber(orgPhotoHeight) * tonumber(focusY)/100)
 
+  -- Transform the percentage values into pixels 
   local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
   local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
   logDebug("Olympus", "FocusXY: " .. x .. ", " .. y)
 
-  local pointType
-  if prefs.focusBoxSize ~= FocusPointPrefs.focusBoxSize[1] then
-    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_CENTER
-  else
-    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
-  end
-
-  local afAreaWidth, afAreaHeight = FocusPointDialog.getFocusPointDimens(photo)
-  local result = {
-    pointTemplates = DefaultDelegates.pointTemplates,
-    points = {
-      {
-        pointType = pointType,
-        x = x,
-        y = y,
-        width = afAreaWidth,
-        height = afAreaHeight
-      }
-    }
-  }
-
   OlympusDelegates.focusPointsDetected = true
-  return result
+  return DefaultPointRenderer.createFocusPixelBox(x, y)
 end
 
--- ========================================================================================================================
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
   @@public table OlympusDelegates.addInfo(string title, string key, table props, table metaData)
   ----
-  Creates the view element for an item to add to a info section and creates/populates the corresponding property
+  Create view element for adding an item to the info section; creates and populates the corresponding view property
 --]]
   function OlympusDelegates.addInfo(title, key, props, metaData)
     local f = LrView.osFactory()
+
+    local function escape(text)
+      return string.gsub(text, "&", "&&")
+    end
+
+    if not key then return nil end
 
     -- Creates and populates the property corresponding to metadata key
     local function populateInfo(key)
       local value = ExifUtils.findValue(metaData, key)
 
-      if (value == nil) then
+      if not value then
         props[key] = OlympusDelegates.metaValueNA
 
       elseif (key == OlympusDelegates.metaKeyFocusMode) then
@@ -150,7 +145,7 @@ end
 
       elseif (key == OlympusDelegates.metaKeyAfPointDetails) then
         -- special case: AFPointDetails. Extract ReleasePriority portion
-        if (value ~= nil) then
+        if value then
             props[key] = get_nth_word(value, 7, ";")
         end
 
@@ -167,12 +162,12 @@ end
     local result = f:row {
                      f:column{f:static_text{title = title .. ":", font="<system>"}},
                      f:spacer{fill_horizontal = 1},
-                     f:column{f:static_text{title = props[key], font="<system>"}}}
+                     f:column{f:static_text{title = escape(props[key]), font="<system>"}}}
     -- decide if and how to add it
     if (props[key] == OlympusDelegates.metaValueNA) then
       -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-      return f:row{}
-    elseif string.sub(props[key], 3, 4) == "AF" then
+      return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
+    elseif string.sub(props[key], -2) == "AF" then
       return f:column{fill = 1, spacing = 2, result,
         OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData) }
     else
@@ -184,32 +179,72 @@ end
 function OlympusDelegates.getFocusMode(focusModeValue)
 
   local f = splitTrim(focusModeValue:gsub(", Imager AF", ""), ";,")
-  local m = f[2]
-  if (m == "MF") then
-    --MF
-    return m
-  elseif (m == "S-AF") or (m == "C-AF") then
-    if (#f >= 3) and (f[3] == "MF") then
-      m = m .. "+" .. f[3]     -- C-AF+M bzw S-AF+M
-      f[3] = f[4]
-      f[4] = f[5]
-    end
-  else
-     m = f[2]                   -- Starry Sky AF
-  end
-  if (#f >= 3) then
-    if (f[3] == "Live View Magnification Frame") then
-      m = m .. " (Live View Magnification)"
+  if #f > 1 then
+    local m = f[2]
+    if (m == "MF") then
+      --MF
+      return m
+    elseif (m == "S-AF") or (m == "C-AF") then
+      if (#f >= 3) and (f[3] == "MF") then
+        m = m .. "+" .. f[3]     -- C-AF+M bzw S-AF+M
+        f[3] = f[4]
+        f[4] = f[5]
+      end
     else
-      m = m .. " (" .. f[3] .. ")"
+      m = f[2]                   -- Starry Sky AF
     end
-   end
-  return m
+    if (#f >= 3) then
+      if (f[3] == "Live View Magnification Frame") then
+        m = m .. " (Live View Magnification)"
+      else
+        m = m .. " (" .. f[3] .. ")"
+      end
+    end
+    return m
+  else
+    return f[1]
+  end
 end
 
 
 --[[
-  @@public table function NikonDelegates.getCameraInfo(table photo, table props, table metaData)
+  @@public table OlympusDelegates.addSpace()
+  ----
+  Adds a spacer between the current entry and the next one
+--]]
+function OlympusDelegates.addSpace()
+  local f = LrView.osFactory()
+    return f:spacer{height = 2}
+end
+
+
+--[[
+  @@public table OlympusDelegates.addSeparator()
+  ----
+  Adds a separator line between the current entry and the next one
+--]]
+function OlympusDelegates.addSeparator()
+  local f = LrView.osFactory()
+    return f:separator{ fill_horizontal = 1 }
+end
+
+
+--[[
+  @@public boolean OlympusDelegates.modelSupported(model)
+  ----
+  Checks whether the camera model is supported or not
+--]]
+function OlympusDelegates.modelSupported(model)
+  local e  = string.match(model, "e%-(%d+)")
+  local em = string.match(model, "e%-m(%d+)")
+  local om = string.match(model, "om%-(%d+)")
+  -- any mirrorless EM/OM or E-5, E-420, E-520, E-620 is supported
+  return om or em or ((e == "5") or (e=="420") or (e=="520") or (e=="620"))
+end
+
+
+--[[
+  @@public table function OlympusDelegates.getCameraInfo(table photo, table props, table metaData)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
   -- if any, otherwise return an empty column
 --]]
@@ -239,7 +274,13 @@ end
 function OlympusDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- Check if makernotes AF section is (still) present in metadata of file
+  -- Check if the current camera model is supported
+  if not OlympusDelegates.modelSupported(DefaultDelegates.cameraModel) then
+    -- if not, finish this section with an error message
+    return FocusInfo.errorMessage("Camera model not supported")
+  end
+
+    -- Check if makernotes AF section is (still) present in metadata of file
   local errorMessage = FocusInfo.afInfoMissing(metaData, OlympusDelegates.metaKeyAfInfoSection)
   if errorMessage then
     -- if not, finish this section with predefined error message
@@ -254,6 +295,9 @@ function OlympusDelegates.getFocusInfo(photo, props, metaData)
       OlympusDelegates.addInfo("Focus Mode",            OlympusDelegates.metaKeyFocusMode,           props, metaData),
       OlympusDelegates.addInfo("AF Search",             OlympusDelegates.metaKeyAfSearch,            props, metaData),
       OlympusDelegates.addInfo("Subject Tracking",      OlympusDelegates.metaKeySubjectTrackingMode, props, metaData),
+      OlympusDelegates.addSpace(),
+      OlympusDelegates.addSeparator(),
+      OlympusDelegates.addSpace(),
       OlympusDelegates.addInfo("Focus Distance",        OlympusDelegates.metaKeyFocusDistance,       props, metaData),
       OlympusDelegates.addInfo("Depth of Field",        OlympusDelegates.metaKeyDepthOfField,        props, metaData),
       OlympusDelegates.addInfo("Hyperfocal Distance",   OlympusDelegates.metaKeyHyperfocalDistance,  props, metaData),

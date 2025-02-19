@@ -47,7 +47,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
   local imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Exif Image Width" })
   local imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Exif Image Height" })
 
-  if imageWidth == nil or imageHeight == nil then
+  if not imageWidth and not imageHeight then
     return nil
   end
 
@@ -56,8 +56,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
   local yScale = orgPhotoHeight / imageHeight
 
   local subjectArea = split(ExifUtils.findFirstMatchingValue(metaData, { "Subject Area" }), " ")
-  if subjectArea == nil then
-    LrErrors.throwUserError("Could not find Subject Area data within the image.")
+  if not subjectArea then
     return nil
   end
 
@@ -107,7 +106,7 @@ function AppleDelegates.getFocusInfo(photo, props, metaData)
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(AppleDelegates.focusPointsDetected),
-      f:row {f:static_text {title = "View details not yet implemented", font="<system>"}}
+      f:row {f:static_text {title = "Details not yet implemented", font="<system>"}}
       }
   return focusInfo
 end

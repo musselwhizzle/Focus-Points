@@ -42,11 +42,13 @@ function PointsRendererFactory.createRenderer(photo)
   local cameraModel = photo:getFormattedMetadata("cameraModel")
 
   if (cameraMake == nil or cameraModel == nil) then
-    LrErrors.throwUserError("File doesn't contain camera maker or model")
+    -- we map both to unknown and deal with the consequences on upper levels
+    cameraMake  = "unknown"
+    cameraModel = "unknown"
+  else
+    cameraMake = string.lower(cameraMake)
+    cameraModel = string.lower(cameraModel)
   end
-
-  cameraMake = string.lower(cameraMake)
-  cameraModel = string.lower(cameraModel)
 
   logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
   logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
@@ -86,20 +88,29 @@ function PointsRendererFactory.createRenderer(photo)
   logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
   logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
 
+  -- initialize the function pointers for handling the current image (in a series)
   if (cameraMake == "fujifilm") then
     DefaultPointRenderer.funcGetAfPoints   = FujifilmDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
     DefaultPointRenderer.funcGetFocusInfo  = FujifilmDelegates.getFocusInfo
 
   elseif (cameraMake == "canon") then
     DefaultPointRenderer.funcGetAfPoints   = CanonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
     DefaultPointRenderer.funcGetFocusInfo  = CanonDelegates.getFocusInfo
 
   elseif (cameraMake == "apple") then
     DefaultPointRenderer.funcGetAfPoints   = AppleDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
     DefaultPointRenderer.funcGetFocusInfo  = AppleDelegates.getFocusInfo
 
   elseif (cameraMake == "sony") then
     DefaultPointRenderer.funcGetAfPoints   = SonyDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
     DefaultPointRenderer.funcGetFocusInfo  = SonyDelegates.getFocusInfo
 
   elseif (cameraMake == "nikon corporation") then
@@ -110,19 +121,28 @@ function PointsRendererFactory.createRenderer(photo)
 
   elseif (cameraMake == "olympus") then
     DefaultPointRenderer.funcGetAfPoints   = OlympusDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
     DefaultPointRenderer.funcGetCameraInfo = OlympusDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = OlympusDelegates.getFocusInfo
 
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
     DefaultPointRenderer.funcGetAfPoints   = PanasonicDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
     DefaultPointRenderer.funcGetFocusInfo  = PanasonicDelegates.getFocusInfo
 
   elseif (cameraMake == "pentax") then
     DefaultPointRenderer.funcGetAfPoints   = PentaxDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = nil
     DefaultPointRenderer.funcGetFocusInfo  = PentaxDelegates.getFocusInfo
 
   else
-    LrErrors.throwUserError("Camera brand '" .. cameraMake .."' not supported")
+    -- Unknown camera maker or model
+    DefaultPointRenderer.funcGetAfPoints   = DefaultPointRenderer.getAfPointsUnknown
+    DefaultPointRenderer.funcGetImageInfo  = nil
+    DefaultPointRenderer.funcGetCameraInfo = DefaultPointRenderer.getCameraInfoUnknown
+    DefaultPointRenderer.funcGetFocusInfo  = DefaultPointRenderer.getFocusInfoUnknown
   end
 
   DefaultDelegates.metaData = ExifUtils.readMetaDataAsTable(photo)

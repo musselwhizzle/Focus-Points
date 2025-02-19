@@ -17,23 +17,27 @@ local LrView = import "LrView"
 local LrPrefs = import "LrPrefs"
 local LrShell = import "LrShell"
 
-
 local bind = LrView.bind
 
 require "Utils"
 
 FocusPointPrefs = {}
 
+-- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
+-- Indices to access scaling values in focusBoxSize table
+FocusPointPrefs.focusBoxSizeSmall =  1
+FocusPointPrefs.focusBoxSizeMedium = 2
+FocusPointPrefs.focusBoxSizeLarge =  3
+FocusPointPrefs.initfocusBoxSize  =  FocusPointPrefs.focusBoxSizeMedium
+
 
 function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
-
-
   -- Initialize settings on first run after installation of plugin
   if not prefs.screenScaling then	prefs.screenScaling = 1.0     end
-  if not prefs.focusBoxSize  then	prefs.focusBoxSize  = FocusPointPrefs.focusBoxSize[2] end
+  if not prefs.focusBoxSize  then	prefs.focusBoxSize  = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor then	prefs.focusBoxColor = "red"    end
   if not prefs.loggingLevel  then	prefs.loggingLevel  = "NONE"   end
 
@@ -65,9 +69,9 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           value = bind "focusBoxSize",
           width = 65,
           items = {
-            { title = "Small",  value = FocusPointPrefs.focusBoxSize[1] },
-            { title = "Medium", value = FocusPointPrefs.focusBoxSize[2] },
-            { title = "Large",  value = FocusPointPrefs.focusBoxSize[3] },
+            { title = "Small",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall ] },
+            { title = "Medium", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeMedium] },
+            { title = "Large",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge ] },
           }
         },
         viewFactory:static_text {
