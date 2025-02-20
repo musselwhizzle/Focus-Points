@@ -77,12 +77,9 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 <img src="../screens/BasicOperation5.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 
-<br>
-<br>
-
 #### User Messages ####
 
-If focus information is present for the photo and focus points have been detected this is indicated by a message highlighted in green.
+If focus information is present for the photo and focus points have been detected this is indicated by a message highlighted in green - see images above.
 
 In case focus information is missing or no focus points have been detected (e.g. for manually focused photos) this will be indicated by a message in red letters:
 
@@ -100,8 +97,7 @@ When run on a selection of photos, the user interface of Focus Point Viewer offe
 The window can be closed by clicking "Exit"  or pressing \<Enter> or \<Esc> or \<Space>.
 
 <img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
-<br>
-<br>
+
 
 #### 2.1.1 Configuration and Settings
 
