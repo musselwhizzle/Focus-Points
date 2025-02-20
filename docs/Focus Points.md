@@ -33,9 +33,20 @@ Other cases where the Focus Points plugin will not be able to display meaningful
 <br>
 
 ## 2. Overview and Basic Operation
-This secction explains how the plugin is used.
+This section explains how the plugin is used.
 
-### 2.1 Focus Point Viewer
+### 2.1 Installation
+1. Unless you have been given a special link (e.g. for a pre-release) download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
+2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
+3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step)" 
+4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
+5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
+   or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
+6. Windows only: Select the display scaling factor. Use the same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%.
+
+
+
+### 2.2 Focus Point Viewer
 Once the plugin has been installed, it can be invoked with one or more photos selected:
 
 Library module:<br> 
@@ -99,7 +110,7 @@ The window can be closed by clicking "Exit"  or pressing \<Enter> or \<Esc> or \
 <img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
 
 
-#### 2.1.1 Configuration and Settings
+#### 2.2.1 Configuration and Settings
 
 Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's preferences page:    
 
@@ -123,7 +134,7 @@ _Color of in-focus points_<br> You can choose between three different colors for
 In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went wrong. Use these controls to set the logging level (Info, Warning, Error, Debug) and open a log file that has just been created.
 
 
-### 2.2 Metadata Viewer
+### 2.3 Metadata Viewer
 Will be documented later
 
 ## 3. Display of Focus Points
