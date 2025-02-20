@@ -139,7 +139,7 @@ end
 function FocusInfo.FocusPointsStatus(focusPointsDeteced)
   local f = LrView.osFactory()
   if focusPointsDeteced then
-    return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 100, 0), font="<system/bold>"}}
+    return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 0.66, 0), font="<system/bold>"}}
   else
     return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
   end

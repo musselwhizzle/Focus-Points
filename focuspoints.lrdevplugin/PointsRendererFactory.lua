@@ -98,7 +98,7 @@ function PointsRendererFactory.createRenderer(photo)
   elseif (cameraMake == "canon") then
     DefaultPointRenderer.funcGetAfPoints   = CanonDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetCameraInfo = CanonDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = CanonDelegates.getFocusInfo
 
   elseif (cameraMake == "apple") then

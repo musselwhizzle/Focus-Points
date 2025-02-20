@@ -41,11 +41,14 @@ CanonDelegates.AfAccelDecelTracking         = "AF Accel Decel Tracking"
 CanonDelegates.AfPointSwitching             = "AF Point Switching"
 CanonDelegates.AIServoFirstImage            = "AI Servo First Image"
 CanonDelegates.AIServoSecondImage           = "AI Servo Second Image"
-
 CanonDelegates.metaKeyFocusDistanceUpper    = "Focus Distance Upper"
 CanonDelegates.metaKeyFocusDistanceLower    = "Focus Distance Lower"
 CanonDelegates.metaKeyDepthOfField          = "Depth Of Field"
 CanonDelegates.metaKeyHyperfocalDistance    = "Hyperfocal Distance"
+CanonDelegates.metaKeyContinuousDrive       = "Continuous Drive"
+CanonDelegates.metaKeyImageStabilization    = "Image Stabilization"
+
+
 
 -- relevant metadata values
 CanonDelegates.metaValueNA                  = "N/A"
@@ -137,7 +140,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
   end
 
   for key, _ in pairs(afAreaXPositions) do
-    local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everithing is referenced from the center,
+    local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everything is referenced from the center,
     local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
     local width = 0
     local height = 0
@@ -151,7 +154,12 @@ function CanonDelegates.getAfPoints(photo, metaData)
     else
       height = afPointHeights[key] * xScale
     end
-    local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
+
+    local pointType
+    if (string.sub(cameraModel, 1, 11) ~= "canon eos r") then
+      -- we won't display the grid for mirrorless
+      pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
+    end
     local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
     local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
 --[[ #FIXME
@@ -166,14 +174,16 @@ function CanonDelegates.getAfPoints(photo, metaData)
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED    -- de facto not used in this code - DPP doesn't show them!
     end
 
-    if width > 0 and height > 0 then
-      table.insert(result.points, {
-        pointType = pointType,
-        x = x,
-        y = y,
-        width = width,
-        height = height
-      })
+    if pointType then
+      if width > 0 and height > 0 then
+        table.insert(result.points, {
+          pointType = pointType,
+          x = x,
+          y = y,
+          width = width,
+          height = height
+        })
+      end
     end
   end
   return result
@@ -223,6 +233,24 @@ end
       return result
     end
   end
+
+function CanonDelegates.getCameraInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local cameraInfo
+  -- append maker specific entries to the "Camera Settings" section
+  if true then
+    cameraInfo = f:column {
+      fill = 1,
+      spacing = 2,
+      CanonDelegates.addInfo("Image Stabilization", CanonDelegates.metaKeyImageStabilization, props, metaData),
+      CanonDelegates.addInfo("Continuous Drive", CanonDelegates.metaKeyContinuousDrive, props, metaData),
+    }
+  else
+    cameraInfo = f:column{}
+  end
+  return cameraInfo
+end
+
 
 --[[
   @@public table CanonDelegates.getFocusInfo(table photo, table info, table metaData)

@@ -25,6 +25,7 @@ FocusPointPrefs = {}
 
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
+
 -- Indices to access scaling values in focusBoxSize table
 FocusPointPrefs.focusBoxSizeSmall =  1
 FocusPointPrefs.focusBoxSizeMedium = 2
@@ -51,11 +52,12 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           title = "Scaling",
           value = bind 'screenScaling',
           items = {
-            { title = "100%", value = 1.0 },
-            { title = "125%", value = 0.8 },
+            { title = "100%", value = 1.0  },
+            { title = "115%", value = 0.87 },
+            { title = "125%", value = 0.8  },
             { title = "150%", value = 0.67 },
             { title = "175%", value = 0.57 },
-            { title = "200%", value = 0.5 },
+            { title = "200%", value = 0.5  },
           }
         },
       },
@@ -75,7 +77,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           }
         },
         viewFactory:static_text {
-          title = "' Size of focus box for 'focus pixel' points ",
+          title = " Size of focus box for 'focus pixel' points ",
           -- alignment = 'left',
         },
       },

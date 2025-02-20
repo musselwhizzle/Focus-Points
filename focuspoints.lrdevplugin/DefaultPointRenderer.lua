@@ -310,6 +310,11 @@ end
 function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
   local fileRotationStr = ""
 
+  local function count_substring(text, sub)
+    local _, count = text:gsub(sub, "")
+    return count
+  end
+
   if angleStep ~= nil and angleStep ~= 0 then
     local closestAngle = (angleStep * math.floor(0.5 + rotation / angleStep)) % 360
     if horizontalMirroring == -1 then
@@ -319,7 +324,15 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
     end
   end
 
-  local fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
+  local fileName
+  if count_substring(iconFileTemplate, "%%s") == 2 then
+    -- two placeholders to be filled in
+    fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
+  else
+    -- just the rotation placeholder to be filled in
+    fileName = string.format(iconFileTemplate, fileRotationStr)
+  end
+
   logDebug("createPointView", "fileName: " .. fileName)
 
   local viewFactory = LrView.osFactory()
