@@ -28,7 +28,7 @@ Supported cameras:
 * Canon
   * Mirrorless: entire R-series
   * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
-  * Powershot models after xxxx
+  * Powershot models after 2004
 
  
 * Fuji
