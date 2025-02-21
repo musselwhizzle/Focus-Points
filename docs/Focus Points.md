@@ -1,6 +1,42 @@
 Focus Points Plugin for Lightroom Classic
 =======
 
+## Content ##
+
+### [Scope and Limitations](#1-scope-and-limitations)
+
+### [Overview and Basic Operation](#2-overview-and-basic-operation)
+
+*  [Installation](#21-installation)
+*  [Focus Point Viewer](#22-focus-point-viewer)
+*  [Metadata Viewer](#23-metadata-viewer)
+
+
+### [Display of Focus Points](#3-display-of-focus-points)
+
+*  [Nikon](#31-nikon)
+
+* [Canon](#32-canon)
+
+* [Sony](#33-sony)
+
+* [Fuji](#34-fuji)
+
+* [Olympus / OM System](#35-olympus--om-system)
+
+* [Panasonic](#36-panasonic)
+ 
+* [Pentax](#37-pentax)
+
+* [Apple](#38-apple)
+
+### [Glossary](#4-glossary)
+
+### [Troubleshooting](troubleshooting_faq.md#troubleshooting--faq)
+
+___
+
+
 ## 1. Scope and Limitations
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
@@ -37,12 +73,12 @@ This section explains how the plugin is used.
 
 ### 2.1 Installation
 1. Unless you have been given a special link (e.g. for a pre-release) download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
-2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
+2. Unzip and rename the extracted folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
 3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step)" 
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
-5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
+5. Once installed, in Library mode with one or multiple photos selected go to "Library -> Plug-in Extras -> Focus Point" 
    or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
-6. Windows only: Select the display scaling factor. Use the same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%.
+6. Windows only: Select the display scaling factor. Use the same or similar value as set for Windows configuration (Settings -> Display -> Scale). The default is 100%.
 
 
 
@@ -274,11 +310,11 @@ to be updated with release of V2.6
 to be updated with release of V2.6
 
 
-## 3.7 Apple
+## 3.8 Apple
 
 to be updated with release of V2.6
 
 
-## Glossary
+## 4 Glossary
 
 to be created

@@ -12,7 +12,7 @@ New features and changes:
   * User can choose focus box color and for focus 'pixel' points also box size
   
 
-* exiftool 13.19
+* exiftool 13.20
  
 
 * Comprehensive user documentation
