@@ -32,7 +32,7 @@ Focus Points Plugin for Lightroom Classic
 
 ### [Glossary](#4-glossary)
 
-### [Troubleshooting](troubleshooting_faq.md#troubleshooting--faq)
+### [Troubleshooting](Troubleshooting_FAQ.md#troubleshooting--faq)
 
 ___
 
