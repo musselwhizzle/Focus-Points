@@ -8,7 +8,7 @@ New features and changes:
   * Multi-image processing: select multiple images in Lightroom before starting the plugin
   * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results
     * Autofocus details currently implemented for Nikon, Canon, Fuji, Olympus
-    * Sony, Panasonic, Pentax and Apple will follow in the next release(s) 
+    * Sony, Pentax and Apple will follow in the next release(s) 
   * User can choose focus box color and for focus 'pixel' points also box size
   
 
@@ -28,7 +28,7 @@ Supported cameras:
 * Canon
   * Mirrorless: entire R-series
   * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
-  * Powershot models after 2004
+  * Compact: Powershot models after 2004
 
  
 * Fuji
@@ -39,9 +39,14 @@ Supported cameras:
 * Olympus / OM System
   * DSLR: E-5, E-420, E-520, E-620
   * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
+
+
+* Panasonic
+  * Mirrorless: entire LUMIX G and S series
+  * Compact: FZ, TZ/ZS, LX series - all models after 2008
   
 
-* Sony, Pentax, Panasonic, Apple 
+* Sony, Pentax, Apple 
   * Display of focus points and supported models are unchanged with respect to previous plugin versions
   * Display of basic image information and camera settings
   * Upcoming releases: Review of focus point logic. Display of advanced camera settings and focus information 

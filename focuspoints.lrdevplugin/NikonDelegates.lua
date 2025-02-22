@@ -486,15 +486,11 @@ end
 function NikonDelegates.getImageInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local imageInfo
-  if true then
-    imageInfo = f:column {
-      fill = 1,
-      spacing = 2,
-      NikonDelegates.addInfo("Crop mode", NikonDelegates.metaKeyAfCropHiSpeed, props, metaData),
-    }
-  else
-    imageInfo = f:column{}
-  end
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    NikonDelegates.addInfo("Crop mode", NikonDelegates.metaKeyAfCropHiSpeed, props, metaData),
+  }
   return imageInfo
 end
 
@@ -507,15 +503,11 @@ function NikonDelegates.getCameraInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
-  if true then
-    cameraInfo = f:column {
-      fill = 1,
-      spacing = 2,
-      NikonDelegates.addInfo("Shooting mode", NikonDelegates.metaKeyShootingMode, props, metaData),
-    }
-  else
-    cameraInfo = f:column{}
-  end
+  cameraInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    NikonDelegates.addInfo("Shooting mode", NikonDelegates.metaKeyShootingMode, props, metaData),
+  }
   return cameraInfo
 end
 

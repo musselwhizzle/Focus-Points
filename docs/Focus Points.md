@@ -302,7 +302,13 @@ Using the focus box settings the display of the focus point can be tweaked to lo
 
 ## 3.6 Panasonic
 
-to be updated with release of V2.6
+Similar to Olympus, Panasonic hasn't changed the logic of focus point data since ages. Since 2008, to be precisely. They are sharing the same logic and format across all of their cameras. This is why Panasonic cameras are widely support, across model lines from mirrorless over bridge down to compact cameras.
+
+Panasonic is another member of "focus pixel" group, so you can choose focus box size and color in the plugin's preferences.  
+
+Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that uses the same logic and notation for face detection frames.
+
+<img src="../screens/Panasonic 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ## 3.7 Pentax

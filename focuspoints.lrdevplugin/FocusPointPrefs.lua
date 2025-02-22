@@ -32,15 +32,30 @@ FocusPointPrefs.focusBoxSizeMedium = 2
 FocusPointPrefs.focusBoxSizeLarge =  3
 FocusPointPrefs.initfocusBoxSize  =  FocusPointPrefs.focusBoxSizeMedium
 
-
-function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
-  local prefs = LrPrefs.prefsForPlugin( nil )
-
-  -- Initialize settings on first run after installation of plugin
+--[[
+  @@public void FocusPointPrefs.InitializePrefs()
+  -- Initialize preferences at first run after installation of plugin
+--]]
+function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.screenScaling then	prefs.screenScaling = 1.0     end
   if not prefs.focusBoxSize  then	prefs.focusBoxSize  = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor then	prefs.focusBoxColor = "red"    end
   if not prefs.loggingLevel  then	prefs.loggingLevel  = "NONE"   end
+end
+
+
+--[[
+  @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table viewFactory, p )
+  -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
+--]]
+function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
+  local prefs = LrPrefs.prefsForPlugin( nil )
+
+  -- Set the defaults
+  FocusPointPrefs.InitializePrefs(prefs)
+
+  -- Width of the drop-down lists in px, to make the naming aligned across rows
+  local dropDownWidth = 65
 
   return {
     {
@@ -51,6 +66,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         viewFactory:popup_menu {
           title = "Scaling",
           value = bind 'screenScaling',
+          width = dropDownWidth,
           items = {
             { title = "100%", value = 1.0  },
             { title = "115%", value = 0.87 },
@@ -58,36 +74,23 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
             { title = "150%", value = 0.67 },
             { title = "175%", value = 0.57 },
             { title = "200%", value = 0.5  },
+            { title = "250%", value = 0.4  },
           }
         },
+        viewFactory:static_text {
+          title = "Set this to the same or similar value you are using on Windows (Display Settings -> Scale)",
+        }
       },
     },
     {
       title = "Viewing Options",
       viewFactory:row {
         bind_to_object = prefs,
-        viewFactory:popup_menu {
-          title = "focusBoxSize",
-          value = bind "focusBoxSize",
-          width = 65,
-          items = {
-            { title = "Small",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall ] },
-            { title = "Medium", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeMedium] },
-            { title = "Large",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge ] },
-          }
-        },
-        viewFactory:static_text {
-          title = " Size of focus box for 'focus pixel' points ",
-          -- alignment = 'left',
-        },
-      },
-      viewFactory:row {
-        bind_to_object = prefs,
         spacing = viewFactory:control_spacing(),
         viewFactory:popup_menu {
           title = "focusBoxColor",
           value = bind "focusBoxColor",
-          width = 65,
+          width = dropDownWidth,
           items = {
             { title = "Red",   value = "red" },
             { title = "Green", value = "green" },
@@ -96,9 +99,24 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         },
         viewFactory:static_text {
           title = 'Color for in-focus points',
-          -- alignment = 'left',
         },
-      }
+      },
+      viewFactory:row {
+        bind_to_object = prefs,
+        viewFactory:popup_menu {
+          title = "focusBoxSize",
+          value = bind "focusBoxSize",
+          width = dropDownWidth,
+          items = {
+            { title = "Small",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall ] },
+            { title = "Medium", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeMedium] },
+            { title = "Large",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge ] },
+          }
+        },
+        viewFactory:static_text {
+          title = "  Size of focus box for 'focus pixel' points ",
+        },
+      },
     },
     {
       title = "Logging",
@@ -108,6 +126,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         viewFactory:popup_menu {
           title = "Logging level",
           value = bind 'loggingLevel',
+          width = dropDownWidth,
           items = {
             { title = "None", value = "NONE" },
             { title = "Error", value = "ERROR" },
@@ -115,6 +134,9 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
             { title = "Info", value = "INFO" },
             { title = "Debug", value = "DEBUG" },
           }
+        },
+        viewFactory:static_text {
+          title = 'Level of information to be logged'
         },
         viewFactory:static_text {
           title = 'Plugin log:',

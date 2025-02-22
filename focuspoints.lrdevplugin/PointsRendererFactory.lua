@@ -128,7 +128,7 @@ function PointsRendererFactory.createRenderer(photo)
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
     DefaultPointRenderer.funcGetAfPoints   = PanasonicDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetCameraInfo = PanasonicDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = PanasonicDelegates.getFocusInfo
 
   elseif (cameraMake == "pentax") then

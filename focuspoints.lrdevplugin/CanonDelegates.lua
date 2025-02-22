@@ -55,7 +55,9 @@ CanonDelegates.metaValueNA                  = "N/A"
 CanonDelegates.metaValueOneShotAf           = "One-shot AF"
 
 --[[
--- metaData - the metadata as read by exiftool
+  @@public table CanonDelegates.getAfPoints(table photo, table metaData)
+  ----
+  Get the autofocus points from metadata
 --]]
 function CanonDelegates.getAfPoints(photo, metaData)
   local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
@@ -238,16 +240,12 @@ function CanonDelegates.getCameraInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
-  if true then
     cameraInfo = f:column {
       fill = 1,
       spacing = 2,
       CanonDelegates.addInfo("Image Stabilization", CanonDelegates.metaKeyImageStabilization, props, metaData),
       CanonDelegates.addInfo("Continuous Drive", CanonDelegates.metaKeyContinuousDrive, props, metaData),
     }
-  else
-    cameraInfo = f:column{}
-  end
   return cameraInfo
 end
 

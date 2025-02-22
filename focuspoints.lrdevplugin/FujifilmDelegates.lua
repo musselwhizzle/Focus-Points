@@ -52,13 +52,14 @@ FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
 FujifilmDelegates.metaKeySequenceNumber              = "Sequence Number"
 FujifilmDelegates.metaKeyImageStabilization          = "Image Stabilization"
 
-
 -- relevant metadata values
 FujifilmDelegates.metaValueNA                        = "N/A"
 
 
---[[ #TODO proper documentation
--- metaData - the metadata as read by exiftool
+--[[
+  @@public table FujiFilmDelegates.getAfPoints(table photo, table metaData)
+  ----
+  Get the autofocus points from metadata
 --]]
 function FujifilmDelegates.getAfPoints(photo, metaData)
   FujifilmDelegates.focusPointsDetected = false
@@ -271,15 +272,11 @@ end
 function FujifilmDelegates.getImageInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local imageInfo
-  if true then
-    imageInfo = f:column {
-      fill = 1,
-      spacing = 2,
-      FujifilmDelegates.addInfo("Crop mode", FujifilmDelegates.metaKeyCropMode, props, metaData),
-    }
-  else
-    imageInfo = f:column{}
-  end
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    FujifilmDelegates.addInfo("Crop mode", FujifilmDelegates.metaKeyCropMode, props, metaData),
+  }
   return imageInfo
 end
 
@@ -293,18 +290,14 @@ function FujifilmDelegates.getCameraInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
-  if true then
-    cameraInfo = f:column {
-      fill = 1,
-      spacing = 2,
+  cameraInfo = f:column {
+    fill = 1,
+    spacing = 2,
 
-      FujifilmDelegates.addInfo("Image Stabilization", FujifilmDelegates.metaKeyImageStabilization, props, metaData),
-      FujifilmDelegates.addInfo("Drive Mode", FujifilmDelegates.metaKeyDriveMode, props, metaData),
-      FujifilmDelegates.addInfo("Drive Speed", FujifilmDelegates.metaKeyDriveSpeed, props, metaData),
-    }
-  else
-    cameraInfo = f:column{}
-  end
+    FujifilmDelegates.addInfo("Image Stabilization", FujifilmDelegates.metaKeyImageStabilization, props, metaData),
+    FujifilmDelegates.addInfo("Drive Mode", FujifilmDelegates.metaKeyDriveMode, props, metaData),
+    FujifilmDelegates.addInfo("Drive Speed", FujifilmDelegates.metaKeyDriveSpeed, props, metaData),
+  }
   return cameraInfo
 end
 

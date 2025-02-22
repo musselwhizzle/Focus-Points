@@ -21,6 +21,8 @@ local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrTasks = import 'LrTasks'
 local LrBinding = import "LrBinding"
+local LrPrefs = import "LrPrefs"
+
 
 require "FocusPointDialog"
 require "FocusInfo"
@@ -42,6 +44,9 @@ local function showDialog()
     local switchedToLibrary
     local userResponse
     local props = LrBinding.makePropertyTable(context)
+
+    -- To avoid nil pointer errors in case of "dirty" installation (copy over old files)
+    FocusPointPrefs.InitializePrefs(LrPrefs.prefsForPlugin(nil))
 
     -- Find the index 'current' of the target photo in set of selectedPhotos
     for i, photo in ipairs(selectedPhotos) do

@@ -167,7 +167,8 @@ end
     if (props[key] == OlympusDelegates.metaValueNA) then
       -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
       return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
-    elseif string.sub(props[key], -2) == "AF" then
+    elseif string.sub(props[key], 1, 4) == "S-AF"
+        or string.sub(props[key], 1, 4) == "C-AF" then
       return f:column{fill = 1, spacing = 2, result,
         OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData) }
     else
@@ -252,16 +253,12 @@ function OlympusDelegates.getCameraInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
-  if true then
-    cameraInfo = f:column {
-      fill = 1,
-      spacing = 2,
-      OlympusDelegates.addInfo("Drive Mode",            OlympusDelegates.metaKeyDriveMode,           props, metaData),
-      OlympusDelegates.addInfo("Image Stabilization",   OlympusDelegates.metaKeyImageStabilization,  props, metaData),
-    }
-  else
-    cameraInfo = f:column{}
-  end
+  cameraInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    OlympusDelegates.addInfo("Drive Mode",            OlympusDelegates.metaKeyDriveMode,           props, metaData),
+    OlympusDelegates.addInfo("Image Stabilization",   OlympusDelegates.metaKeyImageStabilization,  props, metaData),
+  }
   return cameraInfo
 end
 
