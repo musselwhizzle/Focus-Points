@@ -1,8 +1,8 @@
-Change history and planned improvements
+Change history
 =======
 
 ## V2.5.0, February 2025
-New features and changes:
+**New features and changes:**
  
 * Improved user interface
   * Multi-image processing: select multiple images in Lightroom before starting the plugin
@@ -18,7 +18,7 @@ New features and changes:
 * Comprehensive user documentation
 
 
-Supported cameras:
+**Supported cameras:**
 
 * Nikon
   * Mirrorless: entire Z-series
@@ -83,20 +83,3 @@ Supported cameras:
   * has been renamed from "LibraryLogger.log" to "FocusPoints.log" 
 * Includes exiftool 13.10 (#188)
 * Plug-in updates and releases now follow a numbering scheme to keep track of versions and changes (#190). The plug-in version number can be found on the plug-in page in Lightroom's Plug-in Manager. Numbering starts with V2.0.0
-
-
-Future Improvements
---------
-
-### 2.x Adding support for further cameras
-
-* add recent / popular Nikon DSLR models (D850 etc.)
-* verify (and if needed fix) and document support of recent models (priority on Canon and Sony)
-* all supported brands and models: add face detection as far as EXIF data support this (e.g. this is not supported for Nikon Z)
-   
-### 3.0 Improved focus point display
-* Add relevant shooting settings and autofocus parameters to have all relevant data in one place to assess the focusing result for an image. E.g.:
-  * camera and lens ID
-  * focal length, exposure, aperture, ISO
-  * focus mode, focus distance, hyperfocal distance, DoF
-  
