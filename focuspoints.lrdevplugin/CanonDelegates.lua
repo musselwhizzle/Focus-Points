@@ -30,7 +30,7 @@ CanonDelegates.focusPointsDetected = false
 -- Tag which indicates that makernotes / AF section is present
 CanonDelegates.metaKeyAfInfoSection         = "Canon Firmware Version"
 
--- AF relevant metadata tag names
+-- AF relevant tags
 CanonDelegates.metaKeyFocusMode             = "Focus Mode"
 CanonDelegates.metaKeyAfAreaMode            = "AF Area Mode"
 CanonDelegates.metaKeyOneShotAfRelease      = "One Shot AF Release"
@@ -45,10 +45,10 @@ CanonDelegates.metaKeyFocusDistanceUpper    = "Focus Distance Upper"
 CanonDelegates.metaKeyFocusDistanceLower    = "Focus Distance Lower"
 CanonDelegates.metaKeyDepthOfField          = "Depth Of Field"
 CanonDelegates.metaKeyHyperfocalDistance    = "Hyperfocal Distance"
+
+-- Camera Settings relevant tags
 CanonDelegates.metaKeyContinuousDrive       = "Continuous Drive"
 CanonDelegates.metaKeyImageStabilization    = "Image Stabilization"
-
-
 
 -- relevant metadata values
 CanonDelegates.metaValueNA                  = "N/A"
@@ -192,50 +192,58 @@ function CanonDelegates.getAfPoints(photo, metaData)
 end
 
 
--- ========================================================================================================================
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
   @@public table CanonDelegates.addInfo(string title, string key, table props, table metaData)
   ----
   Creates the view element for an item to add to a info section and creates/populates the corresponding property
 --]]
-  function CanonDelegates.addInfo(title, key, props, metaData)
-    local f = LrView.osFactory()
+function CanonDelegates.addInfo(title, key, props, metaData)
+  local f = LrView.osFactory()
 
-    -- Creates and populates the property corresponding to metadata key
-    local function populateInfo(key)
-      local value = ExifUtils.findValue(metaData, key)
+  -- Creates and populates the property corresponding to metadata key
+  local function populateInfo(key)
+    local value = ExifUtils.findValue(metaData, key)
 
-      if (value == nil) then
-        props[key] = CanonDelegates.metaValueNA
-      else
-        -- everything else is the default case!
-        props[key] = value
-      end
-    end
-
-    -- create and populate property with designated value
-    populateInfo(key)
-
-    -- compose the row to be added
-    local result = f:row {
-                     f:column{f:static_text{title = title .. ":", font="<system>"}},
-                     f:spacer{fill_horizontal = 1},
-                     f:column{f:static_text{title = props[key], font="<system>"}}}
-    -- decide if and how to add it
-    if (props[key] == CanonDelegates.metaValueNA) then
-      -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-      return f:row{}
-    elseif (props[key] == CanonDelegates.metaValueOneShotAf) then
-      return f:column{
-        fill = 1, spacing = 2, result,
-        CanonDelegates.addInfo("One Shot AF Release", CanonDelegates.metaKeyOneShotAfRelease, props, metaData) }
+    if (value == nil) then
+      props[key] = CanonDelegates.metaValueNA
     else
-      -- add row as composed
-      return result
+      -- everything else is the default case!
+      props[key] = value
     end
   end
 
+  -- create and populate property with designated value
+  populateInfo(key)
+
+  -- compose the row to be added
+  local result = f:row {
+                   f:column{f:static_text{title = title .. ":", font="<system>"}},
+                   f:spacer{fill_horizontal = 1},
+                   f:column{f:static_text{title = props[key], font="<system>"}}}
+  -- decide if and how to add it
+  if (props[key] == CanonDelegates.metaValueNA) then
+    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
+    return FocusInfo.emptyRow()
+  elseif (props[key] == CanonDelegates.metaValueOneShotAf) then
+    return f:column{
+      fill = 1, spacing = 2, result,
+      CanonDelegates.addInfo("One Shot AF Release", CanonDelegates.metaKeyOneShotAfRelease, props, metaData) }
+  else
+    -- add row as composed
+    return result
+  end
+end
+
+
+--[[
+  @@public table function CanonDelegates.getCameraInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  -- if any, otherwise return an empty column
+--]]
 function CanonDelegates.getCameraInfo(photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
@@ -288,9 +296,6 @@ function CanonDelegates.getFocusInfo(photo, props, metaData)
       CanonDelegates.addInfo("Focus Distance (Lower)"   , CanonDelegates.metaKeyFocusDistanceLower,  props, metaData),
       CanonDelegates.addInfo("Depth of Field"           , CanonDelegates.metaKeyDepthOfField,        props, metaData),
       CanonDelegates.addInfo("Hyperfocal Distance"      , CanonDelegates.metaKeyHyperfocalDistance,  props, metaData),
-
---      CanonDelegates.addInfo("",           CanonDelegates.metaKey.., props, metaData),
-
       }
   return focusInfo
 end

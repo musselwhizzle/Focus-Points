@@ -28,9 +28,6 @@
 
   2017-01-06 - MJ - Test for 'AF Point Position' in Metadata, assume it's good if found
                     Add basic errorhandling if not found
-
-TODO: Verify math by comparing focus point locations with in-camera views.
-
 --]]
 
 local LrErrors = import 'LrErrors'
@@ -40,18 +37,13 @@ require "Utils"
 
 PanasonicDelegates = {}
 
+-- To trigger display whether focus points have been detected or not
 PanasonicDelegates.focusPointsDetected = false
-
 
 -- Tag which indicates that makernotes / AF section is present
 PanasonicDelegates.metaKeyAfInfoSection = "Panasonic Exif Version"
 
--- relevant metadata tag names
-PanasonicDelegates.metaKeyShootingMode                = "Shooting Mode"
-PanasonicDelegates.metaKeyImageStabilization          = "Image Stabilization"
-PanasonicDelegates.metaKeyBurstMode                   = "Burst Mode"
-PanasonicDelegates.metaKeySequenceNumber              = "Sequence Number"
-
+-- AF relevant tags
 PanasonicDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 PanasonicDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 PanasonicDelegates.metaKeyAfPointPosition             = "AF Point Position"
@@ -59,6 +51,12 @@ PanasonicDelegates.metaKeyAfSubjectDetection          = "AF Subject Detection"
 PanasonicDelegates.metaKeyAfFacesDetected             = "Faces Detected"
 PanasonicDelegates.metaKeyAfNumFacePositions          = "Num Face Positions"
 PanasonicDelegates.metaKeyAfFacePosition              = "Face %s Position"
+
+-- Image and Camera Settings relevant tags
+PanasonicDelegates.metaKeyShootingMode                = "Shooting Mode"
+PanasonicDelegates.metaKeyImageStabilization          = "Image Stabilization"
+PanasonicDelegates.metaKeyBurstMode                   = "Burst Mode"
+PanasonicDelegates.metaKeySequenceNumber              = "Sequence Number"
 
 -- relevant metadata values
 PanasonicDelegates.metaValueNA                        = "n/a"
@@ -74,7 +72,7 @@ PanasonicDelegates.metaValueOff                       = "Off"
 function PanasonicDelegates.getAfPoints(photo, metaData)
   -- find selected AF point
   PanasonicDelegates.focusPointsDetected = false
-  local focusPoint = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Position" })
+  local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
   if focusPoint == nil then
     return nil
   end
@@ -136,7 +134,9 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
 end
 
 
--- ========================================================================================================================
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
   @@public table PanasonicDelegates.addInfo(string title, string key, table props, table metaData)
@@ -201,7 +201,8 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
                   }
   -- decide if and how to add it
   if (props[key] == PanasonicDelegates.metaValueNA) then
-    return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
+    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
+    return FocusInfo.emptyRow()
   elseif (key == PanasonicDelegates.metaKeyBurstMode) and (props[key] == PanasonicDelegates.metaValueOn) then
     return f:column{
       fill = 1, spacing = 2, result,

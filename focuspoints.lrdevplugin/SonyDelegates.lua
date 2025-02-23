@@ -60,7 +60,6 @@ SonyDelegates.metaKeyAfSonyImageWidth            = "Sony Image Width"
 SonyDelegates.metaKeyAfSonyImageHeight           = "Sony Image Height"
 SonyDelegates.metaKeyAfPointsUsed                = "AF Points Used"
 
-
 -- Image and Camera Settings relevant tags
 SonyDelegates.metaKeySceneMode                   = "Scene Mode"
 SonyDelegates.metaKeyImageStabilization          = "Image Stabilization"
@@ -222,7 +221,9 @@ function SonyDelegates.getAfPoints(photo, metaData)
 end
 
 
--- ========================================================================================================================
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
   @@public table SonyDelegates.addInfo(string title, string key, table props, table metaData)

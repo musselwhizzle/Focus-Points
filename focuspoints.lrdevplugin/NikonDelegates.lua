@@ -39,7 +39,7 @@ NikonDelegates.focusPointsDetected = false
 -- Tag which indicates that makernotes / AF section is present
 NikonDelegates.metaKeyAfInfoSection           = "AF Info 2 Version"
 
--- relevant metadata tag names
+-- AF relevant tags
 NikonDelegates.metaKeyAfInfoVersion           = "AF Info 2 Version"
 NikonDelegates.metaKeyAfAreaXPosition         = "AF Area X Position"
 NikonDelegates.metaKeyAfAreaYPosition         = "AF Area Y Position"
@@ -51,7 +51,6 @@ NikonDelegates.metaKeyAfPointsUsed            = "AF Points Used"
 NikonDelegates.metaKeyAfPointsSelected        = "AF Points Selected"
 NikonDelegates.metaKeyAfPointsInFocus         = "AF Points In Focus"
 NikonDelegates.metaKeyAfPrimaryPoint          = "Primary AF Point"
-NikonDelegates.metaKeyCropHiSpeed             = "Crop Hi Speed"
 NikonDelegates.metaKeyCropArea                = "Crop Area"
 NikonDelegates.metaKeyFocusMode               = "Focus Mode"
 NikonDelegates.metaKeyFocusResult             = "Focus Result"
@@ -69,9 +68,12 @@ NikonDelegates.metaKeyPhaseDetect             = "Phase Detect AF"
 NikonDelegates.metaKeyFocusDistance           = "Focus Distance"
 NikonDelegates.metaKeyDepthOfField            = "Depth Of Field"
 NikonDelegates.metaKeyHyperfocalDistance      = "Hyperfocal Distance"
-NikonDelegates.metaKeyShootingMode            = "Shooting Mode"
 NikonDelegates.metaKeyAfCPriority             = { "AF-C Priority Sel", "AF-C Priority Selection" }
 NikonDelegates.metaKeyAfSPriority             = { "AF-S Priority Sel", "AF-S Priority Selection" }
+
+-- Image and Camera Settings relevant tags
+NikonDelegates.metaKeyCropHiSpeed             = "Crop Hi Speed"
+NikonDelegates.metaKeyShootingMode            = "Shooting Mode"
 
 -- relevant metadata values
 NikonDelegates.metaValueNA                    = "N/A"
@@ -460,7 +462,7 @@ function NikonDelegates.addInfo(title, key, props, metaData)
   -- decide if and how to add it
   if (props[key] == NikonDelegates.metaValueNA) then
     -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
+    return FocusInfo.emptyRow()
   elseif (props[key] == "AF-C") then
     local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
     return f:column{
@@ -513,7 +515,7 @@ end
 
 
 --[[
-  @@public boolean PentaxDelegates.modelSupported(model)
+  @@public boolean NikonDelegates.modelSupported(model)
   ----
   Checks whether the camera model is supported or not
 --]]

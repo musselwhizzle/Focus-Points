@@ -19,12 +19,12 @@
   the camera is Apple (iPhone, iPad)
 --]]
 
-local LrErrors = import 'LrErrors'
 local LrView = import "LrView"
 require "Utils"
 
 AppleDelegates = {}
 
+-- To trigger display whether focus points have been detected or not
 AppleDelegates.focusPointsDetected = false
 
 -- AF-relevant tags
@@ -52,13 +52,6 @@ function AppleDelegates.getAfPoints(photo, metaData)
 
   AppleDelegates.focusPointsDetected = false
 
---[[ #FIXME
-     this kind of query does not guarantee proper results, as there can be multiple occurences
-     of ImageWidth and ImageHeight tags in different EXIF sections with different meanings and results
-     Only ExifImageWight/Height will deliver exactly what is needed to scale focus coordinates!
-  local imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Image Width", "Exif Image Width" })
-  local imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Image Height", "Exif Image Height" })
---]]
   local imageWidth  = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageWidth)
   local imageHeight = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageHeight)
 
@@ -101,7 +94,9 @@ function AppleDelegates.getAfPoints(photo, metaData)
 end
 
 
--- ========================================================================================================================
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
   @@public table AppleDelegates.addInfo(string title, string key, table props, table metaData)
@@ -144,6 +139,7 @@ function AppleDelegates.addInfo(title, key, props, metaData)
                   }
   -- decide if and how to add it
   if (props[key] == AppleDelegates.metaValueNA) then
+    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
     return FocusInfo.emptyRow()
   else
   -- add row as composed

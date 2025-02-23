@@ -57,18 +57,20 @@ OlympusDelegates.focusPointsDetected = false
 -- Tag which indicates that makernotes / AF section is present
 OlympusDelegates.metaKeyAfInfoSection       = "Focus Info Version"
 
--- AF relevant metadata tag names
+-- AF relevant tags
 OlympusDelegates.metaKeyFocusMode           = "Focus Mode"
 OlympusDelegates.metaKeyAfSearch            = "AF Search"
 OlympusDelegates.metaKeySubjectTrackingMode = "AI Subject Tracking Mode"
-OlympusDelegates.metaKeyDriveMode           = "Drive Mode"
-OlympusDelegates.metaKeyImageStabilization  = "Image Stabilization"
 OlympusDelegates.metaKeyFocusDistance       = "Focus Distance"
 OlympusDelegates.metaKeyDepthOfField        = "Depth Of Field"
 OlympusDelegates.metaKeyHyperfocalDistance  = "Hyperfocal Distance"
 OlympusDelegates.metaKeyReleasePriority     = "Release Priority"
 OlympusDelegates.metaKeyAfPointDetails      = "AF Point Details"
 OlympusDelegates.metaKeyAfPointSelected     = "AF Point Selected"
+
+-- Image and Camera Settings relevant tags
+OlympusDelegates.metaKeyDriveMode           = "Drive Mode"
+OlympusDelegates.metaKeyImageStabilization  = "Image Stabilization"
 
 -- relevant metadata values
 OlympusDelegates.metaValueNA                = "N/A"
@@ -114,6 +116,7 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   return DefaultPointRenderer.createFocusPixelBox(x, y)
 end
 
+
 --[[--------------------------------------------------------------------------------------------------------------------
    Start of section that deals with display of maker specific metadata
 ----------------------------------------------------------------------------------------------------------------------]]
@@ -123,60 +126,66 @@ end
   ----
   Create view element for adding an item to the info section; creates and populates the corresponding view property
 --]]
-  function OlympusDelegates.addInfo(title, key, props, metaData)
-    local f = LrView.osFactory()
+function OlympusDelegates.addInfo(title, key, props, metaData)
+  local f = LrView.osFactory()
 
-    local function escape(text)
-      return string.gsub(text, "&", "&&")
-    end
+  local function escape(text)
+    return string.gsub(text, "&", "&&")
+  end
 
-    if not key then return nil end
+  if not key then return nil end
 
-    -- Creates and populates the property corresponding to metadata key
-    local function populateInfo(key)
-      local value = ExifUtils.findValue(metaData, key)
+  -- Creates and populates the property corresponding to metadata key
+  local function populateInfo(key)
+    local value = ExifUtils.findValue(metaData, key)
 
-      if not value then
-        props[key] = OlympusDelegates.metaValueNA
+    if not value then
+      props[key] = OlympusDelegates.metaValueNA
 
-      elseif (key == OlympusDelegates.metaKeyFocusMode) then
-        -- special case: Focus Mode. Add MF if selected in settings
-          props[key] = OlympusDelegates.getFocusMode(value)
+    elseif (key == OlympusDelegates.metaKeyFocusMode) then
+      -- special case: Focus Mode. Add MF if selected in settings
+        props[key] = OlympusDelegates.getFocusMode(value)
 
-      elseif (key == OlympusDelegates.metaKeyAfPointDetails) then
-        -- special case: AFPointDetails. Extract ReleasePriority portion
-        if value then
-            props[key] = get_nth_word(value, 7, ";")
-        end
-
-      else
-        -- everything else is the default case!
-        props[key] = value
+    elseif (key == OlympusDelegates.metaKeyAfPointDetails) then
+      -- special case: AFPointDetails. Extract ReleasePriority portion
+      if value then
+          props[key] = get_nth_word(value, 7, ";")
       end
-    end
 
-    -- create and populate property with designated value
-    populateInfo(key)
-
-    -- compose the row to be added
-    local result = f:row {
-                     f:column{f:static_text{title = title .. ":", font="<system>"}},
-                     f:spacer{fill_horizontal = 1},
-                     f:column{f:static_text{title = escape(props[key]), font="<system>"}}}
-    -- decide if and how to add it
-    if (props[key] == OlympusDelegates.metaValueNA) then
-      -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-      return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
-    elseif string.sub(props[key], 1, 4) == "S-AF"
-        or string.sub(props[key], 1, 4) == "C-AF" then
-      return f:column{fill = 1, spacing = 2, result,
-        OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData) }
     else
-      -- add row as composed
-      return result
+      -- everything else is the default case!
+      props[key] = value
     end
   end
 
+  -- create and populate property with designated value
+  populateInfo(key)
+
+  -- compose the row to be added
+  local result = f:row {
+                   f:column{f:static_text{title = title .. ":", font="<system>"}},
+                   f:spacer{fill_horizontal = 1},
+                   f:column{f:static_text{title = escape(props[key]), font="<system>"}}}
+  -- decide if and how to add it
+  if (props[key] == OlympusDelegates.metaValueNA) then
+    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
+    return FocusInfo.emptyRow()
+  elseif string.sub(props[key], 1, 4) == "S-AF"
+      or string.sub(props[key], 1, 4) == "C-AF" then
+    return f:column{fill = 1, spacing = 2, result,
+      OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData) }
+  else
+    -- add row as composed
+    return result
+  end
+end
+
+
+--[[
+  @@public string OlympusDelegates.getFocusMode(string focusModeValue)
+  ----
+  Extract the desired focus mode details from a string all kinds of information
+--]]
 function OlympusDelegates.getFocusMode(focusModeValue)
 
   local f = splitTrim(focusModeValue:gsub(", Imager AF", ""), ";,")

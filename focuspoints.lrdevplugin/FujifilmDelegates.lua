@@ -35,13 +35,18 @@ FujifilmDelegates.focusPointsDetected = false
 FujifilmDelegates.metaKeyAfInfoSection               = "Fuji Flash Mode"
 
 -- AF relevant tags
+FujifilmDelegates.metaKeyExifImageWidth              = "Exif Image Width"
+FujifilmDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 FujifilmDelegates.metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
 FujifilmDelegates.metaKeyAfMode                      = {"AF Area Mode", "AF Mode" }
+FujifilmDelegates.metaKeyFocusPixel                  = "Focus Pixel"
 FujifilmDelegates.metaKeyAfSPriority                 = "AF-S Priority"
 FujifilmDelegates.metaKeyAfCPriority                 = "AF-C Priority"
 FujifilmDelegates.metaKeyFocusWarning                = "Focus Warning"
 FujifilmDelegates.FacesDetected                      = "Faces Detected"
+FujifilmDelegates.FacesPositions                     = "Faces Positions"
 FujifilmDelegates.FaceElementTypes                   = "Face Element Types"
+FujifilmDelegates.FaceElementPositions               = "Face Element Positions"
 FujifilmDelegates.metaKeyPreAf                       = "Pre AF"
 FujifilmDelegates.metaKeyAfCSetting                  = "AF-C Setting"
 FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivity"
@@ -67,7 +72,7 @@ FujifilmDelegates.metaValueNA                        = "N/A"
 function FujifilmDelegates.getAfPoints(photo, metaData)
   FujifilmDelegates.focusPointsDetected = false
 
-  local focusPoint = ExifUtils.findValue(metaData, "Focus Pixel")
+  local focusPoint = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyFocusPixel)
   if focusPoint == nil then
     return nil
   end
@@ -78,8 +83,8 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     return nil
   end
 
-  local imageWidth = ExifUtils.findValue(metaData, "Exif Image Width")
-  local imageHeight = ExifUtils.findValue(metaData, "Exif Image Height")
+  local imageWidth  = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageWidth)
+  local imageHeight = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageHeight)
   if imageWidth == nil or imageHeight == nil then
     return nil
   end
@@ -96,9 +101,9 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
 
 
   -- Let see if we have detected faces
-  local detectedFaces = ExifUtils.findValue(metaData, "Faces Detected")
+  local detectedFaces = ExifUtils.findValue(metaData, FujifilmDelegates.FacesDetected)
   if detectedFaces ~= nil and detectedFaces ~= "0" then
-    local coordinatesStr = ExifUtils.findValue(metaData, "Face Positions")
+    local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FacesPositions)
     if coordinatesStr ~= nil then
       local coordinatesTable = split(coordinatesStr, " ")
       for i=1, detectedFaces, 1 do
@@ -124,7 +129,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   (23rd August 2022)
 --]]
   -- Subject detection
-  local coordinatesStr = ExifUtils.findValue(metaData, "Face Element Positions")
+  local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FaceElementPositions)
   if coordinatesStr ~= nil then
     local coordinatesTable = split(coordinatesStr, " ")
     if coordinatesTable ~= nil then
@@ -180,7 +185,9 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
 end
 
 
--- ========================================================================================================================
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
   @@public table FujifilmDelegates.addInfo(string title, string key, table props, table metaData)
@@ -224,7 +231,7 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
   -- decide if and how to add it
   if (props[key] == FujifilmDelegates.metaValueNA) then
     -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return f:row{}
+    return FocusInfo.emptyRow()
   elseif (props[key] == "AF-C") then
     return f:column{
       fill = 1, spacing = 2, result,

@@ -271,7 +271,7 @@ Sony supports face detection on almost all of their mirrorless (alpha) and also 
 
 On Sony, the size of the focus point box is determined by the size of a PDAF point (or focal plane autofocus point, in Sony terminology). So, the color of the box can be changed in plugin preferenes but not its size.
 
-As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. 
+As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. Sony also doesn't have a focus distance tag, so there is no Depth of Field section either.
 
 <img src= "../screens/Sony 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
