@@ -256,6 +256,7 @@ CAF-focused shot using the 'green' color setting for better visibility:
 As with Nikon, Canon mirrorless models feature a hybrid autofocus system. However, in terms of focusing information stored in EXIF, the cooperation of PDAF and CAF is transparent. You can find the x, y positions of the focus point area(s) used to focus the shot as well as their width and height always in the same format.
 
 Shot with 'Animal' subject detection:
+
 <img src= "../screens/Canon 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 When capturing flat subjects, focus point display for Canon R-series can be funny sometimes: 
@@ -266,7 +267,14 @@ Remark: The display of "AF Tracking Sensitivity" and "AF Point Switching" in the
 
 ## 3.3 Sony
 
-To be updated with release of V2.6
+Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
+
+On Sony, the size of the focus point box is determined by the size of a PDAF point (or focal plane autofocus point, in Sony terminology). So, the color of the box can be changed in plugin preferenes but not its size.
+
+As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. 
+
+<img src= "../screens/Sony 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
 
 ## 3.4 Fuji
 
@@ -274,7 +282,7 @@ Fuji is the king of autofocus metadata. For no other camera maker there is so co
 
 Fuji focus points are 'focus pixel' points without a dimension that is linked to the focusing process. For improved visualization you can choose focus box size and color in the plugin's preferences. 
 
-Example shot for face detection (2 persons with their heads, faces, and eyes detected).
+Example shot for face detection (2 persons with their heads, faces, and eyes detected, indicated by yellow frames).
 
 <img src="../screens/Fuji 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
@@ -306,7 +314,7 @@ Similar to Olympus, Panasonic hasn't changed the logic of focus point data since
 
 Panasonic is another member of "focus pixel" group, so you can choose focus box size and color in the plugin's preferences.  
 
-Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that uses the same logic and notation for face detection frames.
+Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that uses the same logic and notation for face detection frames (displayed in yellow).
 
 <img src="../screens/Panasonic 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 

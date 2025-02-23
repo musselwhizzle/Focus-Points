@@ -27,11 +27,26 @@ AppleDelegates = {}
 
 AppleDelegates.focusPointsDetected = false
 
--- Tag which indicates that makernotes / AF section is present
-AppleDelegates.metaKeyAfInfoSection      = "Live Photo Video Index"
+-- AF-relevant tags
+AppleDelegates.metaKeyAfSubjectArea        = "Subject Area"
+AppleDelegates.metaKeyAfFocusDistanceRange = "Focus Distance Range"
+AppleDelegates.metaKeyAfPerformance        = "AF Performance"
+AppleDelegates.metaKeyAfStable             = "AF Stable"
+AppleDelegates.metaKeyAfConfidence         = "AF Confidence"
+AppleDelegates.metaKeyAfMeasuredDepth      = "AF Measured Depth"
+AppleDelegates.metaKeyExifImageWidth       = "Exif Image Width"
+AppleDelegates.metaKeyExifImageHeight      = "Exif Image Height"
+
+-- Camera Settings relevant tags
+AppleDelegates.metaKeyCameraType           = "Camera Type"
+AppleDelegates.metaKeyImageCaptureType     = "Image Capture Type"
+AppleDelegates.metaKeyOISMode              = "OIS Mode"
+
 
 --[[
--- metaData - the metadata as read by exiftool
+  @@public table AppleDelegates.getAfPoints(table photo, table metaData)
+  ----
+  Get the autofocus points from metadata
 --]]
 function AppleDelegates.getAfPoints(photo, metaData)
 
@@ -44,8 +59,8 @@ function AppleDelegates.getAfPoints(photo, metaData)
   local imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Image Width", "Exif Image Width" })
   local imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Image Height", "Exif Image Height" })
 --]]
-  local imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Exif Image Width" })
-  local imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Exif Image Height" })
+  local imageWidth  = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageWidth)
+  local imageHeight = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageHeight)
 
   if not imageWidth and not imageHeight then
     return nil
@@ -55,7 +70,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
   local xScale = orgPhotoWidth / imageWidth
   local yScale = orgPhotoHeight / imageHeight
 
-  local subjectArea = split(ExifUtils.findFirstMatchingValue(metaData, { "Subject Area" }), " ")
+  local subjectArea = split(ExifUtils.findValue(metaData, AppleDelegates.metaKeyAfSubjectArea), " ")
   if not subjectArea then
     return nil
   end
@@ -86,6 +101,89 @@ function AppleDelegates.getAfPoints(photo, metaData)
 end
 
 
+-- ========================================================================================================================
+
+--[[
+  @@public table AppleDelegates.addInfo(string title, string key, table props, table metaData)
+  ----
+  Creates the view element for an item to add to a info section and creates/populates the corresponding property
+--]]
+function AppleDelegates.addInfo(title, key, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Helper function to create and populate the property corresponding to metadata key
+  local function populateInfo(key)
+    local value
+    if type(key) == "string" then
+      value = ExifUtils.findValue(metaData, key)
+    else
+      -- type(key) == "table"
+      value = ExifUtils.findFirstMatchingValue(metaData, key)
+    end
+    if (value == nil) then
+      props[key] = AppleDelegates.metaValueNA
+    else
+      -- everything else is the default case!
+      props[key] = value
+    end
+  end
+
+
+  -- create and populate property with designated value
+  populateInfo(key)
+
+  -- compose the row to be added
+  local result = f:row {fill = 1,
+                   f:column{f:static_text{title = title .. ":", font="<system>"}},
+                   f:spacer{fill_horizontal = 1},
+                   f:column{
+                     f:static_text{
+                       title = props[key],
+  --                     alignment = "right",
+                       font="<system>"}}
+                  }
+  -- decide if and how to add it
+  if (props[key] == AppleDelegates.metaValueNA) then
+    return FocusInfo.emptyRow()
+  else
+  -- add row as composed
+    return result
+  end
+end
+
+
+--[[
+  @@public table function AppleDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  -- if any, otherwise return an empty column
+--]]
+function AppleDelegates.getImageInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local imageInfo
+  return imageInfo
+end
+
+
+--[[
+  @@public table function AppleDelegates.getCameraInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  -- if any, otherwise return an empty column
+--]]
+function AppleDelegates.getCameraInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local cameraInfo
+  -- append maker specific entries to the "Camera Settings" section
+  cameraInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    AppleDelegates.addInfo("Image Capture Type", AppleDelegates.metaKeyImageCaptureType, props, metaData),
+    AppleDelegates.addInfo("OIS Mode"          , AppleDelegates.metaKeyOISMode         , props, metaData),
+    AppleDelegates.addInfo("CameraType"        , AppleDelegates.metaKeyCameraType      , props, metaData),
+  }
+  return cameraInfo
+end
+
+
 --[[
   @@public table AppleDelegates.getFocusInfo(table photo, table info, table metaData)
   ----
@@ -94,19 +192,18 @@ end
 function AppleDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, AppleDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
+  -- for iPhones, there is no characteristic makernotes section tag that is valid for all models
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(AppleDelegates.focusPointsDetected),
-      f:row {f:static_text {title = "Details not yet implemented", font="<system>"}}
-      }
+      AppleDelegates.addInfo("Focus Distance Range", AppleDelegates.metaKeyAfFocusDistanceRange, props, metaData),
+--      AppleDelegates.addInfo("AF Measured Depth"   , AppleDelegates.metaKeyAfMeasuredDepth     , props, metaData),
+      AppleDelegates.addInfo("AF Stable"           , AppleDelegates.metaKeyAfStable            , props, metaData),
+--    AppleDelegates.addInfo("AF Confidence"       , AppleDelegates.metaKeyAfConfidence        , props, metaData),
+--    AppleDelegates.addInfo("AF Performance"      , AppleDelegates.metaKeyAfPerformance       , props, metaData),
+  }
   return focusInfo
 end

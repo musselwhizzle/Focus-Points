@@ -50,10 +50,16 @@ Supported cameras:
   * iPhone (starting from at least iPhone 5)
 
 
-* Sony, Pentax, Apple 
+* Sony
+  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
+  * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
+  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)  
+
+
+* Pentax 
   * Display of focus points and supported models are unchanged with respect to previous plugin versions
   * Display of basic image information and camera settings
-  * Upcoming releases: Review of focus point logic. Display of advanced camera settings and focus information 
+  * Pending (upcoming release): Review of focus point logic. Display of advanced camera settings and focus information 
 
 
 ## V2.1.0, January 27, 2025

@@ -201,8 +201,7 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
                   }
   -- decide if and how to add it
   if (props[key] == PanasonicDelegates.metaValueNA) then
-    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return f:row{}
+    return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
   elseif (key == PanasonicDelegates.metaKeyBurstMode) and (props[key] == PanasonicDelegates.metaValueOn) then
     return f:column{
       fill = 1, spacing = 2, result,

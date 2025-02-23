@@ -28,12 +28,13 @@ require "Utils"
 
 FujifilmDelegates = {}
 
+-- To trigger display whether focus points have been detected or not
 FujifilmDelegates.focusPointsDetected = false
 
--- Tag which indicates that makernotes / AF section is present
+-- Tag that indicates that makernotes / AF section is present
 FujifilmDelegates.metaKeyAfInfoSection               = "Fuji Flash Mode"
 
--- relevant metadata tag names
+-- AF relevant tags
 FujifilmDelegates.metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
 FujifilmDelegates.metaKeyAfMode                      = {"AF Area Mode", "AF Mode" }
 FujifilmDelegates.metaKeyAfSPriority                 = "AF-S Priority"
@@ -46,6 +47,8 @@ FujifilmDelegates.metaKeyAfCSetting                  = "AF-C Setting"
 FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
+
+-- Image and Camera Settings relevant tags
 FujifilmDelegates.metaKeyCropMode                    = "Crop Mode"
 FujifilmDelegates.metaKeyDriveMode                   = "Drive Mode"
 FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
@@ -89,7 +92,6 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
 
   -- the only real focus point is this - the below code just checks for visualization frames
   FujifilmDelegates.focusPointsDetected = true
-
   local result = DefaultPointRenderer.createFocusPixelBox(x*xScale, y*yScale)
 
 
@@ -205,29 +207,6 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
     end
   end
 
-  -- Helper function to wrap text across multiple rows to fit maximum column length
-  local function wrapText(text, max_length)
-    local result = ""
-    local current_line = ""
-    for word in text:gmatch("[^,]+") do
-      word = word:gsub("^%s*(.-)%s*$", "%1")  -- Trim whitespace
-      if #current_line + #word + 1 > max_length then
-        result = result .. current_line .. "\n"
-        current_line = word
-      else
-        if current_line == "" then
-          current_line = word
-        else
-          current_line = current_line .. ", " .. word
-        end
-      end
-    end
-    if current_line ~= "" then
-      result = result .. current_line
-    end
-    return result
-  end
-
   -- create and populate property with designated value
   populateInfo(key)
 
@@ -237,10 +216,11 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
                    f:spacer{fill_horizontal = 1},
                    f:column{
                      f:static_text{
-                       title = wrapText(props[key], 30),
-  --                     alignment = "right",
-                       font="<system>"}}
-                  }
+                       title = wrapText(props[key], ",",30),
+                       font="<system>"
+                     }
+                   }
+                 }
   -- decide if and how to add it
   if (props[key] == FujifilmDelegates.metaValueNA) then
     -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)

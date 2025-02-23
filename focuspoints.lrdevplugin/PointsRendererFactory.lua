@@ -104,13 +104,13 @@ function PointsRendererFactory.createRenderer(photo)
   elseif (cameraMake == "apple") then
     DefaultPointRenderer.funcGetAfPoints   = AppleDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetCameraInfo = AppleDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = AppleDelegates.getFocusInfo
 
   elseif (cameraMake == "sony") then
     DefaultPointRenderer.funcGetAfPoints   = SonyDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetCameraInfo = SonyDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = SonyDelegates.getFocusInfo
 
   elseif (cameraMake == "nikon corporation") then

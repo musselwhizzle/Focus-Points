@@ -77,6 +77,18 @@ function FocusInfo.getMakerInfo(photo, props)
   return imageInfo, cameraInfo, focusInfo
 end
 
+
+--[[
+  @@public table FocusInfo.emptyRow()
+  ----
+  Creates an "empty row" that is really empty - f:row{} is not
+--]]
+function FocusInfo.emptyRow()
+  local f = LrView.osFactory()
+  return f:control_spacing{}
+end
+
+
 --[[
   @@public table FocusInfo.errorMessage(string errorMessage)
   ----

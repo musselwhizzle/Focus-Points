@@ -136,6 +136,11 @@ function stringToKeyValue(str, delim)
 end
 
 
+--[[
+ Gets the nth word from a string
+ @str  the string to split into words
+ @delim the character used for splitting the string
+--]]
 function get_nth_word(str, n, delimiter)
     delimiter = delimiter or ";" -- Default to semicolon if not provided
     local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
@@ -147,6 +152,35 @@ function get_nth_word(str, n, delimiter)
         end
     end
     return nil -- Return nil if n is out of range
+end
+
+
+--[[
+ Wrap text across multiple rows to fit maximum column length
+ @text       the text to wrap across multiple lines
+ @max_length maximum line length
+--]]
+--
+function wrapText(text, delim, max_length)
+  local result = ""
+  local current_line = ""
+  for word in text:gmatch("[^" .. delim .. "]+") do
+    word = word:gsub("^%s*(.-)%s*$", "%1")  -- Trim whitespace
+    if #current_line + #word + 1 > max_length then
+      result = result .. current_line .. "\n"
+      current_line = word
+    else
+      if current_line == "" then
+        current_line = word
+      else
+        current_line = current_line .. ", " .. word
+      end
+    end
+  end
+  if current_line ~= "" then
+    result = result .. current_line
+  end
+  return result
 end
 
 
