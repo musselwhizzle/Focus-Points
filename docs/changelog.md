@@ -46,6 +46,10 @@ Supported cameras:
   * Compact: FZ, TZ/ZS, LX series - all models after 2008
   
 
+* Apple
+  * iPhone (starting from at least iPhone 5)
+
+
 * Sony, Pentax, Apple 
   * Display of focus points and supported models are unchanged with respect to previous plugin versions
   * Display of basic image information and camera settings

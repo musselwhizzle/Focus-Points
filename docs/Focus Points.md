@@ -8,8 +8,9 @@ Focus Points Plugin for Lightroom Classic
 ### [Overview and Basic Operation](#2-overview-and-basic-operation)
 
 *  [Installation](#21-installation)
-*  [Focus Point Viewer](#22-focus-point-viewer)
-*  [Metadata Viewer](#23-metadata-viewer)
+*  [Configuration and Settings](#22-configuration-and-settings)
+*  [Focus Point Viewer](#23-focus-point-viewer)
+*  [Metadata Viewer](#24-metadata-viewer)
 
 
 ### [Display of Focus Points](#3-display-of-focus-points)
@@ -74,15 +75,38 @@ This section explains how the plugin is used.
 ### 2.1 Installation
 1. Unless you have been given a special link (e.g. for a pre-release) download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
 2. Unzip and rename the extracted folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
-3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step)" 
+3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step) 
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 5. Once installed, in Library mode with one or multiple photos selected go to "Library -> Plug-in Extras -> Focus Point" 
    or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
 6. Windows only: Select the display scaling factor. Use the same or similar value as set for Windows configuration (Settings -> Display -> Scale). The default is 100%.
 
 
+### 2.2 Configuration and Settings
 
-### 2.2 Focus Point Viewer
+Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's preferences page:    
+
+<img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+
+
+**Screen Scaling**
+
+ _Display scaling factor_<br> 
+Windows only. In order to avoid that the plugin window can get bigger than the size of the screen this setting should be same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%. 
+
+**Viewing Options**
+
+_Size of focus box for 'focus pixel' points_<br> 
+Depending on the camera maker, focus points can have dimension (width and height), thus forming a focus box. Some makers represent focus points by a single 'focus pixel'. To ensure their visibility, such focus pixel points are represented by a focus box. You can choose whether the box shall be small or medium/large with a center dot.
+
+_Color of in-focus points_<br> You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
+
+**Logging**
+
+In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went wrong. Use these controls to set the logging level (Info, Warning, Error, Debug) and open a log file that has just been created.
+
+
+### 2.3 Focus Point Viewer
 Once the plugin has been installed, it can be invoked with one or more photos selected:
 
 Library module:<br> 
@@ -103,9 +127,9 @@ The information section comprises three groups:
 - Camera settings
 - Focus information
 
-Parts of image information and camera settings come from the LrC catalog, so this information is present for every photo. These sections may be extended by camera specific items like crop mode, drive mode etc, depending on the availabity of information in makernotes.  
+Parts of image information and camera settings come from the LrC catalog, so this information is present for every photo. These sections may be extended by camera specific items like crop mode, drive mode etc., depending on the availabity of information in makernotes.  
 
-Focus information is only present for those photos where the corresponding image file has full metadata included. See [Scope and Limitations](docs/Focus%20Points.md) for more detailed information.
+Focus information is only present for those photos where the corresponding image file has full metadata included. See [Scope and Limitations](#1-scope-and-limitations) for more detailed information.
 <br>
 <br>
 
@@ -146,31 +170,7 @@ The window can be closed by clicking "Exit"  or pressing \<Enter> or \<Esc> or \
 <img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
 
 
-#### 2.2.1 Configuration and Settings
-
-Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's preferences page:    
-
-<img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
-
-
-**Screen Scaling**
-
- _Display scaling factor_<br> 
-Windows only. In order to avoid that the plugin window can get bigger than the size of the screen this setting should be same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%. 
-
-**Viewing Options**
-
-_Size of focus box for 'focus pixel' points_<br> 
-Depending on the camera maker, focus points can have dimension (width and height), thus forming a focus box. Some makers represent focus points by a single 'focus pixel'. To ensure their visibility, such focus pixel points are represented by a focus box. You can choose whether the box shall be small or medium/large with a center dot.
-
-_Color of in-focus points_<br> You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
-
-**Logging**
-
-In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went wrong. Use these controls to set the logging level (Info, Warning, Error, Debug) and open a log file that has just been created.
-
-
-### 2.3 Metadata Viewer
+### 2.4 Metadata Viewer
 Will be documented later
 
 ## 3. Display of Focus Points
@@ -216,7 +216,7 @@ For Contrast AF, the size of the focus "point" is a larger box that varies, depe
 
 Nikon Mirrorless cameras feature a hybrid autofocus system, where PDAF and CAF cooperate to achieve fast and precise focus. While earlier models like the Z6 produced a fair amount of images with PDAF results, those images become rare in modern cameras like the Z9, with CAF technology getting more capable.
 
-Early Z models feature a 81-point (9x9) PDAF, for Z8/Z9 this has grown to 493 points (27x15). In contrast to DSLRs, the information about inactive (not used) focus points is less useful here, so it is not displayed.
+Early Z models feature an 81-point (9x9) PDAF, for Z8/Z9 this has grown to 493 points (27x15). In contrast to DSLRs, the information about inactive (not used) focus points is less useful here, so it is not displayed.
 
 Example for Contrast AF (with subject detection "People"):
 
@@ -256,17 +256,17 @@ CAF-focused shot using the 'green' color setting for better visibility:
 As with Nikon, Canon mirrorless models feature a hybrid autofocus system. However, in terms of focusing information stored in EXIF, the cooperation of PDAF and CAF is transparent. You can find the x, y positions of the focus point area(s) used to focus the shot as well as their width and height always in the same format.
 
 Shot with 'Animal' subject detection:
-<img src="../screens/Canon 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src= "../screens/Canon 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 When capturing flat subjects, focus point display for Canon R-series can be funny sometimes: 
 
-<img src="../screens/Canon 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src= "../screens/Canon 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 Remark: The display of "AF Tracking Sensitivity" and "AF Point Switching" in the above screenshot indicate that the respective values have not been properly decoded by ExifTool. If you suspect such decoding issue and would really like to see the real values, you can help to fix it by creating a topic in ExifTool Forum, describing it and be prepared to provide sample images. ExifTool is very well maintained and likelihood is big that issues brought to notice will be quickly fixed (unless the topic is difficult).   
 
 ## 3.3 Sony
 
-to be updated with release of V2.6
+To be updated with release of V2.6
 
 ## 3.4 Fuji
 
@@ -313,12 +313,20 @@ Panasonic also supports face detection identification in EXIF metadata. This inf
 
 ## 3.7 Pentax
 
-to be updated with release of V2.6
+To be updated with release of V2.6
 
 
 ## 3.8 Apple
 
-to be updated with release of V2.6
+Apple maintains a very simple logic to store the focused subject areas in EXIF metadata. This hasn't changed since early models (at least iPhone 5).
+
+The makernotes section is rather short; older models do not even have an "Apple" section. Apart from the focus area there is no relevant information to be shown:
+
+<img src="../screens/Apple 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Modern iPhones there are some interesting tags to extend the camera settings section. The amount of AF relevant tags however is limited. ExifTool can decode tags like AF Performance, AF Measured Depth or AF Confidence but their meaning is not documented and thus the related values are meaningless.
+
+<img src="../screens/Apple 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ## 4 Glossary
