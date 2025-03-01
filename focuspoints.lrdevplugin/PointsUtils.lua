@@ -17,7 +17,10 @@
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
+
 require "Utils"
+require "Log"
+
 
 PointsUtils = {}
 
@@ -28,12 +31,13 @@ function PointsUtils.readFromFile(folder, filename)
 
   -- replace special character.  '*' is an invalid char on windows file systems
   file = string.gsub(file, "*", "_a_")
-  logDebug("PointsUtils", "readFromFile: " .. file)
+  Log.logDebug("PointsUtils", "Reading focus point mapping from file: " .. file)
 
   if (LrFileUtils.exists(file) ~= false) then
     local data = LrFileUtils.readFile(file)
     return data
   else
+    Log.logError("PointsUtils", "Mapping file not found: " .. file)
     return nil
   end
 end
@@ -69,7 +73,15 @@ function PointsUtils.readIntoTable(folder, filename)
           points[i] = item
         end
 
-        --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
+        if #dataPoints > 2 then
+          Log.logFull("PointsUtils",
+            string.format("Point name: %s = (x:%s, y:%s, w:%s, h:%s)",
+                                       pointName, points[1], points[2], points[3], points[4]))
+        else
+          Log.logFull("PointsUtils",
+            string.format("Point name: %s = (x:%s, y:%s)", pointName, points[1], points[2]))
+        end
+
         if (pointName == "focusPointDimens") then
           focusPointDimens = points
         else

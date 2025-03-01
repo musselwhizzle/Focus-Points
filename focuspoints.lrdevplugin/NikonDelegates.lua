@@ -23,6 +23,8 @@ local LrErrors = import 'LrErrors'
 local LrView = import 'LrView'
 
 require "Utils"
+require "Log"
+
 
 NikonDelegates = {}
 
@@ -54,6 +56,7 @@ NikonDelegates.metaKeyAfPrimaryPoint          = "Primary AF Point"
 NikonDelegates.metaKeyCropArea                = "Crop Area"
 NikonDelegates.metaKeyFocusMode               = "Focus Mode"
 NikonDelegates.metaKeyFocusResult             = "Focus Result"
+NikonDelegates.metaKeyFocusPointSchema        = "Focus Point Schema"
 NikonDelegates.metaKeyAfAreaMode              = "AF Area Mode"
 NikonDelegates.metaKeySubjectDetection        = "Subject Detection"
 NikonDelegates.metaKeyNumberOfFocusPoints     = "Number Of Focus Points"
@@ -89,9 +92,12 @@ function NikonDelegates.getAfPoints(photo, metaData)
   -- look for CAF information first
   NikonDelegates.focusPointsDetected = false
   local result = NikonDelegates.getCAfPoints(metaData)
-  if (result == nil) then
+  if not result then
      -- if CAF is not present, check PDAF information
     result = NikonDelegates.getPDAfPoints(metaData)
+  end
+  if not result then
+    Log.logWarn("Nikon", "Did neither find information on CAF, nor on PDAF points")
   end
   return result
 end
@@ -112,11 +118,19 @@ function NikonDelegates.getCAfPoints(metaData)
   local afAreaHeight    = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfAreaHeight)
 
   -- if any of these is nil then this is not complete information to proceed with
-  if (afAreaXPosition == nil) or (afAreaYPosition == nil) or (afAreaWidth == nil) or (afAreaHeight == nil) then
+  if not (afAreaXPosition and afAreaYPosition and afAreaWidth and afAreaHeight) then
+    -- we don't log this as a warning, because autofocus might not have used CAF points
+    Log.logInfo("Nikon",
+      string.format("No CAF information found - '%s', '%s', '%s', '%s' empty or partly empty",
+      NikonDelegates.metaKeyAfAreaXPosition, NikonDelegates.metaKeyAfAreaYPosition,
+      NikonDelegates.metaKeyAfAreaWidth, NikonDelegates.metaKeyAfAreaHeight))
     return nil
   end
 
   -- otherwise, simply pass on the focus area coordinates from metadata
+  Log.logInfo("Nikon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+    afAreaXPosition, afAreaYPosition, afAreaWidth, afAreaHeight))
+
   NikonDelegates.focusPointsDetected = true
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
@@ -147,22 +161,16 @@ end
 --]]
 function NikonDelegates.getPDAfPoints(metaData)
 
-  -- helper function to check whether a string is contained in a table (of strings)
-  local function contains(tbl, value)
-    if (tbl ~= nil) then
-      for _, v in ipairs(tbl) do
-        if v == value then
-          return true
-        end
-      end
+  local function logKeyStatus(key, value)
+    if value then
+      Log.logInfo("Nikon",
+        string.format("Relevant focus point tag '%s' tag found: '%s'", key, value))
+    else
+      -- no focus points found - handled on upper layers
+      Log.logInfo("Nikon",
+        string.format("No PDAF information found: relevant focus point tag '%s' tag not found or empty", key))
+      return nil
     end
-    return false
-  end
-
-  -- if the photo has been taken by a DSLR but with Contrast AF we can immediately return
-  local phaseDetectAF = ExifUtils.findValue(metaData, NikonDelegates.metaKeyPhaseDetectAF)
-  if (phaseDetectAF ~= nil) and (string.lower(phaseDetectAF)) == "off" then
-    return nil
   end
 
   -- extract the relevant tags from metadata
@@ -172,75 +180,99 @@ function NikonDelegates.getPDAfPoints(metaData)
   local afPointsSelected = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfPointsSelected)
   local afPrimaryPoint   = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfPrimaryPoint)
 
-  local focusPointsTable, afAreaMode, pointMode
+  local focusPointsTable, afAreaMode
 
   -- According to AFInfo version and AFAreaMode, fetch the right focus point(s) to display
   if (afInfoVersion ~= "0101") then
     -- AFPointsUsed is what NX Studio uses for all Nikon DSLR and Mirrorless cameras
     focusPointsTable = split(afPointsUsed,  ",")
+    logKeyStatus(NikonDelegates.metaKeyAfPointsUsed, afPointsUsed)
   else
     -- for whatever reason, the logic for D5, D500, D7500, D850 differs from all other models
     afAreaMode = NikonDelegates.getAfAreaMode(metaData)
     -- depending on the AFAreaMode, choose the relevant AFPoint tag that NX Studio uses to display focus points
-    if contains({"single", "group", "dynamic" }, afAreaMode) then
+    if arrayKeyOf({"single", "group", "dynamic" }, afAreaMode) then
       focusPointsTable = split(afPointsSelected, ",")
-    elseif contains({"3D-tracking", "auto" }, afAreaMode) then
-      if (afPointsInFocus ~= nil) then
+      logKeyStatus(NikonDelegates.metaKeyAfPointsSelected, afPointsSelected)
+    elseif arrayKeyOf({"3D-tracking", "auto" }, afAreaMode) then
+      if afPointsInFocus then
         focusPointsTable = split(afPointsInFocus,  ",")
+        logKeyStatus(NikonDelegates.metaKeyAfPointsInFocus, afPointsInFocus)
       else
         focusPointsTable = split(afPointsSelected,  ",")
+        logKeyStatus(NikonDelegates.metaKeyAfPointsSelected, afPointsSelected)
       end
     else
       -- Sanity check
-      LrErrors.throwUserError(getFileName(photo) .. "Unexpected AF Area Mode: " .. afAreaMode )
+      local userResponse = errorMessage("Unexpected AF Area Mode: " .. afAreaMode)
+      if userResponse == "cancel" then
+        LrErrors.throwUserError("Plugin execution stopped")
+        return
+      end
     end
   end
 
   -- !!! this is the only (conscious) deviation to NX-Studio !!!
   -- if the usual information is empty but PrimaryAFPoint is set, then we'll use this!
   if not focusPointsTable and afPrimaryPoint then
-    focusPointsTable = split(afPrimaryPoint,  ",")
+    focusPointsTable = split(NikonDelegates.normalizeFocusPointName(afPrimaryPoint),  ",")
   end
 
   -- if PDAF points have been found, read the mapping file
   -- @! Outsource this piece of code to a separate function?
+  local fpSchema
   if focusPointsTable then
     if (DefaultDelegates.cameraModel == "nikon d780") then
       -- special case: this camera uses two different PDAF coordinate systems, 51- and 81-point!
-      pointMode = ExifUtils.findValue(metaData, NikonDelegates.metaKeyPhaseDetect)
-      if (pointMode == "On (51-point)") or (pointMode == "On (81-point)") then
+      local focusPointSchema = ExifUtils.findValue(metaData, NikonDelegates.metaKeyFocusPointSchema)
+      if focusPointSchema and ((focusPointSchema == "51-point") or (focusPointSchema == "81-point")) then
         -- appendix number to mapping file name
-        pointMode = "-" .. string.sub(pointMode, 5, 6)
+        fpSchema = "-" .. string.sub(focusPointSchema, 1, 2)
       else
-        LrErrors.throwUserError(getFileName(photo) .. "Unexpected D780 Phase Detect AF mode: \n" .. pointmode)
+        local errorMsg = "No or unexpected D780 focus point schema: \n" .. focusPointSchema
+        Log.logError("Nikon", errorMsg)
+        local userResponse = errorMessage(errorMsg)
+        if userResponse == "cancel" then
+          LrErrors.throwUserError("Plugin execution stopped")
+        else
+          -- can't map D780 PDAF mode, return with empty table
+          Log.logError("Nikon", "Fatal error, unable to continue.")
+          return nil
+        end
       end
     else
       -- mapping file name is camera model name w/o any appendix
-      pointMode = ""
+      fpSchema = ""
     end
 
     DefaultDelegates.focusPointsMap,
     DefaultDelegates.focusPointDimen = PointsUtils.readIntoTable(DefaultDelegates.cameraMake,
-    DefaultDelegates.cameraModel .. pointMode .. ".txt")
-
-    if (DefaultDelegates.focusPointsMap == nil) then
-      LrErrors.throwUserError(
-        getFileName(photo) .. "No (or incorrect) mapping found at: \n"
-                           .. DefaultDelegates.cameraMake .. "/"
-                           .. DefaultDelegates.cameraModel .. pointMode .. ".txt")
+    DefaultDelegates.cameraModel .. fpSchema .. ".txt")
+    if not DefaultDelegates.focusPointsMap then
+      local errorMsg = "No (or incorrect) mapping file"
+      Log.logError("Nikon", errorMsg)
+      local userResponse = errorMessage(errorMsg)
+      if userResponse == "cancel" then
+          LrErrors.throwUserError("Plugin execution stopped")
+      else
+        -- can't map PDAF points, return with empty table
+        Log.logError("Nikon", "Fatal error, unable to continue.")
+        return nil
+      end
     end
   else
     -- can't find PDAF focus point information, return and check CAF
+-- #TODO I guess we don't need this anymore?  Log.logInfo("Nikon", "No PDAF information found")
     return nil
   end
 
   -- from the mapping file we know all the relevant focus points for this photo,
   -- so we will create the visual representation of the layout as an accompanying overlay
   local inactivePointsTable = {}
-  if (string.sub(DefaultDelegates.cameraModel, 1, 7) == "nikon d") and (pointMode ~= "-81") then
+  if (string.sub(DefaultDelegates.cameraModel, 1, 7) == "nikon d") and (fpSchema ~= "-81") then
     -- however, we only do this for DSLRs to visualize the limited AF point coverage of the frame
     for key, _ in pairs(DefaultDelegates.focusPointsMap) do
-      if (not contains(focusPointsTable, key)) then
+      if (not arrayKeyOf(focusPointsTable, key)) then
         table.insert(inactivePointsTable, key)
       end
     end
@@ -252,13 +284,16 @@ function NikonDelegates.getPDAfPoints(metaData)
   }
 
   -- add the active focus points
-  if (focusPointsTable ~= nil) then
-    NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_FOCUS_BOX, focusPointsTable)
-    NikonDelegates.focusPointsDetected = true
+  if focusPointsTable then
+    if NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_FOCUS_BOX, focusPointsTable) then
+      NikonDelegates.focusPointsDetected = true
+    else
+      return nil
+    end
   end
 
   -- add the inactive points
-  if (inactivePointsTable ~= nil) then
+  if inactivePointsTable then
     NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_INACTIVE, inactivePointsTable)
   end
 
@@ -270,17 +305,26 @@ end
 
 
 --[[
-  @@public void NikonDelegates.addFocusPointsToResult(table result, string focusPointType, table focusPointTable)
+  @@public bool NikonDelegates.addFocusPointsToResult(table result, string focusPointType, table focusPointTable)
   ----
   Add the focus point coordinates/dimensions found to the table of focus points to be rendered in the next step
 --]]
 function NikonDelegates.addFocusPointsToResult(result, focusPointType, focusPointTable)
-  if (focusPointTable ~= nil) then
+  if focusPointTable then
     for _,value in pairs(focusPointTable) do
       local focusPointName = NikonDelegates.normalizeFocusPointName(value)
-      if DefaultDelegates.focusPointsMap[focusPointName] == nil then
-        LrErrors.throwUserError(getFileName(photo) .. "The AF-Point " .. focusPointName .. " could not be found within the file.")
-        return nil
+      if not DefaultDelegates.focusPointsMap[focusPointName] then
+        local errorMsg = "The AF-Point " .. focusPointName .. " could not be found in the mapping file."
+        Log.logError("Nikon", errorMsg)
+        local userResponse = errorMessage(errorMsg)
+        if userResponse == "cancel" then
+          LrErrors.throwUserError("Plugin execution stopped")
+        else
+          -- can't map PDAF points, return with empty table
+          Log.logError("Nikon", "Fatal error, unable to continue.")
+          focusPointTable = nil
+          return false
+        end
       end
 
       local x = DefaultDelegates.focusPointsMap[focusPointName][1]
@@ -296,15 +340,20 @@ function NikonDelegates.addFocusPointsToResult(result, focusPointType, focusPoin
         h = DefaultDelegates.focusPointDimen[2]
       end
 
+      if focusPointType == DefaultDelegates.POINTTYPE_AF_FOCUS_BOX then
+        Log.logInfo("Nikon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]", x, y, w, h))
+      end
+
       table.insert(result.points, {
-          pointType = focusPointType,
-          x = x,
-          y = y,
-          width = w,
-          height = h
-        })
+        pointType = focusPointType,
+        x = x,
+        y = y,
+        width = w,
+        height = h
+      })
     end
   end
+  return true
 end
 
 
@@ -317,11 +366,11 @@ end
 --]]
 function NikonDelegates.normalizeFocusPointName(focusPoint)
   local focusPointin = focusPoint
-  if ((focusPoint ~= nil) and (focusPoint ~= "")) then
-    if (string.find(focusPoint, "Center") ~= nil) then
+  if focusPoint and focusPoint ~= "" then
+    if string.find(focusPoint, "Center") then
       focusPoint = string.sub(focusPoint, 1, 2)
     end
-    logDebug("NikonDelegates", "focusPoint: " .. focusPointin .. ", normalized: " .. focusPoint)
+    Log.logFull("Nikon", "focusPoint: " .. focusPointin .. ", normalized: " .. focusPoint)
   end
   return focusPoint
 end
@@ -362,7 +411,7 @@ function NikonDelegates.applyCAFCrop(focusPoints, metaData)
 
   local cropHiSpeed = ExifUtils.findValue(metaData, NikonDelegates.metaKeyCropHiSpeed)
 
-  if (cropHiSpeed ~= nil) then
+  if cropHiSpeed then
     -- perform string comparisons in lower case
     cropHiSpeed = string.lower(cropHiSpeed)
     -- check if image has been taken in crop mode
@@ -396,7 +445,7 @@ function NikonDelegates.applyPDAfCrop(focusPoints, metaData)
 
   local cropHiSpeed = ExifUtils.findValue(metaData, NikonDelegates.metaKeyCropHiSpeed)
 
-  if (cropHiSpeed ~= nil) then
+  if cropHiSpeed then
     -- perform string comparisons in lower case
     cropHiSpeed = string.lower(cropHiSpeed)
     -- check if image has been taken in crop mode
@@ -437,9 +486,10 @@ end
 function NikonDelegates.addInfo(title, key, props, metaData)
   local f = LrView.osFactory()
 
+  -- Avoid issues with implicite followers that do not exist for all models
   if not key then return nil end
 
-  -- Creates and populates the property corresponding to metadata key
+  -- Create and populate property with designated value
   local function populateInfo(key)
     local value = ExifUtils.findValue(metaData, key)
     if not value then
@@ -451,31 +501,38 @@ function NikonDelegates.addInfo(title, key, props, metaData)
     end
   end
 
-  -- create and populate property with designated value
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
+
+  -- Create and populate property with designated value
   populateInfo(key)
 
-  -- compose the row to be added
-  local result = f:row {
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{f:static_text{title = props[key], font="<system>"}}}
-  -- decide if and how to add it
-  if (props[key] == NikonDelegates.metaValueNA) then
-    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return FocusInfo.emptyRow()
-  elseif (props[key] == "AF-C") then
-    local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
-    return f:column{
-      fill = 1, spacing = 2, result,
-      NikonDelegates.addInfo("AF-C Priority", afPriorityKey, props, metaData) }
-  elseif (props[key] == "AF-S") then
-    local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
-    return f:column{
-      fill = 1, spacing = 2, result,
-      NikonDelegates.addInfo("AF-S Priority", afPriorityKey, props, metaData) }
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= NikonDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = props[key], font="<system>"}}
+    }
+    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+    if (props[key] == "AF-C") then
+      local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
+      return f:column{
+        fill = 1, spacing = 2, result,
+        NikonDelegates.addInfo("AF-C Priority", afPriorityKey, props, metaData) }
+    elseif (props[key] == "AF-S") then
+      local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
+      return f:column{
+        fill = 1, spacing = 2, result,
+        NikonDelegates.addInfo("AF-S Priority", afPriorityKey, props, metaData) }
+    else
+      -- add row as composed
+      return result
+    end
   else
-    -- add row as composed
-    return result
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 
@@ -526,6 +583,7 @@ function NikonDelegates.modelSupported(currentModel)
       return true
     end
   end
+  Log.logError("Nikon", "Camera model " .. currentModel .. " is not supported")
   return false
 end
 

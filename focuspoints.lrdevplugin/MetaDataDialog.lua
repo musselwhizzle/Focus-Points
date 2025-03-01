@@ -18,17 +18,14 @@ local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
-
---[[
--- BEGIN MOD.156 - Add Metadata filter
--- showMetadataDialog largely rewritten to add entry field w/ observer and "Open as text" button
---]]
-
-
+local LrPrefs = import 'LrPrefs'
 local LrBinding = import 'LrBinding'
 
 require "Utils"
+require "Log"
 
+
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 function showMetadataDialog(column1, column2, column1Length, column2Length, numLines)
 
@@ -36,10 +33,26 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
 
   LrFunctionContext.callWithContext("showMetaDataDialog", function(context)
 
-    local appWidth, appHeight = LrSystemInfo.appWindowSize()
     local viewFactory = LrView.osFactory()
     local properties = LrBinding.makePropertyTable( context ) -- make a table
     local delimiter = "\r"  -- carriage return; used to separate individual entries in column1 and column2 strings
+
+    local appWidth, appHeight = LrSystemInfo.appWindowSize()
+    local contentWidth  = appWidth  * .4
+    local contentHeight = appHeight * .8
+
+    local scalingLevel
+    if WIN_ENV then
+      if not prefs.screenScaling or prefs.screenScaling == 0 then
+        -- Scaling level has not been set ot set to "Auto" -> same scaling as for Windows Display
+        scalingLevel = getWinScalingFactor()
+      else
+        scalingLevel = prefs.screenScaling
+      end
+      contentWidth  = contentWidth  * scalingLevel
+      contentHeight = contentHeight * scalingLevel
+      Log.logInfo("MetaDataDialog", "Display scaling level " .. math.floor(1/scalingLevel) .. "%")
+    end
 
     local bool_to_number={ [true]=1, [false]=0 }
 
@@ -128,8 +141,8 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
 
     local scrollView = viewFactory:scrolled_view {
       row,
-      width = appWidth * .4,  -- don't need such wide display, it's scrollable anyway
-      height = appHeight *.7,
+      width  = contentWidth,
+      height = contentHeight,
     }
 
     local contents = viewFactory:column {

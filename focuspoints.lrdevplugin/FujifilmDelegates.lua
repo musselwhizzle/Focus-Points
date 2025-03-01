@@ -25,6 +25,8 @@ local LrView        = import 'LrView'
 require "FocusPointPrefs"
 require "FocusPointDialog"
 require "Utils"
+require "Log"
+
 
 FujifilmDelegates = {}
 
@@ -72,20 +74,31 @@ FujifilmDelegates.metaValueNA                        = "N/A"
 function FujifilmDelegates.getAfPoints(photo, metaData)
   FujifilmDelegates.focusPointsDetected = false
 
+  -- Search EXIF for the focus point key
   local focusPoint = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyFocusPixel)
-  if focusPoint == nil then
+  if focusPoint then
+    Log.logInfo("Fujifilm",
+      string.format("Focus point tag '%s' tag found", FujifilmDelegates.metaKeyFocusPixel, focusPoint))
+  else
+    Log.logError("Fujifilm",
+      string.format("Focus point tag '%s' tag not found", FujifilmDelegates.metaKeyFocusPixel))
     return nil
   end
+
   local values = split(focusPoint, " ")
   local x = LrStringUtils.trimWhitespace(values[1])
   local y = LrStringUtils.trimWhitespace(values[2])
   if x == nil or y == nil then
+    Log.logError("Fujifilm", "Error at extracting x/y positions from focus point tag")
     return nil
   end
 
   local imageWidth  = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageWidth)
   local imageHeight = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageHeight)
   if imageWidth == nil or imageHeight == nil then
+    Log.logError("Fujifilm",
+      string.format("No valid information on image width/height - relevant tags '%s' / '%s' not found",
+        FujifilmDelegates.metaKeyExifImageWidth, FujifilmDelegates.metaKeyExifImageHeight))
     return nil
   end
 
@@ -93,12 +106,11 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local xScale = orgPhotoWidth / imageWidth
   local yScale = orgPhotoHeight / imageHeight
 
-  logInfo("Fujifilm", "AF points detected at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
+  Log.logInfo("Fujifilm", "AF points detected at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
 
   -- the only real focus point is this - the below code just checks for visualization frames
   FujifilmDelegates.focusPointsDetected = true
   local result = DefaultPointRenderer.createFocusPixelBox(x*xScale, y*yScale)
-
 
   -- Let see if we have detected faces
   local detectedFaces = ExifUtils.findValue(metaData, FujifilmDelegates.FacesDetected)
@@ -111,7 +123,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
         local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
         local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
         local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
-        logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+        Log.logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
         table.insert(result.points, {
           pointType = DefaultDelegates.POINTTYPE_FACE,
           x = (x1 + x2) / 2,
@@ -139,7 +151,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
         local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
         local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
         local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
-        logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+        Log.logInfo("Fujifilm", "Subject detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
         table.insert(result.points, {
           pointType = DefaultDelegates.POINTTYPE_FACE,
           x = (x1 + x2) / 2,
@@ -169,7 +181,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
           local y1 = croptopleftTable[2] * yScale
           local x2 = (cropsizeTable[1]+croptopleftTable[1]) * xScale
           local y2 = (cropsizeTable[2]+croptopleftTable[2]) * yScale
-          logInfo("Fujifilm", "Crop area at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+          Log.logInfo("Fujifilm", "Crop area at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
           table.insert(result.points, {
             pointType = DefaultDelegates.POINTTYPE_CROP,
             x = (x1 + x2) / 2,
@@ -214,39 +226,40 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
     end
   end
 
-  -- create and populate property with designated value
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
+
+  -- Create and populate property with designated value
   populateInfo(key)
 
-  -- compose the row to be added
-  local result = f:row {fill = 1,
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{
-                     f:static_text{
-                       title = wrapText(props[key], ",",30),
-                       font="<system>"
-                     }
-                   }
-                 }
-  -- decide if and how to add it
-  if (props[key] == FujifilmDelegates.metaValueNA) then
-    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return FocusInfo.emptyRow()
-  elseif (props[key] == "AF-C") then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      FujifilmDelegates.addInfo("AF-C Priority", FujifilmDelegates.metaKeyAfCPriority, props, metaData) }
-  elseif (props[key] == "AF-S") then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      FujifilmDelegates.addInfo("AF-S Priority", FujifilmDelegates.metaKeyAfSPriority, props, metaData) }
-  elseif (key == FujifilmDelegates.metaKeyDriveSpeed) then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      FujifilmDelegates.addInfo("Sequence Number", FujifilmDelegates.metaKeySequenceNumber, props, metaData) }
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= FujifilmDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
+    }
+    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+    if (props[key] == "AF-C") then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        FujifilmDelegates.addInfo("AF-C Priority", FujifilmDelegates.metaKeyAfCPriority, props, metaData) }
+    elseif (props[key] == "AF-S") then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        FujifilmDelegates.addInfo("AF-S Priority", FujifilmDelegates.metaKeyAfSPriority, props, metaData) }
+    elseif (key == FujifilmDelegates.metaKeyDriveSpeed) then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        FujifilmDelegates.addInfo("Sequence Number", FujifilmDelegates.metaKeySequenceNumber, props, metaData) }
+    else
+      -- add row as composed
+      return result
+    end
   else
-    -- add row as composed
-    return result
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 

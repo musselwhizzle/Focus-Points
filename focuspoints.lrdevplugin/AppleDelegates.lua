@@ -20,20 +20,28 @@
 --]]
 
 local LrView = import "LrView"
+
 require "Utils"
+require "Log"
+
 
 AppleDelegates = {}
 
 -- To trigger display whether focus points have been detected or not
 AppleDelegates.focusPointsDetected = false
 
+-- Tag which indicates that makernotes / AF section is present
+AppleDelegates.metaKeyMakerNotVersion      = "Maker Note Version"
+
 -- AF-relevant tags
-AppleDelegates.metaKeyAfSubjectArea        = "Subject Area"
-AppleDelegates.metaKeyAfFocusDistanceRange = "Focus Distance Range"
+AppleDelegates.metaKeySubjectArea          = "Subject Area"
+AppleDelegates.metaKeyFocusDistanceRange   = "Focus Distance Range"
 AppleDelegates.metaKeyAfPerformance        = "AF Performance"
 AppleDelegates.metaKeyAfStable             = "AF Stable"
 AppleDelegates.metaKeyAfConfidence         = "AF Confidence"
 AppleDelegates.metaKeyAfMeasuredDepth      = "AF Measured Depth"
+AppleDelegates.metaKeyImageWidth           = "Image Width"
+AppleDelegates.metaKeyImageHeight          = "Image Height"
 AppleDelegates.metaKeyExifImageWidth       = "Exif Image Width"
 AppleDelegates.metaKeyExifImageHeight      = "Exif Image Height"
 
@@ -50,48 +58,75 @@ AppleDelegates.metaKeyOISMode              = "OIS Mode"
 --]]
 function AppleDelegates.getAfPoints(photo, metaData)
 
-  AppleDelegates.focusPointsDetected = false
-
-  local imageWidth  = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageWidth)
-  local imageHeight = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageHeight)
-
-  if not imageWidth and not imageHeight then
-    return nil
-  end
-
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  local xScale = orgPhotoWidth / imageWidth
-  local yScale = orgPhotoHeight / imageHeight
-
-  local subjectArea = split(ExifUtils.findValue(metaData, AppleDelegates.metaKeyAfSubjectArea), " ")
-  if not subjectArea then
-    return nil
-  end
-
-  local x = subjectArea[1] * xScale
-  local y = subjectArea[2] * yScale
-  local w = subjectArea[3] * xScale
-  local h = subjectArea[4] * yScale
-    
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
     }
   }
 
-  if w > 0 and h > 0 then
-    table.insert(result.points, {
-        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
-        x = x,
-        y = y,
-        width = w,
-        height = h
-      })
-  end
+  AppleDelegates.focusPointsDetected = ExifUtils.decodeXmpMWGRegions(result, metaData)
 
-  AppleDelegates.focusPointsDetected = true
+  if not AppleDelegates.focusPointsDetected then
+    -- Only we we don't have a focus area yet - avoid double focus frames!
+
+    -- For Apple iPhone, these three tags need to be present to calculate proper focus point:
+    local subjectAreaStr  = ExifUtils.findValue(metaData, AppleDelegates.metaKeySubjectArea)
+    local exifImageWidth  = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageWidth)
+    local exifImageHeight = ExifUtils.findValue(metaData, AppleDelegates.metaKeyExifImageHeight)
+
+    if not (exifImageWidth and exifImageHeight) then
+      Log.logError("Apple",
+        string.format("Relevant tags  '%s' / '%s' tag not found. %s",
+          AppleDelegates.metaKeyExifImageWidth, AppleDelegates.metaKeyExifImageHeight, FocusInfo.msgImageNotOoc))
+      return nil
+    end
+
+    -- Determining size and proper orientation can be tricky for iPhones
+    -- for RAWs, there is only ExifImageWidth/ExifImageHeight and the (proper) "Orientation"
+    -- for JPGs, orientation is baked in ImageWidth/ImageHeight, i.e. for a capture in portrait format
+    --           the values are reversed wrt to ExifImageWidth/ExifImageHeight.
+    --           "Orientation" tag is always "Horizontal (normal)"
+    -- So, to determine proper scaling factors, we better fetch consistent information from Lightroom
+    local originalWidth, originalHeight, cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+    local xScale = cropWidth  / originalWidth
+    local yScale = cropHeight / originalHeight
+
+    -- Do we have a subject area tag to convert into a focus point?
+    if subjectAreaStr then
+
+      Log.logInfo("Apple",
+        string.format("'%s' tag found: '%s'",
+          AppleDelegates.metaKeySubjectArea, subjectAreaStr))
+
+      local subjectArea = split(subjectAreaStr, ", ")
+      local x = subjectArea[1] * xScale
+      local y = subjectArea[2] * yScale
+      local w = subjectArea[3] * xScale
+      local h = subjectArea[4] * yScale
+
+      if w > 0 and h > 0 then
+        table.insert(result.points, {
+            pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
+            x = x,
+            y = y,
+            width = w,
+            height = h
+          })
+      end
+
+      Log.logInfo("Apple",
+        string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+        math.floor(x), math.floor(y), math.floor(w), math.floor(h)))
+
+      AppleDelegates.focusPointsDetected = true
+    else
+      Log.logWarn("Apple",
+        string.format("'%s' tag not found.", AppleDelegates.metaKeySubjectArea))
+    end
+  end
   return result
 end
+
 
 
 --[[--------------------------------------------------------------------------------------------------------------------
@@ -123,27 +158,25 @@ function AppleDelegates.addInfo(title, key, props, metaData)
     end
   end
 
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
 
-  -- create and populate property with designated value
+  -- Create and populate property with designated value
   populateInfo(key)
 
-  -- compose the row to be added
-  local result = f:row {fill = 1,
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{
-                     f:static_text{
-                       title = props[key],
-  --                     alignment = "right",
-                       font="<system>"}}
-                  }
-  -- decide if and how to add it
-  if (props[key] == AppleDelegates.metaValueNA) then
-    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return FocusInfo.emptyRow()
-  else
-  -- add row as composed
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= AppleDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = props[key], font="<system>"}}
+    }
+    -- add row as composed
     return result
+  else
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 
@@ -154,7 +187,6 @@ end
   -- if any, otherwise return an empty column
 --]]
 function AppleDelegates.getImageInfo(photo, props, metaData)
-  local f = LrView.osFactory()
   local imageInfo
   return imageInfo
 end
@@ -188,14 +220,12 @@ end
 function AppleDelegates.getFocusInfo(photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- for iPhones, there is no characteristic makernotes section tag that is valid for all models
-
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(AppleDelegates.focusPointsDetected),
-      AppleDelegates.addInfo("Focus Distance Range", AppleDelegates.metaKeyAfFocusDistanceRange, props, metaData),
+      AppleDelegates.addInfo("Focus Distance Range", AppleDelegates.metaKeyFocusDistanceRange, props, metaData),
 --      AppleDelegates.addInfo("AF Measured Depth"   , AppleDelegates.metaKeyAfMeasuredDepth     , props, metaData),
       AppleDelegates.addInfo("AF Stable"           , AppleDelegates.metaKeyAfStable            , props, metaData),
 --    AppleDelegates.addInfo("AF Confidence"       , AppleDelegates.metaKeyAfConfidence        , props, metaData),

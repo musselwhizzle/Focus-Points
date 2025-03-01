@@ -21,6 +21,8 @@ local LrTasks = import 'LrTasks'
 local LrPrefs = import "LrPrefs"
 
 require "Utils"
+require "Log"
+
 
 MogrifyUtils = { }    -- class
 
@@ -59,16 +61,18 @@ local function mogrifyExecute(params, script)
   else
     cmdline = cmdline .. 'mogrify ' .. params
   end
-  logDebug('mogrifyExecute', cmdline )
-  local stat = LrTasks.execute( '\"' .. cmdline .. '\"' )
-  if stat ~= 0 then
-    logError('mogrifyDraw', 'Error calling: ' .. cmdline )
-    LrErrors.throwUserError(getFileName(photo) .. "Error calling 'mogrify.exe' Please check plugin configuration")
+  Log.logDebug("Mogrify", cmdline )
+  local rc = LrTasks.execute( '\"' .. cmdline .. '\"' )
+  if rc ~= 0 then
+    Log.logError("Mogrify", 'Error calling: ' .. cmdline .. ", return code " .. rc)
+    LrErrors.throwUserError(getPhotoFileName(photo) .. "Error calling 'mogrify.exe' Please check plugin configuration!")
   end
   if script then
     if prefs.loggingLevel ~= "DEBUG" then
       -- keep temporary script file for log level DEBUG
-      LrFileUtils.delete(scriptName)
+      if not LrFileUtils.delete(scriptName) then
+        Log.logWarn("Mogrify", "Error deleting mogrify script file " .. scriptName)
+      end
     end
   end
 
@@ -100,18 +104,25 @@ local function exportToDisk(photo, xSize, ySize)
   local orgPath = photo:getRawMetadata("path")
   local thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, errorMsg)
     if data == nil then
-      logError('exportToDisk', 'No thumbnail data')
-      LrErrors.throwUserError(getFileName(photo) .. "Export to disk failed. No thumbnail data received.")
+      Log.logError('Mogrify', 'No thumbnail data')
+      LrErrors.throwUserError(getPhotoFileName(photo) .. "Export to disk failed. No thumbnail data received.")
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
       local tempPath = LrPathUtils.getStandardFilePath( "temp" )
       fileName = LrPathUtils.child( tempPath, leafWOExt .. "-fpoints.jpg" )
-      logDebug('exportToDisk', "filename = " .. fileName )
-
-      local localFile = io.open(fileName, "w+b")
-      localFile:write(data)
-      localFile:close()
+      local success, errorCode = pcall(function()
+        local localFile = io.open(fileName, "w+b")
+        localFile:write(data)
+        localFile:close()
+      end)
+      if not success then
+        local msg = 'Error ' .. errorCode .. 'creating image file for Mogrify at ' .. fileName
+        Log.logError('Mogrify', msg)
+        LrErrors.throwUserError(getPhotoFileName(photo) .. msg)
+      else
+        Log.logInfo('Mogrify', "Image exported to " .. fileName )
+      end
     end
     done = true
   end)
@@ -129,7 +140,7 @@ end
 --]]
 local function mogrifyResize(xSize, ySize)
   local params = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' \"' .. fileName  .. '\"'
-  logDebug('mogrifyResize', params )
+  Log.logInfo("Mogrify", "Resizing image to window size: " .. params )
   mogrifyExecute(params, false)
 end
 
@@ -170,7 +181,7 @@ local function buildDrawParams(focuspointsTable)
         local x = math.floor(tonumber(fpPoint.points.center.x))
         local y = math.floor(tonumber(fpPoint.points.center.y))
         para = '-stroke ' .. color .. ' -fill ' .. color .. ' -draw \"circle ' ..x .. ',' .. y .. ' ' .. x+3 .. ',' .. y  .. '\" -fill none '
-        logDebug('buildCmdLine', '[' .. i .. '] ' .. para )
+        Log.logDebug("Mogrify", "Building command line: " .. '[' .. i .. '] ' .. para )
         params = params .. para
       end
       if fpPoint.template.corner ~= nil then
@@ -196,7 +207,7 @@ local function buildDrawParams(focuspointsTable)
           para = para .. '-draw \"polyline ' .. trx .. ',' .. try .. ' ' .. tlx .. ',' .. tly .. ' '
                   .. blx .. ',' .. bly .. ' ' .. brx .. ',' .. bry .. ' ' .. trx .. ',' .. try .. '\" '
         end
-        logDebug('buildCmdLine', '[' .. i .. '] ' .. para .. ' ' .. fpPoint.template.corner.fileTemplate)
+        Log.logDebug("Mogrify", "Building command line: " .. '[' .. i .. '] ' .. para .. ' ' .. fpPoint.template.corner.fileTemplate)
         params = params .. para
       end
     end
@@ -214,7 +225,6 @@ end
 -- ySize: height in pixel of the create temporary photo
 --]]
 function MogrifyUtils.createDiskImage(photo, xSize, ySize)
-  logInfo('MogrifyUtils.createDiskImage', photo:getFormattedMetadata( 'fileName' ) .. ' ' .. xSize .. ' ' .. ySize )
   exportToDisk(photo, xSize, ySize)
   mogrifyResize(xSize, ySize)
   return fileName
@@ -227,7 +237,10 @@ end
 function MogrifyUtils.drawFocusPoints(focuspointsTable)
   local params = buildDrawParams(focuspointsTable)
   if params ~= nil then
+    Log.logInfo("Mogrify", "Drawing focus points and visualization frames")
     mogrifyExecute(params, true)
+  else
+    Log.logInfo("Mogrify", "Nothing to draw - no focus points or visualization frames found")
   end
 end
 
@@ -236,26 +249,31 @@ end
 -- Creates a temporay script file for Magick. Returns the name of the temp file
 --]]
 function createMagickScript(params)
-  local scriptName = os.tmpname()
-  local file = io.open(scriptName, "w")
-  file:write('-read \"' .. fileName .. '\"', "\n")
-  file:write(params, "\n")
-  file:write('-write \"' .. fileName .. '\"', "\n")
-  file:close()
+  local scriptName = getTempFileName()
+
+  local success, errorCode = pcall(function()
+    local file = io.open(scriptName, "w")
+    file:write('-read \"' .. fileName .. '\"', "\n")
+    file:write(params, "\n")
+    file:write('-write \"' .. fileName .. '\"', "\n")
+    file:close()
+  end)
+  if not success then
+    Log.logError('Mogrify', 'Error creating script file' .. scriptName)
+    LrErrors.throwUserError(getPhotoFileName(photo) .. "Error creating script file " .. scriptName)
+  end
   return scriptName
 end
 
 
 --[[
 -- Deletes the temporary file (created by 'MogrifyUtils.exportToDisk')
--- Raises a LrError in case that the deletion fails
 --]]
 function MogrifyUtils.cleanup()
   if fileName ~= nil then
     local resultOK, errorMsg  = LrFileUtils.delete( fileName )
     if errorMsg ~= nil then
-      logError('MogrifyUtils.cleanup', errMsg)
-      LrErrors.throwUserError(getFileName(photo) .. "Deletion of temporary file failed: " ..  errMsg)
+      Log.logWarn('Mogrify', "Error deleting script file " .. scriptName .. ": " .. errorMsg)
     end
   end
 end

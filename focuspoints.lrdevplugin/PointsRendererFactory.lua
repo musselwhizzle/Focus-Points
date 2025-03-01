@@ -31,6 +31,8 @@ require "AppleDelegates"
 require "PentaxDelegates"
 require "SonyDelegates"
 require "ExifUtils"
+require "Log"
+
 
 
 local LrErrors = import 'LrErrors'
@@ -38,6 +40,7 @@ local LrErrors = import 'LrErrors'
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
+
   local cameraMake = photo:getFormattedMetadata("cameraMake")
   local cameraModel = photo:getFormattedMetadata("cameraModel")
 
@@ -50,15 +53,17 @@ function PointsRendererFactory.createRenderer(photo)
     cameraModel = string.lower(cameraModel)
   end
 
-  logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
-  logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
+  local mapped
+  Log.logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
+  Log.logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
 
   -- normalize the camera names. Pentax can be called multiple things
   if (string.find(cameraMake, "ricoh imaging company", 1, true)
-          or string.find(cameraMake, "pentax", 1, true)
+          or (string.find(cameraMake, "pentax", 1, true) and cameraMake ~= "pentax")
           -- since K-3, tested with K-3, K-1, K-1 Mark II. cameraMake is too unspecific, therefor we test against cameraModel as well
           or (string.find(cameraMake, "ricoh", 1, true) and string.find(cameraModel, "pentax", 1, true))) then
     cameraMake = "pentax"
+    mapped = true
   end
 
   -- Nikon
@@ -70,23 +75,24 @@ function PointsRendererFactory.createRenderer(photo)
     if (duplicateModel ~= nil) then
       cameraModel = duplicateModel
     end
+    mapped = true
   end
 
   -- Olympus and OM Digital share the same exact makernotes structures
   if (string.find(cameraMake, "om digital solutions", 1, true)
-  or (string.find(cameraMake, "olympus", 1, true))) then
+          or (string.find(cameraMake, "olympus", 1, true)) and cameraMake ~= "olympus") then
     cameraMake = "olympus"
+    mapped = true
   end
 
-  logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
-  logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
+  if mapped then
+    Log.logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
+    Log.logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
+  end
 
   -- for use in make specific Delegates, to avoid repeatedly normalization
   DefaultDelegates.cameraMake  = cameraMake
   DefaultDelegates.cameraModel = cameraModel
-
-  logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
-  logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
 
   -- initialize the function pointers for handling the current image (in a series)
   if (cameraMake == "fujifilm") then

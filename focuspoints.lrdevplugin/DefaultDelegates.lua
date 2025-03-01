@@ -19,6 +19,8 @@
 --]]
 
 require "Utils"
+require "Log"
+
 
 DefaultDelegates = {}
 DefaultDelegates.cameraMake = nil

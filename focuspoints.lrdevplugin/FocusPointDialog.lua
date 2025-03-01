@@ -17,36 +17,55 @@
 local LrSystemInfo = import 'LrSystemInfo'
 local LrView       = import 'LrView'
 local LrPrefs      = import 'LrPrefs'
+local LrApplication = import 'LrApplication'
 
 require "Utils"
+require "Log"
+
 
 FocusPointDialog = {}
 
 FocusPointDialog.PhotoWidth  = 0
 FocusPointDialog.PhotoHeight = 0
 
+FocusPointDialog.currentPhoto = nil
+FocusPointDialog.errorsEncountered = nil
+
+
 local prefs = LrPrefs.prefsForPlugin( nil )
 
-function FocusPointDialog.calculatePhotoDimens(targetPhoto)
+function FocusPointDialog.calculatePhotoDimens(photo)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
-  local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
+  local dimens = photo:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
+  local osName
+
+  if WIN_ENV then osName = "WIN" else osName = "MAC" end
+  Log.logInfo("FocusPointDialog", string.format("Running Lightroom Classic %s.%s (%s)",
+    LrApplication.versionTable().major, LrApplication.versionTable().minor, osName))
 
   -- store for use with drawing variable sized focus boxes around 'focus pixels'
   FocusPointDialog.PhotoWidth  = w
   FocusPointDialog.PhotoHeight = h
 
-  local contentWidth = appWidth * .75
-  local contentHeight = appHeight * .75
+  local contentWidth  = appWidth  * .8
+  local contentHeight = appHeight * .8
 
+  local scalingLevel
   if WIN_ENV then
-    if prefs.screenScaling == nil or prefs.screenScaling == 0 then
-   	  prefs.screenScaling = 1
+    if not prefs.screenScaling or prefs.screenScaling == 0 then
+      -- Scaling level has not been set ot set to "Auto" -> same scaling as for Windows Display
+      scalingLevel = getWinScalingFactor()
+    else
+      scalingLevel = prefs.screenScaling
     end
-    logDebug('calculatePhotoDimens', prefs.screenScaling )
-    contentWidth = contentWidth * prefs.screenScaling
-    contentHeight = contentHeight * prefs.screenScaling
+    contentWidth  = contentWidth  * scalingLevel
+    contentHeight = contentHeight * scalingLevel
+    Log.logInfo("FocusPointDialog", "Display scaling level " .. math.floor(100/scalingLevel + 0.5) .. "%")
   end
+
+  Log.logInfo("FocusPointDialog",
+    string.format("Image: %s (%sx%s)", photo:getFormattedMetadata('fileName'), w, h))
 
   local photoWidth
   local photoHeight
@@ -70,8 +89,7 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
 
 end
 
-function FocusPointDialog.createDialog(targetPhoto, photoView, infoView)
-  -- local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+function FocusPointDialog.createDialog(photo, photoView, infoView)
   local myView
   local f = LrView.osFactory()
 
@@ -82,7 +100,7 @@ function FocusPointDialog.createDialog(targetPhoto, photoView, infoView)
 
   -- view for textual information on image, camera settings and AF information
   if infoView ~= nil then
-    local column2 = f:column {
+    local column2 = f:column { fill_vertical = 1,
       infoView,
     }
     local row = f:row {

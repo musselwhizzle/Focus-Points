@@ -22,19 +22,8 @@
 local LrStringUtils = import "LrStringUtils"
 local LrView = import "LrView"
 require "Utils"
+require "Log"
 
--- Sony says PDAF covers approximately 68% of the sensor
--- a7r3 images are 7952x5304 pixels, 3:2
--- sensor is 42 MP, 68% of which is 28,680,637.44
--- Focal Plane AF Point Area value is "640 428"
--- 640 * 428 * 10^2 == 27,392,000
--- 6400x4280, margins - left/right 776, top/bottom 512
-
---[[ old implementation
-local pdafScale = 10 -- this is a guess
-local focusLocationSize = 120
-local pdafPointSize = 85
---]]
 
 SonyDelegates = {}
 
@@ -74,34 +63,41 @@ SonyDelegates.metaValueNA                         = "N/A"
   Get autofocus points and frames for detected face from metadata
 --]]
 function SonyDelegates.getAfPoints(photo, metaData)
+
   SonyDelegates.focusPointsDetected = false
+
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local result
 
   local focusPoint = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusLocation)
   if focusPoint then
+    Log.logInfo("Sony",
+      string.format("Focus point tag '%s' tag found", SonyDelegates.metaKeyAfFocusLocation))
+
     local values = split(focusPoint, " ")
     local imageWidth = LrStringUtils.trimWhitespace(values[1])
     local imageHeight = LrStringUtils.trimWhitespace(values[2])
-    local pdafPointSize = imageWidth*0.039/2  -- #TODO is 0.039/2 be different for other models?
 
     if imageWidth and imageHeight then
       if (imageWidth ~= "0") and (imageHeight ~= "0") then
         local xScale = orgPhotoWidth / imageWidth
         local yScale = orgPhotoHeight / imageHeight
-        local x = LrStringUtils.trimWhitespace(values[3])
-        local y = LrStringUtils.trimWhitespace(values[4])
+        local x = LrStringUtils.trimWhitespace(values[3]) * xScale
+        local y = LrStringUtils.trimWhitespace(values[4]) * yScale
         local pdafPointSize = imageWidth*0.039/2  -- #TODO is 0.039/2 be different for other models?
 
-        logInfo("Sony", "Focus location at [" .. math.ceil(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
         SonyDelegates.focusPointsDetected = true
+
+        Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+          math.floor(x), math.floor(y), math.floor(pdafPointSize), math.floor(pdafPointSize)))
+
         result = {
           pointTemplates = DefaultDelegates.pointTemplates,
           points = {
             {
               pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
-              x = x * xScale, -- - (pdafPointSize/2),
-              y = y * yScale, -- - (pdafPointSize/2),
+              x = x,
+              y = y,
               width  = pdafPointSize,
               height = pdafPointSize
             }
@@ -109,8 +105,17 @@ function SonyDelegates.getAfPoints(photo, metaData)
         }
       else
         -- focus location string is "0 0 0 0" -> the focus point is a PDAF point #FIXME but which one exactly?
+        Log.logWarn("Sony",
+          string.format("Unusal CAF focus location: '%s'", focusPoint))
       end
+    else
+      Log.logError("Sony",
+        string.format("No valid information on image width/height found"))
     end
+  else
+    -- no focus points found - handled on upper layers
+    Log.logWarn("Sony",
+      string.format("Focus point tag '%s' tag not found", SonyDelegates.metaKeyAfFocusLocation))
   end
 
   -- Let's see if we used any PDAF points
@@ -119,7 +124,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
 
     local numPdafPoints = LrStringUtils.trimWhitespace(numPdafPointsStr)
     if numPdafPoints then
-      logDebug("Sony", "PDAF AF points used: " .. numPdafPoints)
+      Log.logInfo("Sony", "PDAF points used: " .. numPdafPoints)
 
       local pdafDimensionsStr = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocalPlaneAFPointArea)
       if pdafDimensionsStr then
@@ -138,7 +143,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
               local x = LrStringUtils.trimWhitespace(pdafPoint[1])
               local y = LrStringUtils.trimWhitespace(pdafPoint[2])
               if x and y then
-                logDebug("Sony", "PDAF unscaled point at [" .. x .. ", " .. y .. "]")
+                Log.logDebug("Sony", "PDAF unscaled point at [" .. x .. ", " .. y .. "]")
                 -- #FIXME Does this really need to be scaled?
                 -- #FIXME What else than the original image size could be imageWidth and ImageHeight?
                 local imageWidth, imageHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
@@ -147,10 +152,10 @@ function SonyDelegates.getAfPoints(photo, metaData)
                 local pdafX = (imageWidth*x/pdafWidth)*xScale
                 local pdafY = (imageHeight*y/pdafHeight)*yScale
                 local pdafPointSize = imageWidth*0.039/2  -- #TODO is 0.039/2 be different for other models?
-                logInfo("Sony", "PDAF point at [" .. math.floor(pdafX) .. ", " .. math.floor(pdafY) .. "]")
+                Log.logInfo("Sony", "PDAF scaled point at [" .. math.floor(pdafX) .. ", " .. math.floor(pdafY) .. "]")
                 if not SonyDelegates.focusPointsDetected then
                   -- this is actually the focus point!
-                  logInfo("Sony", "Focus location at [" .. math.ceil(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
+                  Log.logInfo("Sony", "Focus location at [" .. math.ceil(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
                   SonyDelegates.focusPointsDetected = true
                   result = {
                     pointTemplates = DefaultDelegates.pointTemplates,
@@ -197,7 +202,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
         local h = coordinatesTable[4]
         local x = coordinatesTable[2] + w/2
         local y = coordinatesTable[1] + h/2
-        logInfo("Sony", "Face detected at [" .. x .. ", " .. y .. "]")
+        Log.logInfo("Sony", "Face detected at [" .. x .. ", " .. y .. "]")
         local face = {
           pointType = DefaultDelegates.POINTTYPE_FACE,
           x = x,
@@ -250,60 +255,33 @@ function SonyDelegates.addInfo(title, key, props, metaData)
     end
   end
 
-  -- Helper function to wrap text across multiple rows to fit maximum column length
-  local function wrapText(text, max_length)
-    local result = ""
-    local current_line = ""
-    for word in text:gmatch("[^,]+") do
-      word = word:gsub("^%s*(.-)%s*$", "%1")  -- Trim whitespace
-      if #current_line + #word + 1 > max_length then
-        result = result .. current_line .. "\n"
-        current_line = word
-      else
-        if current_line == "" then
-          current_line = word
-        else
-          current_line = current_line .. ", " .. word
-        end
-      end
-    end
-    if current_line ~= "" then
-      result = result .. current_line
-    end
-    return result
-  end
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
 
-  -- create and populate property with designated value
+  -- Create and populate property with designated value
   populateInfo(key)
 
-  -- compose the row to be added
-  local result = f:row {fill = 1,
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{
-                     f:static_text{
-                       title = wrapText(props[key], 30),
-  --                     alignment = "right",
-                       font="<system>"}}
-                  }
-  -- decide if and how to add it
-  if (props[key] == SonyDelegates.metaValueNA) then
-    return FocusInfo.emptyRow()
---[[
-  elseif (key == SonyDelegates.metaKeyBurstMode) and (props[key] == SonyDelegates.metaValueOn) then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      SonyDelegates.addInfo("Sequence Number", SonyDelegates.metaKeySequenceNumber, props, metaData)
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= SonyDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
     }
---]]
-  elseif (key == SonyDelegates.metaKeyAfTracking) and string.find(string.lower(props[key]), "face") then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      SonyDelegates.addInfo("Faces Detected", SonyDelegates.metaKeyAfFacesDetected, props, metaData)
-    }
+    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+    if (key == SonyDelegates.metaKeyAfTracking) and string.find(string.lower(props[key]), "face") then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        SonyDelegates.addInfo("Faces Detected", SonyDelegates.metaKeyAfFacesDetected, props, metaData)
+      }
+    else
+      -- add row as composed
+      return result
+    end
   else
-    -- add row as composed
-    return result
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 

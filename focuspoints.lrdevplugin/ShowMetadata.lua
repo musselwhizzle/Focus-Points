@@ -20,10 +20,14 @@ local LrDialogs = import 'LrDialogs'
 local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrStringUtils = import "LrStringUtils"
+local LrPrefs = import "LrPrefs"
 
+require "FocusPointPrefs"
 require "MetaDataDialog"
 require "ExifUtils"
 require "Utils"
+require "Log"
+
 
 local function showDialog()
 
@@ -31,6 +35,9 @@ local function showDialog()
 
   local catalog = LrApplication.activeCatalog()
   local targetPhoto = catalog:getTargetPhoto()
+
+  -- To avoid nil pointer errors in case of "dirty" installation (copy over old files)
+  FocusPointPrefs.InitializePrefs(LrPrefs.prefsForPlugin(nil))
 
   LrTasks.startAsyncTask(function(context)
     --https://forums.adobe.com/thread/359790
@@ -56,18 +63,6 @@ local function showDialog()
         end)
 
       LrTasks.sleep(0)
-
-      --[[
-      -- BEGIN MOD - Add Metadata filter
-      -- Creation/presentation of dialog by additional entry field with associated observer moved to MetaDataDialog.lua
-      LrDialogs.presentModalDialog {
-        title = "Metadata display",
-        resizable = true,
-        cancelVerb = "< exclude >",
-        actionVerb = "OK",
-        contents = MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
-      }
-      --]]
 
       local result = showMetadataDialog(column1, column2, column1Length, column2Length, numLines)
 
@@ -116,18 +111,15 @@ function splitForColumns(metaData)
     maxValueLength = math.max(maxValueLength, string.len(v))
     numOfLines = numOfLines + 1
 
-    -- logDebug("ShowMetadata", "l: " .. l)
-    -- logDebug("ShowMetadata", "v: " .. v)
-
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
 
-  logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
-  logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
-  logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
-  logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
-  logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
+  Log.logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
+  Log.logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
+  Log.logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
+  Log.logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
+  Log.logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
 
   return labels, values, maxLabelLength, maxValueLength, numOfLines
 
@@ -141,7 +133,7 @@ function createParts(metaData)
     local p = {}
     p.label = LrStringUtils.trimWhitespace(label)
     p.value = LrStringUtils.trimWhitespace(value)
-    logDebug("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
+    Log.logDebug("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
     return p
   end
 

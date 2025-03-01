@@ -20,7 +20,10 @@
 --]]
 
 local LrView = import "LrView"
+
 require "Utils"
+require "Log"
+
 
 CanonDelegates = {}
 
@@ -31,6 +34,19 @@ CanonDelegates.focusPointsDetected = false
 CanonDelegates.metaKeyAfInfoSection         = "Canon Firmware Version"
 
 -- AF relevant tags
+CanonDelegates.metaKeyAfPointsInFocus       = "AF Points In Focus"
+CanonDelegates.metaKeyAfAreaWidth           = "AF Area Width"
+CanonDelegates.metaKeyAfAreaHeight          = "AF Area Height"
+CanonDelegates.metaKeyAfAreaWidths          = "AF Area Widths"
+CanonDelegates.metaKeyAfAreaHeights         = "AF Area Heights"
+CanonDelegates.metaKeyAfAreaXPositions      = "AF Area X Positions"
+CanonDelegates.metaKeyAfAreaYPositions      = "AF Area Y Positions"
+CanonDelegates.metaKeyAfImageWidth          = "AF Image Width"
+CanonDelegates.metaKeyAfImageHeight         = "AF Image Height"
+CanonDelegates.metaKeyExifImageWidth        = "Exif Image Width"
+CanonDelegates.metaKeyExifImageHeight       = "Exif Image Height"
+CanonDelegates.metaKeyCanonImageWidth       = "Canon Image Width"
+CanonDelegates.metaKeyCanonImageHeight      = "Canon Image Height"
 CanonDelegates.metaKeyFocusMode             = "Focus Mode"
 CanonDelegates.metaKeyAfAreaMode            = "AF Area Mode"
 CanonDelegates.metaKeyOneShotAfRelease      = "One Shot AF Release"
@@ -67,14 +83,17 @@ function CanonDelegates.getAfPoints(photo, metaData)
 
   CanonDelegates.focusPointsDetected = false
 
+  -- #TODO ATTENTION!!!
+  -- Searching for ImageWidth/Height tags in a simplified listing output may result in unusable information!
   if cameraModel == "canon eos 5d" then   -- For some reason for this camera, the AF Image Width/Height has to be replaced by Canon Image Width/Height
-    imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "Canon Image Width", "Exif Image Width" })
-    imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "Canon Image Height", "Exif Image Height" })
+    imageWidth  = ExifUtils.findFirstMatchingValue(metaData,{ CanonDelegates.metaKeyCanonImageWidth , CanonDelegates.metaKeyExifImageWidth  })
+    imageHeight = ExifUtils.findFirstMatchingValue(metaData,{ CanonDelegates.metaKeyCanonImageHeight, CanonDelegates.metaKeyExifImageHeight })
   else
-    imageWidth = ExifUtils.findFirstMatchingValue(metaData, { "AF Image Width", "Exif Image Width" })
-    imageHeight = ExifUtils.findFirstMatchingValue(metaData, { "AF Image Height", "Exif Image Height" })
+    imageWidth  = ExifUtils.findFirstMatchingValue(metaData,{ CanonDelegates.metaKeyAfImageWidth    , CanonDelegates.metaKeyExifImageWidth  })
+    imageHeight = ExifUtils.findFirstMatchingValue(metaData,{ CanonDelegates.metaKeyAfImageHeight   , CanonDelegates.metaKeyExifImageHeight })
   end
   if imageWidth == nil or imageHeight == nil then
+    Log.logWarn("Canon", "No valid information on image width/height found")
     return nil
   end
 
@@ -82,12 +101,13 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local xScale = orgPhotoWidth / imageWidth
   local yScale = orgPhotoHeight / imageHeight
 
-  local afPointWidth = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Width" })
-  local afPointHeight = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Height" })
-  local afPointWidths = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Widths" })
-  local afPointHeights = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Heights" })
+  local afPointWidth   = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaWidth  )
+  local afPointHeight  = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaHeight )
+  local afPointWidths  = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaWidths )
+  local afPointHeights = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaHeights)
 
   if (afPointWidth == nil and afPointWidths == nil) or (afPointHeight == nil and afPointHeights == nil) then
+    Log.logWarn("Canon", "No valid information on 'AF Area Width/Height' found")
     return nil
   end
   if afPointWidths == nil then
@@ -101,9 +121,10 @@ function CanonDelegates.getAfPoints(photo, metaData)
     afPointHeights = split(afPointHeights, " ")
   end
 
-  local afAreaXPositions = ExifUtils.findFirstMatchingValue(metaData, { "AF Area X Positions" })
-  local afAreaYPositions = ExifUtils.findFirstMatchingValue(metaData, { "AF Area Y Positions" })
+  local afAreaXPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaXPositions)
+  local afAreaYPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaYPositions)
   if afAreaXPositions == nil or afAreaYPositions == nil then
+    Log.logWarn("Canon", "No valid information on 'AF Area X/Y Positions' found")
     return nil
   end
 
@@ -111,17 +132,20 @@ function CanonDelegates.getAfPoints(photo, metaData)
   afAreaYPositions = split(afAreaYPositions, " ")
 
   local afPointsSelected -- = ExifUtils.findFirstMatchingValue(metaData, { "AF Points Selected" }) DPP doesn't display these!
-  if afPointsSelected == nil then
-    afPointsSelected = {}
-  else
+  if afPointsSelected then
     afPointsSelected = split(afPointsSelected, ",")
+  else
+    afPointsSelected = {}
   end
 
-  local afPointsInFocus = ExifUtils.findFirstMatchingValue(metaData, { "AF Points In Focus" })
-  if afPointsInFocus == nil then
-    afPointsInFocus = {}
-  else
+  local afPointsInFocus = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfPointsInFocus)
+  if afPointsInFocus then
     afPointsInFocus = split(afPointsInFocus, ",")
+    Log.logInfo("Canon",
+      string.format("Focus point tag '%s' tag found: '%s'", CanonDelegates.metaKeyAfPointsInFocus, afPointsInFocus))
+  else
+    Log.logWarn("Canon", string.format("Focus point tag '%s' tag not found or empty", CanonDelegates.metaKeyAfPointsInFocus))
+    afPointsInFocus = {}
   end
 
   local result = {
@@ -131,7 +155,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
   }
   
   -- it seems Canon Point and Shoot cameras are reversed on the y-axis
-  local exifCameraType = ExifUtils.findFirstMatchingValue(metaData, { "Camera Type" })
+  local exifCameraType = ExifUtils.findValue(metaData, "Camera Type")
   if (exifCameraType == nil) then
     exifCameraType = ""
   end
@@ -164,7 +188,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
     end
     local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
     local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
---[[ #FIXME
+--[[ #TODO we won't support such detailed classifcation in future
     if isInFocus and isSelected then
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
     end
@@ -172,6 +196,10 @@ function CanonDelegates.getAfPoints(photo, metaData)
     if isInFocus then
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
       CanonDelegates.focusPointsDetected = true
+
+      Log.logInfo("Canon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+        math.floor(x), math.floor(y), math.floor(width), math.floor(height)))
+
     elseif isSelected then
       pointType = DefaultDelegates.POINTTYPE_AF_SELECTED    -- de facto not used in this code - DPP doesn't show them!
     end
@@ -216,25 +244,32 @@ function CanonDelegates.addInfo(title, key, props, metaData)
     end
   end
 
-  -- create and populate property with designated value
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
+
+  -- Create and populate property with designated value
   populateInfo(key)
 
-  -- compose the row to be added
-  local result = f:row {
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{f:static_text{title = props[key], font="<system>"}}}
-  -- decide if and how to add it
-  if (props[key] == CanonDelegates.metaValueNA) then
-    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return FocusInfo.emptyRow()
-  elseif (props[key] == CanonDelegates.metaValueOneShotAf) then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      CanonDelegates.addInfo("One Shot AF Release", CanonDelegates.metaKeyOneShotAfRelease, props, metaData) }
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= CanonDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = props[key], font="<system>"}}
+    }
+    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+    if (props[key] == CanonDelegates.metaValueOneShotAf) then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        CanonDelegates.addInfo("One Shot AF Release", CanonDelegates.metaKeyOneShotAfRelease, props, metaData) }
+    else
+      -- add row as composed
+      return result
+    end
   else
-    -- add row as composed
-    return result
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 

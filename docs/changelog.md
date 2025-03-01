@@ -1,15 +1,17 @@
 Change history
 =======
 
-## V2.5.0, February 2025
+## V2.5.0, March 2025
 **New features and changes:**
  
 * Improved user interface
   * Multi-image processing: select multiple images in Lightroom before starting the plugin
   * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results
-    * Autofocus details currently implemented for Nikon, Canon, Fuji, Olympus
-    * Sony, Pentax and Apple will follow in the next release(s) 
-  * User can choose focus box color and for focus 'pixel' points also box size
+    * Autofocus details implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
+    * Pentax pending
+  * User can choose focus box color and for 'focus pixel' points also box size
+  * One-click access to logfile provides more detailed information when focus point display fails 
+  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting
   
 
 * exiftool 13.20
@@ -34,6 +36,7 @@ Change history
 * Fuji
   * X-series (from X100 in 2011 up to X-H2S today)
   * GFX-series
+  * Face and subject detection frames
 
 
 * Olympus / OM System
@@ -44,17 +47,20 @@ Change history
 * Panasonic
   * Mirrorless: entire LUMIX G and S series
   * Compact: FZ, TZ/ZS, LX series - all models after 2008
+  * Face detection support added
   
 
 * Apple
   * iPhone (starting from at least iPhone 5)
+  * Face/pet detection support added (originating from "Person & Pets" in Apple's Photos App)
 
 
 * Sony
   * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
   * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
   * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)  
-
+  * Face detection support added
+  
 
 * Pentax 
   * Display of focus points and supported models are unchanged with respect to previous plugin versions

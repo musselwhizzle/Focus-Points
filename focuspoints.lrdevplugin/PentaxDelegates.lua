@@ -33,7 +33,9 @@
 
 local LrErrors = import 'LrErrors'
 local LrView = import "LrView"
+
 require "Utils"
+require "Log"
 
 
 PentaxDelegates = {}
@@ -202,7 +204,7 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
         end
       end
     elseif (contrastAfMode[1] == "Face Detect AF" and facesDetected == 0) then
-      LrErrors.throwUserError(getFileName(photo) .. "Face Detect AF mode enabled, but no faces detected.")
+      LrErrors.throwUserError(getPhotoFileName(photo) .. "Face Detect AF mode enabled, but no faces detected.")
     else -- 'Automatic Tracking AF', 'Fixed Center', 'AF Select'
       local contrastDetectArea = ExifUtils.findFirstMatchingValue(metaData, { "Contrast Detect AF Area" })
         contrastDetectArea = splitTrim(contrastDetectArea, " ")

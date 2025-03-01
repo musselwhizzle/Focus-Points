@@ -13,9 +13,10 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
-local LrView = import "LrView"
-local LrPrefs = import "LrPrefs"
-local LrShell = import "LrShell"
+local LrView    = import "LrView"
+local LrPrefs   = import "LrPrefs"
+local LrShell   = import "LrShell"
+local LrDialogs = import "LrDialogs"
 
 local bind = LrView.bind
 
@@ -34,13 +35,14 @@ FocusPointPrefs.initfocusBoxSize  =  FocusPointPrefs.focusBoxSizeMedium
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()
-  -- Initialize preferences at first run after installation of plugin
+  ----
+  Initialize preferences at first run after installation of plugin
 --]]
 function FocusPointPrefs.InitializePrefs(prefs)
-  if not prefs.screenScaling then	prefs.screenScaling = 1.0     end
+  if not prefs.screenScaling then	prefs.screenScaling = 0 end
   if not prefs.focusBoxSize  then	prefs.focusBoxSize  = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor then	prefs.focusBoxColor = "red"    end
-  if not prefs.loggingLevel  then	prefs.loggingLevel  = "NONE"   end
+  if not prefs.loggingLevel  then	prefs.loggingLevel  = "AUTO"   end
 end
 
 
@@ -55,7 +57,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   FocusPointPrefs.InitializePrefs(prefs)
 
   -- Width of the drop-down lists in px, to make the naming aligned across rows
-  local dropDownWidth = 65
+  local dropDownWidth = LrView.share('-Medium-')
 
   return {
     {
@@ -68,8 +70,8 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           value = bind 'screenScaling',
           width = dropDownWidth,
           items = {
+            { title = "Auto", value = 0    },
             { title = "100%", value = 1.0  },
-            { title = "115%", value = 0.87 },
             { title = "125%", value = 0.8  },
             { title = "150%", value = 0.67 },
             { title = "175%", value = 0.57 },
@@ -78,7 +80,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           }
         },
         viewFactory:static_text {
-          title = "Set this to the same or similar value you are using on Windows (Display Settings -> Scale)",
+          title = 'Select "Auto" for same display scale factor as on Windows OS (Display Settings -> Scale)'
         }
       },
     },
@@ -128,15 +130,17 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           value = bind 'loggingLevel',
           width = dropDownWidth,
           items = {
-            { title = "None", value = "NONE" },
+            { title = "Auto",  value = "AUTO" },
+            { title = "None",  value = "NONE" },
+            { title = "Info",  value = "INFO" },
+            { title = "Warn",  value = "WARN" },
             { title = "Error", value = "ERROR" },
-            { title = "Warn", value = "WARN" },
-            { title = "Info", value = "INFO" },
             { title = "Debug", value = "DEBUG" },
+            { title = "Full",  value = "FULL" },
           }
         },
         viewFactory:static_text {
-          title = 'Level of information to be logged'
+          title = 'Level of information to be logged (Recommended: "Auto")'
         },
         viewFactory:static_text {
           title = 'Plugin log:',
@@ -146,7 +150,12 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         viewFactory:push_button {
           title = "Show file",
           action = function()
-            LrShell.revealInShell(getlogFileName())
+            local logFileName = Log.getFileName()
+            if logFileName then
+              LrShell.revealInShell(logFileName)
+            else
+              LrDialogs.message('No log file written. Set logging level other than "None".')
+            end
           end,
         },
       },
@@ -157,7 +166,6 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         fill_horizontal = 1,
         viewFactory:column {
           fill_horizontal = 1,
---          spacing = viewFactory:control_spacing(),
           viewFactory:static_text {
             font = "<system/bold>",
             title = 'ImageMagick Studio LLC'
@@ -178,7 +186,6 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         fill_horizontal = 1,
         viewFactory:column {
           fill_horizontal = 1,
---          spacing = viewFactory:control_spacing(),
           viewFactory:static_text {
             font = "<system/bold>",
             title = 'ExifTool'

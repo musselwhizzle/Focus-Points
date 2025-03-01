@@ -16,10 +16,8 @@
 
 local LrFileUtils = import 'LrFileUtils'
 
-require "Utils"
+require "Log"
 
 return {
-
-  -- delete old log file whenever plugin is (re)loaded
-  LrFileUtils.delete(getlogFileName())
+  Log.delete()
 }

@@ -34,6 +34,8 @@ local LrErrors = import 'LrErrors'
 local LrView   = import 'LrView'
 
 require "Utils"
+require "Log"
+
 
 PanasonicDelegates = {}
 
@@ -62,6 +64,7 @@ PanasonicDelegates.metaKeySequenceNumber              = "Sequence Number"
 PanasonicDelegates.metaValueNA                        = "n/a"
 PanasonicDelegates.metaValueOn                        = "On"
 PanasonicDelegates.metaValueOff                       = "Off"
+PanasonicDelegates.metaKeyAfPointPositionPattern      = "0(%.%d+) 0(%.%d+)"
 
 
 --[[
@@ -70,31 +73,32 @@ PanasonicDelegates.metaValueOff                       = "Off"
   Get the autofocus points from metadata
 --]]
 function PanasonicDelegates.getAfPoints(photo, metaData)
-  -- find selected AF point
+  
   PanasonicDelegates.focusPointsDetected = false
+  
   local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
-  if focusPoint == nil then
+  if focusPoint then
+    Log.logInfo("Panasonic",
+      string.format("Focus point tag '%s' tag found", PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
+  else
+    -- no focus points found - handled on upper layers
+    Log.logInfo("Panasonic",
+      string.format("Focus point tag '%s' tag not found", PanasonicDelegates.metaKeyAfPointPosition))
     return nil
   end
 
-  local focusX, focusY = string.match(focusPoint, "0(%.%d+) 0(%.%d+)")
-  if focusX == nil or focusY == nil then
-      LrErrors.throwUserError(getFileName(photo) .. "Focus point not found in 'AF Point Position' metadata tag")
-      return nil
+  local focusX, focusY = string.match(focusPoint, PanasonicDelegates.metaKeyAfPointPositionPattern)
+  if not (focusX and focusY) then
+    Log.logError("Panasonic",
+      string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
+    return nil
   end
-  logDebug("Panasonic", "Focus %: " .. focusX .. "," ..  focusY .. "," .. focusPoint)
-
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  if orgPhotoWidth == nil or orgPhotoHeight == nil then
-      LrErrors.throwUserError(getFileName(photo) .. "Unable to retrieve current photo size from Lightroom")
-      return nil
-  end
-  logDebug("Panasonic", "Focus px: " .. tonumber(orgPhotoWidth) * tonumber(focusX) .. "," .. tonumber(orgPhotoHeight) * tonumber(focusY))
 
   -- determine x,y location of center of focus point in image pixels
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local x = tonumber(orgPhotoWidth) * tonumber(focusX)
   local y = tonumber(orgPhotoHeight) * tonumber(focusY)
-  logDebug("Panasonic", "FocusXY: " .. x .. ", " .. y)
+  Log.logInfo("Panasonic", string.format("Focus point detected at [x=%s, y=%s]", x, y))
 
   PanasonicDelegates.focusPointsDetected = true
   local result = DefaultPointRenderer.createFocusPixelBox(x, y)
@@ -105,7 +109,7 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
     for i=1, detectedFaces, 1 do
       local currFaceTag = string.format(PanasonicDelegates.metaKeyAfFacePosition, i)
       local coordinatesStr = ExifUtils.findValue(metaData, currFaceTag)
-      if coordinatesStr ~= nil then
+      if coordinatesStr then
         -- format as per https://exiftool.org/TagNames/Panasonic.html:
         -- X/Y coordinates of the face center and width/height of face.
         -- Coordinates are relative to an image twice the size of the thumbnail, or 320 pixels wide
@@ -118,7 +122,7 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
           local y = coordinatesTable[2] * yScale
           local w = coordinatesTable[3] * xScale
           local h = coordinatesTable[4] * yScale
-          logInfo("Panasonic", "Face detected at [" .. x .. ", " .. y .. "]")
+          Log.logInfo("Panasonic", "Face detected at [" .. x .. ", " .. y .. "]")
           table.insert(result.points, {
             pointType = DefaultDelegates.POINTTYPE_FACE,
             x = x,
@@ -155,7 +159,7 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
       -- type(key) == "table"
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
-    if (value == nil) then
+    if not value then
       props[key] = PanasonicDelegates.metaValueNA
     else
       -- everything else is the default case!
@@ -163,62 +167,41 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
     end
   end
 
-  -- Helper function to wrap text across multiple rows to fit maximum column length
-  local function wrapText(text, max_length)
-    local result = ""
-    local current_line = ""
-    for word in text:gmatch("[^,]+") do
-      word = word:gsub("^%s*(.-)%s*$", "%1")  -- Trim whitespace
-      if #current_line + #word + 1 > max_length then
-        result = result .. current_line .. "\n"
-        current_line = word
-      else
-        if current_line == "" then
-          current_line = word
-        else
-          current_line = current_line .. ", " .. word
-        end
-      end
-    end
-    if current_line ~= "" then
-      result = result .. current_line
-    end
-    return result
-  end
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
 
-  -- create and populate property with designated value
+  -- Create and populate property with designated value
   populateInfo(key)
 
-  -- compose the row to be added
-  local result = f:row {fill = 1,
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{
-                     f:static_text{
-                       title = wrapText(props[key], 30),
-  --                     alignment = "right",
-                       font="<system>"}}
-                  }
-  -- decide if and how to add it
-  if (props[key] == PanasonicDelegates.metaValueNA) then
-    -- we won't display any "N/A" entries - return a empty row (that will get ignored by LrView)
-    return FocusInfo.emptyRow()
-  elseif (key == PanasonicDelegates.metaKeyBurstMode) and (props[key] == PanasonicDelegates.metaValueOn) then
-    return f:column{
-      fill = 1, spacing = 2, result,
-      PanasonicDelegates.addInfo("Sequence Number", PanasonicDelegates.metaKeySequenceNumber, props, metaData)
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= PanasonicDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
     }
-  elseif (key == PanasonicDelegates.metaKeyAfSubjectDetection) then
-    local faceDetection = string.find(string.lower(props[key]), "face")
-    if faceDetection then
+    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+    if (key == PanasonicDelegates.metaKeyBurstMode) and (props[key] == PanasonicDelegates.metaValueOn) then
       return f:column{
         fill = 1, spacing = 2, result,
-        PanasonicDelegates.addInfo("Faces Detected", PanasonicDelegates.metaKeyAfFacesDetected, props, metaData)
+        PanasonicDelegates.addInfo("Sequence Number", PanasonicDelegates.metaKeySequenceNumber, props, metaData)
       }
+    elseif (key == PanasonicDelegates.metaKeyAfSubjectDetection) then
+      local faceDetection = string.find(string.lower(props[key]), "face")
+      if faceDetection then
+        return f:column{
+          fill = 1, spacing = 2, result,
+          PanasonicDelegates.addInfo("Faces Detected", PanasonicDelegates.metaKeyAfFacesDetected, props, metaData)
+        }
+      end
+    else
+      -- add row as composed
+      return result
     end
   else
-    -- add row as composed
-    return result
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 

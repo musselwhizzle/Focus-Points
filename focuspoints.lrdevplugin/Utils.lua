@@ -15,56 +15,20 @@
 --]]
 
 
-local LrApplication = import 'LrApplication'
+local LrDialogs = import 'LrDialogs'
 local LrPathUtils = import 'LrPathUtils'
-local LrLogger = import 'LrLogger'
+local LrFileUtils = import 'LrFileUtils'
 local LrStringUtils = import "LrStringUtils"
-local LrPrefs = import "LrPrefs"
 local LrShell = import "LrShell"
+local LrTasks = import "LrTasks"
+local LrUUID = import "LrUUID"
+
+require "Log"
 
 
-local prefs = LrPrefs.prefsForPlugin( nil )
-
---[[----------------------------------------------------------------------------
--- Use the SDK's LrLogger infrastructure to log the plugin's execution to the
--- file "FocusPoints.log" in LrC's log folder (see note below).
-------------------------------------------------------------------------------]]
-
-logName  = "FocusPoints"
-myLogger = LrLogger(logName)
-myLogger:enable("logfile")
-
---[[
--- Retrieves the full path name of the plugin log file.
--- (to support access to file via Plugin Manager dialog)
---
--- LrC 14 logs interface note (Oct 2024):
--- We (Adobe) have changed the log file location for the LrLogger interface.
--- The timestamps are no longer appended to the folders. The updated locations are:
--- Win: C:\Users\<user>\AppData\Local\Adobe\Lightroom\Logs\LrClassicLogs\
--- Mac: /Users/<user>/Library/Logs/Adobe/Lightroom/LrClassicLogs/
---
--- Before LrC 14, plugin logfiles have been stored under Documents/LrClassicLogs
--- on both WIN and MAC computers.
---]]
-function getlogFileName()
-  local userHome = LrPathUtils.getStandardFilePath("home")
-  local logFolder
-  if (LrApplication.versionTable().major < 14) then
-    if (WIN_ENV) then
-      logFolder = "\\Documents\\LrClassicLogs\\"
-    else
-      logFolder = "/Documents/LrClassicLogs/"
-    end
-  else
-    if (WIN_ENV) then
-        logFolder = "\\AppData\\Local\\Adobe\\Lightroom\\Logs\\LrClassicLogs\\"
-      else
-        logFolder = "/Library/Logs/Adobe/Lightroom/LrClassicLogs/"
-    end
-  end
-  return LrPathUtils.child(userHome, LrPathUtils.child(logFolder, logName .. ".log"))
-end
+--[[--------------------------------------------------------------------------------------------------------------------
+   Utilities for string handling
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -90,7 +54,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function split(str, delim)
+function splitoriginal(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -99,6 +63,19 @@ function split(str, delim)
     i = i + 1
   end
   return t
+end
+
+function split(str, delimiters)
+  -- Build a pattern that matches any sequence of characters
+  -- that are not one of the delimiters.
+  -- This is an extension to the original split function that supported a single delimiter
+  if not str then return nil end
+  local pattern = "([^" .. delimiters .. "]+)"
+  local result = {}
+  for token in string.gmatch(str, pattern) do
+    table.insert(result, token)
+  end
+  return result
 end
 
 --[[
@@ -135,7 +112,6 @@ function stringToKeyValue(str, delim)
   return r
 end
 
-
 --[[
  Gets the nth word from a string
  @str  the string to split into words
@@ -153,7 +129,6 @@ function get_nth_word(str, n, delimiter)
     end
     return nil -- Return nil if n is out of range
 end
-
 
 --[[
  Wrap text across multiple rows to fit maximum column length
@@ -183,74 +158,6 @@ function wrapText(text, delim, max_length)
   return result
 end
 
-
---[[
--- Logging functions. You are provided 5 levels of logging. Wisely choose the level of the message you want to report
--- to prevent to much messages.
--- Typical use cases:
---   - logDebug - Informations diagnostically helpful to people (developers, IT, sysadmins, etc.)
---   - logInfo - Informations generally useful to log (service start/stop, configuration assumptions, etc)
---   - logWarn - Informations about an unexpected state that won't generate a problem
---   - logError - An error which is fatal to the operation
--- These methods expects 2 parameters:
---   - group - a logical grouping string (limited to 20 chars and converted to upper case) to make it easier to find the messages you are looking for
---   - message - the message to be logged
--- A call to logDebug("ExifUtils", "Searching for 'AF Point Used'") will result in the following log entry
---    EXIFUTILS | Searching for 'AF Point Used'
--- A call to logWarn("FUJIDELEGATE", "Face recognition algorithm returned an unexcepted value") will result in the following log entry
--- FUJIDELEGATE | Face recognition algorithm returned an unexcepted value
---]]
-function logDebug(group, message)
-  doLog("DEBUG", group, message)
-end
-
-function logInfo(group, message)
-  doLog("INFO", group, message)
-end
-
-function logWarn(group, message)
-  doLog("WARN", group, message)
-end
-
-function logError(group, message)
-  doLog("ERROR", group, message)
-end
-
-function doLog(level, group, message)
-  local levels = {
-    NONE = 0,
-    ERROR = 1,
-    WARN = 2,
-    INFO = 3,
-    DEBUG = 4
-  }
-
-  -- Looking for the prefs
-  if prefs.loggingLevel == nil or levels[prefs.loggingLevel] == nil then
-    prefs.loggingLevel = "NONE"
-  end
-
-  local prefsLevel = levels[prefs.loggingLevel]
-  local msgLevel = levels[level]
-
-  if prefsLevel == 0 or msgLevel == nil or msgLevel > prefsLevel then
-    -- Unknown message log level or level set in preferences higher
-    -- No need to log this one, return
-    return
-  end
-
-  local str = string.format("%20s | %s", string.upper(string.sub(group, 1, 20)), message)
-  if level == "ERROR" then
-    myLogger:error(str)
-  elseif level == "WARN" then
-    myLogger:warn(str)
-  elseif level == "INFO" then
-    myLogger:info(str)
-  else
-    myLogger:debug(str)
-  end
-end
-
 --[[
 -- Parses a string in the form of "(width)x(height)"" and returns width and height
 -- strDimens - string to be parsed
@@ -263,13 +170,18 @@ function parseDimens(strDimens)
   w = LrStringUtils.trimWhitespace(w)
   h = LrStringUtils.trimWhitespace(h)
   return tonumber(w), tonumber(h)
-end
+  end
+
+--[[--------------------------------------------------------------------------------------------------------------------
+   Miscellaneous utilities
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
 -- Searches for a value in a table and returns the corresponding key
 -- table - table to search inside
 -- val - value to search for
 --]]
+-- #TODO Isn't there something similar used as a local function elsewhere?
 function arrayKeyOf(table, val)
   for k,v in pairs(table) do
     if v == val then
@@ -279,13 +191,12 @@ function arrayKeyOf(table, val)
   return nil
 end
 
---[[
+--[[ #TODO This code seems to be used nowhere!?
 -- Transform the coordinates around a center point and scale them
 -- x, y - the coordinates to be transformed
 -- oX, oY - the coordinates of the center
 -- angle - the rotation angle
 -- scaleX, scaleY - scaleing factors
---]]
 function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
   -- Rotation around 0,0
   local rX = x * math.cos(angle) + y * math.sin(angle)
@@ -305,9 +216,21 @@ function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
 
   return tX, tY
 end
+--]]
+
 
 --[[
--- BEGIN MOD - Add Metadata filter
+  @@public string getTempFileName()
+  ----
+  Create new UUID name for a temporary file
+--]]
+function getTempFileName()
+  local fileName = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
+  return fileName
+end
+
+
+--[[ #TODO Documentation!
 -- Open filename in associated application as per file extension
 -- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
 --]]
@@ -318,9 +241,76 @@ function openFileInApp(filename)
     LrShell.openFilesInApp({filename}, "open")
   end
 end
--- END MOD - Add Metadata filter
+
+--[[ #TODO Documentation!
+--]]
+function getPhotoFileName(photo)
+  if not photo then
+    photo = FocusPointDialog.currentPhoto
+  end
+  if photo then
+    return photo:getFormattedMetadata( "fileName" )
+  end
+end
 
 
-function getFileName(photo)
-  return photo:getFormattedMetadata( "fileName" ) .. ":\n\n"
+--[[
+  @@public int getWinScalingFactor()
+  ----
+  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\\Control Panel\\Desktop, LogPixels)
+  Returns display scaling level as factor (100/scale_in_percent)
+--]]
+function getWinScalingFactor()
+  local output = getTempFileName()
+  local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" -v LogPixels >\"" .. output .. "\""
+  local result
+
+  -- Query registry value by calling REG.EXE
+  local rc = LrTasks.execute(cmd)
+  Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
+  Log.logDebug("Utils", "REG command: " .. cmd .. ", RC=" .. rc)
+
+  -- Read redirected stdout from temp file and find the line that starts with "LogPixels"
+  local regOutput = LrFileUtils.readFile(output)
+  local regOutputStr = "^"
+  local dpiValue, scale
+  for line in string.gmatch(regOutput, ("[^\r\n]+")) do
+    local item = split(line, " ")
+    if item and #item >= 3 then
+      if item[1] == "LogPixels" and item[2] == "REG_DWORD" then
+        dpiValue = item[3]
+        scale = math.floor(tonumber(dpiValue) * 100/96 + 0.5)
+      end
+    end
+    regOutputStr = regOutputStr .. line .. "^"
+  end
+  Log.logDebug("Utils", "REG output: " .. regOutputStr)
+
+  -- Set and log the result
+  if dpiValue then
+    result = 100 / scale
+    Log.logDebug("Utils", string.format("DPI scaling level %s = %sdpi ~ %s%%", dpiValue, tonumber(dpiValue), scale))
+  else
+    result = 100 / 125
+    Log.logWarn("Utils", "Unable to retrieve Windows scaling level, using 125% instead")
+  end
+
+  -- Clean up: remove the temp file
+  if not LrFileUtils.delete(output) then
+    Log.logWarn("Utils", "Unable to delete REG output file " .. output)
+  end
+
+  return result
+end
+
+
+--[[
+  @@public void errorMessage(string msg)
+  ----
+  Displays an error message
+  Returns
+--]]
+function errorMessage(msg)
+  FocusPointDialog.errorsEncountered = msg
+  return LrDialogs.confirm(msg, getPhotoFileName(), "Continue", "Stop")
 end

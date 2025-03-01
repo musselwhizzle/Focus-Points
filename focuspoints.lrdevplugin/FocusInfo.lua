@@ -20,8 +20,11 @@
 
 local LrView = import 'LrView'
 local LrColor = import 'LrColor'
+local LrPrefs   = import "LrPrefs"
 
 require "DefaultPointRenderer"
+require "Log"
+
 
 FocusInfo = {}
 
@@ -39,6 +42,10 @@ FocusInfo.metaKeyExposureProgram    = "exposureProgram"
 FocusInfo.metaKeyMeteringMode       = "meteringMode"
 FocusInfo.metaValueNA               = "N/A"
 
+FocusInfo.msgImageNotOoc            = "Image file does not seem be straight out of camera."
+
+local prefs = LrPrefs.prefsForPlugin( nil )
+
 
 --[[
   @@public table, table, table FocusInfo.getMakerInfo(table photo, table props)
@@ -55,7 +62,7 @@ function FocusInfo.getMakerInfo(photo, props)
   if (DefaultPointRenderer.funcGetImageInfo ~= nil) then
     imageInfo = DefaultPointRenderer.funcGetImageInfo(photo, props, DefaultDelegates.metaData)
   else
-    imageInfo = f:column{}
+    imageInfo = FocusInfo.emptyRow()
   end
 
   -- get maker specific camera settings information, if any
@@ -63,7 +70,7 @@ function FocusInfo.getMakerInfo(photo, props)
   if (DefaultPointRenderer.funcGetCameraInfo ~= nil) then
     cameraInfo = DefaultPointRenderer.funcGetCameraInfo(photo, props, DefaultDelegates.metaData)
   else
-    cameraInfo = f:column{}
+    cameraInfo = FocusInfo.emptyRow()
   end
 
   -- get focus information which is always maker specific
@@ -92,7 +99,7 @@ end
 --[[
   @@public table FocusInfo.errorMessage(string errorMessage)
   ----
-  Creates an error message text to be added to the current section
+  Creates static text error message text to be added to the current section
 --]]
 function FocusInfo.errorMessage(message)
   local f = LrView.osFactory()
@@ -133,7 +140,6 @@ end
   Checks if AF info section is present in metadata. Returns a view entry with an error message if not
 --]]
 function FocusInfo.afInfoMissing(metaData, afInfoSectionKey)
-  local f = LrView.osFactory()
   local result
   result = ExifUtils.findValue(metaData, afInfoSectionKey)
   if not result then
@@ -142,23 +148,78 @@ function FocusInfo.afInfoMissing(metaData, afInfoSectionKey)
   return nil
 end
 
+
 --[[
-  @@public table FocusInfo.FocusPointsStatus(boolean focusPointsDeteced)
-  ----
-  Returns a view entry stating whether focus points have been found or not
+  @@ public table FocusInfo.FocusPointsStatus(focusPointsDeteced)
+  -- Returns a static text element with a message stating whether focus points have been found or not
 --]]
-  -- helper function to add information whether focus points have been found or not
 function FocusInfo.FocusPointsStatus(focusPointsDeteced)
   local f = LrView.osFactory()
   if focusPointsDeteced then
     return f:row {f:static_text {title = "Focus points detected", text_color=LrColor(0, 0.66, 0), font="<system/bold>"}}
+  elseif FocusPointDialog.errorsEncountered then
+    return f:row {f:static_text {title = "Errors encountered", text_color=LrColor("red"), font="<system/bold>"}}
   else
     return f:row {f:static_text {title = "No focus points detected", text_color=LrColor("red"), font="<system/bold>"}}
   end
 end
 
---[[ #TODO
-  -- helper function to simplify adding items row-by-row
+
+--[[
+  @@ public table FocusInfo.pluginStatus()
+  ----
+  In case errors or warnings have been encountered, add a separate group element with a status message and a button
+  to open the log file at the bottom of the information column
+--]]
+function FocusInfo.pluginStatus()
+  local f = LrView.osFactory()
+
+  -- Compose status message
+  local statusMsg
+  if Log.errorsEncountered then
+    statusMsg = f:static_text {title = "Errors encountered", text_color=LrColor("red"), font="<system>"}
+  elseif Log.warningsEncountered then
+    statusMsg = f:static_text {title = "Warnings encountered", text_color=LrColor("orange"), font="<system>"}
+  else
+    -- displaying a "success" status message might be distracting ...
+    return FocusInfo.emptyRow()
+  end
+
+  if prefs.loggingLevel == "NONE" then
+    return
+      f:column { fill = 1, spacing = 2,
+          f:group_box {title = "Plug-in status:  ", fill = 1, font = "<system/bold>",
+              f:row {statusMsg},
+              f:row{
+                f:static_text {title = 'Turn on logging "Auto" for more details', font="<system>"}
+              },
+          },
+      }
+  else
+    -- Return the 'status' group element with "check log" button
+    return
+      f:column { fill = 1, spacing = 2,
+          f:group_box {title = "Plug-in status:  ", fill = 1, font = "<system/bold>",
+              f:row {
+                statusMsg,
+                f:spacer{fill_horizontal = 1},
+                f:push_button {
+                  title = "Check log",
+                  font = "<system>",
+                  action = function() openFileInApp(Log.getFileName()) end,
+                },
+              },
+          },
+      }
+  end
+end
+
+--[[
+  @@ public table FocusInfo.addInfo(title, key, photo, props)
+  ----
+  Generate row element to be added to the current view container:
+  - creates a property to store the value corresponding to "key"
+  - compose row, with "[Title]:" on the left, following "props[key]" right aligned
 --]]
 function FocusInfo.addInfo(title, key, photo, props)
   local f = LrView.osFactory()
@@ -175,63 +236,66 @@ function FocusInfo.addInfo(title, key, photo, props)
   -- populate property with designated value
   populateInfo(key, props)
 
-  -- compose the row to be added
-  local result = f:row {
-                   f:column{f:static_text{title = title .. ":", font="<system>"}},
-                   f:spacer{fill_horizontal = 1},
-                   f:column{f:static_text{title = props[key], font="<system>"}}}
-
-  -- decide if and how to add it
-  if (props[key] == FocusInfo.metaValueNA) then
-    -- we won't display any "N/A" entries - return "blank"
-    return f:control_spacing{}     -- creates an "empty row" that is really empty - f:row{} is not
-  else
+    -- check if there is (meaningful) content to add
+  if props[key] and props[key] ~= FocusInfo.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = props[key], font="<system>"}}
+    }
     -- add row as composed
     return result
+  else
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
   end
 end
 
---[[ #TODO
+
+--[[
+  @@ public table FocusInfo.createInfoView(photo, props)
+  ----
+  Creates the content of information column view container
 --]]
 function FocusInfo.createInfoView(photo, props)
   local f = LrView.osFactory()
 
   local imageInfo, cameraInfo, focusInfo = FocusInfo.getMakerInfo(photo, props)
 
-  local defaultInfo = f:column{
-    f:spacer { height = 20, fill_horizontal = 1 },
---    f:spacer{fill_horizontal = 1},
-    f:group_box { title = "Image information:  ", fill = 1, font="<system/bold>",
-        f:column {
-            fill = 1,
-            spacing = 2,
-            FocusInfo.addInfo("Filename",          FocusInfo.metaKeyFileName,          photo, props),
-            FocusInfo.addInfo("Captured on",       FocusInfo.metaKeyDateTimeOriginal,  photo, props),
-            FocusInfo.addInfo("Original size",     FocusInfo.metaKeyDimensions,        photo, props),
-            FocusInfo.addInfo("Current size",      FocusInfo.metaKeyCroppedDimensions, photo, props),
-            imageInfo
-        },
+  local defaultInfo =
+  f:column{ fill_vertical = 1,
+      f:column { fill = 1, spacing = 2,
+          f:group_box { title = "Image information:  ", fill = 1, font = "<system/bold>",
+              f:column {fill = 1, spacing = 2,
+                  FocusInfo.addInfo("Filename", FocusInfo.metaKeyFileName, photo, props),
+                  FocusInfo.addInfo("Captured on", FocusInfo.metaKeyDateTimeOriginal, photo, props),
+                  FocusInfo.addInfo("Original size", FocusInfo.metaKeyDimensions, photo, props),
+                  FocusInfo.addInfo("Current size", FocusInfo.metaKeyCroppedDimensions, photo, props),
+                  imageInfo
+              },
+          },
+          f:spacer { height = 20 },
+          f:group_box { title = "Camera settings:  ", fill = 1, font = "<system/bold>",
+              f:column {fill = 1, fill_vertical = 0, spacing = 2,
+                  FocusInfo.addInfo("Camera", FocusInfo.metaKeyCameraModel, photo, props),
+                  FocusInfo.addInfo("Lens", FocusInfo.metaKeyLens, photo, props),
+                  FocusInfo.addInfo("FocalLength", FocusInfo.metaKeyFocalLength, photo, props),
+                  FocusInfo.addInfo("Exposure", FocusInfo.metaKeyExposure, photo, props),
+                  FocusInfo.addInfo("ISO", FocusInfo.metaKeyIsoSpeedRating, photo, props),
+                  FocusInfo.addInfo("Exposure Bias", FocusInfo.metaKeyExposureBias, photo, props),
+                  FocusInfo.addInfo("Exposure Program", FocusInfo.metaKeyExposureProgram, photo, props),
+                  FocusInfo.addInfo("Metering Mode", FocusInfo.metaKeyMeteringMode, photo, props),
+                  cameraInfo
+             },
+          },
+          f:spacer { height = 20 },
+          f:group_box { title = "Focus information:  ", fill = 1, font = "<system/bold>",
+                       focusInfo
+          },
       },
-    f:spacer { height = 20, fill_horizontal = 1 },
-    f:group_box { title = "Camera settings:  ", fill = 1, font = "<system/bold>",
-        f:column {
-            fill = 1,
-            spacing = 2,
-            FocusInfo.addInfo("Camera",            FocusInfo.metaKeyCameraModel,       photo, props),
-            FocusInfo.addInfo("Lens",              FocusInfo.metaKeyLens,              photo, props),
-            FocusInfo.addInfo("FocalLength",       FocusInfo.metaKeyFocalLength,       photo, props),
-            FocusInfo.addInfo("Exposure",          FocusInfo.metaKeyExposure,          photo, props),
-            FocusInfo.addInfo("ISO",               FocusInfo.metaKeyIsoSpeedRating,    photo, props),
-            FocusInfo.addInfo("Exposure Bias",     FocusInfo.metaKeyExposureBias,      photo, props),
-            FocusInfo.addInfo("Exposure Program",  FocusInfo.metaKeyExposureProgram,   photo, props),
-            FocusInfo.addInfo("Metering Mode",     FocusInfo.metaKeyMeteringMode,      photo, props),
-            cameraInfo
-        },
-    },
-    f:spacer { height = 20, fill_horizontal = 1 },
-    f:group_box { title = "Focus information:  ", fill = 1,  font="<system/bold>",
-        focusInfo
-    },
+      f:spacer { fill_vertical = 100 },
+      FocusInfo.pluginStatus(),
   }
   return defaultInfo
 end
