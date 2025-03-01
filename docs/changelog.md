@@ -5,13 +5,13 @@ Change history
 **New features and changes:**
  
 * Improved user interface
-  * Multi-image processing: select multiple images in Lightroom before starting the plugin
-  * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results
+  * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
+  * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
     * Autofocus details implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
     * Pentax pending
-  * User can choose focus box color and for 'focus pixel' points also box size
-  * One-click access to logfile provides more detailed information when focus point display fails 
-  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting
+  * User can choose focus box color and for 'focus pixel' points also box size [#215](https://github.com/musselwhizzle/Focus-Points/issues/215)
+  * One-click access to logfile provides more detailed information when focus point display fails [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
+  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   
 
 * exiftool 13.20
@@ -24,7 +24,7 @@ Change history
 
 * Nikon
   * Mirrorless: entire Z-series
-  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020)
+  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020) [#209](https://github.com/musselwhizzle/Focus-Points/issues/209) [#211](https://github.com/musselwhizzle/Focus-Points/issues/211)
 
   
 * Canon
@@ -36,7 +36,7 @@ Change history
 * Fuji
   * X-series (from X100 in 2011 up to X-H2S today)
   * GFX-series
-  * Face and subject detection frames
+  * Face and subject detection frames [#165](https://github.com/musselwhizzle/Focus-Points/issues/165)
 
 
 * Olympus / OM System
@@ -52,7 +52,7 @@ Change history
 
 * Apple
   * iPhone (starting from at least iPhone 5)
-  * Face/pet detection support added (originating from "Person & Pets" in Apple's Photos App)
+  * Face/pet detection support added (originating from "Person & Pets" in Apple's Photos App) [#218](https://github.com/musselwhizzle/Focus-Points/issues/218)
 
 
 * Sony
