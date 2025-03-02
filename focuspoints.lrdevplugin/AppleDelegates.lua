@@ -76,8 +76,9 @@ function AppleDelegates.getAfPoints(photo, metaData)
 
     if not (exifImageWidth and exifImageHeight) then
       Log.logError("Apple",
-        string.format("Relevant tags  '%s' / '%s' tag not found. %s",
-          AppleDelegates.metaKeyExifImageWidth, AppleDelegates.metaKeyExifImageHeight, FocusInfo.msgImageNotOoc))
+        string.format("Required tags  '%s' / '%s' not found.",
+          AppleDelegates.metaKeyExifImageWidth, AppleDelegates.metaKeyExifImageHeight))
+      Log.logWarn("Apple", FocusInfo.msgImageNotOoc)
       return nil
     end
 
@@ -95,7 +96,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
     if subjectAreaStr then
 
       Log.logInfo("Apple",
-        string.format("'%s' tag found: '%s'",
+        string.format("Focus point tag '%s' found: '%s'",
           AppleDelegates.metaKeySubjectArea, subjectAreaStr))
 
       local subjectArea = split(subjectAreaStr, ", ")

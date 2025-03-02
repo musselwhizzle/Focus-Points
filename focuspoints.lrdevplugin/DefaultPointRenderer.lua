@@ -414,7 +414,7 @@ function DefaultPointRenderer.getUserRotationAndMirroring(photo)
     return 90, -1
   end
 
-Log.logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
+  Log.logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
   return 0, 0
 end
 

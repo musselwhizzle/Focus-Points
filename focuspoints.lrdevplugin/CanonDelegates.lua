@@ -93,7 +93,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
     imageHeight = ExifUtils.findFirstMatchingValue(metaData,{ CanonDelegates.metaKeyAfImageHeight   , CanonDelegates.metaKeyExifImageHeight })
   end
   if imageWidth == nil or imageHeight == nil then
-    Log.logWarn("Canon", "No valid information on image width/height found")
+    Log.logError(string.format("Canon", "Required image size tags '%s' / '%s' not found",
+      CanonDelegates.metaKeyExifImageWidth, CanonDelegates.metaKeyExifImageHeight))
+    Log.logWarn("Canon", FocusInfo.msgImageNotOoc)
     return nil
   end
 
@@ -107,7 +109,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local afPointHeights = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaHeights)
 
   if (afPointWidth == nil and afPointWidths == nil) or (afPointHeight == nil and afPointHeights == nil) then
-    Log.logWarn("Canon", "No valid information on 'AF Area Width/Height' found")
+    Log.logWarn("Canon", "Information on 'AF Area Width/Height' not found")
     return nil
   end
   if afPointWidths == nil then
@@ -124,7 +126,7 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local afAreaXPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaXPositions)
   local afAreaYPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaYPositions)
   if afAreaXPositions == nil or afAreaYPositions == nil then
-    Log.logWarn("Canon", "No valid information on 'AF Area X/Y Positions' found")
+    Log.Error("Canon", "Information on 'AF Area X/Y Positions' not found")
     return nil
   end
 
@@ -142,9 +144,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
   if afPointsInFocus then
     afPointsInFocus = split(afPointsInFocus, ",")
     Log.logInfo("Canon",
-      string.format("Focus point tag '%s' tag found: '%s'", CanonDelegates.metaKeyAfPointsInFocus, afPointsInFocus))
+      string.format("Focus point tag '%s' found: '%s'", CanonDelegates.metaKeyAfPointsInFocus, afPointsInFocus))
   else
-    Log.logWarn("Canon", string.format("Focus point tag '%s' tag not found or empty", CanonDelegates.metaKeyAfPointsInFocus))
+    Log.logWarn("Canon", string.format("Focus point tag '%s' not found or empty", CanonDelegates.metaKeyAfPointsInFocus))
     afPointsInFocus = {}
   end
 

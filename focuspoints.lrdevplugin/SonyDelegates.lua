@@ -72,7 +72,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusLocation)
   if focusPoint then
     Log.logInfo("Sony",
-      string.format("Focus point tag '%s' tag found", SonyDelegates.metaKeyAfFocusLocation))
+      string.format("Focus point tag '%s' found", SonyDelegates.metaKeyAfFocusLocation))
 
     local values = split(focusPoint, " ")
     local imageWidth = LrStringUtils.trimWhitespace(values[1])
@@ -111,6 +111,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
     else
       Log.logError("Sony",
         string.format("No valid information on image width/height found"))
+      Log.logWarn("Sony", FocusInfo.msgImageNotOoc)
     end
   else
     -- no focus points found - handled on upper layers
@@ -292,7 +293,6 @@ end
   -- if any, otherwise return an empty column
 --]]
 function SonyDelegates.getImageInfo(photo, props, metaData)
-  local f = LrView.osFactory()
   local imageInfo
   return imageInfo
 end

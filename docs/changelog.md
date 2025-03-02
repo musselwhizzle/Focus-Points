@@ -58,7 +58,7 @@ Change history
 * Sony
   * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
   * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
-  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)  
+  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
   * Face detection support added
   
 

@@ -90,11 +90,11 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyAfPointSelected)
   if focusPoint then
     Log.logInfo("Olympus",
-      string.format("Focus point tag '%s' tag found", OlympusDelegates.metaKeyAfPointSelected, focusPoint))
+      string.format("Focus point tag '%s' found", OlympusDelegates.metaKeyAfPointSelected, focusPoint))
   else
     -- no focus points found - handled on upper layers
     Log.logWarn("Olympus",
-      string.format("Focus point tag '%s' tag not found", OlympusDelegates.metaKeyAfPointSelected))
+      string.format("Focus point tag '%s' not found", OlympusDelegates.metaKeyAfPointSelected))
     return nil
   end
 

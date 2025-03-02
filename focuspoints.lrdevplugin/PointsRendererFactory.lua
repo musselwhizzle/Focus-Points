@@ -48,6 +48,7 @@ function PointsRendererFactory.createRenderer(photo)
     -- we map both to unknown and deal with the consequences on upper levels
     cameraMake  = "unknown"
     cameraModel = "unknown"
+    Log.logError("PointsRenderFactory", "Unknown camera make / model")
   else
     cameraMake = string.lower(cameraMake)
     cameraModel = string.lower(cameraModel)

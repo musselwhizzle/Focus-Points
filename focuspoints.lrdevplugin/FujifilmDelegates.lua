@@ -78,10 +78,11 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyFocusPixel)
   if focusPoint then
     Log.logInfo("Fujifilm",
-      string.format("Focus point tag '%s' tag found", FujifilmDelegates.metaKeyFocusPixel, focusPoint))
+      string.format("Focus point tag '%s' found", FujifilmDelegates.metaKeyFocusPixel, focusPoint))
   else
     Log.logError("Fujifilm",
-      string.format("Focus point tag '%s' tag not found", FujifilmDelegates.metaKeyFocusPixel))
+      string.format("Focus point tag '%s' not found", FujifilmDelegates.metaKeyFocusPixel))
+    Log.logWarn("Fujifilm", FocusInfo.msgImageNotOoc)
     return nil
   end
 
@@ -97,8 +98,9 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local imageHeight = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageHeight)
   if imageWidth == nil or imageHeight == nil then
     Log.logError("Fujifilm",
-      string.format("No valid information on image width/height - relevant tags '%s' / '%s' not found",
+      string.format("No valid information on image width/height. Relevant tags '%s' / '%s' not found",
         FujifilmDelegates.metaKeyExifImageWidth, FujifilmDelegates.metaKeyExifImageHeight))
+    Log.logWarn("Fujifilm", FocusInfo.msgImageNotOoc)
     return nil
   end
 

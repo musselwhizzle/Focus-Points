@@ -30,7 +30,6 @@
                     Add basic errorhandling if not found
 --]]
 
-local LrErrors = import 'LrErrors'
 local LrView   = import 'LrView'
 
 require "Utils"
@@ -79,11 +78,11 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
   if focusPoint then
     Log.logInfo("Panasonic",
-      string.format("Focus point tag '%s' tag found", PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
+      string.format("Focus point tag '%s' found", PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
   else
     -- no focus points found - handled on upper layers
-    Log.logInfo("Panasonic",
-      string.format("Focus point tag '%s' tag not found", PanasonicDelegates.metaKeyAfPointPosition))
+    Log.logWarn("Panasonic",
+      string.format("Focus point tag '%s' not found", PanasonicDelegates.metaKeyAfPointPosition))
     return nil
   end
 
@@ -212,7 +211,6 @@ end
   -- if any, otherwise return an empty column
 --]]
 function PanasonicDelegates.getImageInfo(photo, props, metaData)
-  local f = LrView.osFactory()
   local imageInfo
   return imageInfo
 end

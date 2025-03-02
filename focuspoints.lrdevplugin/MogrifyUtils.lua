@@ -259,7 +259,7 @@ function createMagickScript(params)
     file:close()
   end)
   if not success then
-    Log.logError('Mogrify', 'Error creating script file' .. scriptName)
+    Log.logError('Mogrify', 'Error creating script file ' .. scriptName)
     LrErrors.throwUserError(getPhotoFileName(photo) .. "Error creating script file " .. scriptName)
   end
   return scriptName

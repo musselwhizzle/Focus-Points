@@ -164,11 +164,11 @@ function NikonDelegates.getPDAfPoints(metaData)
   local function logKeyStatus(key, value)
     if value then
       Log.logInfo("Nikon",
-        string.format("Relevant focus point tag '%s' tag found: '%s'", key, value))
+        string.format("Relevant focus point tag '%s' found: '%s'", key, value))
     else
       -- no focus points found - handled on upper layers
       Log.logInfo("Nikon",
-        string.format("No PDAF information found: relevant focus point tag '%s' tag not found or empty", key))
+        string.format("No PDAF information found: relevant focus point tag '%s' not found or empty", key))
       return nil
     end
   end
