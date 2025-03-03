@@ -79,7 +79,6 @@ This section explains how the plugin is used.
 4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 5. Once installed, in Library mode with one or multiple photos selected go to "Library -> Plug-in Extras -> Focus Point" 
    or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
-6. Windows only: Select the display scaling factor. To use the same exact scaling factor as set for Windows configuration (Settings -> Display -> Scale), select "Auto" (default value on first installation of plugin)
 
 
 ### 2.2 Configuration and Settings
@@ -91,10 +90,15 @@ Selecting Focus Point Viewer in the list of installed plugins (Library module, F
 
 **Screen Scaling**
 
- _Display scaling factor_<br> 
-Windows only. In order to avoid that the plugin window can get bigger than the size of the screen this setting should be same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%. 
+ _Display scaling factor_   
+Windows only. Default setting: "Auto"
+
+The drawing routines used on Windows are not aware of a display scale factor that might have been applied to the Windows configuration (Settings -> Display -> Scale). In order to avoid that the plugin window can get bigger than the size of the screen the plugin needs to reverse such scaling/magnification when sizing the dialog window.
+ The "Auto" setting will trigger the plugin to size its windows in sync with a system scale factor. Optionally, a pre-defined, fix scale value can selected, which will avoid a registry access via an external command (REG.EXE)on each call of the plugin. The meaning of the predefined values 100%, 125%, 150% etc is the same as in the Windows Settings dialog. I.e. in order to reverse a system-wide 150% magnification, the same value needs to be selected in the plugin settings.   
 
 **Viewing Options**
+
+Default settings: "Red, Medium"
 
 _Size of focus box for 'focus pixel' points_<br> 
 Depending on the camera maker, focus points can have dimension (width and height), thus forming a focus box. Some makers represent focus points by a single 'focus pixel'. To ensure their visibility, such focus pixel points are represented by a focus box. You can choose whether the box shall be small or medium/large with a center dot.
@@ -103,7 +107,26 @@ _Color of in-focus points_<br> You can choose between three different colors for
 
 **Logging**
 
-In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went wrong. Use these controls to set the logging level (Info, Warning, Error, Debug) and open a log file that has just been created.
+Default setting: "Auto"
+
+In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went wrong.
+
+The logging mechanism offers a fin grain hierarchy of levels which information should be logged. Setting a certain logging level in the plugin preferences will result in writing all messages of that level including those on lower levels. Description, from lower to higher levels:
+
+   | Level   | Information logged                                                      |
+   |---------|-------------------------------------------------------------------------|
+   | None    | No logging output. No logfile created.                                  | 
+   | Error   | Only error messages.                                                    |
+   | Warning | + warnings                                                              |
+   | Info    | + information on progress and intermediate results                      |
+   | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |              
+   | Debug   | + important debug information. No noticeable slow down.                 |   
+   | Full    | Full debug information, including entire EXIF data. Slow down.          |
+   
+"Auto" is the recommended setting, because it logs relevant information that can help to understand why e.g. the plugin is not able to properly determine the focus point(s) for a given image. In case the plugin encounters any errors or warnings during its operation, it will provide a link to display the log for additional information. See example under "User Messages" below. 
+
+Also, "Auto" logging will start on an empty log file for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.  
+
 
 
 ### 2.3 Focus Point Viewer
