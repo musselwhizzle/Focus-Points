@@ -294,6 +294,7 @@ function FocusInfo.createInfoView(photo, props)
                        focusInfo
           },
       },
+      f:spacer { height = 20 },
       f:spacer { fill_vertical = 100 },
       FocusInfo.pluginStatus(),
   }

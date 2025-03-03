@@ -257,12 +257,15 @@ end
 --[[
   @@public int getWinScalingFactor()
   ----
-  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\\Control Panel\\Desktop, LogPixels)
+  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
   Returns display scaling level as factor (100/scale_in_percent)
 --]]
+
+
+
 function getWinScalingFactor()
   local output = getTempFileName()
-  local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\" -v LogPixels >\"" .. output .. "\""
+  local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
   local result
 
   -- Query registry value by calling REG.EXE
@@ -270,14 +273,14 @@ function getWinScalingFactor()
   Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
   Log.logDebug("Utils", "REG command: " .. cmd .. ", RC=" .. rc)
 
-  -- Read redirected stdout from temp file and find the line that starts with "LogPixels"
+  -- Read redirected stdout from temp file and find the line that starts with "AppliedDPI"
   local regOutput = LrFileUtils.readFile(output)
   local regOutputStr = "^"
   local dpiValue, scale
   for line in string.gmatch(regOutput, ("[^\r\n]+")) do
     local item = split(line, " ")
     if item and #item >= 3 then
-      if item[1] == "LogPixels" and item[2] == "REG_DWORD" then
+      if item[1] == "AppliedDPI" and item[2] == "REG_DWORD" then
         dpiValue = item[3]
         scale = math.floor(tonumber(dpiValue) * 100/96 + 0.5)
       end
