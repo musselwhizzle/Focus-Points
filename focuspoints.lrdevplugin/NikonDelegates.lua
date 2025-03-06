@@ -112,6 +112,7 @@ end
   returns typical points table
 --]]
 function NikonDelegates.getCAfPoints(metaData)
+
   local afAreaXPosition = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfAreaXPosition)
   local afAreaYPosition = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfAreaYPosition)
   local afAreaWidth     = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfAreaWidth)
@@ -121,7 +122,7 @@ function NikonDelegates.getCAfPoints(metaData)
   if not (afAreaXPosition and afAreaYPosition and afAreaWidth and afAreaHeight) then
     -- we don't log this as a warning, because autofocus might not have used CAF points
     Log.logInfo("Nikon",
-      string.format("No CAF information found - '%s', '%s', '%s', '%s' empty or partly empty",
+      string.format("No CAF information found - tags '%s', '%s', '%s', '%s' empty or partly empty",
       NikonDelegates.metaKeyAfAreaXPosition, NikonDelegates.metaKeyAfAreaYPosition,
       NikonDelegates.metaKeyAfAreaWidth, NikonDelegates.metaKeyAfAreaHeight))
     return nil
@@ -180,7 +181,8 @@ function NikonDelegates.getPDAfPoints(metaData)
   local afPointsSelected = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfPointsSelected)
   local afPrimaryPoint   = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfPrimaryPoint)
 
-  local focusPointsTable, afAreaMode
+  local primaryPoint, focusPointsTable
+  local afAreaMode = NikonDelegates.getAfAreaMode(metaData)
 
   -- According to AFInfo version and AFAreaMode, fetch the right focus point(s) to display
   if (afInfoVersion ~= "0101") then
@@ -189,7 +191,6 @@ function NikonDelegates.getPDAfPoints(metaData)
     logKeyStatus(NikonDelegates.metaKeyAfPointsUsed, afPointsUsed)
   else
     -- for whatever reason, the logic for D5, D500, D7500, D850 differs from all other models
-    afAreaMode = NikonDelegates.getAfAreaMode(metaData)
     -- depending on the AFAreaMode, choose the relevant AFPoint tag that NX Studio uses to display focus points
     if arrayKeyOf({"single", "group", "dynamic" }, afAreaMode) then
       focusPointsTable = split(afPointsSelected, ",")
@@ -212,16 +213,15 @@ function NikonDelegates.getPDAfPoints(metaData)
     end
   end
 
-  -- !!! this is the only (conscious) deviation to NX-Studio !!!
-  -- if the usual information is empty but PrimaryAFPoint is set, then we'll use this!
-  if not focusPointsTable and afPrimaryPoint then
-    focusPointsTable = split(NikonDelegates.normalizeFocusPointName(afPrimaryPoint),  ",")
+  -- Store PrimaryAFPoint separately from other focus points (except for 'group area')
+  if afPrimaryPoint and (afAreaMode and (afAreaMode ~= "group")) then
+    primaryPoint = split(NikonDelegates.normalizeFocusPointName(afPrimaryPoint),  ",")
   end
 
   -- if PDAF points have been found, read the mapping file
   -- @! Outsource this piece of code to a separate function?
   local fpSchema
-  if focusPointsTable then
+  if focusPointsTable or primaryPoint then
     if (DefaultDelegates.cameraModel == "nikon d780") then
       -- special case: this camera uses two different PDAF coordinate systems, 51- and 81-point!
       local focusPointSchema = ExifUtils.findValue(metaData, NikonDelegates.metaKeyFocusPointSchema)
@@ -272,7 +272,8 @@ function NikonDelegates.getPDAfPoints(metaData)
   if (string.sub(DefaultDelegates.cameraModel, 1, 7) == "nikon d") and (fpSchema ~= "-81") then
     -- however, we only do this for DSLRs to visualize the limited AF point coverage of the frame
     for key, _ in pairs(DefaultDelegates.focusPointsMap) do
-      if (not arrayKeyOf(focusPointsTable, key)) then
+      if not ((focusPointsTable and arrayKeyOf(focusPointsTable, key)) or
+              (primaryPoint     and arrayKeyOf(primaryPoint,     key))) then
         table.insert(inactivePointsTable, key)
       end
     end
@@ -283,7 +284,24 @@ function NikonDelegates.getPDAfPoints(metaData)
     points = {}
   }
 
-  -- add the active focus points
+  -- Add the primary focus point
+  if primaryPoint then
+    local pointType
+    if focusPointsTable and #focusPointsTable > 1 then
+      -- multiple focus points, emphasize PrimaryAFPoint
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT
+    else
+      -- no other focus points, use the standard focus point shape
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
+    end
+    if NikonDelegates.addFocusPointsToResult(result, pointType, primaryPoint) then
+      NikonDelegates.focusPointsDetected = true
+    else
+      return nil
+    end
+  end
+
+  -- Add the active focus points
   if focusPointsTable then
     if NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_FOCUS_BOX, focusPointsTable) then
       NikonDelegates.focusPointsDetected = true
@@ -292,12 +310,12 @@ function NikonDelegates.getPDAfPoints(metaData)
     end
   end
 
-  -- add the inactive points
+  -- Add the inactive points
   if inactivePointsTable then
     NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_INACTIVE, inactivePointsTable)
   end
 
-  -- apply crop dimensions to focus point coordinates if photo has been cropped in camera
+  -- Apply crop dimensions to focus point coordinates if photo has been cropped in camera
   NikonDelegates.applyPDAfCrop(result, metaData)
 
   return result
@@ -384,18 +402,22 @@ end
 --]]
 function NikonDelegates.getAfAreaMode(metaData)
   local afAreaMode = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfAreaMode)
-  local areaMode = string.lower(afAreaMode)
-  local mode
-  if     (areaMode == "auto-area")                              then mode = "auto"
-  elseif (areaMode == "group area")                             then mode = "group"
-  elseif (areaMode == "single area")                            then mode = "single"
-  elseif (areaMode == "dynamic area (3d-tracking)")             then mode = "3D-tracking"
-  elseif (string.sub(areaMode, 1, 12) == "dynamic area") then mode = "dynamic"
+  if afAreaMode then
+    local areaMode = string.lower(afAreaMode)
+    local mode
+    if     (areaMode == "auto-area")                              then mode = "auto"
+    elseif (areaMode == "group area")                             then mode = "group"
+    elseif (areaMode == "single area")                            then mode = "single"
+    elseif (areaMode == "dynamic area (3d-tracking)")             then mode = "3D-tracking"
+    elseif (string.sub(areaMode, 1, 12) == "dynamic area") then mode = "dynamic"
+    else
+      -- other AFAreaMode values are not known for the relevant models
+      mode = afAreaMode
+    end
+    return mode
   else
-    -- other AFAreaMode values are not known for the relevant models
-    mode = afAreaMode
+    return nil
   end
-  return mode
 end
 
 

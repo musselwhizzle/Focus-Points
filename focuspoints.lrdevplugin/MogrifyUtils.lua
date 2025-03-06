@@ -65,12 +65,12 @@ local function mogrifyExecute(params, script)
   local rc = LrTasks.execute( '\"' .. cmdline .. '\"' )
   if rc ~= 0 then
     Log.logError("Mogrify", 'Error calling: ' .. cmdline .. ", return code " .. rc)
-    LrErrors.throwUserError(getPhotoFileName(photo) .. "Error calling 'mogrify.exe' Please check plugin configuration!")
+    LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error calling 'mogrify.exe' Please check plugin configuration!")
   end
   if script then
     if prefs.loggingLevel ~= "DEBUG" then
       -- keep temporary script file for log level DEBUG
-      if not LrFileUtils.delete(scriptName) then
+      if LrFileUtils.exists(scriptName) and not LrFileUtils.delete(scriptName) then
         Log.logWarn("Mogrify", "Error deleting mogrify script file " .. scriptName)
       end
     end
@@ -105,7 +105,7 @@ local function exportToDisk(photo, xSize, ySize)
   local thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, errorMsg)
     if data == nil then
       Log.logError('Mogrify', 'No thumbnail data')
-      LrErrors.throwUserError(getPhotoFileName(photo) .. "Export to disk failed. No thumbnail data received.")
+      LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error: Lightroom preview not available.")
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
@@ -117,7 +117,7 @@ local function exportToDisk(photo, xSize, ySize)
         localFile:close()
       end)
       if not success then
-        local msg = 'Error ' .. errorCode .. 'creating image file for Mogrify at ' .. fileName
+        local msg = 'FATAL error ' .. errorCode .. 'creating image file for Mogrify at ' .. fileName
         Log.logError('Mogrify', msg)
         LrErrors.throwUserError(getPhotoFileName(photo) .. msg)
       else
@@ -259,8 +259,8 @@ function createMagickScript(params)
     file:close()
   end)
   if not success then
-    Log.logError('Mogrify', 'Error creating script file ' .. scriptName)
-    LrErrors.throwUserError(getPhotoFileName(photo) .. "Error creating script file " .. scriptName)
+    Log.logError('Mogrify', 'FATAL error creating script file ' .. scriptName)
+    LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error creating script file " .. scriptName)
   end
   return scriptName
 end
@@ -270,8 +270,8 @@ end
 -- Deletes the temporary file (created by 'MogrifyUtils.exportToDisk')
 --]]
 function MogrifyUtils.cleanup()
-  if fileName ~= nil then
-    local resultOK, errorMsg  = LrFileUtils.delete( fileName )
+  if LrFileUtils.exists(fileName) then
+    local resultOK, errorMsg = LrFileUtils.delete( fileName )
     if errorMsg ~= nil then
       Log.logWarn('Mogrify', "Error deleting script file " .. scriptName .. ": " .. errorMsg)
     end

@@ -38,11 +38,9 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
   local dimens = photo:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
-  local osName
 
-  if WIN_ENV then osName = "WIN" else osName = "MAC" end
-  Log.logInfo("FocusPointDialog", string.format("Running Lightroom Classic %s.%s (%s)",
-    LrApplication.versionTable().major, LrApplication.versionTable().minor, osName))
+  Log.logInfo("FocusPointDialog", string.format("Running Lightroom Classic %s.%s on %s",
+    LrApplication.versionTable().major, LrApplication.versionTable().minor, LrSystemInfo.summaryString()))
 
   -- store for use with drawing variable sized focus boxes around 'focus pixels'
   FocusPointDialog.PhotoWidth  = w

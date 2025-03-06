@@ -143,24 +143,37 @@ Develop module:<br>
 
 <img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
-The window is split in two parts. The photo view with visualized focus points on the left and side-by-side on the right the display of selected metadata relevant information that may be helpful for assessing the photo with respect to focus results.<br>
+The window is split in two parts. The photo view with visualized focus points on the left and side-by-side on the right the display of selected information that may be helpful for assessing the photo with respect to focus results.<br>
 
 The information section comprises three groups:
 - Image information
 - Camera settings
 - Focus information
 
-Parts of image information and camera settings come from the LrC catalog, so this information is present for every photo. These sections may be extended by camera specific items like crop mode, drive mode etc., depending on the availabity of information in makernotes.  
+Image information and camera settings largely come from the LrC catalog, so this information is present for every photo. These sections may be extended by camera specific items like crop mode, drive mode etc., depending on the availabity of information in makernotes.  
 
 Focus information is only present for those photos where the corresponding image file has full metadata included. See [Scope and Limitations](#1-scope-and-limitations) for more detailed information.
-<br>
+
+The window can be closed by clicking "OK" or pressing \<Enter> or \<Esc> or \<Space>.
+
 <br>
 
+<b>User interface (multi-image operation):</b>
+
+When run on a selection of photos, the user interface of Focus Point Viewer offers two additional buttons at the bottom left. These buttons enable the user to move forwards and backwards within the series of selected photos.
+
+The window can be closed by clicking "Exit"  or pressing \<Enter> or \<Esc> or \<Space>.
+
+<img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
+<br>
+<br>
 
 #### Depth of Field, Hyperfocal Distance ####
-Even though 'Depth of Field' and 'Hyperfocal Distance' are part of the "Focus Information" group, this information is displayed for most makers (except Fuji and Apple). The plugin displays this subsection always in the same format, that's why it's covered here.
+Even though 'Focus distance', 'Depth of Field' and 'Hyperfocal Distance' are part of the "Focus Information" group, the plugin displays this subsection always in the same format, that's why it's covered here.
 
-Most cameras include Focus Distance information in makernotes. ExifTool uses this information to calculate Depth of Field (DoF) which can be helpful to assess whether the lens has been stopped down enough to capture a subject 'acceptably sharp', i.e. whether the desired portion of the subject is 'in focus'. ExifTool also calculates Hyperfocal distance, which can help to assess if for photos that should be sharp from front to back (e.g. landscapes) autofocus has been aimed at a proper distance.
+Most camera makers reflect Subject or Focus Distance information in makernotes. Sony and Fuji do not, so this subsection is missing from Focus Information on Sony and Fuji images.   
+
+ExifTool uses the focus distance information to calculate Depth of Field (DoF) which can be helpful to assess whether the lens has been stopped down enough to capture a subject 'acceptably sharp', i.e. whether the desired portion of the subject is 'in focus'. ExifTool also calculates Hyperfocal distance, which can help to assess if for photos that should be sharp from front to back (e.g. landscapes) autofocus has been aimed at a proper distance.
 
 Note that the precision of Focus Distance values is limited. Cameras are not designed to measure distances. The values given in EXIF data are by-products of the focusing process, derived from control information to send the lens to a certain distance. Such focus step counts can be converted approximately into a distance. While this information is likely to be  inaccurate especially in extreme conditions (in macro range or towards infinity), it is usually good enough to be used in DoF considerations for 'normal' distances.
 
@@ -177,21 +190,15 @@ If focus information is present for the photo and focus points have been detecte
 
 In case focus information is missing or no focus points have been detected (e.g. for manually focused photos) this will be indicated by a message in red letters:
 
-<img src="../screens/BasicOperation2.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/BasicOperation2.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
 
-<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+Missuccess in detecting focus points is usually the result of missing or unexpected information while analyzing image metadata. Provided logging is enabled, the corresponding details can be logged and displayed to receive additional information what is wrong. When the plugin encounters warnings or errors while analyzing autofocus metadata, a "Plug-in Status" message will occur at the bottom with a button to open the logfile:
 
-The window can be closed by clicking "OK" or pressing \<Enter> or \<Esc> or \<Space>.
+<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 900px;"/>
+
+
 <br>
 <br>
-<b>User interface (multi-image operation):</b>
-
-When run on a selection of photos, the user interface of Focus Point Viewer offers two additional buttons that enable the user to move forwards and backwards within the series of selected photos.
-
-The window can be closed by clicking "Exit"  or pressing \<Enter> or \<Esc> or \<Space>.
-
-<img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
-
 
 ### 2.4 Metadata Viewer
 Will be documented later

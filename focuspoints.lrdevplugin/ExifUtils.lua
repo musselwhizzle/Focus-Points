@@ -50,16 +50,16 @@ function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
   local singleQuoteWrap = '\'"\'"\''
   local cmd
-  if (WIN_ENV) then
+  if WIN_ENV then
     -- windows needs " around the entire command and then " around each path
     -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
-    cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""';
+    cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""'
   else
     exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
     path = string.gsub(path, "'", singleQuoteWrap)
-    cmd = "'".. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'";
+    cmd = "'".. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'"
   end
- Log.logDebug("ExifUtils", "Exif command: " .. cmd)
+ Log.logDebug("ExifUtils", "ExifTool command: " .. cmd)
 
   return cmd, metaDataFile
 end
@@ -124,14 +124,14 @@ end
 
 -- Returns the first value of "keys" that could be found within the metaDataTable table
 -- Ignores nil and "(none)" as valid values
--- metaDataTable - the medaData key/value table
+-- metaData - the medaData key/value table
 -- keys - the keys to be search for in order of importance
 -- return 1. value of the first key match, 2. which key was used
 --]]
-function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
+function ExifUtils.findFirstMatchingValue(metaData, keys)
   local exifValue
   for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
-    exifValue = metaDataTable[value]
+    exifValue = metaData[value]
     if exifValue and (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
       Log.logDebug("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
       return exifValue, keys[key]
@@ -139,6 +139,47 @@ function ExifUtils.findFirstMatchingValue(metaDataTable, keys)
   end
  Log.logDebug("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
   return nil
+end
+
+
+--[[
+  @@public boolean function getBinaryValue(table photo, string key)
+  ---- # TODO
+--]]
+function ExifUtils.getBinaryValue(photo, key)
+  local path = photo:getRawMetadata("path")
+  local output = getTempFileName()
+  local singleQuoteWrap = '\'"\'"\''
+  local cmd, result
+
+  if key then
+    -- Compose the command line string
+    -- Unlike searching the ExifTool listing output, when asking for a specific key its name must have no blanks
+    key = string.gsub(key, " ", "")
+    if WIN_ENV then
+      -- windows needs " around the entire command and then " around each path
+      cmd = '""' .. exiftoolWindows .. '" -b -' .. key .. ' "' .. path .. '" > "' .. output .. '""'
+    else
+      exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
+      path = string.gsub(path, "'", singleQuoteWrap)
+      cmd = "'" .. exiftool .. "' -b " .. key .. " '" .. path .. "' > '" .. output .. "'"
+    end
+
+    -- Call ExifTool to output key's value in binary format
+    local rc = LrTasks.execute(cmd)
+    if (rc == 0) then
+      -- Read redirected stdout from temp file to save output
+      result = LrFileUtils.readFile(output)
+      Log.logDebug("ExifUtils", "Binary output for " .. key .. " -> " .. result)
+    else
+      Log.logDebug("ExifUtils", "ExifTool command failed (rc=" .. rc ..") : " .. cmd)
+    end
+    -- Clean up: remove the temp file
+    if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
+      Log.logWarn("Utils", "Unable to delete ExifTool output file " .. output)
+    end
+  end
+  return result
 end
 
 

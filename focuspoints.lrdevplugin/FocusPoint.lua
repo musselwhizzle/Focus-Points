@@ -45,10 +45,13 @@ local function showDialog()
     local switchedToLibrary
     local userResponse
     local done
+    local prefs = LrPrefs.prefsForPlugin( nil )
     local props = LrBinding.makePropertyTable(context, { clicked = false })
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy over old files)
-    FocusPointPrefs.InitializePrefs(LrPrefs.prefsForPlugin())
+    FocusPointPrefs.InitializePrefs(prefs)
+    -- Log what and where we are logging to ;-)
+    if prefs.loggingLevel ~= "NONE" then Log.info() end
 
     -- Find the index 'current' of the target photo in set of selectedPhotos
     for i, photo in ipairs(selectedPhotos) do
@@ -77,8 +80,9 @@ local function showDialog()
     -- let the renderer build the view now and show progress dialog
     repeat
 
-      Log.initialize()
+      if prefs.loggingLevel == "AUTO" then Log.initialize() end
       Log.logInfo("FocusPoint", string.rep("=", 72))
+      if prefs.loggingLevel == "AUTO" then Log.info() end
 
       -- Save link to current photo, eg. as supplementary information in user messages
       FocusPointDialog.currentPhoto = targetPhoto
@@ -146,11 +150,11 @@ local function showDialog()
         end
       else
         -- Main dialog with has slightly different controls depending on single/multi mode
-        Log.logInfo("FocusPoint", "Preparations completed, presenting dialog")
+        Log.logInfo("FocusPoint", "Preparations completed, show dialog")
         if (#selectedPhotos == 1) then
           -- single photo operation
           userResponse = LrDialogs.presentModalDialog {
-            title = "Focus Points of " ..  targetPhoto:getRawMetadata("path") .. ")",
+            title = "Focus Points of " ..  targetPhoto:getRawMetadata("path"),
             cancelVerb = "< exclude >",
             actionVerb = "OK",
             contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView)

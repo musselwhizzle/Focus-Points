@@ -67,9 +67,15 @@ OlympusDelegates.metaKeyHyperfocalDistance       = "Hyperfocal Distance"
 OlympusDelegates.metaKeyReleasePriority          = "Release Priority"
 OlympusDelegates.metaKeyAfPointDetails           = "AF Point Details"
 OlympusDelegates.metaKeyAfPointSelected          = "AF Point Selected"
+OlympusDelegates.metaKeyFacesDetected            = "Faces Detected"
+OlympusDelegates.metaKeyFaceDetectArea           = "Face Detect Area"
+OlympusDelegates.metaKeyFaceDetectFrameCrop      = "Face Detect Frame Crop"
+OlympusDelegates.metaKeyFaceDetectFrameSize      = "Face Detect Frame Size"
+OlympusDelegates.metaKeyMaxFaces                 = "Max Faces"
 
 -- Image and Camera Settings relevant tags
 OlympusDelegates.metaKeyDriveMode                = "Drive Mode"
+OlympusDelegates.metaKeyStackedImage             = "Stacked Image"
 OlympusDelegates.metaKeyImageStabilization       = "Image Stabilization"
 
 -- relevant metadata values
@@ -99,21 +105,93 @@ function OlympusDelegates.getAfPoints(photo, metaData)
   end
 
   -- Extract the coordinates (in percent of image dimensions)
-  local focusX, focusY = string.match(focusPoint, OlympusDelegates.metaKeyAfPointSelectedPattern)
-  if not (focusX and focusY) then
-    Log.logError("Olympus", "Error at extracting x/y positions from focus point tag")
-    return nil
+  local focusX, focusY
+  local focusXY = ExifUtils.getBinaryValue(photo, OlympusDelegates.metaKeyAfPointSelected)
+  if not focusXY then
+    -- if something went wrong with getting the binary value, let's use the integer percentage values
+    Log.logError("Olympus", "Error retrieving high precision x/y positions from focus point tag")
+    focusX, focusY = string.match(focusPoint, OlympusDelegates.metaKeyAfPointSelectedPattern)
+    if not (focusX and focusY) then
+      Log.logError("Olympus", "Error at extracting x/y positions from focus point tag")
+      return nil
+    else
+      focusX = tonumber(focusX) / 100
+      focusY = tonumber(focusY) / 100
+    end
+  else
+    focusX = get_nth_Word(focusXY, 1, " ")
+    focusY = get_nth_Word(focusXY, 2, " ")
   end
-  
+
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
 
-  -- Transform the percentage values into pixels 
-  local x = tonumber(orgPhotoWidth) * tonumber(focusX) / 100
-  local y = tonumber(orgPhotoHeight) * tonumber(focusY) / 100
+  -- Transform the percentage values into pixels
+  local x = math.floor(tonumber(orgPhotoWidth)  * tonumber(focusX))
+  local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY))
   Log.logInfo("Olympus", string.format("Focus point detected at [x=%s, y=%s]", x, y))
 
   OlympusDelegates.focusPointsDetected = true
-  return DefaultPointRenderer.createFocusPixelBox(x, y)
+  local result = DefaultPointRenderer.createFocusPixelBox(x, y)
+
+
+  -- Let see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
+  -- (a, b, c) are the numbers of detected faces in each of the 2 supported sets of face detect area
+  local detectedFaces = split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFacesDetected), " ")
+  local maxFaces      = split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyMaxFaces), " ")
+
+  local faceDetectArea
+  if detectedFaces and ((detectedFaces[1] ~= "0") or (detectedFaces[2] ~= "0")) then
+    -- Faces have been detected for this image, let's get the details
+
+    local faceDetectFrameCrop = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFaceDetectFrameCrop)
+    if faceDetectFrameCrop then
+      faceDetectFrameCrop = split(faceDetectFrameCrop, " ")
+    end
+
+    local faceDetectFrameSize = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFaceDetectFrameSize)
+    if faceDetectFrameSize then
+      faceDetectFrameSize = split(faceDetectFrameSize, " ")
+    end
+
+    faceDetectArea      = ExifUtils.getBinaryValue(photo, OlympusDelegates.metaKeyFaceDetectArea)
+    if faceDetectArea then
+      faceDetectArea  = split (faceDetectArea, " ")
+
+      -- Loop over FaceDetectArea to construct the face detect face frames
+      -- Format of FaceDetectArea:
+      -- 3 sets x 8 (=MaxFaces) tuples (x,y,h,r) where:
+      -- 'x' and 'y' give the coordinates, 'h' the size and 'r' the rotation angle of the face detect square
+      -- FaceDetectFrameCrop (x,y,w,h) gives x/y offset and width/height of the cropped face detect frame
+
+      local x,y, w, h
+      for i=1, 3, 1 do
+        if (detectedFaces[i] ~= "0") then
+          local xScale = tonumber(orgPhotoWidth)  / (tonumber(faceDetectFrameSize[(i-1)*2+1]))
+          local yScale = tonumber(orgPhotoHeight) / (tonumber(faceDetectFrameSize[(i-1)*2+2]))
+          local k
+          for j=1, detectedFaces[i], 1 do
+            if i == 1 then k=(j-1)*4 else k = maxFaces[i-1]*4 + (j-1)*4 end
+            x = (faceDetectArea[k+1] - faceDetectFrameCrop[(i-1)*4 + 1]) * xScale
+            y = (faceDetectArea[k+2] - faceDetectFrameCrop[(i-1)*4 + 2]) * yScale
+            w = (faceDetectArea[k+3]                                   ) * xScale
+            h = (faceDetectArea[k+3]                                   ) * yScale
+
+            Log.logInfo("Olympus", "Face detected at [" .. x .. ", " .. y .. "]")
+            table.insert(result.points, {
+              pointType = DefaultDelegates.POINTTYPE_FACE,
+              x = x,
+              y = y,
+              width  = w,
+              height = h,
+            })
+          end
+        end
+      end
+    else
+      Log.logError("Olympus", "Error at extracting x/y positions from focus point tag")
+    end
+  end
+  return result
 end
 
 
@@ -154,7 +232,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
     elseif (key == OlympusDelegates.metaKeyAfPointDetails) then
       -- special case: AFPointDetails. Extract ReleasePriority portion
       if value then
-          props[key] = get_nth_word(value, 7, ";")
+          props[key] = get_nth_Word(value, 7, ";")
       end
 
     else
@@ -167,24 +245,31 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= OlympusDelegates.metaValueNA then
-    -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = escape(props[key]), font="<system>"}}
-    }
-    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
-    if string.sub(props[key], 1, 4) == "S-AF" or string.sub(props[key], 1, 4) == "C-AF" then
-      return f:column{fill = 1, spacing = 2, result,
-      OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData) }
-    else
-      -- add row as composed
-      return result
-    end
-  else
+  if not props[key] or props[key] == OlympusDelegates.metaValueNA then
     -- we won't display any "N/A" entries - return empty row
     return FocusInfo.emptyRow()
+  end
+
+  if key == OlympusDelegates.metaKeyFacesDetected then
+    local facesDetected = props[OlympusDelegates.metaKeyFacesDetected]
+    if (facesDetected == OlympusDelegates.metaValueNA)  or (facesDetected == "0 0 0") then
+      return FocusInfo.emptyRow()
+    end
+  end
+
+  -- compose the row to be added
+  local result = f:row {
+    f:column{f:static_text{title = title .. ":", font="<system>"}},
+    f:spacer{fill_horizontal = 1},
+    f:column{f:static_text{title = escape(props[key]), font="<system>"}}
+  }
+  -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+  if string.sub(props[key], 1, 4) == "S-AF" or string.sub(props[key], 1, 4) == "C-AF" then
+    return f:column{fill = 1, spacing = 2, result,
+    OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData) }
+  else
+    -- add row as composed
+    return result
   end
 end
 
@@ -278,6 +363,7 @@ function OlympusDelegates.getCameraInfo(photo, props, metaData)
     fill = 1,
     spacing = 2,
     OlympusDelegates.addInfo("Drive Mode",            OlympusDelegates.metaKeyDriveMode,           props, metaData),
+    OlympusDelegates.addInfo("Stacked Image",         OlympusDelegates.metaKeyStackedImage,        props, metaData),
     OlympusDelegates.addInfo("Image Stabilization",   OlympusDelegates.metaKeyImageStabilization,  props, metaData),
   }
   return cameraInfo
@@ -313,6 +399,7 @@ function OlympusDelegates.getFocusInfo(photo, props, metaData)
       OlympusDelegates.addInfo("Focus Mode",            OlympusDelegates.metaKeyFocusMode,           props, metaData),
       OlympusDelegates.addInfo("AF Search",             OlympusDelegates.metaKeyAfSearch,            props, metaData),
       OlympusDelegates.addInfo("Subject Tracking",      OlympusDelegates.metaKeySubjectTrackingMode, props, metaData),
+      OlympusDelegates.addInfo("Faces Detected",        OlympusDelegates.metaKeyFacesDetected,       props, metaData),
       OlympusDelegates.addSpace(),
       OlympusDelegates.addSeparator(),
       OlympusDelegates.addSpace(),

@@ -13,10 +13,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
-local LrView    = import "LrView"
-local LrPrefs   = import "LrPrefs"
-local LrShell   = import "LrShell"
-local LrDialogs = import "LrDialogs"
+local LrView    =   import "LrView"
+local LrPrefs     = import "LrPrefs"
+local LrFileUtils = import "LrFileUtils"
 
 local bind = LrView.bind
 
@@ -130,13 +129,13 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           value = bind 'loggingLevel',
           width = dropDownWidth,
           items = {
+            { title = "Full",  value = "FULL" },
+            { title = "Debug", value = "DEBUG" },
             { title = "Auto",  value = "AUTO" },
-            { title = "None",  value = "NONE" },
             { title = "Info",  value = "INFO" },
             { title = "Warn",  value = "WARN" },
             { title = "Error", value = "ERROR" },
-            { title = "Debug", value = "DEBUG" },
-            { title = "Full",  value = "FULL" },
+            { title = "None",  value = "NONE" },
           }
         },
         viewFactory:static_text {
@@ -151,7 +150,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           title = "Show file",
           action = function()
             local logFileName = Log.getFileName()
-            if logFileName then
+            if LrFileUtils.exists(logFileName)then
               LrShell.revealInShell(logFileName)
             else
               LrDialogs.message('No log file written. Set logging level other than "None".')

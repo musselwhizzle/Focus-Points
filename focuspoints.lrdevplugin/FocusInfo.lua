@@ -181,8 +181,13 @@ function FocusInfo.pluginStatus()
   elseif Log.warningsEncountered then
     statusMsg = f:static_text {title = "Warnings encountered", text_color=LrColor("orange"), font="<system>"}
   else
-    -- displaying a "success" status message might be distracting ...
-    return FocusInfo.emptyRow()
+    if (prefs.loggingLevel ~= "AUTO") and (prefs.loggingLevel ~= "NONE") and Log.fileExists() then
+      -- if user wants an extended log this should be easily accessible
+      statusMsg = f:static_text {title = "Debug information collected", font="<system>"}
+    else
+      -- displaying a "success" status message during normal operation might be distracting ...
+      return FocusInfo.emptyRow()
+    end
   end
 
   if prefs.loggingLevel == "NONE" then

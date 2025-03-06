@@ -117,7 +117,7 @@ end
  @str  the string to split into words
  @delim the character used for splitting the string
 --]]
-function get_nth_word(str, n, delimiter)
+function get_nth_Word(str, n, delimiter)
     delimiter = delimiter or ";" -- Default to semicolon if not provided
     local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
     local count = 0
@@ -299,7 +299,7 @@ function getWinScalingFactor()
   end
 
   -- Clean up: remove the temp file
-  if not LrFileUtils.delete(output) then
+  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
     Log.logWarn("Utils", "Unable to delete REG output file " .. output)
   end
 

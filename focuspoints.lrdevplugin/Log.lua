@@ -128,33 +128,34 @@ end
 --]]
 function Log.getFileName()
   local userHome = LrPathUtils.getStandardFilePath("home")
-  local logFolder, logFileName
+  local logFolder
   if (LrApplication.versionTable().major < 14) then
-    if (WIN_ENV) then
+    if WIN_ENV then
       logFolder = "\\Documents\\LrClassicLogs\\"
     else
       logFolder = "/Documents/LrClassicLogs/"
     end
   else
-    if (WIN_ENV) then
+    if WIN_ENV then
         logFolder = "\\AppData\\Local\\Adobe\\Lightroom\\Logs\\LrClassicLogs\\"
       else
         logFolder = "/Library/Logs/Adobe/Lightroom/LrClassicLogs/"
     end
   end
   Log.fileName = LrPathUtils.child(userHome, LrPathUtils.child(logFolder, Log.logName .. ".log"))
-  if LrFileUtils.exists(Log.fileName) then
-    return Log.fileName
-  else
-    return nil
-  end
+  return Log.fileName
+end
+
+
+function Log.fileExists()
+  return LrFileUtils.exists(Log.getFileName())
 end
 
 
 function Log.delete()
   -- delete / reset log
   local logFileName = Log.getFileName()
-  if logFileName then
+  if Log.fileExists() then
     if not LrFileUtils.delete(logFileName) then
       Log.logWarn("Utils", "Error deleting log file " .. logFileName)
     end
@@ -163,7 +164,17 @@ end
 
 
 --[[
-  @@public void Log.Initialize()
+  @@public void Log.info()
+  ----
+  Logs a message, which level of information is logged and to which file
+--]]
+function Log.info()
+  Log.logInfo("Logging", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
+end
+
+
+--[[
+  @@public void Log.initialize()
   ----
   Initialize/reset log handling for processing of next image
 --]]
@@ -174,3 +185,5 @@ function Log.initialize()
   Log.warningsEncountered = nil
   Log.errorsEncountered   = nil
 end
+
+
