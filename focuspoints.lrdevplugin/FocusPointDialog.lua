@@ -17,7 +17,6 @@
 local LrSystemInfo = import 'LrSystemInfo'
 local LrView       = import 'LrView'
 local LrPrefs      = import 'LrPrefs'
-local LrApplication = import 'LrApplication'
 
 require "Utils"
 require "Log"
@@ -39,9 +38,6 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   local dimens = photo:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
 
-  Log.logInfo("FocusPointDialog", string.format("Running Lightroom Classic %s.%s on %s",
-    LrApplication.versionTable().major, LrApplication.versionTable().minor, LrSystemInfo.summaryString()))
-
   -- store for use with drawing variable sized focus boxes around 'focus pixels'
   FocusPointDialog.PhotoWidth  = w
   FocusPointDialog.PhotoHeight = h
@@ -49,17 +45,10 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   local contentWidth  = appWidth  * .8
   local contentHeight = appHeight * .8
 
-  local scalingLevel
   if WIN_ENV then
-    if not prefs.screenScaling or prefs.screenScaling == 0 then
-      -- Scaling level has not been set ot set to "Auto" -> same scaling as for Windows Display
-      scalingLevel = getWinScalingFactor()
-    else
-      scalingLevel = prefs.screenScaling
-    end
+    local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
     contentWidth  = contentWidth  * scalingLevel
     contentHeight = contentHeight * scalingLevel
-    Log.logInfo("FocusPointDialog", "Display scaling level " .. math.floor(100/scalingLevel + 0.5) .. "%")
   end
 
   Log.logInfo("FocusPointDialog",

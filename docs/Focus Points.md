@@ -15,9 +15,9 @@ Focus Points Plugin for Lightroom Classic
 
 ### [Display of Focus Points](#3-display-of-focus-points)
 
-*  [Nikon](#31-nikon)
-
 * [Canon](#32-canon)
+  
+* [Nikon](#31-nikon)
 
 * [Sony](#33-sony)
 
@@ -41,8 +41,8 @@ ___
 ## 1. Scope and Limitations
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
-- show which focus point was active when the picture was taken.
-- display (EXIF) metadata of the selected image
+- Show which focus point was active when the picture was taken.
+- Display (EXIF) metadata of the selected image
 
 **Principle of operation:** <br>
 The plugin uses [exiftool](https://exiftool.org/) to retrieve EXIF metadata from the image file. Autofocus related information is extracted from metadata and is processed to visualize the focus points. In order for this to work, the plugin requires an image file that has camera maker specific metadata information (_makenotes_) included.
@@ -323,19 +323,26 @@ Example shot for subject detection. 4 birds  detected (with different levels of 
 
 ## 3.5 Olympus / OM System
 
-Olympus and their successor OM System have been using the same format of storing autofocus information in EXIF for all mirrorless cameras, so focus point display for all of their models is the same.
+Olympus and their successor OM System have been using the same format of storing autofocus information in EXIF for all mirrorless cameras (starting with the E-M5 in 2012), so focus point display for all of their models is the same.
 
 Olympus / OM System belongs to the 'focus pixel' point group of camera makers. Focus box size and color can be adjusted in the plugin's preferences.
-
-Olympus makernotes does contain data on face detection. However, the necessary details of this information are not present in Exiftool standard output which is the current basis for the plugin to work. A future version of the plugin might use Exiftool in 'stay-open' mode, which could bring a number of improvements, including query of any kind of metadata information.
-
-Compared to the display of focus points in OM Workspace, there are sometimes slight deviations. This is due to the fact, that Exiftool standard output as used by the plugin contains the focus point coordinates as a string "(x%,y%)" with 0 < x,y 100 giving the position in percent of width and height of the frame. In fact, metadata contains pixel precise informion, so there could be a rounding error up to 0.5% ~ 26px on the long edge, 20px on the short edge. While it is not critical for practical applications, using exiftool in 'stay-open' mode would also help to solve this issue.    
 
 <img src="../screens/Olympus 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 Using the focus box settings the display of the focus point can be tweaked to look like Olympus / OM shooters are used to it from OM Workspace application: 
 
 <img src="../screens/Olympus 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Olympus/OM makernotes also contain data on face detection. 
+
+Olympus/OM cameras save two sets of recognized faces (maximum eight faces per set). The metadata tags reserve room for a third set, but as of today there is no camera that stores more than two sets. Accordingly, the FacesDetected tag for the sample image below reads “1 2 0”: 1 face in the first set, 2 faces in the second, the third set is empty.
+
+The positions of the detected faces usually differ between the zwo sets. They can be slightly shifted, or a face that is present in one set is not in part of the other. Since it is neither possible to deduce which set has “better” information, nor combine the information of the two sets (at least not with reasonable effort), all faces in both of the two sets are visualize by yellow face detection frames:
+
+<img src="../screens/Olympus 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+
+
 
 
 ## 3.6 Panasonic

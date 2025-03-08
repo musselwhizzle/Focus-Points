@@ -20,6 +20,9 @@ local LrPathUtils = import 'LrPathUtils'
 local LrFileUtils = import 'LrFileUtils'
 local LrLogger = import 'LrLogger'
 local LrPrefs = import "LrPrefs"
+local LrSystemInfo = import "LrSystemInfo"
+
+require "Info"
 
 Log = {}
 
@@ -169,7 +172,36 @@ end
   Logs a message, which level of information is logged and to which file
 --]]
 function Log.info()
-  Log.logInfo("Logging", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
+
+  local Info = require 'Info.lua'
+
+  -- Retrieve plugin version
+  local pluginVersion = Info.VERSION
+  local versionString
+  if pluginVersion then
+    versionString = string.format("%d.%d.%d",
+                      pluginVersion.major, pluginVersion.minor, pluginVersion.revision)
+  else
+    versionString = "undefined"
+  end
+
+  -- Output logfile header with general status information
+  Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
+  Log.logInfo("System", string.format(
+          "Running plugin version %s in Lightroom Classic %s.%s on %s",
+            versionString, LrApplication.versionTable().major, LrApplication.versionTable().minor,
+            LrSystemInfo.osVersion()))
+  end
+
+
+--[[
+  @@public void Log.resetErrorsWarnings()
+  ----
+  Reset indicator flags for errors/warnings encountered
+--]]
+function Log.resetErrorsWarnings()
+  Log.warningsEncountered = nil
+  Log.errorsEncountered   = nil
 end
 
 
@@ -179,11 +211,7 @@ end
   Initialize/reset log handling for processing of next image
 --]]
 function Log.initialize()
-  if prefs.loggingLevel == "AUTO" then
-    Log.delete()
-  end
-  Log.warningsEncountered = nil
-  Log.errorsEncountered   = nil
+  Log.delete()
+  Log.info()
+  Log.resetErrorsWarnings()
 end
-
-

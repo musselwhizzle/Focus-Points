@@ -25,6 +25,7 @@ Change history
 * Nikon
   * Mirrorless: entire Z-series
   * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020) [#209](https://github.com/musselwhizzle/Focus-Points/issues/209) [#211](https://github.com/musselwhizzle/Focus-Points/issues/211)
+  * Compact: CoolPix models not supported
 
   
 * Canon

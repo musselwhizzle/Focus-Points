@@ -363,7 +363,7 @@ function OlympusDelegates.getCameraInfo(photo, props, metaData)
     fill = 1,
     spacing = 2,
     OlympusDelegates.addInfo("Drive Mode",            OlympusDelegates.metaKeyDriveMode,           props, metaData),
-    OlympusDelegates.addInfo("Stacked Image",         OlympusDelegates.metaKeyStackedImage,        props, metaData),
+--  OlympusDelegates.addInfo("Stacked Image",         OlympusDelegates.metaKeyStackedImage,        props, metaData),
     OlympusDelegates.addInfo("Image Stabilization",   OlympusDelegates.metaKeyImageStabilization,  props, metaData),
   }
   return cameraInfo

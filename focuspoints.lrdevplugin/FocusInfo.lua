@@ -183,7 +183,7 @@ function FocusInfo.pluginStatus()
   else
     if (prefs.loggingLevel ~= "AUTO") and (prefs.loggingLevel ~= "NONE") and Log.fileExists() then
       -- if user wants an extended log this should be easily accessible
-      statusMsg = f:static_text {title = "Debug information collected", font="<system>"}
+      statusMsg = f:static_text {title = "Logging information collected", font="<system>"}
     else
       -- displaying a "success" status message during normal operation might be distracting ...
       return FocusInfo.emptyRow()

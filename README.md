@@ -1,105 +1,107 @@
 Focus Points
 =======
 
-A plugin for Lightroom Classic (LrC) to show which focus point was active when the picture was taken.
+A plugin for Lightroom Classic (LrC on Windows, macOS) to 
+- Show which focus point was active when the picture was taken.
+- Display the entire (EXIF) metadata of the selected image
 
-See [Scope and Limitations](docs/Focus%20Points.md) for detailed information relevant to users.
+
+For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
 
 <img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
 
 Current Release
 --------
-## V2.2.0, February 14, 2025 (Pre-release)
-* Support of Nikon cameras
-  * Mirrorless: full support of Z series (all models)
-  * DSLRs: support of all models with 39 or more autofocus points: 
-    - D3, D3s, D3x D4, D4s, D5, D6, Df
-    - D300, D300S, D500, D600, D610, D700, D750, D780, D800, D810, D850
-    - D5200, D5300, D5500, D5600,  D7000, D7100, D7200, D7500
-    
+## V2.5.0, xx April 2025
 
-* Multi-image operation (basic)<br> 
-The plugin can be run on a selection of multiple photos in Lightroom. The selection is handled as a series of individual photos. The user can move forwards and backwards within the series.
-Current implementation is basic and will be improved towards a seamless UI experience in future releases.
+xxx
 
-
-* Display of camera settings and focus information<br>
-The plugin windows is extended by a textual presentation of relevant information along with the focus point view to support assessment of focus results.
-  * General camera settings are implemented for all supported brands.
-  * Focus information is currently only implemented for Nikon, Olympus, Fuji.
-
-
-* Includes exiftool 13.18
-
-For history of versions and changes as well as planned, future improvements see [changelog.](docs/changelog.md)
+For history of versions and changes see [changelog.](docs/changelog.md)
 
 [Download release](https://github.com/musselwhizzle/Focus-Points/releases/tag/v2.1.0)
 
 
 Supported Cameras
 --------
+**Supported cameras:**
+
+* Canon
+  * Mirrorless: entire R-series
+  * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
+  * Compact: Powershot models after 2004
+
+ 
 * Nikon
-  * Mirrorless: full support of Z series (all models)
-  * DSLRs: support of all models with 39 or more autofocus points: 
-    - D3, D3s, D3x D4, D4s, D5, D6, Df
-    - D300, D300S, D500, D600, D610, D700, D750, D780, D800, D810, D850
-    - D5200, D5300, D5500, D5600,  D7000, D7100, D7200, D7500
-* Canon cameras 
-  * all EOS and point and shoots. 
-  * 7D Mark ii, 5D Mark iii, 5D Mark iv, 350D, 40D, 50D, 60D, 70D, 80D, 7D, 5D, etc, 
-  * Powershot G12, G16, G1X, G5X, IXUS 310 HS, SX30, SX40 HS
-* Sony E-Mount cameras
-  * all full frame bodies beginning with &alpha;7 III resp. &alpha;7R II
-  * APS-C
-    * &alpha;6100, &alpha;6400, &alpha;6500, &alpha;6600, ..
-* Fuji cameras 
-  * all recent X bodies (X-T2, X-T1, X-T10, X-Pro2, X-Pro1, X-A3, X-A2, X-A1, X-A10, X-E2S, X-E2, X-E1, X100T, X30, X70, etc)
-* Olympus cameras 
+  * Mirrorless: entire Z-series
+  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020)
+  * Compact: CoolPix models not supported
+
+  
+* Sony
+  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
+  * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
+  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
+  * Face detection frames
+  
+
+* Fuji
+  * X-series (from X100 in 2011 up to X-H2S today)
+  * GFX-series
+  * Face and subject detection frames
+
+
+* Olympus / OM System
   * DSLR: E-5, E-420, E-520, E-620
-  * Mirrorless: E-M1, E-M5, E-M10
-* OM System cameras
-  * OM-1, OM-5
-* Panasonic cameras
-* Pentax ([full list](focuspoints.lrdevplugin/focus_points/pentax/README.md))
-  * Tested
-    * K-50, K-S1, K-5 II, K-5 IIs, K-5, K-30, K-7, K20D, K-r, K200D, K10D, K110D, K100D Super, K100D, *ist DS2, *ist DS, *ist D
-  * Working, but missing features
-    * K-1, K-3, K-3 II
-  * Untested, but should work:
-    * KP, K-70, K-S2, K-500, K-x
-* iphone and ipad
+  * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
+  * Face detection frames
+
+
+* Panasonic
+  * Mirrorless: entire LUMIX G and S series
+  * Compact: FZ, TZ/ZS, LX series - all models after 2008
+  * Face detection frames
+  
+
+* Apple
+  * iPhone (starting from at least iPhone 5)
+  * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
+
+
+* Pentax 
+  * Display of focus points and supported models are unchanged with respect to previous plugin versions
+  * Display of basic image information and camera settings
+  * Pending (upcoming release): Review/revision of focus point logic. Display of advanced camera settings and focus information 
+
 
 
 Installing
 --------
 **Installation steps**
 1. Download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
-2. Extract the zip and (optionally) rename the folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
-3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step)" 
-4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
-5. Once installed, in Library mode with a photo selected go to "Library -> Plug-in Extras -> Focus Point" 
-   or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
-6. Windows only: Select the display scaling factor. Use the same or similar to the Windows configuration (Settings -> Display -> Scale). The default is 100%.
+2. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step) 
+3. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
+4. Once installed, select one or more photos and invoke the plugin via  
+Library -> Plug-in Extras -> Focus Point, or  
+File -> Plug-in Extras -> Focus Point
+
 
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
 Supported AF-Points
 --------
-Currently, 5 types of AF-points will be displayed :
+Currently, the following types of AF-points and visualization frames will be displayed :
 
-* <img src="screens/af_selected_infocus.png" alt="AF selected in focus" style="width: 20px;"/> The AF-Point is selected and in focus
-* <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/> The AF-Point is selected
-* <img src="screens/af_infocus.png" alt="AF in focus" style="width: 20px;"/> The AF-Point is in focus
-* <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> The AF-Point is inactive
-* <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face was detected by the camera at this position
-<img src="screens/faces1.jpg" alt="Screenshot" style="width: 200px;"/>
+* <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/> Active AF-Point
+* <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> Inactive AF-Point
+* <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face or subject was detected by the camera at this position
+* <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> Part of the image used by the camera in 'crop mode'.
 
-Please note that not all cameras save the needed information in the Exifs of the photo. Thus, the accuracy of the displayed points will greatly depend on whether or not your camera supports it.
+Please note that not all cameras save the needed information to support these features in the Exifs of the photo. E.g. Canon and Nikon do not store any information on detect faces or subjects, hence there are no detection frames for these cameras.  
+
 
 Metadata viewer
 --------
-The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing information like FocusDistance from Maker Notes section, which Lightroom doesn't read and display via its UI.
-The information is fetched (by Phil Harvey's exiftool) directly from the image file on disk so that this gives the full picture of metadata written by the camera:
+The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing any information that is not visible in the info sections of the focus point windows. The information is fetched directly from the image file on disk so that this gives the full picture of metadata written by the camera:
 
 <img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
 
@@ -140,7 +142,7 @@ Special Thanks
 --------
 There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who has worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
 
-rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma. 
+rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma, capricorn8 (Karsten Gieselmann)
 
 <a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 

@@ -23,6 +23,8 @@ require "Utils"
 
 FocusPointPrefs = {}
 
+FocusPointPrefs.displayScaleFactor = 0
+
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
 
@@ -42,6 +44,22 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.focusBoxSize  then	prefs.focusBoxSize  = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor then	prefs.focusBoxColor = "red"    end
   if not prefs.loggingLevel  then	prefs.loggingLevel  = "AUTO"   end
+end
+
+function FocusPointPrefs.setDisplayScaleFactor()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  if prefs.screenScaling ~= 0 then
+    FocusPointPrefs.displayScaleFactor = prefs.screenScaling
+  else
+    FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
+  end
+end
+
+function FocusPointPrefs.getDisplayScaleFactor()
+  if FocusPointPrefs.displayScaleFactor == 0 then
+    FocusPointPrefs.setDisplayScaleFactor()
+  end
+  return FocusPointPrefs.displayScaleFactor
 end
 
 

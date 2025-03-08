@@ -50,8 +50,11 @@ local function showDialog()
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy over old files)
     FocusPointPrefs.InitializePrefs(prefs)
-    -- Log what and where we are logging to ;-)
-    if prefs.loggingLevel ~= "NONE" then Log.info() end
+    -- Initialize logging for non-Auto modes
+    if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
+    FocusPointPrefs.setDisplayScaleFactor()
+    Log.logInfo("System", "Display scaling level " ..
+           math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
 
     -- Find the index 'current' of the target photo in set of selectedPhotos
     for i, photo in ipairs(selectedPhotos) do
@@ -80,9 +83,10 @@ local function showDialog()
     -- let the renderer build the view now and show progress dialog
     repeat
 
+      -- Initialize logging
       if prefs.loggingLevel == "AUTO" then Log.initialize() end
+      Log.resetErrorsWarnings()
       Log.logInfo("FocusPoint", string.rep("=", 72))
-      if prefs.loggingLevel == "AUTO" then Log.info() end
 
       -- Save link to current photo, eg. as supplementary information in user messages
       FocusPointDialog.currentPhoto = targetPhoto

@@ -162,7 +162,7 @@ function ExifUtils.getBinaryValue(photo, key)
     else
       exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
       path = string.gsub(path, "'", singleQuoteWrap)
-      cmd = "'" .. exiftool .. "' -b " .. key .. " '" .. path .. "' > '" .. output .. "'"
+      cmd = "'" .. exiftool .. "' -b -" .. key .. " '" .. path .. "' > '" .. output .. "'"
     end
 
     -- Call ExifTool to output key's value in binary format
@@ -170,7 +170,7 @@ function ExifUtils.getBinaryValue(photo, key)
     if (rc == 0) then
       -- Read redirected stdout from temp file to save output
       result = LrFileUtils.readFile(output)
-      Log.logDebug("ExifUtils", "Binary output for " .. key .. " -> " .. result)
+      Log.logDebug("ExifUtils", "Binary mode (-b) value for " .. key .. " -> " .. result)
     else
       Log.logDebug("ExifUtils", "ExifTool command failed (rc=" .. rc ..") : " .. cmd)
     end
