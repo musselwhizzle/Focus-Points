@@ -201,7 +201,29 @@ Missuccess in detecting focus points is usually the result of missing or unexpec
 <br>
 
 ### 2.4 Metadata Viewer
-Will be documented later
+The plugin also features a Metadata Viewer with live search: 
+  
+* Library -> Plug-in Extras -> Show Metadata, or  
+* File -> Plug-in Extras -> Show Metadata
+
+This comes in handy for viewing any information that is not visible in the info sections of the focus point window. The data is fetched by ExifTool directly from the image file on disk so it gives a full picture of the metadata written by the camera. Metadata can be filtered by key or value search terms. The filter accepts pattern matching with the commonly known “magic characters”:    
+
+ | Char  | <div align="left">Meaning</div>                | 
+ |:-----:|------------------------------------------------|
+ |   .   | any character                                  | 
+ |   +   | one or more repetitions of previous character  |
+ |   *   | zero or more repetitions of previous character |                                            
+ |   ^   | start of string                                |
+ |   $   | end of string                                  |              
+
+Note:  
+The plugin is written in Lua programming language and uses Lua string.find() for filtering. This function supports "Lua patterns", so you could use even more [sophisticated pattern matching](https://www.lua.org/pil/20.2.html). However, for filtering a simple EXIF data output, basic pattern matching should be more than sufficient. 
+
+For further processing as text, the full metadata (retrieved via 'exiftool -a -u -sort <file>') can also be opened in a text editor.  
+
+
+<img src="../screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
+
 
 ## 3. Display of Focus Points
 The subchapters in this section describe in more detail which focus point features are supported by the plugin for individual camera makers and specific lines or models. This can be different colors for different statuses (e.g. focus point selected, in focus, inactive), or face/subject detection frames. The level to which such features can be supported ultimately depends on the availability of corresponding data in EXIF maker notes.

@@ -12,6 +12,7 @@ Change history
   * User can choose focus box color and for 'focus pixel' points also box size [#215](https://github.com/musselwhizzle/Focus-Points/issues/215)
   * One-click access to logfile provides more detailed information when focus point display fails [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
   * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
+  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
   
 
 * exiftool 13.20

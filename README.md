@@ -8,17 +8,37 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 
 For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
 
-<img src="screens/screen1.png" alt="Screenshot" style="width: 200px;"/>
+<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
 
 Current Release
 --------
-## V2.5.0, xx April 2025
+## V2.5.0, xx March 2025
 
-xxx
+**New features and changes:**
+ 
+* Improved user interface
+  * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
+  * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
+    * Autofocus details implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
+    * Pentax pending
+  * User can choose focus box color and for 'focus pixel' points also box size [#215](https://github.com/musselwhizzle/Focus-Points/issues/215)
+  * One-click access to logfile provides more detailed information when focus point display fails [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
+  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
+  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
+  
+
+* exiftool 13.20
+ 
+
+* Comprehensive user documentation
+
+
+**Supported cameras:**
+See below
 
 For history of versions and changes see [changelog.](docs/changelog.md)
 
-[Download release](https://github.com/musselwhizzle/Focus-Points/releases/tag/v2.1.0)
+[Download release](https://github.com/musselwhizzle/Focus-Points/releases/latest)
 
 
 Supported Cameras
@@ -80,9 +100,10 @@ Installing
 1. Download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
 2. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step) 
 3. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
-4. Once installed, select one or more photos and invoke the plugin via  
-Library -> Plug-in Extras -> Focus Point, or  
-File -> Plug-in Extras -> Focus Point
+
+Once installed, select one or more photos and invoke the plugin via
+* Library -> Plug-in Extras -> Show Focus Point, or  
+* File -> Plug-in Extras -> Show Focus Point
 
 
 <img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
@@ -101,38 +122,24 @@ Please note that not all cameras save the needed information to support these fe
 
 Metadata viewer
 --------
-The plugin also features a metadata viewer with live search. This comes in handy eg. for viewing any information that is not visible in the info sections of the focus point windows. The information is fetched directly from the image file on disk so that this gives the full picture of metadata written by the camera:
+The plugin also features a metadata viewer with live search: 
+  
+* Library -> Plug-in Extras -> Show Metadata, or  
+* File -> Plug-in Extras -> Show Metadata
 
-<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>
+The Metadata Viewer comes in handy for viewing any information that is not visible in the info sections of the focus point windows. The information is fetched directly from the image file on disk so it gives a full picture of metadata written by the camera. Metadata can be filtered by keys or value. The filter accepts pattern matching using commonly known 'magic characters':  
 
-<!--
-Adding your own camera
---------
-It's very likely your camera is already supported. So try the plugin first before doing anything. :)
-
-If your camera reports its focus points dynamically, adding support for you camera should be easy. Simply update or create a new CameraDelegate which extracts the focus points. Update the PointsRendererFactory so it knows about this new camera.
-
-If your camera does not report its focus points dynamically, such as in the case of Nikons, this should be as painless as possible. You will need to map all of your camera's focus points to pixel coordinates. Refer to the "focus_points/nikon corporation/nikon d7200.txt" as an example.
-```
--- 1st column
-B1 = {810, 1550}
-C1 = {810, 1865}
-D1 = {810, 2210}
-
--- an so on
-```
-The best way I found to do this was to set up a ruler/tape measure, get out my camera and I took a photo at each of the focus points lining it up exactly with the 1-inch mark. I then imported those pictures into Lightroom and ran this plugin so I could see the metadata. From the metadata, I could see the focus points name. I then took the image into photoshop and measured from the top left corner of the image to the top left corner of the focus point. I compared the preview from the camera to my photoshop selection and got as close as possible. Once you have done all of that, add the file to "focus_points/{camera_maker}/{camera_model}.txt" using all lowercase. Then all is done.
-
-The camera model must only contain characters valid on all supported file systems. If a character is not valid (for example '\*' in the model "PENTAX \*ist D") it must be mapped to a valid character combination.
-The mapping is done in PointsUtils.readFromFile(): '\*' -> '\_a\_'. 
-
-If 2 or more cameras share a common points mapping, simplying add that to the list of known duplicate as in the NikonDuplicates file. With this, both Nikon D7100 and Nikon D7200 will share the same mapping file. 
+ | Char  | <div align="left">Meaning</div>                | 
+ |:-----:|------------------------------------------------|
+ |   .   | any character                                  | 
+ |   +   | one or more repetitions of previous character  |
+ |   *   | zero or more repetitions of previous character |                                            
+ |   ^   | start of line/string                           |
+ |   $   | end of line/string                             |              
 
 
-Known Issues
---------
-1. Not compatible if photo was edited in Photoshop. 3rd party tools often remove the necessary metadata from the image. 
--->
+<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
+
 
 Contributing as a Developer
 --------
