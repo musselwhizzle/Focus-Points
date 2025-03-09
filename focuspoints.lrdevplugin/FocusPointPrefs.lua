@@ -13,8 +13,9 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
-local LrView    =   import "LrView"
+local LrView      = import "LrView"
 local LrPrefs     = import "LrPrefs"
+local LrShell     = import "LrShell"
 local LrFileUtils = import "LrFileUtils"
 
 local bind = LrView.bind
