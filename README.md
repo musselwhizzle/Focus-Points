@@ -8,15 +8,15 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 
 For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
 
-<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
 
 Current Release
 --------
 ## V2.5.0, xx March 2025
 
-**New features and changes:**
+### New features and changes:
  
-* Improved user interface
+* **Improved user interface**
   * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
   * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
     * Autofocus details implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
@@ -25,16 +25,26 @@ Current Release
   * One-click access to logfile provides more detailed information when focus point display fails [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
   * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
-  
+  * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
 
-* exiftool 13.20
+
+* **Camera specific improvements to focus point detection and display**
+  * Nikon: added full support of Mirrorless and all DSLRs with 39 or more autofocus points  [#203](https://github.com/musselwhizzle/Focus-Points/issues/203), [#208](https://github.com/musselwhizzle/Focus-Points/issues/208),  [#209](https://github.com/musselwhizzle/Focus-Points/issues/209), [#211](https://github.com/musselwhizzle/Focus-Points/issues/211), [#212](https://github.com/musselwhizzle/Focus-Points/issues/212).
+  * Sony: fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Unified implementations for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213),
+  * Face detection frames added for Sony [#222](https://github.com/musselwhizzle/Focus-Points/issues/222), Panasonic [#223](https://github.com/musselwhizzle/Focus-Points/issues/223), Olympus [#219](https://github.com/musselwhizzle/Focus-Points/issues/219), Apple [#218](https://github.com/musselwhizzle/Focus-Points/issues/218). 
+  * Face and subjection detection frames added for Fuji [#165](https://github.com/musselwhizzle/Focus-Points/issues/165).
+  * Pentax: Fixed a problem that prevented the plugin from recognizing K-3, K-1 and K-1 Mark II [#206](https://github.com/musselwhizzle/Focus-Points/issues/206).
+   
+
+
+* Includes ExifTool 13.20
  
 
 * Comprehensive user documentation
 
 
-**Supported cameras:**
-See below
+**Supported cameras:**  
+See below.
 
 For history of versions and changes see [changelog.](docs/changelog.md)
 
@@ -116,6 +126,13 @@ Currently, the following types of AF-points and visualization frames will be dis
 * <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> Inactive AF-Point
 * <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face or subject was detected by the camera at this position
 * <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> Part of the image used by the camera in 'crop mode'.
+
+As different implementations of focus point rendering are required for Windows and macOS, the display of focus points looks different on both operating systems. On macOS, focus points and frames for face/subject detection and crops are indicated by the corners only while on Windows all frames have solid lines. Availabilty of the same method(s) on both platforms (ideally selected by the user) would be desirable, but it's a technical challenge to make the MAC method available on WIN and vice versa.
+
+On macOS, the focus point display of title photo looks like this:
+
+<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
+
 
 Please note that not all cameras save the needed information to support these features in the Exifs of the photo. E.g. Canon and Nikon do not store any information on detect faces or subjects, hence there are no detection frames for these cameras.  
 
