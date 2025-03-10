@@ -12,7 +12,7 @@ For details on scope and limitations as well as comprehensive operating instruct
 
 Current Release
 --------
-## V2.5.0, xx March 2025
+## V3.0, xx March 2025
 
 ### New features and changes:
  
@@ -53,7 +53,6 @@ For history of versions and changes see [changelog.](docs/changelog.md)
 
 Supported Cameras
 --------
-**Supported cameras:**
 
 * Canon
   * Mirrorless: entire R-series

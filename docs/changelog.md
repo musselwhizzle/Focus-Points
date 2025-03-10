@@ -1,10 +1,11 @@
 Change history
 =======
 
-## V2.5.0, March 2025
-**New features and changes:**
+## V3.0, March 2025
+
+### New features and changes:
  
-* Improved user interface
+* **Improved user interface**
   * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
   * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
     * Autofocus details implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
@@ -13,9 +14,19 @@ Change history
   * One-click access to logfile provides more detailed information when focus point display fails [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
   * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
-  
+  * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
 
-* exiftool 13.20
+
+* **Camera specific improvements to focus point detection and display**
+  * Nikon: added full support of Mirrorless and all DSLRs with 39 or more autofocus points  [#203](https://github.com/musselwhizzle/Focus-Points/issues/203), [#208](https://github.com/musselwhizzle/Focus-Points/issues/208),  [#209](https://github.com/musselwhizzle/Focus-Points/issues/209), [#211](https://github.com/musselwhizzle/Focus-Points/issues/211), [#212](https://github.com/musselwhizzle/Focus-Points/issues/212).
+  * Sony: fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Unified implementations for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213),
+  * Face detection frames added for Sony [#222](https://github.com/musselwhizzle/Focus-Points/issues/222), Panasonic [#223](https://github.com/musselwhizzle/Focus-Points/issues/223), Olympus [#219](https://github.com/musselwhizzle/Focus-Points/issues/219), Apple [#218](https://github.com/musselwhizzle/Focus-Points/issues/218). 
+  * Face and subjection detection frames added for Fuji [#165](https://github.com/musselwhizzle/Focus-Points/issues/165).
+  * Pentax: Fixed a problem that prevented the plugin from recognizing K-3, K-1 and K-1 Mark II [#206](https://github.com/musselwhizzle/Focus-Points/issues/206).
+   
+
+
+* Includes ExifTool 13.20
  
 
 * Comprehensive user documentation
@@ -23,51 +34,52 @@ Change history
 
 **Supported cameras:**
 
-* Nikon
-  * Mirrorless: entire Z-series
-  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020) [#209](https://github.com/musselwhizzle/Focus-Points/issues/209) [#211](https://github.com/musselwhizzle/Focus-Points/issues/211)
-  * Compact: CoolPix models not supported
-
-  
 * Canon
   * Mirrorless: entire R-series
   * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
   * Compact: Powershot models after 2004
 
  
+* Nikon
+  * Mirrorless: entire Z-series
+  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020)
+  * Compact: CoolPix models not supported
+
+  
+* Sony
+  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
+  * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
+  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
+  * Face detection frames
+  
+
 * Fuji
   * X-series (from X100 in 2011 up to X-H2S today)
   * GFX-series
-  * Face and subject detection frames [#165](https://github.com/musselwhizzle/Focus-Points/issues/165)
+  * Face and subject detection frames
 
 
 * Olympus / OM System
   * DSLR: E-5, E-420, E-520, E-620
   * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
+  * Face detection frames
 
 
 * Panasonic
   * Mirrorless: entire LUMIX G and S series
   * Compact: FZ, TZ/ZS, LX series - all models after 2008
-  * Face detection support added
+  * Face detection frames
   
 
 * Apple
   * iPhone (starting from at least iPhone 5)
-  * Face/pet detection support added (originating from "Person & Pets" in Apple's Photos App) [#218](https://github.com/musselwhizzle/Focus-Points/issues/218)
+  * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
 
-
-* Sony
-  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
-  * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
-  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
-  * Face detection support added
-  
 
 * Pentax 
   * Display of focus points and supported models are unchanged with respect to previous plugin versions
   * Display of basic image information and camera settings
-  * Pending (upcoming release): Review of focus point logic. Display of advanced camera settings and focus information 
+  * Pending (upcoming release): Review/revision of focus point logic. Display of advanced camera settings and focus information 
 
 
 ## V2.1.0, January 27, 2025
