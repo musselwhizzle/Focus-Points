@@ -48,7 +48,7 @@ See below.
 
 For history of versions and changes see [changelog.](docs/changelog.md)
 
-[Download release](https://github.com/musselwhizzle/Focus-Points/releases/latest)
+[Download pre-release](https://github.com/capricorn8/Focus-Points/releases/latest)
 
 
 Supported Cameras
@@ -107,7 +107,7 @@ Supported Cameras
 Installing
 --------
 **Installation steps**
-1. Download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
+1. Download the _**source code.zip**_ file from [latest release](https://github.com/capricorn8/Focus-Points/releases/latest).
 2. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step) 
 3. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
 
