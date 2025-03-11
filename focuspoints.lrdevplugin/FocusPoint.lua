@@ -52,6 +52,7 @@ local function showDialog()
     FocusPointPrefs.InitializePrefs(prefs)
     -- Initialize logging for non-Auto modes
     if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
+    FocusPointPrefs.updateAvailable = updateExists()
     FocusPointPrefs.setDisplayScaleFactor()
     Log.logInfo("System", "Display scaling level " ..
            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
@@ -158,7 +159,7 @@ local function showDialog()
         if (#selectedPhotos == 1) then
           -- single photo operation
           userResponse = LrDialogs.presentModalDialog {
-            title = "Focus Points of " ..  targetPhoto:getRawMetadata("path"),
+            title = "Focus Points for " ..  targetPhoto:getRawMetadata("path"),
             cancelVerb = "< exclude >",
             actionVerb = "OK",
             contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView)

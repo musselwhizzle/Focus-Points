@@ -30,10 +30,14 @@ FocusPointPrefs.displayScaleFactor = 0
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
 
 -- Indices to access scaling values in focusBoxSize table
-FocusPointPrefs.focusBoxSizeSmall =  1
+FocusPointPrefs.focusBoxSizeSmall  =  1
 FocusPointPrefs.focusBoxSizeMedium = 2
-FocusPointPrefs.focusBoxSizeLarge =  3
-FocusPointPrefs.initfocusBoxSize  =  FocusPointPrefs.focusBoxSizeMedium
+FocusPointPrefs.focusBoxSizeLarge  =  3
+FocusPointPrefs.initfocusBoxSize   =  FocusPointPrefs.focusBoxSizeMedium
+
+FocusPointPrefs.latestReleaseURL = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
+FocusPointPrefs.updateAvailable  = false
+
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()

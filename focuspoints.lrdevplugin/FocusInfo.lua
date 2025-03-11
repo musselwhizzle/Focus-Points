@@ -18,9 +18,10 @@
   This object is responsible for creating the textual info view next to focus point display.
 --]]
 
-local LrView = import 'LrView'
-local LrColor = import 'LrColor'
-local LrPrefs   = import "LrPrefs"
+local LrView  = import "LrView"
+local LrColor = import "LrColor"
+local LrPrefs = import "LrPrefs"
+local LrHttp  = import "LrHttp"
 
 require "DefaultPointRenderer"
 require "Log"
@@ -32,6 +33,7 @@ FocusInfo.metaKeyFileName           = "fileName"
 FocusInfo.metaKeyDimensions         = "dimensions"
 FocusInfo.metaKeyCroppedDimensions  = "croppedDimensions"
 FocusInfo.metaKeyDateTimeOriginal   = "dateTimeOriginal"
+FocusInfo.metaKeyCameraMake         = "cameraMake"
 FocusInfo.metaKeyCameraModel        = "cameraModel"
 FocusInfo.metaKeyLens               = "lens"
 FocusInfo.metaKeyFocalLength        = "focalLength"
@@ -174,6 +176,23 @@ end
 function FocusInfo.pluginStatus()
   local f = LrView.osFactory()
 
+  -- Compose update available message, if applicable
+  local updateMessage
+  if FocusPointPrefs.updateAvailable then
+    updateMessage =
+      f:row {
+        f:static_text {title = "Update available", text_color=LrColor("blue"), font="<system>"},
+        f:spacer{fill_horizontal = 1},
+        f:push_button {
+          title = "Open page",
+          font = "<system>",
+          action = function() LrHttp.openUrlInBrowser( FocusPointPrefs.latestReleaseURL ) end,
+        },
+      }
+    else
+      updateMessage = FocusInfo.emptyRow()
+  end
+
   -- Compose status message
   local statusMsg
   if Log.errorsEncountered then
@@ -185,8 +204,16 @@ function FocusInfo.pluginStatus()
       -- if user wants an extended log this should be easily accessible
       statusMsg = f:static_text {title = "Logging information collected", font="<system>"}
     else
-      -- displaying a "success" status message during normal operation might be distracting ...
-      return FocusInfo.emptyRow()
+      if FocusPointPrefs.updateAvailable then
+        return
+          f:column { fill = 1, spacing = 2,
+              f:group_box {title = "Plug-in status:  ", fill = 1, font = "<system/bold>",
+                 updateMessage,
+              },
+          }
+      else
+        return FocusInfo.emptyRow()
+      end
     end
   end
 
@@ -198,6 +225,7 @@ function FocusInfo.pluginStatus()
               f:row{
                 f:static_text {title = 'Turn on logging "Auto" for more details', font="<system>"}
               },
+             updateMessage,
           },
       }
   else
@@ -214,6 +242,7 @@ function FocusInfo.pluginStatus()
                   action = function() openFileInApp(Log.getFileName()) end,
                 },
               },
+              updateMessage,
           },
       }
   end
@@ -273,24 +302,25 @@ function FocusInfo.createInfoView(photo, props)
       f:column { fill = 1, spacing = 2,
           f:group_box { title = "Image information:  ", fill = 1, font = "<system/bold>",
               f:column {fill = 1, spacing = 2,
-                  FocusInfo.addInfo("Filename", FocusInfo.metaKeyFileName, photo, props),
-                  FocusInfo.addInfo("Captured on", FocusInfo.metaKeyDateTimeOriginal, photo, props),
+                  FocusInfo.addInfo("Filename"     , FocusInfo.metaKeyFileName, photo, props),
+                  FocusInfo.addInfo("Captured on"  , FocusInfo.metaKeyDateTimeOriginal, photo, props),
                   FocusInfo.addInfo("Original size", FocusInfo.metaKeyDimensions, photo, props),
-                  FocusInfo.addInfo("Current size", FocusInfo.metaKeyCroppedDimensions, photo, props),
+                  FocusInfo.addInfo("Current size" , FocusInfo.metaKeyCroppedDimensions, photo, props),
                   imageInfo
               },
           },
           f:spacer { height = 20 },
           f:group_box { title = "Camera settings:  ", fill = 1, font = "<system/bold>",
               f:column {fill = 1, fill_vertical = 0, spacing = 2,
-                  FocusInfo.addInfo("Camera", FocusInfo.metaKeyCameraModel, photo, props),
-                  FocusInfo.addInfo("Lens", FocusInfo.metaKeyLens, photo, props),
-                  FocusInfo.addInfo("FocalLength", FocusInfo.metaKeyFocalLength, photo, props),
-                  FocusInfo.addInfo("Exposure", FocusInfo.metaKeyExposure, photo, props),
-                  FocusInfo.addInfo("ISO", FocusInfo.metaKeyIsoSpeedRating, photo, props),
-                  FocusInfo.addInfo("Exposure Bias", FocusInfo.metaKeyExposureBias, photo, props),
+                  FocusInfo.addInfo("Make"            , FocusInfo.metaKeyCameraMake, photo, props),
+                  FocusInfo.addInfo("Model"           , FocusInfo.metaKeyCameraModel, photo, props),
+                  FocusInfo.addInfo("Lens"            , FocusInfo.metaKeyLens, photo, props),
+                  FocusInfo.addInfo("FocalLength"     , FocusInfo.metaKeyFocalLength, photo, props),
+                  FocusInfo.addInfo("Exposure"        , FocusInfo.metaKeyExposure, photo, props),
+                  FocusInfo.addInfo("ISO"             , FocusInfo.metaKeyIsoSpeedRating, photo, props),
+                  FocusInfo.addInfo("Exposure Bias"   , FocusInfo.metaKeyExposureBias, photo, props),
                   FocusInfo.addInfo("Exposure Program", FocusInfo.metaKeyExposureProgram, photo, props),
-                  FocusInfo.addInfo("Metering Mode", FocusInfo.metaKeyMeteringMode, photo, props),
+                  FocusInfo.addInfo("Metering Mode"   , FocusInfo.metaKeyMeteringMode, photo, props),
                   cameraInfo
              },
           },

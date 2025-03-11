@@ -23,6 +23,7 @@ local LrShell = import "LrShell"
 local LrTasks = import "LrTasks"
 local LrUUID = import "LrUUID"
 
+require "Info"
 require "Log"
 
 
@@ -301,6 +302,71 @@ function getWinScalingFactor()
   -- Clean up: remove the temp file
   if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
     Log.logWarn("Utils", "Unable to delete REG output file " .. output)
+  end
+
+  return result
+end
+
+
+function updateExists()
+  local output = getTempFileName()
+  local singleQuoteWrap = '\'"\'"\''
+  local cmd, result, url
+  local Info = require 'Info.lua'
+
+  if WIN_ENV then
+    -- windows needs " around the entire command and then " around each path
+    cmd = "curl.exe -I " .. FocusPointPrefs.latestReleaseURL .. " > " .. output .. "\""
+  else
+    cmd = "curl -I " .. FocusPointPrefs.latestReleaseURL .. " > '" .. output .. "'"
+  end
+
+  -- Call curl.exe to get 'latest' resolved to 'tags/vX.Y.ZZZ'
+  local rc = LrTasks.execute(cmd)
+  if (rc == 0) then
+    -- Parse curl output to find the resolved URL
+    local curlOutput = LrFileUtils.readFile(output)
+    for line in string.gmatch(curlOutput, ("[^\r\n]+")) do
+      local item = split(line, " ")
+      if item and #item >= 2 then
+        if item[1] == "Location:" then
+          url = LrStringUtils.trimWhitespace(item[2])
+          Log.logDebug("ExifUtils", "Update check, URL retrieved for latest release -> " .. url)
+          local major, minor, revision = url:match("v(%d+)%.(%d+)%.(%d+)")
+          if major and minor and revision then
+            -- we have a valid version number from the URL
+            local pluginVersion = Info.VERSION
+            if tonumber(major) > pluginVersion.major-1 then
+              result = true
+            elseif tonumber(major) == pluginVersion.major then
+              if  tonumber(minor) > pluginVersion.minor then
+                result = true
+              elseif tonumber(minor) == pluginVersion.minor then
+                result = tonumber(revision) > pluginVersion.revision
+              end
+            end
+          else
+            Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
+          end
+          break
+        end
+      end
+    end
+    if not url then
+      Log.logWarn("Utils", "Update check command failed, URL of tagged release not found")
+    end
+  else
+    Log.logWarn("Utils", "Update check command failed (rc=" .. rc ..") : " .. cmd)
+  end
+
+  -- Log info message
+  if result then
+    Log.logInfo("System", "Update available for plugin -> " .. url)
+  end
+
+  -- Clean up: remove the temp file
+  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
+    Log.logWarn("Utils", "Unable to delete curl output file " .. output)
   end
 
   return result
