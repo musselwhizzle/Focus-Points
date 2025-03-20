@@ -15,6 +15,7 @@ Change history
   * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
   * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
+  * Automatic check for updates [#224](https://github.com/musselwhizzle/Focus-Points/issues/224)
 
 
 * **Camera specific improvements to focus point detection and display**
@@ -26,7 +27,7 @@ Change history
    
 
 
-* Includes ExifTool 13.20
+* Includes ExifTool 13.25
  
 
 * Comprehensive user documentation

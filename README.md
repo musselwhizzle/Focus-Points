@@ -26,6 +26,7 @@ Current Release
   * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
   * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
+  * Automatic check for updates [#224](https://github.com/musselwhizzle/Focus-Points/issues/224)
 
 
 * **Camera specific improvements to focus point detection and display**
@@ -114,8 +115,6 @@ Once installed, select one or more photos and invoke the plugin via
 * Library -> Plug-in Extras -> Show Focus Point, or  
 * File -> Plug-in Extras -> Show Focus Point
 
-
-<img src="screens/plugin_extra.png" alt="Screenshot" style="width: 200px;"/>
 
 Supported AF-Points
 --------
