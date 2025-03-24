@@ -25,9 +25,9 @@ my %crossDelete = (
 # mandatory tag default values
 my %mandatory = (
     IFD0 => {
-        0x011a => 72,       # XResolution
-        0x011b => 72,       # YResolution
-        0x0128 => 2,        # ResolutionUnit (inches)
+      # (optional as of 3.0)  0x011a => 72,       # XResolution
+      # (optional as of 3.0)  0x011b => 72,       # YResolution
+      # (optional as of 3.0)  0x0128 => 2,        # ResolutionUnit (inches)
         0x0213 => 1,        # YCbCrPositioning (centered)
       # 0x8769 => ????,     # ExifOffset
     },
@@ -40,7 +40,7 @@ my %mandatory = (
     ExifIFD => {
         0x9000 => '0232',   # ExifVersion
         0x9101 => "1 2 3 0",# ComponentsConfiguration
-        0xa000 => '0100',   # FlashpixVersion
+      # (optional as of 3.0)  0xa000 => '0100',   # FlashpixVersion
         0xa001 => 0xffff,   # ColorSpace (uncalibrated)
       # 0xa002 => ????,     # ExifImageWidth
       # 0xa003 => ????,     # ExifImageHeight
@@ -2269,6 +2269,11 @@ NoOverwrite:            next if $isNew > 0;
             # build list of offsets to process
             my @offsetList;
             if ($ifd >= 0) {
+                $dirName = $$dirInfo{DirName} || 'unknown';
+                if ($ifd) {
+                    $dirName =~ s/\d+$//;
+                    $dirName .= $ifd;
+                }
                 my $offsetInfo = $offsetInfo[$ifd] or next;
                 if ($$offsetInfo{0x111} and $$offsetInfo{0x144}) {
                     # SubIFD may contain double-referenced data as both strips and tiles
