@@ -48,7 +48,7 @@ local function showDialog()
     local prefs = LrPrefs.prefsForPlugin( nil )
     local props = LrBinding.makePropertyTable(context, { clicked = false })
 
-    -- To avoid nil pointer errors in case of "dirty" installation (copy over old files)
+    -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
     -- Initialize logging for non-Auto modes
     if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
@@ -112,11 +112,10 @@ local function showDialog()
             photoView = rendererTable.createPhotoView(targetPhoto, photoW, photoH)
             infoView  = FocusInfo.createInfoView (targetPhoto, props)
             if not (photoView and infoView) then
-              -- #TODO (when?) can this condition occur?
-              errorMsg = "No Focus-Point information found"
+              errorMsg = "Internal error: Unable to create main window"
             end
           else
-           -- #TODO (when?) can this condition occur?
+            -- just to have this case covered - normally this condition should not occur
             errorMsg = "Internal error: Unmapped points renderer"
           end
         else
@@ -126,7 +125,7 @@ local function showDialog()
       LrTasks.sleep(0) -- this actually closes the dialog. go figure.
 
       -- "Loading Data" dialog has been canceled
-      -- #TODO photoView should never not been nil in the absence of a fatal error
+      -- photoView should never be nil in the absence of a fatal error
       local skipMainWindow
       if (dialogScope:isCanceled() or not photoView) then
         skipMainWindow = true

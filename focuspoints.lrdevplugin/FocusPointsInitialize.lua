@@ -14,10 +14,6 @@
   limitations under the License.
 --]]
 
-local LrFileUtils = import 'LrFileUtils'
+require "FocusPointPrefs"
 
-require "Log"
-
-return {
-  Log.delete()
-}
+FocusPointPrefs.getLatestVersion()

@@ -261,8 +261,7 @@ function NikonDelegates.getPDAfPoints(metaData)
       end
     end
   else
-    -- can't find PDAF focus point information, return and check CAF
--- #TODO I guess we don't need this anymore?  Log.logInfo("Nikon", "No PDAF information found")
+    -- can't find PDAF focus point information -> return
     return nil
   end
 

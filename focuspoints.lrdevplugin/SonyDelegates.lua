@@ -84,7 +84,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
         local yScale = orgPhotoHeight / imageHeight
         local x = LrStringUtils.trimWhitespace(values[3]) * xScale
         local y = LrStringUtils.trimWhitespace(values[4]) * yScale
-        local pdafPointSize = imageWidth*0.039/2  -- #TODO is 0.039/2 be different for other models?
+        local pdafPointSize = imageWidth * 0.039/2  -- #TODO is 0.039/2 be different for other models?
 
         SonyDelegates.focusPointsDetected = true
 

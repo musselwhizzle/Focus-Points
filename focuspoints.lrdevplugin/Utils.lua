@@ -23,6 +23,8 @@ local LrShell = import "LrShell"
 local LrTasks = import "LrTasks"
 local LrUUID = import "LrUUID"
 
+-- require "FocusPointPrefs"
+-- require "FocusPointDialog"
 require "Info"
 require "Log"
 
@@ -171,7 +173,7 @@ function parseDimens(strDimens)
   w = LrStringUtils.trimWhitespace(w)
   h = LrStringUtils.trimWhitespace(h)
   return tonumber(w), tonumber(h)
-  end
+end
 
 --[[--------------------------------------------------------------------------------------------------------------------
    Miscellaneous utilities
@@ -182,7 +184,6 @@ function parseDimens(strDimens)
 -- table - table to search inside
 -- val - value to search for
 --]]
--- #TODO Isn't there something similar used as a local function elsewhere?
 function arrayKeyOf(table, val)
   for k,v in pairs(table) do
     if v == val then
@@ -191,33 +192,6 @@ function arrayKeyOf(table, val)
   end
   return nil
 end
-
---[[ #TODO This code seems to be used nowhere!?
--- Transform the coordinates around a center point and scale them
--- x, y - the coordinates to be transformed
--- oX, oY - the coordinates of the center
--- angle - the rotation angle
--- scaleX, scaleY - scaleing factors
-function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
-  -- Rotation around 0,0
-  local rX = x * math.cos(angle) + y * math.sin(angle)
-  local rY = -x * math.sin(angle) + y * math.cos(angle)
-
-  -- Rotation of origin corner
-  local roX = oX * math.cos(angle) + oY * math.sin(angle)
-  local roY = -oX * math.sin(angle) + oY * math.cos(angle)
-
-  -- Translation so the top left corner become the origin
-  local tX = rX - roX
-  local tY = rY - roY
-
-  -- Let's resize everything to match the view
-  tX = tX * scaleX
-  tY = tY * scaleY
-
-  return tX, tY
-end
---]]
 
 
 --[[
@@ -231,7 +205,7 @@ function getTempFileName()
 end
 
 
---[[ #TODO Documentation!
+--[[
 -- Open filename in associated application as per file extension
 -- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
 --]]
@@ -243,7 +217,9 @@ function openFileInApp(filename)
   end
 end
 
---[[ #TODO Documentation!
+--[[
+  @@public string getPhotoFileName(table)
+  Retrieves name of current photo, used by centralized error handling
 --]]
 function getPhotoFileName(photo)
   if not photo then
@@ -261,9 +237,6 @@ end
   Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
   Returns display scaling level as factor (100/scale_in_percent)
 --]]
-
-
-
 function getWinScalingFactor()
   local output = getTempFileName()
   local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
@@ -308,7 +281,10 @@ function getWinScalingFactor()
 end
 
 
-function updateExists()
+--[[ Initial approach to implement update check. Superseded by LrHttp.get(version.txt_URL)
+--   Keep this code as commented out block until http method has been proven reliable.
+--
+function updateExists() -- Method using 'curl'
   local output = getTempFileName()
   local singleQuoteWrap = '\'"\'"\''
   local cmd, result, url
@@ -329,7 +305,7 @@ function updateExists()
     for line in string.gmatch(curlOutput, ("[^\r\n]+")) do
       local item = split(line, " ")
       if item and #item >= 2 then
-        if item[1] == "Location:" then
+        if string.lower(item[1]) == "location:" then
           url = LrStringUtils.trimWhitespace(item[2])
           Log.logDebug("ExifUtils", "Update check, URL retrieved for latest release -> " .. url)
           local major, minor, revision = url:match("v(%d+)%.(%d+)%.(%d+)")
@@ -371,6 +347,7 @@ function updateExists()
 
   return result
 end
+--]]
 
 
 --[[

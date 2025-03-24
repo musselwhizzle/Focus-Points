@@ -16,7 +16,6 @@
 
 local LrSystemInfo = import 'LrSystemInfo'
 local LrView       = import 'LrView'
-local LrPrefs      = import 'LrPrefs'
 
 require "Utils"
 require "Log"
@@ -30,8 +29,6 @@ FocusPointDialog.PhotoHeight = 0
 FocusPointDialog.currentPhoto = nil
 FocusPointDialog.errorsEncountered = nil
 
-
-local prefs = LrPrefs.prefsForPlugin( nil )
 
 function FocusPointDialog.calculatePhotoDimens(photo)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
@@ -75,6 +72,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   return photoWidth, photoHeight
 
 end
+
 
 function FocusPointDialog.createDialog(photo, photoView, infoView)
   local myView

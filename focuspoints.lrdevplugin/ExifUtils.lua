@@ -40,8 +40,6 @@ end
 
 function ExifUtils.filterInput(str)
   local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
-  -- FIXME: doesn't strip - or ] correctly
-  --local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=\\-\\[\\\n\\\t~`-]", "?");
   return result
 end
 
@@ -144,7 +142,9 @@ end
 
 --[[
   @@public boolean function getBinaryValue(table photo, string key)
-  ---- # TODO
+  Retrieves the value for an EXIF tag in binary mode.
+  Useful for tags, where ExifTool produces a simplified or shortened output,
+  e.g. AFPointSelected or FaceDetectArea for Olympus cameras
 --]]
 function ExifUtils.getBinaryValue(photo, key)
   local path = photo:getRawMetadata("path")
