@@ -1,8 +1,3 @@
--- to enable use of debugging toolkit
-local Require = require "Require".path ("../debuggingtoolkit.lrdevplugin").reload ()
-local Debug   = require "Debug".init ()
-require "strict"
-
 --[[
   Copyright 2016 JWhizzbang Inc
 

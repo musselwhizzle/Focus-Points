@@ -52,7 +52,7 @@ local function showDialog()
     FocusPointPrefs.InitializePrefs(prefs)
     -- Initialize logging for non-Auto modes
     if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
-    FocusPointPrefs.updateAvailable = updateExists()
+
     FocusPointPrefs.setDisplayScaleFactor()
     Log.logInfo("System", "Display scaling level " ..
            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
