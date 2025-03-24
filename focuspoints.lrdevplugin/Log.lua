@@ -186,13 +186,19 @@ function Log.info()
   end
 
   -- Output logfile header with general status information
+  local osName = ""
+  if not WIN_ENV then
+    osName = "macOS "
+  end
   Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
   Log.logInfo("System", string.format(
-          "Running plugin version %s in Lightroom Classic %s.%s on %s",
+          "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
             versionString, LrApplication.versionTable().major, LrApplication.versionTable().minor,
-            LrSystemInfo.osVersion()))
+            osName, LrSystemInfo.osVersion()))
+  if FocusPointPrefs.updateAvailable() then
+    Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
   end
-
+end
 
 --[[
   @@public void Log.resetErrorsWarnings()

@@ -178,13 +178,13 @@ function FocusInfo.pluginStatus()
 
   -- Compose update available message, if applicable
   local updateMessage
-  if FocusPointPrefs.updateAvailable then
+  if prefs.checkForUpdates and FocusPointPrefs.updateAvailable() then
     updateMessage =
       f:row {
-        f:static_text {title = "Update available", text_color=LrColor("blue"), font="<system>"},
+        f:static_text {title = "Update available!", text_color=LrColor("blue"), font="<system>"},
         f:spacer{fill_horizontal = 1},
         f:push_button {
-          title = "Open page",
+          title = "Open URL",
           font = "<system>",
           action = function() LrHttp.openUrlInBrowser( FocusPointPrefs.latestReleaseURL ) end,
         },
@@ -204,7 +204,7 @@ function FocusInfo.pluginStatus()
       -- if user wants an extended log this should be easily accessible
       statusMsg = f:static_text {title = "Logging information collected", font="<system>"}
     else
-      if FocusPointPrefs.updateAvailable then
+      if prefs.checkForUpdates and FocusPointPrefs.updateAvailable() then
         return
           f:column { fill = 1, spacing = 2,
               f:group_box {title = "Plug-in status:  ", fill = 1, font = "<system/bold>",

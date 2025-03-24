@@ -1,3 +1,8 @@
+-- to enable use of debugging toolkit
+local Require = require "Require".path ("../debuggingtoolkit.lrdevplugin").reload ()
+local Debug   = require "Debug".init ()
+require "strict"
+
 --[[
   Copyright 2016 JWhizzbang Inc
 
@@ -16,11 +21,15 @@
 local LrView      = import "LrView"
 local LrPrefs     = import "LrPrefs"
 local LrShell     = import "LrShell"
+local LrTasks     = import "LrTasks"
+local LrColor     = import "LrColor"
 local LrFileUtils = import "LrFileUtils"
+local LrDialogs   = import "LrDialogs"
+local LrHttp      = import "LrHttp"
 
 local bind = LrView.bind
 
-require "Utils"
+require "Log"
 
 FocusPointPrefs = {}
 
@@ -30,13 +39,13 @@ FocusPointPrefs.displayScaleFactor = 0
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
 
 -- Indices to access scaling values in focusBoxSize table
-FocusPointPrefs.focusBoxSizeSmall  =  1
+FocusPointPrefs.focusBoxSizeSmall  = 1
 FocusPointPrefs.focusBoxSizeMedium = 2
-FocusPointPrefs.focusBoxSizeLarge  =  3
-FocusPointPrefs.initfocusBoxSize   =  FocusPointPrefs.focusBoxSizeMedium
+FocusPointPrefs.focusBoxSizeLarge  = 3
+FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 
-FocusPointPrefs.latestReleaseURL = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
-FocusPointPrefs.updateAvailable  = false
+FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
+FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/capricorn8/Focus-Points/develop/focuspoints.lrdevplugin/Version.txt"
 
 
 --[[
@@ -45,12 +54,18 @@ FocusPointPrefs.updateAvailable  = false
   Initialize preferences at first run after installation of plugin
 --]]
 function FocusPointPrefs.InitializePrefs(prefs)
-  if not prefs.screenScaling then	prefs.screenScaling = 0 end
-  if not prefs.focusBoxSize  then	prefs.focusBoxSize  = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
-  if not prefs.focusBoxColor then	prefs.focusBoxColor = "red"    end
-  if not prefs.loggingLevel  then	prefs.loggingLevel  = "AUTO"   end
+  if not prefs.screenScaling      then	prefs.screenScaling   = 0 end
+  if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
+  if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
+  if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
+  if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
+  -- get the latest plugin version for update checks
+  FocusPointPrefs.getLatestVersion()
 end
 
+
+--[[ #TODO Documentation!
+--]]
 function FocusPointPrefs.setDisplayScaleFactor()
   local prefs = LrPrefs.prefsForPlugin( nil )
   if prefs.screenScaling ~= 0 then
@@ -60,11 +75,78 @@ function FocusPointPrefs.setDisplayScaleFactor()
   end
 end
 
+
+--[[ #TODO Documentation!
+--]]
 function FocusPointPrefs.getDisplayScaleFactor()
   if FocusPointPrefs.displayScaleFactor == 0 then
     FocusPointPrefs.setDisplayScaleFactor()
   end
   return FocusPointPrefs.displayScaleFactor
+end
+
+
+--[[
+  @@public void FocusPointPrefs.getLatestVersion()
+  ----
+  Retrieves the version number of the latest plug-in release. Result is stored in global
+  variable 'prefs.latestVersion' for further use by the routines that deal with updates
+--]]
+function FocusPointPrefs.getLatestVersion()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  -- Need to execute this as a collaborative task
+  LrTasks.startAsyncTask(function()
+    prefs.latestVersion = string.match(LrHttp.get(FocusPointPrefs.latestVersionFile), "v%d+%.%d+%.%d+")
+  end)
+end
+
+
+--[[
+  @@public string FocusPointPrefs.latestVersion()
+  ----
+  Returns the version number of the latest plug-in release as a string eg. 'v3.5.12'
+--]]
+function FocusPointPrefs.latestVersion()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  if prefs.latestVersion then
+    return prefs.latestVersion
+  else
+    return ""
+  end
+end
+
+
+--[[
+  @@public boolean FocusPointPrefs.updateAvailable()
+  Checks whether an updated version of the plug-in is available
+  Returns true if so, otherwise false
+--]]
+function FocusPointPrefs.updateAvailable()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  local Info = require 'Info.lua'
+  local result
+
+  if prefs.latestVersion then
+    local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
+    if major and minor and revision then
+      -- we have a valid version number from the URL
+      local pluginVersion = Info.VERSION
+      if tonumber(major) > pluginVersion.major then
+        result = true
+      elseif tonumber(major) == pluginVersion.major then
+        if  tonumber(minor) > pluginVersion.minor then
+          result = true
+        elseif tonumber(minor) == pluginVersion.minor then
+          result = tonumber(revision) > pluginVersion.revision
+        end
+      end
+    else
+      Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
+    end
+  else
+    Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
+  end
+  return result
 end
 
 
@@ -78,6 +160,22 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   -- Set the defaults
   FocusPointPrefs.InitializePrefs(prefs)
 
+  -- Check for updates
+  local updateMessage
+  if FocusPointPrefs.updateAvailable() then
+    updateMessage =
+      viewFactory:row {
+        viewFactory:static_text {title = "Update available!", text_color=LrColor("red")},
+        viewFactory:spacer{fill_horizontal = 1},
+        viewFactory:push_button {
+          title = "Open URL",
+          action = function() LrHttp.openUrlInBrowser( FocusPointPrefs.latestReleaseURL ) end,
+        },
+      }
+  else
+    updateMessage = viewFactory:static_text{ title = "" }
+  end
+
   -- Width of the drop-down lists in px, to make the naming aligned across rows
   local dropDownWidth = LrView.share('-Medium-')
 
@@ -89,7 +187,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         spacing = viewFactory:control_spacing(),
         viewFactory:popup_menu {
           title = "Scaling",
-          value = bind 'screenScaling',
+          value = bind ("screenScaling"),
           width = dropDownWidth,
           items = {
             { title = "Auto", value = 0    },
@@ -113,7 +211,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         spacing = viewFactory:control_spacing(),
         viewFactory:popup_menu {
           title = "focusBoxColor",
-          value = bind "focusBoxColor",
+          value = bind ("focusBoxColor"),
           width = dropDownWidth,
           items = {
             { title = "Red",   value = "red" },
@@ -129,7 +227,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         bind_to_object = prefs,
         viewFactory:popup_menu {
           title = "focusBoxSize",
-          value = bind "focusBoxSize",
+          value = bind ("focusBoxSize"),
           width = dropDownWidth,
           items = {
             { title = "Small",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall ] },
@@ -149,7 +247,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         spacing = viewFactory:control_spacing(),
         viewFactory:popup_menu {
           title = "Logging level",
-          value = bind 'loggingLevel',
+          value = bind ('loggingLevel'),
           width = dropDownWidth,
           items = {
             { title = "Full",  value = "FULL" },
@@ -180,6 +278,19 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
             end
           end,
         },
+      },
+    },
+    {
+      title = "Updates",
+      bind_to_object = prefs,
+      spacing = viewFactory:control_spacing(),
+      viewFactory:row {
+        viewFactory:checkbox {
+          title = 'Display message when updates are available',
+          value = bind('checkForUpdates')
+        },
+        viewFactory:spacer{fill_horizontal = 1},
+        updateMessage,
       },
     },
     {
