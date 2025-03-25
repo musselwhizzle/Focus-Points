@@ -135,7 +135,7 @@ function ExifUtils.findFirstMatchingValue(metaData, keys)
       return exifValue, keys[key]
     end
   end
- Log.logDebug("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
+  Log.logDebug("ExifUtils", "Searching for { " .. table.concat(keys, " ") .. " } returned nothing")
   return nil
 end
 

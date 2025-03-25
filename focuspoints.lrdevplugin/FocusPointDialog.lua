@@ -49,7 +49,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   end
 
   Log.logInfo("FocusPointDialog",
-    string.format("Image: %s (%sx%s)", photo:getFormattedMetadata('fileName'), w, h))
+    string.format("Image: %s (%sx%spx)", photo:getFormattedMetadata('fileName'), w, h))
 
   local photoWidth
   local photoHeight

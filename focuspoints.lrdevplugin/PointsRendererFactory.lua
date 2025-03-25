@@ -87,8 +87,8 @@ function PointsRendererFactory.createRenderer(photo)
   end
 
   if mapped then
-    Log.logInfo("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
-    Log.logInfo("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
+    Log.logDebug("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
+    Log.logDebug("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
   end
 
   -- for use in make specific Delegates, to avoid repeatedly normalization

@@ -538,11 +538,13 @@ function NikonDelegates.addInfo(title, key, props, metaData)
     }
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == "AF-C") then
+      -- first, figure out which of the two tags is relevant for this camera
       local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
       return f:column{
         fill = 1, spacing = 2, result,
         NikonDelegates.addInfo("AF-C Priority", afPriorityKey, props, metaData) }
     elseif (props[key] == "AF-S") then
+      -- first, figure out which of the two tags is relevant for this camera
       local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
       return f:column{
         fill = 1, spacing = 2, result,
