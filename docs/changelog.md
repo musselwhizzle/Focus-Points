@@ -1,39 +1,38 @@
 Change history
 =======
 
-## V3.0, March 2025
+## V3.0, March 28, 2025
 
 ### New features and changes:
  
 * **Improved user interface**
   * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
-  * Side-by-side presentation of camera settings and autofocus details to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
-    * Autofocus details implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
+  * Side-by-side presentation of focus point display and camera settings / focus information to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
+    * Focus information implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
     * Pentax pending
   * User can choose focus box color and for 'focus pixel' points also box size [#215](https://github.com/musselwhizzle/Focus-Points/issues/215)
-  * One-click access to logfile provides more detailed information when focus point display fails [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
-  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
-  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
   * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
+  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   * Automatic check for updates [#224](https://github.com/musselwhizzle/Focus-Points/issues/224)
-
+  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
+  
 
 * **Camera specific improvements to focus point detection and display**
   * Nikon: added full support of Mirrorless and all DSLRs with 39 or more autofocus points  [#203](https://github.com/musselwhizzle/Focus-Points/issues/203), [#208](https://github.com/musselwhizzle/Focus-Points/issues/208),  [#209](https://github.com/musselwhizzle/Focus-Points/issues/209), [#211](https://github.com/musselwhizzle/Focus-Points/issues/211), [#212](https://github.com/musselwhizzle/Focus-Points/issues/212).
-  * Sony: fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Unified implementations for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213),
+  * Sony: fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Unified implementation for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213)
   * Face detection frames added for Sony [#222](https://github.com/musselwhizzle/Focus-Points/issues/222), Panasonic [#223](https://github.com/musselwhizzle/Focus-Points/issues/223), Olympus [#219](https://github.com/musselwhizzle/Focus-Points/issues/219), Apple [#218](https://github.com/musselwhizzle/Focus-Points/issues/218). 
   * Face and subjection detection frames added for Fuji [#165](https://github.com/musselwhizzle/Focus-Points/issues/165).
   * Pentax: Fixed a problem that prevented the plugin from recognizing K-3, K-1 and K-1 Mark II [#206](https://github.com/musselwhizzle/Focus-Points/issues/206).
    
 
 
-* Includes ExifTool 13.25
+* Includes ExifTool 13.25 (Mar. 11, 2025)
  
 
 * Comprehensive user documentation
 
 
-**Supported cameras:**
+### Supported cameras:
 
 * Canon
   * Mirrorless: entire R-series
