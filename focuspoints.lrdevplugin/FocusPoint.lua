@@ -154,7 +154,7 @@ local function showDialog()
         end
       else
         -- Main dialog with has slightly different controls depending on single/multi mode
-        Log.logInfo("FocusPoint", "Preparations completed, show dialog")
+        Log.logInfo("FocusPoint", "Present information")
         if (#selectedPhotos == 1) then
           -- single photo operation
           userResponse = LrDialogs.presentModalDialog {

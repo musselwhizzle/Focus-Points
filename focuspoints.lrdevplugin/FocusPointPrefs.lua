@@ -40,7 +40,7 @@ FocusPointPrefs.focusBoxSizeLarge  = 3
 FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
-FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/capricorn8/Focus-Points/develop/focuspoints.lrdevplugin/Version.txt"
+FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
 
 --[[
