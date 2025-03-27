@@ -17,7 +17,10 @@
 local LrFileUtils = import 'LrFileUtils'
 local LrPathUtils = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
+
 require "Utils"
+require "Log"
+
 
 PointsUtils = {}
 
@@ -28,12 +31,13 @@ function PointsUtils.readFromFile(folder, filename)
 
   -- replace special character.  '*' is an invalid char on windows file systems
   file = string.gsub(file, "*", "_a_")
-  logDebug("PointsUtils", "readFromFile: " .. file)
-  
+  Log.logDebug("PointsUtils", "Reading focus point mapping from file: " .. file)
+
   if (LrFileUtils.exists(file) ~= false) then
     local data = LrFileUtils.readFile(file)
     return data
   else
+    Log.logError("PointsUtils", "Mapping file not found: " .. file)
     return nil
   end
 end
@@ -44,34 +48,45 @@ function PointsUtils.readIntoTable(folder, filename)
   local data = PointsUtils.readFromFile(folder, filename)
   if (data == nil) then return nil end
   for i in string.gmatch(data, "[^\\\n]+") do
-    p = splitToKeyValue(i, "=")
-    if p ~= nil then
-      
-      -- variable or focus point name
-      local pointName = p.key
-      pointName = LrStringUtils.trimWhitespace(pointName)
-      
-      -- variable value
-      local value = LrStringUtils.trimWhitespace(p.value)
-      value = string.gsub(value, "{", "")
-      value = string.gsub(value, "}", "")
-      value = LrStringUtils.trimWhitespace(p.value)
-      local dataPoints = splitTrim(value, ",")
-      
-      local points = {}
-      for i in pairs(dataPoints) do
-        local item = dataPoints[i]
-        item = string.gsub(item, "[^0-9]", "")
-        item = LrStringUtils.trimWhitespace(item)
-        points[i] = item
-      end
-      
-      --logDebug("PointsUtils", "pointName: " .. pointName .. ", x: " .. x .. ", y: " .. y)
+    -- skip comment lines
+    if i:match("^%s*%-%-") == nil then
+      local p = splitToKeyValue(i, "=")
+      if p ~= nil then
 
-      if (pointName == "focusPointDimens") then
-        focusPointDimens = points
-      else
-        focusPoints[pointName] = points
+        -- variable or focus point name
+        local pointName = p.key
+        pointName = LrStringUtils.trimWhitespace(pointName)
+
+        -- variable value
+        local value = LrStringUtils.trimWhitespace(p.value)
+        value = string.gsub(value, "{", "")
+        value = string.gsub(value, "}", "")
+        value = LrStringUtils.trimWhitespace(p.value)
+        local dataPoints = splitTrim(value, ",")
+
+        -- parse the single value items: x, y, [h, w]
+        local points = {}
+        for i in pairs(dataPoints) do
+          local item = dataPoints[i]
+          item = string.gsub(item, "[^0-9]", "")
+          item = LrStringUtils.trimWhitespace(item)
+          points[i] = item
+        end
+
+        if #dataPoints > 2 then
+          Log.logFull("PointsUtils",
+            string.format("Point name: %s = (x:%s, y:%s, w:%s, h:%s)",
+                                       pointName, points[1], points[2], points[3], points[4]))
+        else
+          Log.logFull("PointsUtils",
+            string.format("Point name: %s = (x:%s, y:%s)", pointName, points[1], points[2]))
+        end
+
+        if (pointName == "focusPointDimens") then
+          focusPointDimens = points
+        else
+          focusPoints[pointName] = points
+        end
       end
     end
   end

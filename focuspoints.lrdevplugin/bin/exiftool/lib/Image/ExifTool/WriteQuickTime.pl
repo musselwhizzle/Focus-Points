@@ -891,7 +891,7 @@ sub WriteQuickTime($$$)
     $et or return 1;    # allow dummy access to autoload this package
     my ($mdat, @mdat, @mdatEdit, $edit, $track, $outBuff, $co, $term, $delCount);
     my (%langTags, $canCreate, $delGrp, %boxPos, %didDir, $writeLast, $err, $atomCount);
-    my ($tag, $lastTag, $lastPos, $errStr, $trailer, $buf2, $keysGrp, $keysPath);
+    my ($tag, $lastTag, $lastPos, $errStr, $trailer, $buf2, $keysGrp, $keysPath, $itemIndex);
     my $outfile = $$dirInfo{OutFile} || return 0;
     my $raf = $$dirInfo{RAF};       # (will be null for lower-level atoms)
     my $dataPt = $$dirInfo{DataPt}; # (will be null for top-level atoms)
@@ -904,15 +904,10 @@ sub WriteQuickTime($$$)
     my $createKeys = 0;
     my ($rtnVal, $rtnErr) = $dataPt ? (undef, undef) : (1, 0);
 
-    # check for Insta360 trailer at top level
+    # check for trailer at end of file
     if ($raf) {
-        my $pos = $raf->Tell();
-        if ($raf->Seek(-40, 2) and $raf->Read($buf2, 40) == 40 and
-            substr($buf2, 8) eq '8db42d694ccc418790edff439fe026bf')
-        {
-            $trailer = [ 'Insta360', $raf->Tell() - unpack('V',$buf2) ];
-        }
-        $raf->Seek($pos, 0) or return 0;
+        $trailer = IdentifyTrailers($raf);
+        $trailer and not ref $trailer and $et->Error($trailer), return 1;
     }
     if ($dataPt) {
         $raf = File::RandomAccess->new($dataPt);
@@ -987,8 +982,25 @@ sub WriteQuickTime($$$)
     $atomCount = $$tagTablePtr{VARS}{ATOM_COUNT} if $$tagTablePtr{VARS};
 
     $tag = $lastTag = '';
+    $itemIndex = 0 if $dirName eq 'ItemPropertyContainer';
 
+    # read ahead to parse item property associations if this is 'iprp' ItemProperties
+    # (necessary to determine which properties belong to primary item in HEIC file)
+    if ($dirName eq 'ItemProperties') {
+        my $pos = $raf->Tell();
+        for (;;) {
+            $raf->Read($buf2, 8) == 8 or last;
+            my $size = Get32u(\$buf2, 0) - 8;    # (atom size without 8-byte header)
+            $tag = substr($buf2, 4, 4);
+            last if $size < 0;
+            $tag eq 'ipma' or $raf->Seek($size, 1), next;
+            ParseItemPropAssoc($buf2,$et) if $raf->Read($buf2,$size) == $size;
+            last;
+        }
+        $raf->Seek($pos);
+    }
     for (;;) {      # loop through all atoms at this level
+        ++$itemIndex if defined $itemIndex;
         $lastPos = $raf->Tell();
         # stop processing if we reached a known trailer
         if ($trailer and $lastPos >= $$trailer[1]) {
@@ -1066,6 +1078,10 @@ sub WriteQuickTime($$$)
             $et->Error("Can't yet write compressed movie metadata");
             return $rtnVal;
         } elsif ($tag eq 'wide') {
+            if ($size) {
+                $et->Warn("Incorrect size for 'wide' atom ($size bytes)");
+                $raf->Seek($size, 1) or $et->Error('Truncated wide atom');
+            }
             next;   # drop 'wide' tag
         }
 
@@ -1187,6 +1203,36 @@ sub WriteQuickTime($$$)
         }
         undef $tagInfo if $tagInfo and $$tagInfo{AddedUnknown};
 
+        # don't write this tag unless associated with the primary item
+        # (Note: This relies on iinf and dimg coming before iprp)
+        if (defined $itemIndex and $$et{ItemInfo}) {
+            my $items = $$et{ItemInfo};
+            my ($id, $prop, $isPrimary);
+            my $primary = $$et{PrimaryItem};
+            unless (defined $primary) {
+                ($primary) = sort { $a <=> $b } keys %{$$et{ItemInfo}} if $$et{ItemInfo};
+                $primary = 0 unless defined $primary;
+            }
+            my $pitem = $$items{$primary} || { };
+            $$pitem{RefersTo} or $$pitem{RefersTo} = { };
+ItemID2:    foreach $id (reverse sort { $a <=> $b } keys %$items) {
+                next unless $$items{$id}{Association};
+                my $item = $$items{$id};
+                foreach $prop (@{$$item{Association}}) {
+                    next unless $prop == $itemIndex;
+                    my $dont = $dontInherit{$tag} || 0;
+                    last unless $id == $primary or (not $dont and
+                        ($$item{RefersTo} and $$item{RefersTo}{$primary})) or
+                        # special case to assume this property belongs to the primary
+                        # image if it belongs to an item referred to by the primary
+                        ($dont != 1 and $$pitem{RefersTo}{$id});
+                    $isPrimary = 1;
+                    last ItemID2;
+                }
+            }
+            undef $tagInfo unless $isPrimary;
+        }
+
         if ($tagInfo and (not defined $$tagInfo{Writable} or $$tagInfo{Writable})) {
             my $subdir = $$tagInfo{SubDirectory};
             my ($newData, @chunkOffset);
@@ -1226,6 +1272,7 @@ sub WriteQuickTime($$$)
                     OutFile  => $outfile,
                     NoRefTest=> 1,     # don't check directory references
                     WriteGroup => $$tagInfo{WriteGroup},
+                    Permanent => $$tagInfo{Permanent},
                     # initialize array to hold details about chunk offset table
                     # (each entry has 3-5 items: 0=atom type, 1=table offset, 2=table size,
                     #  3=optional base offset, 4=optional item ID)
@@ -1469,7 +1516,10 @@ sub WriteQuickTime($$$)
                             ++$$et{CHANGED};
                             my $grp = $et->GetGroup($langInfo, 1);
                             $et->VerboseValue("- $grp:$$langInfo{Name}", $val);
-                            next unless defined $newData and not $$didTag{$nvHash};
+                            unless (defined $newData and not $$didTag{$nvHash}) {
+                                # must not delete items from iprp because it will mess up the ordering
+                                next unless defined $itemIndex;
+                            }
                             $et->VerboseValue("+ $grp:$$langInfo{Name}", $newData);
                             # add back necessary header and encode as necessary
                             if (defined $lang) {
@@ -1498,7 +1548,7 @@ sub WriteQuickTime($$$)
                                 $newData = $et->Encode($newData, 'UTF8');
                             } elsif ($format and not $$tagInfo{Binary}) {
                                 # format new value for writing
-                                $newData = WriteValue($newData, $format);
+                                $newData = WriteValue($newData, $format, $$tagInfo{Count});
                             }
                         }
                         $$didTag{$nvHash} = 1;   # set flag so we don't add this tag again
@@ -1565,7 +1615,9 @@ sub WriteQuickTime($$$)
             }
             if ($msg) {
                 # (allow empty sample description for non-audio/video handler types, eg. 'url ', 'meta')
-                if ($$et{MediaType}) {
+                # (also, incorrectly written 'mett' SampleEntry by Google phones,
+                #  see https://exiftool.org/forum/index.php?msg=91158)
+                if ($avType{$$et{MediaType}}) {
                     my $grp = $$et{CUR_WRITE_GROUP} || $parent;
                     $et->Error("$msg for $grp");
                     return $rtnErr;
@@ -1601,16 +1653,26 @@ sub WriteQuickTime($$$)
         if (($lastTag eq 'mdat' or $lastTag eq 'moov') and not $dataPt and (not $$tagTablePtr{$tag} or
             ref $$tagTablePtr{$tag} eq 'HASH' and $$tagTablePtr{$tag}{Unknown}))
         {
-            # identify other known trailers
+            # identify other known trailers from their first bytes
             $buf2 = '';
             $raf->Seek($lastPos,0) and $raf->Read($buf2,8);
+            my ($type, $len);
             if ($buf2 eq 'CCCCCCCC') {
-                $trailer = [ 'Kenwood', $lastPos ];
+                $type = 'Kenwood';
             } elsif ($buf2 =~ /^(gpsa|gps0|gsen|gsea)...\0/s) {
-                $trailer = [ 'RIFF', $lastPos ];
+                $type = 'RIFF';
             } else {
-                $trailer = [ 'Unknown', $lastPos ];
+                $type = 'Unknown';
             }
+            # determine length of this trailer
+            if ($trailer) {
+                $len = $$trailer[1] - $lastPos; # runs to start of next trailer
+            } else {
+                $raf->Seek(0, 2) or $et->Error('Seek error'), return $dataPt ? undef : 1;
+                $len = $raf->Tell() - $lastPos; # runs to end of file
+            }
+            # add to start of linked list of trailers
+            $trailer = [ $type, $lastPos, $len, $trailer ];
         } else {
             $et->Error($errStr);
             return $dataPt ? undef : 1;
@@ -2072,21 +2134,35 @@ sub WriteQuickTime($$$)
     # write the stuff that must come last
     Write($outfile, $writeLast) or $rtnVal = 0 if $writeLast;
 
-    # copy trailer if necessary
-    if ($rtnVal and $trailer) {
-        # are we deleting the trailer?
+    # copy trailers if necessary
+    while ($rtnVal and $trailer) {
+        # are we deleting the trailers?
         my $nvTrail = $et->GetNewValueHash($Image::ExifTool::Extra{Trailer});
-        if ($$et{DEL_GROUP}{Trailer} or ($nvTrail and not ($$nvTrail{Value} and $$nvTrail{Value}[0]))) {
+        if ($$et{DEL_GROUP}{Trailer} or $$et{DEL_GROUP}{$$trailer[0]} or
+            ($nvTrail and not ($$nvTrail{Value} and $$nvTrail{Value}[0])))
+        {
             $et->Warn("Deleted $$trailer[0] trailer", 1);
-        } elsif ($raf->Seek($$trailer[1])) {
-            $et->Warn(sprintf('Copying %s trailer from offset 0x%x', @$trailer), 1);
-            while ($raf->Read($buf2, 65536)) {
-                Write($outfile, $buf2) or $rtnVal = 0, last;
-            }
-        } else {
-            $rtnVal = 0;
+            ++$$et{CHANGED};
+            $trailer = $$trailer[3];
+            next;
         }
-        $rtnVal or $et->Error("Error copying $$trailer[0] trailer");
+        $raf->Seek($$trailer[1], 0) or $rtnVal = 0, last;
+        if ($$trailer[0] eq 'MIE') {
+            require Image::ExifTool::MIE;
+            my %dirInfo = ( RAF => $raf, OutFile => $outfile );
+            my $result = Image::ExifTool::MIE::ProcessMIE($et, \%dirInfo);
+            $result > 0 or $et->Error('Error writing MIE trailer'), $rtnVal = 0, last;
+        } else {
+            $et->Warn(sprintf('Copying %s trailer from offset 0x%x (%d bytes)', @$trailer[0..2]), 1);
+            my $len = $$trailer[2];
+            while ($len) {
+                my $n = $len > 65536 ? 65536 : $len;
+                $raf->Read($buf2, $n) == $n and Write($outfile, $buf2) or $rtnVal = 0, last;
+                $len -= $n;
+            }
+            $rtnVal or $et->Error("Error copying $$trailer[0] trailer"), last;
+        }
+        $trailer = $$trailer[3];    # step to next trailer in linked list
     }
     return $rtnVal;
 }

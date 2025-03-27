@@ -11,7 +11,9 @@ use strict;
 use warnings;
 require 5.004;
 
-my $version = '13.15';
+my $version = '13.25';
+
+$^W = 1;    # enable global warnings
 
 # add our 'lib' directory to the include list BEFORE 'use Image::ExifTool'
 my $exePath;
@@ -43,7 +45,7 @@ sub EncodeXML($);
 sub FormatXML($$$);
 sub EscapeJSON($;$);
 sub FormatJSON($$$;$);
-sub PrintCSV();
+sub PrintCSV(;$);
 sub AddGroups($$$$);
 sub ConvertBinary($);
 sub IsEqual($$);
@@ -181,6 +183,7 @@ my $outFormat;      # -1=Canon format, 0=same-line, 1=tag names, 2=values only
 my $outOpt;         # output file or directory name
 my $overwriteOrig;  # flag to overwrite original file (1=overwrite, 2=in place)
 my $pause;          # pause before returning
+my $plot;           # flag for plot output format
 my $preserveTime;   # flag to preserve times of updated files (2=preserve FileCreateDate only)
 my $progress;       # flag to calculate total files to process (0=calculate but don't display)
 my $progressCount;  # count of files processed
@@ -208,6 +211,7 @@ my $structOpt;      # output structured XMP information (JSON and XML output onl
 my $tabFormat;      # non-zero for tab output format
 my $tagOut;         # flag for separate text output file for each tag
 my $textOut;        # extension for text output file (or undef for no output)
+my $textOut2;       # complete file name for single text output file
 my $textOverwrite;  # flag to overwrite existing text output file (2=append, 3=over+append)
 my $tmpFile;        # temporary file to delete on exit
 my $tmpText;        # temporary text file
@@ -472,8 +476,8 @@ undef %filterExt;
 undef %ignore;
 undef %outComma;
 undef %outTrailer;
-undef %printFmt;
 undef %preserveTime;
+undef %printFmt;
 undef %seqFileDir;
 undef %setTags;
 undef %setTagsList;
@@ -1189,6 +1193,7 @@ for (;;) {
     }
     /^overwrite_original$/i and $overwriteOrig = 1, next;
     /^overwrite_original_in_place$/i and $overwriteOrig = 2, next;
+    /^plot$/i and require Image::ExifTool::Plot and $plot = Image::ExifTool::Plot->new, next;
     if (/^p(-?)$/ or /^printformat(-?)$/i) {
         my $fmt = shift;
         if ($pass) {
@@ -1404,7 +1409,8 @@ for (;;) {
                 # add geotag/geosync/geolocate commands first
                 unshift @newValues, pop @newValues;
                 if (lc $2 eq 'geotag' and (not defined $addGeotime or $addGeotime) and length $val) {
-                    $addGeotime = ($1 || '') . 'Geotime<DateTimeOriginal#';
+                    $addGeotime = [ ($1 || '') . 'Geotime<DateTimeOriginal#',
+                                    ($1 || '') . 'Geotime<SubSecDateTimeOriginal#' ];
                 }
             }
         }
@@ -1495,38 +1501,34 @@ unless ((@tags and not $outOpt) or @files or @newValues or $geoOnly) {
 if (defined $deleteOrig and (@newValues or @tags)) {
     if (not @newValues) {
         my $verb = $deleteOrig ? 'deleting' : 'restoring from';
-        Warn "Can't specify tags when $verb originals\n";
+        Error "Can't specify tags when $verb originals\n";
     } elsif ($deleteOrig) {
-        Warn "Can't use -delete_original when writing.\n";
-        Warn "Maybe you meant -overwrite_original ?\n";
+        Error "Can't use -delete_original when writing.\n";
+        Error "Maybe you meant -overwrite_original ?\n";
     } else {
-        Warn "It makes no sense to use -restore_original when writing\n";
+        Error "It makes no sense to use -restore_original when writing\n";
     }
-    $rtnVal = 1;
     next;
 }
 
 if ($overwriteOrig > 1 and $outOpt) {
-    Warn "Can't overwrite in place when -o option is used\n";
-    $rtnVal = 1;
+    Error "Can't overwrite in place when -o option is used\n";
     next;
 }
 
-if (($tagOut or defined $diff) and ($csv or $json or %printFmt or $tabFormat or $xml or
+if (($tagOut or defined $diff) and ($csv or $json or %printFmt or $tabFormat or $xml or $plot or
     ($verbose and $html)))
 {
     my $opt = $tagOut ? '-W' : '-diff';
-    Warn "Sorry, $opt may not be combined with -csv, -htmlDump, -j, -p, -t or -X\n";
-    $rtnVal = 1;
+    Error "Sorry, $opt may not be combined with -csv, -htmlDump, -j, -p, -t or -X\n";
     next;
 }
 
 if ($csv and $csv eq 'CSV' and not $isWriting) {
-    undef $json;    # (not compatible)
+    $json = 0;    # (not compatible)
     if ($textOut) {
-        Warn "Sorry, -w may not be combined with -csv\n";
-        $rtnVal = 1;
-        next;
+        $textOut2 = $textOut;
+        undef $textOut;
     }
     if ($binaryOutput) {
         $binaryOutput = 0;
@@ -1537,6 +1539,32 @@ if ($csv and $csv eq 'CSV' and not $isWriting) {
         undef $csv;
     }
     require Image::ExifTool::XMP if $setCharset;
+}
+if ($plot and $textOut) {
+    $textOut2 = $textOut;
+    undef $textOut;
+}
+if ($textOut2) {
+    if ($textOverwrite > 1) {
+        Error "Can not append to multi-file output format\n";
+        undef $textOut2;
+        next;
+    }
+    if (not $textOverwrite and $mt->Exists($textOut2, 1)) {
+        Error "Output file $textOut2 already exists\n";
+        undef $textOut2;
+        next;
+    }
+    # make sure we can write the output text file before processing all input files
+    CreateDirectory($textOut2);  # create directory if necessary
+    if ($mt->Open(\*OUTFILE, $textOut2, '>')) {
+        close(\*OUTFILE);
+        unlink($textOut2);  # (this was just a test)
+    } else {
+        Error("Error creating $textOut2\n");
+        undef $textOut2;
+        next;
+    }
 }
 
 if ($escapeHTML or $json) {
@@ -1551,7 +1579,7 @@ if ($escapeHTML or $json) {
 # set sort option
 if ($sortOpt) {
     # (note that -csv sorts alphabetically by default anyway if more than 1 file)
-    my $sort = ($outFormat > 0 or $xml or $json or $csv) ? 'Tag' : 'Descr';
+    my $sort = ($outFormat > 0 or $xml or $json or $csv or $plot) ? 'Tag' : 'Descr';
     $mt->Options(Sort => $sort, Sort2 => $sort);
 }
 
@@ -1562,7 +1590,11 @@ if ($mt->Options('Struct') and not $structOpt) {
 }
 
 # set up for RDF/XML, JSON and PHP output formats
-if ($xml) {
+if ($plot) {
+    undef $joinLists;
+    $mt->Options(List => 1);
+    $plot->Settings($mt->Options('Plot'));
+} elsif ($xml) {
     require Image::ExifTool::XMP;   # for EscapeXML()
     my $charset = $mt->Options('Charset');
     # standard XML encoding names for supported Charset settings
@@ -1634,11 +1666,10 @@ if (Image::ExifTool::IsPC()) {
 unless (@files) {
     unless ($outOpt) {
         if ($doGlob and $doGlob == 2) {
-            Warn "No matching files\n";
+            Error "No matching files\n";
         } else {
-            Warn "No file specified\n";
+            Error "No file specified\n";
         }
-        $rtnVal = 1;
         next;
     }
     push @files, '';    # create file from nothing
@@ -1667,8 +1698,9 @@ if (@newValues) {
     # assume -geotime value if -geotag specified without -geotime
     if ($addGeotime) {
         AddSetTagsFile($setTagsFile = '@') unless $setTagsFile and $setTagsFile eq '@';
-        push @{$setTags{$setTagsFile}}, $addGeotime;
-        $verbose and print $vout qq{Argument "-$addGeotime" is assumed\n};
+        push @{$setTags{$setTagsFile}}, @$addGeotime;
+        my @a = map qq("-$_"), @$addGeotime;
+        $verbose and print $vout 'Arguments ',join(' and ', @a)," are assumed\n";
     }
     my %setTagsIndex;
     # add/delete option lookup
@@ -1700,8 +1732,7 @@ if (@newValues) {
                 next;   # set tags from dynamic file later
             }
             unless ($mt->Exists($newVal) or $newVal eq '-') {
-                Warn "File '${newVal}' does not exist for -tagsFromFile option\n";
-                $rtnVal = 1;
+                Error "File '${newVal}' does not exist for -tagsFromFile option\n";
                 next Command;
             }
             my $setTags = $setTags{$newVal};
@@ -1765,18 +1796,19 @@ if (@newValues) {
         }
     }
     unless ($isWriting or $outOpt or @tags) {
-        Warn "Nothing to do.\n";
-        $rtnVal = 1;
+        Error "Nothing to do.\n";
         next;
     }
 } elsif (grep /^(\*:)?\*$/, @exclude) {
-    Warn "All tags excluded -- nothing to do.\n";
-    $rtnVal = 1;
+    Error "All tags excluded -- nothing to do.\n";
     next;
 }
 if ($isWriting) {
     if (defined $diff) {
         Error "Can't use -diff option when writing tags\n";
+        next;
+    } elsif ($plot) {
+        Error "Can't use -plot option when writing tags\n";
         next;
     } elsif (@tags and not $outOpt and not $csv) {
         my ($tg, $s) = @tags > 1 ? ("$tags[0] ...", 's') : ($tags[0], '');
@@ -1926,9 +1958,6 @@ ProcessFiles($mt);
 
 Error "No file with specified extension\n" if $filtered and not $validFile;
 
-# print CSV information if necessary
-PrintCSV() if $csv and not $isWriting;
-
 # print folder/file trailer if necessary
 if ($textOut) {
     foreach (keys %outTrailer) {
@@ -1944,6 +1973,37 @@ if ($textOut) {
 } else {
     print $sectTrailer if $sectTrailer;
     print $fileTrailer if $fileTrailer and not $fileHeader;
+    # print CSV or SVG output file if necessary
+    my ($fp, $err);
+    if ($textOut2) {
+        if ($mt->Open(\*OUTFILE, $textOut2, '>')) {
+            $fp = \*OUTFILE;
+        } else {
+            Error("Error creating $textOut2\n");
+            $err = 1;
+        }
+    }
+    unless ($err) {
+        PrintCSV($fp) if $csv and not $isWriting;
+        # print SVG plot
+        if ($plot) {
+            $plot->Draw($fp || \*STDOUT);
+            if ($$plot{Error}) {
+                Error("Error: $$plot{Error}\n");
+                $err = 1;
+            } elsif ($$plot{Warn}) {
+                Warn("Warning: $$plot{Warn}\n");
+            }
+        }
+    }
+    if ($fp) {
+        close($fp) or $err = 1;
+        if ($err) {
+            $mt->Unlink($textOut2);
+        } else {
+            $created{$textOut2} = 1;
+        }
+    }
 }
 
 my $totWr = $countGoodWr + $countBadWr + $countSameWr + $countCopyWr +
@@ -1988,7 +2048,7 @@ if (defined $deleteOrig) {
     # print summary
     my $tot = $count + $countBad;
     if ($countDir or $totWr or $countFailed or $tot > 1 or $textOut or %countLink) {
-        my $o = (($html or $json or $xml or %printFmt or $csv) and not $textOut) ? \*STDERR : $vout;
+        my $o = (($html or $json or $xml or %printFmt or $csv or $plot) and not $textOut) ? \*STDERR : $vout;
         printf($o "%5d directories scanned\n", $countDir) if $countDir;
         printf($o "%5d directories created\n", $countNewDir) if $countNewDir;
         printf($o "%5d files failed condition\n", $countFailed) if $countFailed;
@@ -2000,7 +2060,7 @@ if (defined $deleteOrig) {
         printf($o "%5d files weren't created due to errors\n", $countBadCr) if $countBadCr;
         printf($o "%5d image files read\n", $count) if ($tot+$countFailed)>1 or ($countDir and not $totWr);
         printf($o "%5d files could not be read\n", $countBad) if $countBad;
-        printf($o "%5d output files created\n", scalar(keys %created)) if $textOut;
+        printf($o "%5d output files created\n", scalar(keys %created)) if $textOut or $textOut2;
         printf($o "%5d output files appended\n", scalar(keys %appended)) if %appended;
         printf($o "%5d hard links created\n", $countLink{Hard} || 0) if $countLink{Hard} or $countLink{BadHard};
         printf($o "%5d hard links could not be created\n", $countLink{BadHard}) if $countLink{BadHard};
@@ -2205,7 +2265,7 @@ sub GetImageInfo($$)
 
     my $lineCount = 0;
     my ($fp, $outfile, $append);
-    if ($textOut and ($verbose or $et->Options('PrintCSV')) and not ($tagOut or defined $diff)) {
+    if ($textOut and ($verbose or $et->Options('PrintCSV')) and not ($tagOut or defined $diff or $plot)) {
         ($fp, $outfile, $append) = OpenOutputFile($orig);
         $fp or EFile($file), ++$countBad, return;
         # delete file if we exit prematurely (unless appending)
@@ -2245,7 +2305,7 @@ sub GetImageInfo($$)
     }
     # print file/progress message
     my $o;
-    unless ($binaryOutput or $textOut or %printFmt or $html > 1 or $csv) {
+    unless ($binaryOutput or $textOut or %printFmt or $html > 1 or $csv or $plot) {
         if ($html) {
             require Image::ExifTool::HTML;
             my $f = Image::ExifTool::HTML::EscapeHTML($file);
@@ -2348,7 +2408,7 @@ sub GetImageInfo($$)
     unless (defined $outfile or $tagOut) {
         ($fp, $outfile, $append) = OpenOutputFile($orig);
         $fp or EFile($file), ++$countBad, return;
-        $tmpText = $outfile unless $append;
+        $tmpText = $outfile if defined $outfile and not $append;
     }
 
     # print differences if requested
@@ -2401,6 +2461,7 @@ sub GetImageInfo($$)
                 ($g2, $same) = ($g, 0);
                 # build list of all tags in the new group of the diff file
                 @groupTags2 = ();
+                push @groupTags2, $tag2 if defined $tag2;
                 foreach $t2 (@found2) {
                     $done2{$t2} or $g ne $et2->GetGroup($t2, $showGroup) or push @groupTags2, $t2;
                 }
@@ -2458,9 +2519,8 @@ T2:         foreach $t2 (@tags2) {
             $done2{$tag2} = 1 if defined $tag2;
         }
         print $fp "(no metadata differences)\n" unless $wasDiff;
-        undef $tmpText;
         if (defined $outfile) {
-            ++$created{$outfile};
+            $created{$outfile} = 1;
             close($fp);
             undef $tmpText;
         }
@@ -2535,6 +2595,17 @@ T2:         foreach $t2 (@tags2) {
         delete $printFmt{HEAD} unless defined $outfile; # print header only once per output file
         my $errs = $et->GetInfo('Warning', 'Error');
         PrintErrors($et, $errs, $file) and EFile($file);
+    } elsif ($plot) {
+        # add points from this file to the plot
+        my $tagExtra = $$et{TAG_EXTRA};
+        my ($tag, %docNum);
+        foreach $tag (keys %$info) {
+            next unless $$tagExtra{$tag} and $$tagExtra{$tag}{G3};
+            $docNum{$tag} = $1 if $$tagExtra{$tag}{G3} =~ /(\d+)/;
+        }
+        $$plot{DocNum} = \%docNum;
+        $$plot{EE} = 1 if $et->Options('ExtractEmbedded');
+        $plot->AddPoints($info, \@foundTags);
     } elsif (not $disableOutput) {
         my ($tag, $line, %noDups, %csvInfo, $bra, $ket, $sep, $quote);
         if ($fp) {
@@ -3767,8 +3838,10 @@ sub FormatCSV($)
 
 #------------------------------------------------------------------------------
 # Print accumulated CSV information
-sub PrintCSV()
+# Inputs: 0) file ref
+sub PrintCSV(;$)
 {
+    my $fp = shift || \*STDOUT;
     my ($file, $lcTag, @tags);
 
     @csvTags or @csvTags = sort keys %csvTags;
@@ -3776,7 +3849,7 @@ sub PrintCSV()
     foreach $lcTag (@csvTags) {
         push @tags, FormatCSV($csvTags{$lcTag}) if $csvTags{$lcTag};
     }
-    print join($csvDelim, 'SourceFile', @tags), "\n";
+    print $fp join($csvDelim, 'SourceFile', @tags), "\n";
     my $empty = defined($forcePrint) ? $forcePrint : '';
     foreach $file (@csvFiles) {
         my @vals = (FormatCSV($file)); # start with full file name
@@ -3787,7 +3860,7 @@ sub PrintCSV()
             defined $val or push(@vals,$empty), next;
             push @vals, FormatCSV($val);
         }
-        print join($csvDelim, @vals), "\n";
+        print $fp join($csvDelim, @vals), "\n";
     }
 }
 
@@ -4121,9 +4194,8 @@ sub ProcessFiles($;$)
                 $filtered = 1;
                 Progress($vout, "-------- $file (wrong extension)") if $verbose;
             } else {
-                Warn "Error: File not found - $file\n";
+                Error "Error: File not found - $file\n";
                 FileNotFound($file);
-                $rtnVal = 1;
             }
         } else {
             $validFile = 1;
@@ -4882,7 +4954,7 @@ sub PrintTagList($@)
     my $msg = shift;
     print $msg, ":\n" unless $quiet;
     my $tag;
-    if ($outFormat < 0 and $msg =~ /file extensions$/ and @_) {
+    if (($outFormat < 0 or $verbose) and $msg =~ /file extensions$/ and @_) {
         foreach $tag (@_) {
             printf("  %-11s %s\n", $tag, GetFileType($tag, 1));
         }

@@ -14,34 +14,59 @@
   limitations under the License.
 --]]
 
-local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
 local LrApplicationView = import 'LrApplicationView'
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
-local LrColor = import 'LrColor'
 local LrTasks = import 'LrTasks'
-local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
-local LrErrors = import 'LrErrors'
+local LrBinding = import "LrBinding"
+local LrPrefs = import "LrPrefs"
 
+require "FocusPointPrefs"
 require "FocusPointDialog"
+require "FocusInfo"
 require "PointsRendererFactory"
+require "Log"
+
 
 local function showDialog()
+
   LrFunctionContext.callWithContext("showDialog", function(context)
 
     local catalog = LrApplication.activeCatalog()
     local targetPhoto = catalog:getTargetPhoto()
-    local errorMsg = nil
-    local photoView = nil
-    local dialogScope = nil
-    local rendererTable = nil
-    local switchedToLibrary = nil
+    local selectedPhotos = catalog:getTargetPhotos()
+    local current
+    local errorMsg
+    local photoView, infoView
+    local dialogScope
+    local rendererTable
+    local switchedToLibrary
+    local userResponse
+    local done
+    local prefs = LrPrefs.prefsForPlugin( nil )
+    local props = LrBinding.makePropertyTable(context, { clicked = false })
+
+    -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
+    FocusPointPrefs.InitializePrefs(prefs)
+    -- Initialize logging for non-Auto modes
+    if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
+
+    FocusPointPrefs.setDisplayScaleFactor()
+    Log.logInfo("System", "Display scaling level " ..
+           math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+
+    -- Find the index 'current' of the target photo in set of selectedPhotos
+    for i, photo in ipairs(selectedPhotos) do
+       if photo == targetPhoto then
+         current = i
+         break
+       end
+    end
 
     -- only on WIN (issue #199):
-    -- when launched in Develop module switch to Library to enforce that a preview of the image is available
+    -- if launched in Develop module switch to Library to enforce that a preview of the image is available
     -- must switch to loupe view because only in this view previews will be rendered
     -- perform module switch as early as possible to give Library time to create a preview if none exists
     if WIN_ENV then
@@ -50,58 +75,144 @@ local function showDialog()
         LrApplicationView.switchToModule("library")
         LrApplicationView.showView("loupe")
         switchedToLibrary = true
-        LrTasks.sleep(2.5)  -- timing-specific; might need to be increased on certain systems. Perhaps make it configurable?
+        LrTasks.sleep(0)  -- timing-specific; might need to be increased on certain systems. tbe
       end
     end
 
     -- throw up this dialog as soon as possible as it blocks input which keeps the plugin from potentially launching
     -- twice if clicked on really quickly
     -- let the renderer build the view now and show progress dialog
-    LrFunctionContext.callWithContext("innerContext", function(dialogContext)
-      dialogScope = LrDialogs.showModalProgressDialog {
-        title = "Loading Data",
-        caption = "Calculating Focus Point",
-        width = 200,
-        cannotCancel = false,
-        functionContext = dialogContext,
-      }
-      dialogScope:setIndeterminate()
+    repeat
 
-      if (targetPhoto:checkPhotoAvailability()) then
-        local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-        rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
-        if (rendererTable ~= nil) then
-          photoView = rendererTable.createView(targetPhoto, photoW, photoH)
-          if photoView == nil then
-            errorMsg = "No Focus-Point information found"
+      -- Initialize logging
+      if prefs.loggingLevel == "AUTO" then Log.initialize() end
+      Log.resetErrorsWarnings()
+      Log.logInfo("FocusPoint", string.rep("=", 72))
+
+      -- Save link to current photo, eg. as supplementary information in user messages
+      FocusPointDialog.currentPhoto = targetPhoto
+      FocusPointDialog.errorsEncountered = nil
+
+      LrFunctionContext.callWithContext("innerContext", function(dialogContext)
+        dialogScope = LrDialogs.showModalProgressDialog {
+          title = "Loading Data",
+          caption = "Calculating Focus Point",
+          width = 200,
+          cannotCancel = false,
+          functionContext = dialogContext,
+        }
+        dialogScope:setIndeterminate()
+
+        errorMsg = nil
+        if (targetPhoto:checkPhotoAvailability()) then
+          local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+          rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
+
+          if rendererTable then
+            photoView = rendererTable.createPhotoView(targetPhoto, photoW, photoH)
+            infoView  = FocusInfo.createInfoView (targetPhoto, props)
+            if not (photoView and infoView) then
+              errorMsg = "Internal error: Unable to create main window"
+            end
+          else
+            -- just to have this case covered - normally this condition should not occur
+            errorMsg = "Internal error: Unmapped points renderer"
           end
         else
-          errorMsg = "Unmapped points renderer"
+          errorMsg = "Photo is not available. Make sure hard drives are attached and try again"
+        end
+      end)
+      LrTasks.sleep(0) -- this actually closes the dialog. go figure.
+
+      -- "Loading Data" dialog has been canceled
+      -- photoView should never be nil in the absence of a fatal error
+      local skipMainWindow
+      if (dialogScope:isCanceled() or not photoView) then
+        skipMainWindow = true
+      end
+
+      -- a fatal error has occured for the current image: ask user wether to "Exit" the plugin
+      -- or "Continue" with the next image in multi-image mode (which means repeat in single-image mode)
+      if errorMsg then
+        userResponse = errorMessage(errorMsg)
+        if userResponse == "cancel" then
+          -- Stop plugin operation
+          return
+        else
+          -- just skip the main window, continue with next image or retry for the current
+          skipMainWindow = true
+        end
+      end
+
+      if skipMainWindow then
+        -- a fatal error has occured for the current image, "Exit" the plugin opreration or
+        -- "Continue" to next image (in multi-image mode) or repeat (single-image mode)
+        if (#selectedPhotos > 1) then
+          -- set index to next image, wrap around at end of list
+          current = (current % #selectedPhotos) + 1
+          targetPhoto = selectedPhotos[current]
         end
       else
-        errorMsg = "Photo is not available. Make sure hard drives are attached and try again"
+        -- Main dialog with has slightly different controls depending on single/multi mode
+        Log.logInfo("FocusPoint", "Present information")
+        if (#selectedPhotos == 1) then
+          -- single photo operation
+          userResponse = LrDialogs.presentModalDialog {
+            title = "Focus Points for " ..  targetPhoto:getRawMetadata("path"),
+            cancelVerb = "< exclude >",
+            actionVerb = "OK",
+            contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView)
+          }
+        else
+          -- operate on a series of selected photos
+          local f = LrView.osFactory()
+          local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
+          local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
+
+          props.clicked = false
+          userResponse = LrDialogs.presentModalDialog {
+            title = "Focus Points of " ..  targetPhoto:getRawMetadata("path") .. " (" .. current .. "/" .. #selectedPhotos .. ")",
+            contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView),
+            accessoryView = f:row {
+              spacing = 0,     -- removes uniform spacing; we control it manually
+              f:push_button {
+                title = buttonPrevImage,
+                action = function(button)
+                  -- Prevent multiple executions - known LrC SDK quirk!
+                  if props.clicked then return end
+                  props.clicked = true
+                  -- set index to previous image, wrap around at beginning of list
+                  current =  (current - 2) % #selectedPhotos + 1
+                  LrDialogs.stopModalWithResult(button, "previous")
+                end
+              },
+              f:spacer { width = 20 },    -- space before the next button
+              f:push_button {
+                title = buttonNextImage,
+                action = function(button)
+                  -- Prevent multiple executions - known LrC SDK quirk!
+                  if props.clicked then return end
+                  props.clicked = true
+                  -- set index to next image, wrap around at end of list
+                  current = (current % #selectedPhotos) + 1
+                  LrDialogs.stopModalWithResult(button, "next")
+                end
+              },
+            },
+            actionVerb = "Exit",
+            cancelVerb = "< exclude >",
+          }
+          -- Proceed to selected photo
+          targetPhoto = selectedPhotos[current]
+        end
+
+        rendererTable.cleanup()
+
+        -- Funnily, using the right side of the expression directly with until doesn't work !??
+        done = (userResponse == "ok") or (userResponse == "cancel")
       end
-    end)
-    LrTasks.sleep(0) -- this actually closes the dialog. go figure.
 
-    -- by displaying the error outside of the dialogContext, it allows the progress dialog to close
-    if (errorMsg ~= nil) then
-      LrDialogs.message(errorMsg, nil, nil)
-      return
-    end
-
-    if (dialogScope:isCanceled() or photoView == nil) then
-      return
-    end
-
-    -- display the contents
-    LrDialogs.presentModalDialog {
-      title = "Focus Point Viewer",
-      cancelVerb = "< exclude >",
-      actionVerb = "OK",
-      contents = FocusPointDialog.createDialog(targetPhoto, photoView)
-    }
-    rendererTable.cleanup()
+    until done
 
     if WIN_ENV and switchedToLibrary then
       LrApplicationView.switchToModule("develop")
@@ -111,6 +222,3 @@ local function showDialog()
 end
 
 LrTasks.startAsyncTask(showDialog)
-
-
-

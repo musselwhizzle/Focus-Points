@@ -50,7 +50,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 require Exporter;
 
-$VERSION = '3.70';
+$VERSION = '3.72';
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(EscapeXML UnescapeXML);
 
@@ -165,7 +165,7 @@ my %xmpNS = (
 #
     plus      => 'http://ns.useplus.org/ldf/xmp/1.0/',
     # (prism recommendations from http://www.prismstandard.org/specifications/3.0/Image_Guide_3.0.htm)
-    prism     => 'http://prismstandard.org/namespaces/basic/2.0/',
+    prism     => 'http://prismstandard.org/namespaces/basic/2.0/', # (maybe left at 2.0 to avoid compatibility issues -- think hard before changing this)
     prl       => 'http://prismstandard.org/namespaces/prl/2.1/',
     pur       => 'http://prismstandard.org/namespaces/prismusagerights/2.1/',
     pmi       => 'http://prismstandard.org/namespaces/pmi/2.2/',
@@ -1247,8 +1247,22 @@ my %sPantryItem = (
     NAMESPACE   => 'pdfx',
     NOTES => q{
         PDF extension tags.  This namespace is used to store application-defined PDF
-        information, so there are no pre-defined tags.  User-defined tags must be
-        created to enable writing of XMP-pdfx information.
+        information, so there are few pre-defined tags.  User-defined tags must be
+        created to enable writing of other XMP-pdfx information.
+    },
+    SourceModified => {
+        Name => 'SourceModified',
+        Groups => { 2 => 'Time' },
+        Shift => 'Time',
+        ValueConv => 'require Image::ExifTool::PDF; $val = Image::ExifTool::PDF::ConvertPDFDate($val)',
+        ValueConvInv => q{
+            require Image::ExifTool::PDF;
+            $val = Image::ExifTool::PDF::WritePDFValue($self,$val,"date");
+            $val =~ tr/()//d;
+            return $val;
+        },
+        PrintConv => '$self->ConvertDateTime($val)',
+        PrintConvInv => '$self->InverseDateTime($val)',
     },
 );
 
@@ -3804,8 +3818,22 @@ sub ParseXMPElement($$$;$$$$)
         my ($parseResource, %attrs, @attrs);
 # this hangs Perl (v5.18.4) for a specific capture string [patched in ExifTool 12.98]
 #        while ($attrs =~ m/(\S+?)\s*=\s*(['"])(.*?)\2/sg) {
-        while ($attrs =~ /(\S+?)\s*=\s*(['"])/g) {
-            my ($attr, $quote) = ($1, $2);
+# this may hang Perl v5.26.3 (but not v5.18.4) if there is lots of garbage in the XMP [patched in 13.23]
+#        while ($attrs =~ /(\S+?)\s*=\s*(['"])/g) {
+        for (;;) {
+            my ($attr, $quote);
+            if (length($attrs) < 2000) { # (do it the easy way if attributes aren't stupid long)
+                last unless $attrs =~ /(\S+)\s*=\s*(['"])/g;
+                ($attr, $quote) = ($1, $2);
+            } else {
+                # 13.23 patch to avoid capturing tons of garbage if XMP is corrupted
+                last unless $attrs =~ /=\s*(['"])/g;
+                $quote = $1;
+                my $p = pos($attrs) > 1000 ? pos($attrs) - 1000 : 0;
+                my $tmp = substr($attrs, $p, pos($attrs)-$p);
+                last unless $tmp =~ /(\S+)\s*=\s*$quote$/;
+                $attr = $1;
+            }
             my $p0 = pos($attrs);
             last unless $attrs =~ /$quote/g;
             my $val = substr($attrs, $p0, pos($attrs)-$p0-1);

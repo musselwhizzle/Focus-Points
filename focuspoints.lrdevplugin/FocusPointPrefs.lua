@@ -13,93 +13,322 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
-local LrView = import "LrView"
-local LrPrefs = import "LrPrefs"
-local LrShell = import "LrShell"
-
+local LrView      = import "LrView"
+local LrPrefs     = import "LrPrefs"
+local LrShell     = import "LrShell"
+local LrTasks     = import "LrTasks"
+local LrColor     = import "LrColor"
+local LrFileUtils = import "LrFileUtils"
+local LrDialogs   = import "LrDialogs"
+local LrHttp      = import "LrHttp"
 
 local bind = LrView.bind
 
-require "Utils"
+require "Log"
 
 FocusPointPrefs = {}
 
+FocusPointPrefs.displayScaleFactor = 0
+
+-- Scaling values for size of 'pixel focus' box, relative to focus point window size
+FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
+
+-- Indices to access scaling values in focusBoxSize table
+FocusPointPrefs.focusBoxSizeSmall  = 1
+FocusPointPrefs.focusBoxSizeMedium = 2
+FocusPointPrefs.focusBoxSizeLarge  = 3
+FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
+
+FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
+FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
+
+
+--[[
+  @@public void FocusPointPrefs.InitializePrefs()
+  ----
+  Initialize preferences at first run after installation of plugin
+--]]
+function FocusPointPrefs.InitializePrefs(prefs)
+  if not prefs.screenScaling      then	prefs.screenScaling   = 0 end
+  if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
+  if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
+  if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
+  if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
+  -- get the latest plugin version for update checks
+  FocusPointPrefs.getLatestVersion()
+end
+
+
+--[[ #TODO Documentation!
+--]]
+function FocusPointPrefs.setDisplayScaleFactor()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  if prefs.screenScaling ~= 0 then
+    FocusPointPrefs.displayScaleFactor = prefs.screenScaling
+  else
+    FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
+  end
+end
+
+
+--[[ #TODO Documentation!
+--]]
+function FocusPointPrefs.getDisplayScaleFactor()
+  if FocusPointPrefs.displayScaleFactor == 0 then
+    FocusPointPrefs.setDisplayScaleFactor()
+  end
+  return FocusPointPrefs.displayScaleFactor
+end
+
+
+--[[
+  @@public void FocusPointPrefs.getLatestVersion()
+  ----
+  Retrieves the version number of the latest plug-in release. Result is stored in global
+  variable 'prefs.latestVersion' for further use by the routines that deal with updates
+--]]
+function FocusPointPrefs.getLatestVersion()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  -- Need to execute this as a collaborative task
+  LrTasks.startAsyncTask(function()
+    prefs.latestVersion = string.match(LrHttp.get(FocusPointPrefs.latestVersionFile), "v%d+%.%d+%.%d+")
+  end)
+end
+
+
+--[[
+  @@public string FocusPointPrefs.latestVersion()
+  ----
+  Returns the version number of the latest plug-in release as a string eg. 'v3.5.12'
+--]]
+function FocusPointPrefs.latestVersion()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  if prefs.latestVersion then
+    return prefs.latestVersion
+  else
+    return ""
+  end
+end
+
+
+--[[
+  @@public boolean FocusPointPrefs.updateAvailable()
+  Checks whether an updated version of the plug-in is available
+  Returns true if so, otherwise false
+--]]
+function FocusPointPrefs.updateAvailable()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  local Info = require 'Info.lua'
+  local result
+
+  if prefs.latestVersion then
+    local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
+    if major and minor and revision then
+      -- we have a valid version number from the URL
+      local pluginVersion = Info.VERSION
+      if tonumber(major) > pluginVersion.major then
+        result = true
+      elseif tonumber(major) == pluginVersion.major then
+        if  tonumber(minor) > pluginVersion.minor then
+          result = true
+        elseif tonumber(minor) == pluginVersion.minor then
+          result = tonumber(revision) > pluginVersion.revision
+        end
+      end
+    else
+      Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
+    end
+  else
+    Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
+  end
+  return result
+end
+
+
+--[[
+  @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table viewFactory, p )
+  -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
+--]]
 function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
-  if prefs.screenScaling == nil then
-	prefs.screenScaling = 1.0
+  -- Set the defaults
+  FocusPointPrefs.InitializePrefs(prefs)
+
+  -- Check for updates
+  local updateMessage
+  if FocusPointPrefs.updateAvailable() then
+    updateMessage =
+      viewFactory:row {
+        viewFactory:static_text {title = "Update available!", text_color=LrColor("red")},
+        viewFactory:spacer{fill_horizontal = 1},
+        viewFactory:push_button {
+          title = "Open URL",
+          action = function() LrHttp.openUrlInBrowser( FocusPointPrefs.latestReleaseURL ) end,
+        },
+      }
+  else
+    updateMessage = viewFactory:static_text{ title = "" }
   end
 
+  -- Width of the drop-down lists in px, to make the naming aligned across rows
+  local dropDownWidth = LrView.share('-Medium-')
+
   return {
-  {
-    title = "Screen Scaling (only for Windows)",
-    viewFactory:row {
-      bind_to_object = prefs,
-      spacing = viewFactory:control_spacing(),
-      viewFactory:popup_menu {
-        title = "Scaling",
-        value = bind 'screenScaling',
-        items = {
-          { title = "100%", value = 1.0},
-          { title = "125%", value = 0.8},
-          { title = "150%", value = 0.67},
-          { title = "175%", value = 0.57},
-          { title = "200%", value = 0.5},
-        }
-      },
-    },
-  },
-  {
-    title = "Logging",
-    viewFactory:row {
-      bind_to_object = prefs,
-      spacing = viewFactory:control_spacing(),
-      viewFactory:popup_menu {
-        title = "Logging level",
-        value = bind 'loggingLevel',
-        items = {
-          { title = "None", value = "NONE"},
-          { title = "Error", value = "ERROR"},
-          { title = "Warn", value = "WARN"},
-          { title = "Info", value = "INFO"},
-          { title = "Debug", value = "DEBUG"},
-        }
-      },
-      viewFactory:static_text {
-          title     = 'Plugin log:',
-  				alignment = 'right',
-  				fill_horizontal = 1,
-      },
-      viewFactory:push_button {
-  				title 		= "Show file",
-  				action 		= function()
-  					LrShell.revealInShell(getlogFileName())
-  				end,
-			},
-    },
-  },
-  {
-    title = "Acknowledgements",
-    viewFactory:row {
-      fill_horizontal = 1,
-      viewFactory:column {
-        fill_horizontal = 1,
+    {
+      title = "Screen Scaling (only for Windows)",
+      viewFactory:row {
+        bind_to_object = prefs,
         spacing = viewFactory:control_spacing(),
-        viewFactory:static_text {
-          font = "<system/bold>",
-          title = 'ImageMagick Studio LLC'
+        viewFactory:popup_menu {
+          title = "Scaling",
+          value = bind ("screenScaling"),
+          width = dropDownWidth,
+          items = {
+            { title = "Auto", value = 0    },
+            { title = "100%", value = 1.0  },
+            { title = "125%", value = 0.8  },
+            { title = "150%", value = 0.67 },
+            { title = "175%", value = 0.57 },
+            { title = "200%", value = 0.5  },
+            { title = "250%", value = 0.4  },
+          }
         },
         viewFactory:static_text {
-          title = 'This plugin uses ImageMagick mogrify'
+          title = 'Select "Auto" for same display scale factor as on Windows OS (Display Settings -> Scale)'
         }
       },
-      viewFactory:column {
+    },
+    {
+      title = "Viewing Options",
+      viewFactory:row {
+        bind_to_object = prefs,
+        spacing = viewFactory:control_spacing(),
+        viewFactory:popup_menu {
+          title = "focusBoxColor",
+          value = bind ("focusBoxColor"),
+          width = dropDownWidth,
+          items = {
+            { title = "Red",   value = "red" },
+            { title = "Green", value = "green" },
+            { title = "Blue",  value = "blue" },
+          }
+        },
         viewFactory:static_text {
-          title = "https://imagemagick.org/index.php"
+          title = 'Color for in-focus points',
+        },
+      },
+      viewFactory:row {
+        bind_to_object = prefs,
+        viewFactory:popup_menu {
+          title = "focusBoxSize",
+          value = bind ("focusBoxSize"),
+          width = dropDownWidth,
+          items = {
+            { title = "Small",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall ] },
+            { title = "Medium", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeMedium] },
+            { title = "Large",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge ] },
+          }
+        },
+        viewFactory:static_text {
+          title = "  Size of focus box for 'focus pixel' points ",
         },
       },
     },
-  },
+    {
+      title = "Logging",
+      viewFactory:row {
+        bind_to_object = prefs,
+        spacing = viewFactory:control_spacing(),
+        viewFactory:popup_menu {
+          title = "Logging level",
+          value = bind ('loggingLevel'),
+          width = dropDownWidth,
+          items = {
+            { title = "Full",  value = "FULL" },
+            { title = "Debug", value = "DEBUG" },
+            { title = "Auto",  value = "AUTO" },
+            { title = "Info",  value = "INFO" },
+            { title = "Warn",  value = "WARN" },
+            { title = "Error", value = "ERROR" },
+            { title = "None",  value = "NONE" },
+          }
+        },
+        viewFactory:static_text {
+          title = 'Level of information to be logged (Recommended: "Auto")'
+        },
+        viewFactory:static_text {
+          title = 'Plugin log:',
+          alignment = 'right',
+          fill_horizontal = 1,
+        },
+        viewFactory:push_button {
+          title = "Show file",
+          action = function()
+            local logFileName = Log.getFileName()
+            if LrFileUtils.exists(logFileName)then
+              LrShell.revealInShell(logFileName)
+            else
+              LrDialogs.message('No log file written. Set logging level other than "None".')
+            end
+          end,
+        },
+      },
+    },
+    {
+      title = "Updates",
+      bind_to_object = prefs,
+      spacing = viewFactory:control_spacing(),
+      viewFactory:row {
+        viewFactory:checkbox {
+          title = 'Display message when updates are available',
+          value = bind('checkForUpdates')
+        },
+        viewFactory:spacer{fill_horizontal = 1},
+        updateMessage,
+      },
+    },
+    {
+      title = "Acknowledgements",
+      viewFactory:row {
+        fill_horizontal = 1,
+        viewFactory:column {
+          fill_horizontal = 1,
+          viewFactory:static_text {
+            font = "<system/bold>",
+            title = 'ImageMagick Studio LLC'
+          },
+          viewFactory:spacer{ height = 5 },
+          viewFactory:static_text {
+            title = 'This plugin uses ImageMagick mogrify'
+          }
+        },
+        viewFactory:column {
+          viewFactory:static_text {
+            title = "https://imagemagick.org/index.php"
+          },
+        },
+      },
+      viewFactory:spacer{fill_horizontal = 1},
+      viewFactory:row {
+        fill_horizontal = 1,
+        viewFactory:column {
+          fill_horizontal = 1,
+          viewFactory:static_text {
+            font = "<system/bold>",
+            title = 'ExifTool'
+          },
+          viewFactory:spacer{ height = 5 },
+          viewFactory:static_text {
+            title = "This plugin relies on Phil Harvey's ExifTool to read and decode metadata"
+          }
+        },
+        viewFactory:column {
+          viewFactory:static_text {
+            title = "https://exiftool.org/"
+          },
+        },
+      },
+    }
   }
 end

@@ -29,7 +29,7 @@ use vars qw($VERSION $RELEASE @ISA @EXPORT_OK %EXPORT_TAGS $AUTOLOAD @fileTypes
             %jpegMarker %specialTags %fileTypeLookup $testLen $exeDir
             %static_vars $advFmtSelf);
 
-$VERSION = '13.15';
+$VERSION = '13.25';
 $RELEASE = '';
 @ISA = qw(Exporter);
 %EXPORT_TAGS = (
@@ -155,9 +155,9 @@ sub ReadValue($$$;$$$);
     Real::Metafile Red RIFF AIFF ASF WTV DICOM FITS XISF MIE JSON HTML XMP::SVG
     Palm Palm::MOBI Palm::EXTH Torrent EXE EXE::PEVersion EXE::PEString
     EXE::DebugRSDS EXE::DebugNB10 EXE::Misc EXE::MachO EXE::PEF EXE::ELF EXE::AR
-    EXE::CHM LNK Font VCard Text VCard::VCalendar VCard::VNote RSRC Rawzor ZIP
-    ZIP::GZIP ZIP::RAR ZIP::RAR5 RTF OOXML iWork ISO FLIR::AFF FLIR::FPF MacOS
-    MacOS::MDItem FlashPix::DocTable
+    EXE::CHM LNK PCAP Font VCard Text VCard::VCalendar VCard::VNote RSRC Rawzor
+    ZIP ZIP::GZIP ZIP::RAR ZIP::RAR5 RTF OOXML iWork ISO FLIR::AFF FLIR::FPF
+    MacOS MacOS::MDItem FlashPix::DocTable
 );
 
 # alphabetical list of current Lang modules
@@ -199,8 +199,8 @@ $defaultLang = 'en';    # default language
                 LFP HTML VRD RTF FITS XISF XCF DSS QTIF FPX PICT ZIP GZIP PLIST
                 RAR 7Z BZ2 CZI TAR EXE EXR HDR CHM LNK WMF AVC DEX DPX RAW Font
                 JUMBF RSRC M2TS MacOS PHP PCX DCX DWF DWG DXF WTV Torrent VCard
-                LRI R3D AA PDB PFM2 MRC LIF JXL MOI ISO ALIAS JSON MP3 DICOM PCD
-                NKA ICO TXT AAC);
+                LRI R3D AA PDB PFM2 MRC LIF JXL MOI ISO ALIAS PCAP JSON MP3
+                DICOM PCD NKA ICO TXT AAC);
 
 # file types that we can write (edit)
 my @writeTypes = qw(JPEG TIFF GIF CRW MRW ORF RAF RAW PNG MIE PSD XMP PPM EPS
@@ -263,6 +263,7 @@ my %createTypes = map { $_ => 1 } qw(XMP ICC MIE VRD DR4 EXIF EXV);
     BPG  => ['BPG',  'Better Portable Graphics'],
     BTF  => ['BTF',  'Big Tagged Image File Format'], #(unofficial)
     BZ2  => ['BZ2',  'BZIP2 archive'],
+    CAP  =>  'PCAP',
     C2PA => ['JUMBF','Coalition for Content Provenance and Authenticity'],
     CHM  => ['CHM',  'Microsoft Compiled HTML format'],
     CIFF => ['CRW',  'Camera Image File Format'],
@@ -454,6 +455,8 @@ my %createTypes = map { $_ => 1 } qw(XMP ICC MIE VRD DR4 EXIF EXV);
     PAC  => ['RIFF', 'Lossless Predictive Audio Compression'],
     PAGES => ['ZIP', 'Apple Pages document'],
     PBM  => ['PPM',  'Portable BitMap'],
+    PCAP => ['PCAP', 'Packet Capture'],
+    PCAPNG => ['PCAP', 'Packet Capture Next Generation'],
     PCD  => ['PCD',  'Kodak Photo CD Image Pac'],
     PCT  =>  'PICT',
     PCX  => ['PCX',  'PC Paintbrush'],
@@ -568,7 +571,7 @@ my %createTypes = map { $_ => 1 } qw(XMP ICC MIE VRD DR4 EXIF EXV);
     XLTX => [['ZIP','FPX'], 'Office Open XML Spreadsheet Template'],
     XMP  => ['XMP',  'Extensible Metadata Platform'],
     WOFF => ['Font', 'Web Open Font Format'],
-    WOFF2=> ['Font', 'Web Open Font Format2'],
+    WOFF2=> ['Font', 'Web Open Font Format 2'],
     WPG  => ['WPG',  'WordPerfect Graphics'],
     WTV  => ['WTV',  'Windows recorded TV show'],
     ZIP  => ['ZIP',  'ZIP archive'],
@@ -744,6 +747,7 @@ my %fileDescription = (
     OTF  => 'application/font-otf',
     PAGES=> 'application/x-iwork-pages-sffpages',
     PBM  => 'image/x-portable-bitmap',
+    PCAP => 'application/vnd.tcpdump.pcap',
     PCD  => 'image/x-photo-cd',
     PCX  => 'image/pcx',
     PDB  => 'application/vnd.palm',
@@ -980,6 +984,7 @@ $testLen = 1024;    # number of bytes to read when testing for magic number
     NKA  => 'NIKONADJ',
     OGG  => '(OggS|ID3)',
     ORF  => '(II|MM)',
+    PCAP => '\xa1\xb2(\xc3\xd4|\x3c\x4d)\0.\0.|(\xd4\xc3|\x4d\x3c)\xb2\xa1.\0.\0|\x0a\x0d\x0d\x0a.{4}(\x1a\x2b\x3c\x4d|\x4d\x3c\x2b\x1a)|GMBU\0\x02',
   # PCD  =>  signature is at byte 2048
     PCX  => '\x0a[\0-\x05]\x01[\x01\x02\x04\x08].{64}[\0-\x02]',
     PDB  => '.{60}(\.pdfADBE|TEXtREAd|BVokBDIC|DB99DBOS|PNRdPPrs|DataPPrs|vIMGView|PmDBPmDB|InfoINDB|ToGoToGo|SDocSilX|JbDbJBas|JfDbJFil|DATALSdb|Mdb1Mdb1|BOOKMOBI|DataPlkr|DataSprd|SM01SMem|TEXtTlDc|InfoTlIf|DataTlMl|DataTlPt|dataTDBP|TdatTide|ToRaTRPW|zTXTGPlm|BDOCWrdS)',
@@ -1135,6 +1140,7 @@ my @availableOptions = (
     [ 'IgnoreMinorErrors',undef,  'ignore minor errors when reading/writing' ],
     [ 'IgnoreTags',       undef,  'list of tags to ignore when extracting' ],
     [ 'ImageHashType',    'MD5',  'image hash algorithm' ],
+    [ 'KeepUTCTime',      undef,  'do not convert times stored as UTC' ],
     [ 'Lang',       $defaultLang, 'localized language for descriptions etc' ],
     [ 'LargeFileSupport', 1,      'flag indicating support of 64-bit file offsets' ],
     [ 'LimitLongValues',  60,     'length limit for long values' ],
@@ -1152,6 +1158,7 @@ my @availableOptions = (
     [ 'NoPDFList',        undef,  'flag to avoid splitting PDF List-type tag values' ],
     [ 'NoWarning',        undef,  'regular expression for warnings to suppress' ],
     [ 'Password',         undef,  'password for password-protected PDF documents' ],
+    [ 'Plot',             undef,  'SVG plot settings' ],
     [ 'PrintCSV',         undef,  'flag to print CSV directly (selected metadata types only)' ],
     [ 'PrintConv',        1,      'flag to enable print conversion' ],
     [ 'QuickTimeHandler', 1,      'flag to add mdir Handler to newly created Meta box' ],
@@ -2587,6 +2594,12 @@ sub Options($$;@)
             } else {
                 warn("Can't set $param to undef\n");
             }
+        } elsif ($param eq 'Plot') {
+            # add to existing plot settings
+            $newVal = "$oldVal,$newVal" if defined $oldVal and defined $newVal;
+            $$options{$param} = $newVal;
+        } elsif ($param eq 'KeepUTCTime') {
+            $$options{$param} = $static_vars{$param} = $newVal;
         } elsif (lc $param eq 'geodir') {
             $Image::ExifTool::Geolocation::geoDir = $newVal;
         } else {
@@ -4166,7 +4179,7 @@ sub GetFileType(;$$)
                 $desc = $$fileType[1];
             }
         } else {
-            $desc = $fileDescription{$file};
+            $desc = $fileDescription{$file} || $file;
         }
         $desc .= ", $subType" if $subType;
         return $desc;
@@ -4245,7 +4258,7 @@ sub Init($)
     my $self = shift;
     # delete all DataMember variables (lower-case names)
     delete $$self{$_} foreach grep /[a-z]/, keys %$self;
-    undef %static_vars;             # clear all static variables
+    %static_vars = ( KeepUTCTime => $$self{OPTIONS}{KeepUTCTime} ); # reset static variables
     delete $$self{FOUND_TAGS};      # list of found tags
     delete $$self{EXIF_DATA};       # the EXIF data block
     delete $$self{EXIF_POS};        # EXIF position in file
@@ -4494,7 +4507,7 @@ sub DoneExtract($)
         # set family 8 group name for all tags
         $$altExifTool{TAG_EXTRA}{$_}{G8} = $g8 foreach keys %{$$altExifTool{VALUE}};
         # prepare our sorted list of found tags
-        $$altExifTool{FoundTags} = [ reverse sort keys %{$$altExifTool{VALUE}} ];
+        $$altExifTool{FoundTags} = $altExifTool->SetFoundTags();
         $$altExifTool{DID_EXTRACT} = 1;
     }
     # if necessary, build composite tags that rely on tags from alternate files
@@ -6680,12 +6693,15 @@ sub ConvertUnixTime($;$$)
         $time = int($time + 1e-6) if $time != int($time);  # avoid round-off errors
         $dec = '';
     }
-    if ($toLocal) {
-        @tm = localtime($time);
-        $tz = TimeZoneString(\@tm, $time);
-    } else {
+    if (not $toLocal) {
         @tm = gmtime($time);
         $tz = '';
+    } elsif ($static_vars{KeepUTCTime}) {
+        @tm = gmtime($time);
+        $tz = 'Z';
+    } else {
+        @tm = localtime($time);
+        $tz = TimeZoneString(\@tm, $time);
     }
     my $str = sprintf("%4d:%.2d:%.2d %.2d:%.2d:%.2d$dec%s",
                       $tm[5]+1900, $tm[4]+1, $tm[3], $tm[2], $tm[1], $tm[0], $tz);
@@ -6868,10 +6884,10 @@ sub HDump($$$$;$$$)
 # Returns: Trailer info hash (with RAF and DirName set),
 #          or undef if no recognized trailer was found
 # Notes: leaves file position unchanged
-sub IdentifyTrailer($;$)
+sub IdentifyTrailer($$;$)
 {
-    my $raf = shift;
-    my $offset = shift || 0;
+    my ($self, $raf, $offset) = @_;
+    $offset or $offset = 0;
     my $pos = $raf->Tell();
     my ($buff, $type, $len);
     while ($raf->Seek(-$offset, 2) and ($len = $raf->Tell()) > 0) {
@@ -6898,6 +6914,11 @@ sub IdentifyTrailer($;$)
             $type = 'NikonApp';
         } elsif ($buff =~ /\xff{4}\x1b\*9HWfu\x84\x93\xa2\xb1$/) {
             $type = 'Vivo';
+        } elsif ($buff =~ /jxrs...\0$/s) {
+            $type = 'OnePlus';
+        } elsif ($$self{ProcessGoogleTrailer}) {
+            # check for Google trailer information if specific XMP tags exist
+            $type = 'Google';
         }
         last;
     }
@@ -6929,18 +6950,24 @@ sub ProcessTrailers($$)
     my $success = 1;
     my $path = $$self{PATH};
 
+    # get position of end of file
+    $raf->Seek(0,2);
+    $$self{FileEnd} = $raf->Tell();
+
     for (;;) { # loop through all trailers
+        $raf->Seek($pos);
         my ($proc, $outBuff);
-        if ($dirName eq 'Insta360') {
-            require 'Image/ExifTool/QuickTimeStream.pl';
-            $proc = 'Image::ExifTool::QuickTime::ProcessInsta360';
-        } elsif ($dirName eq 'NikonApp') {
-            require Image::ExifTool::Nikon;
-            $proc = 'Image::ExifTool::Nikon::ProcessNikonApp';
-        } else {
-            require "Image/ExifTool/$dirName.pm";
-            $proc = "Image::ExifTool::${dirName}::Process$dirName";
-        }
+        # trailer-processing procs residing in modules of a different name
+        my $module = {
+            Insta360 => 'QuickTimeStream.pl',
+            NikonApp => 'Nikon.pm',
+            Vivo     => 'Trailer.pm',
+            OnePlus  => 'Trailer.pm',
+            Google   => 'Trailer.pm',
+        }->{$dirName} || "$dirName.pm";
+        require "Image/ExifTool/$module";
+        $module =~ s/(Stream)?\..*//;   # remove extension and change QuickTimeStream to QuickTime
+        $proc = "Image::ExifTool::${module}::Process$dirName";
         if ($outfile) {
             # write to local buffer so we can add trailer in proper order later
             $$outfile and $$dirInfo{OutFile} = \$outBuff, $outBuff = '';
@@ -6953,11 +6980,38 @@ sub ProcessTrailers($$)
         $$dirInfo{Trailer} = 1;         # set Trailer flag in case proc cares
         # add trailer and DirName to SubDirectory PATH
         push @$path, 'Trailer', $dirName;
-
-        # read or write this trailer
-        # (proc takes Offset as positive offset from end of trailer to end of file,
-        #  and returns DataPos and DirLen, and Fixup if applicable, and updates
-        #  OutFile when writing.  Returns < 0 if we must scan for this trailer)
+#
+# Call proc to read or write this trailer
+#
+# Proc inputs:
+#   0) ExifTool ref, with FileEnd set, and TrailerStart possibly set (start of all trailers)
+#   1) DirInfo with the following elements:
+#        DirName - name of this trailer
+#        RAF     - RAF reference
+#        Offset  - positive offset from end of this trailer to the end of file
+#        OutFile - (write mode) scalar reference for output buffer consisting of an empty string
+#        Trailer - flag set so proc knows we are processing a trailer (if it cares)
+#        Fixup   - optional fixup for pointers in trailer
+#        ScanForTrailer - set if we should now scan for the trailer start.  For JPEG
+#           images the ExifTool TrailerStart member will also be set, but for TIFF
+#           images TrailerStart will only be set when writing, so the proc should
+#           scan from the current file position when reading in a TIFF image.
+# Proc returns in read mode (OutFile not set):
+#   1 = success
+#   0 = error processing trailer (no warning will be issued and remaining trailers will be ignored)
+#  -1 = must scan from TrailerStart since length can not be determined
+#       (in which case this routine will be called again later when TrailerStart is known)
+# Proc returns in write mode:
+#   1 = success (and proc updates OutFile with the trailer to write, or empty string to delete)
+#   0 = error processing trailer (will issue minor error)
+#  -1 = caller to copy or delete the trailer as-is (from TrailerStart if DataPos isn't set)
+#   - TrailerStart will always be set in write mode
+#   - the write routine will not be called if all trailers are being deleted
+# Proc sets the following elements of $dirInfo in both read and write mode:
+#   DataPos - file position for start of this trailer
+#   DirLen  - length of this trailer (subsequent trailers are not processed if this is not set)
+#   Fixup   - for any pointers in the trailer that need adjusting
+#
         no strict 'refs';
         my $result = &$proc($self, $dirInfo);
         use strict 'refs';
@@ -6965,8 +7019,27 @@ sub ProcessTrailers($$)
         # restore PATH (pop last 2 items)
         splice @$path, -2;
 
-        # check result
+        my ($dataPos, $dirLen) = @$dirInfo{'DataPos','DirLen'};
         if ($outfile) {
+            if ($result < 0) {
+                # copy or delete the trailer ourself
+                $result = 1;
+                if ($$self{TrailerStart}) {
+                    $dataPos or $dataPos = $$self{TrailerStart};
+                    $dirLen or $dirLen = $$self{FileEnd} - $offset - $dataPos;
+                }
+                if ($$self{DEL_GROUP}{Trailer} or $$self{DEL_GROUP}{$dirName}) {
+                    my $bytes = $dirLen ? " ($dirLen bytes)" : '';
+                    $self->VPrint(0, "Deleting $dirName trailer$bytes\n");
+                    ++$$self{CHANGED};
+                } elsif ($dataPos and $dirLen) {
+                    $self->VPrint(0, "Copying $dirName trailer ($dirLen bytes)\n");
+                    $result = 0 unless $raf->Seek($dataPos) and
+                        $raf->Read(${$$dirInfo{OutFile}}, $dirLen) == $dirLen;
+                } else {
+                    $result = 0;
+                }
+            }
             if ($result > 0) {
                 if ($outBuff) {
                     # write trailers to OutFile in original order
@@ -6994,15 +7067,20 @@ sub ProcessTrailers($$)
             $success = 0;
             last;
         }
-        last unless $result > 0 and $$dirInfo{DirLen};
+        last unless $result > 0 and $dirLen;
+        $offset += $dirLen;
+        last if $dataPos and $$self{TrailerStart} and $dataPos <= $$self{TrailerStart};
         # look for next trailer
-        $offset += $$dirInfo{DirLen};
-        my $nextTrail = IdentifyTrailer($raf, $offset) or last;
+        my $nextTrail = $self->IdentifyTrailer($raf, $offset);
+        # process Google trailer after all others if necessary and not done already
+        unless ($nextTrail) {
+            last unless $$self{ProcessGoogleTrailer};
+            $nextTrail = { DirName => 'Google', RAF => $raf };
+        }
         $dirName = $$dirInfo{DirName} = $$nextTrail{DirName};
-        $raf->Seek($pos, 0);
     }
     SetByteOrder($byteOrder);       # restore original byte order
-    $raf->Seek($pos, 0);            # restore original file position
+    $raf->Seek($pos);               # restore original file position
     $$dirInfo{OutFile} = $outfile;  # restore original outfile
     $$dirInfo{Offset} = $offset;    # return offset from EOF to start of first trailer
     $$dirInfo{Fixup} = $fixup;      # return fixup information
@@ -7399,12 +7477,57 @@ sub ProcessJPEG($$;$)
             $foundSOS = 1;
             # all done with meta information unless we have a trailer
             $verbose and print $out "${indent}JPEG SOS\n";
+            # process extended XMP now if it existed
+            # (must do this before trailers because XMP is required to process Google trailer)
+            if (%extendedXMP) {
+                my $guid;
+                # GUID indicated by the last main XMP segment
+                my $goodGuid = $$self{VALUE}{HasExtendedXMP} || '';
+                # GUID of the extended XMP that we will process ('2' for all)
+                my $readGuid = $$options{ExtendedXMP} || 0;
+                $readGuid = $goodGuid if $readGuid eq '1';
+                foreach $guid (sort keys %extendedXMP) {
+                    next unless length $guid == 32;     # ignore other (internal) keys
+                    my $extXMP = $extendedXMP{$guid};
+                    my ($off, @offsets, $warn);
+                    # make sure we have all chunks, and create a list of sorted offsets
+                    for ($off=0; $off<$$extXMP{Size}; ) {
+                        last unless defined $$extXMP{$off};
+                        push @offsets, $off;
+                        $off += length $$extXMP{$off};
+                    }
+                    unless ($off == $$extXMP{Size}) {
+                        $self->Warn("Incomplete extended XMP (GUID $guid)");
+                        next;
+                    }
+                    if ($guid eq $readGuid or $readGuid eq '2') {
+                        $warn = 'Reading non-' if $guid ne $goodGuid;
+                        my $buff = '';
+                        # assemble XMP all together
+                        $buff .= $$extXMP{$_} foreach @offsets;
+                        my $tagTablePtr = GetTagTable('Image::ExifTool::XMP::Main');
+                        my %dirInfo = (
+                            DataPt      => \$buff,
+                            Parent      => 'APP1',
+                            IsExtended  => 1,
+                        );
+                        $$path[$pn] = 'APP1';
+                        $self->ProcessDirectory(\%dirInfo, $tagTablePtr);
+                        pop @$path;
+                    } else {
+                        $warn = 'Ignored ';
+                        $warn .= 'non-' if $guid ne $goodGuid;
+                    }
+                    $self->Warn("${warn}standard extended XMP (GUID $guid)") if $warn;
+                    delete $extendedXMP{$guid};
+                }
+            }
             unless ($fast) {
-                $trailInfo = IdentifyTrailer($raf);
+                $trailInfo = $self->IdentifyTrailer($raf);
                 # process trailer now unless we are doing verbose dump
                 if ($trailInfo and $verbose < 3 and not $htmlDump) {
                     # process trailers (keep trailInfo to finish processing later
-                    # only if we can't finish without scanning from end of file)
+                    # only if we can't finish without scanning from JPEG EOF)
                     $self->ProcessTrailers($trailInfo) and undef $trailInfo;
                 }
                 if ($wantTrailer and $$self{PreviewImageStart}) {
@@ -7577,7 +7700,7 @@ sub ProcessJPEG($$;$)
                         my $n = length($1) + 1;
                         $self->HDump($segPos+pos($$dataPt)-$n, $n, '[Vivo HiddenData]', undef, 0x08);
                     }
-                    my $tbl = GetTagTable('Image::ExifTool::Vivo::Main');
+                    my $tbl = GetTagTable('Image::ExifTool::Trailer::Vivo');
                     $self->HandleTag($tbl, HiddenData => $1);
                 }
                 # avoid looking for preview unless necessary because it really slows
@@ -7855,6 +7978,12 @@ sub ProcessJPEG($$;$)
                     $self->ProcessDirectory(\%dirInfo, $tagTablePtr);
                     undef $scalado;
                 }
+            } elsif ($$segDataPt =~ /^Qualcomm Dual Camera Attributes/) {
+                $dumpType = 'Qualcomm Dual Camera';
+                my $tagTablePtr = GetTagTable('Image::ExifTool::Qualcomm::DualCamera');
+                DirStart(\%dirInfo, 31);
+                $dirInfo{DirName} = 'Qualcomm Dual Camera';
+                $self->ProcessDirectory(\%dirInfo, $tagTablePtr);
             } elsif ($$segDataPt =~ /^FPXR\0/) {
                 next if $fast > 1;      # skip processing for very fast
                 $dumpType = 'FPXR';
@@ -8237,50 +8366,6 @@ sub ProcessJPEG($$;$)
         }
         undef $$segDataPt;
     }
-    # process extended XMP now if it existed
-    if (%extendedXMP) {
-        my $guid;
-        # GUID indicated by the last main XMP segment
-        my $goodGuid = $$self{VALUE}{HasExtendedXMP} || '';
-        # GUID of the extended XMP that we will process ('2' for all)
-        my $readGuid = $$options{ExtendedXMP} || 0;
-        $readGuid = $goodGuid if $readGuid eq '1';
-        foreach $guid (sort keys %extendedXMP) {
-            next unless length $guid == 32;     # ignore other (internal) keys
-            my $extXMP = $extendedXMP{$guid};
-            my ($off, @offsets, $warn);
-            # make sure we have all chunks, and create a list of sorted offsets
-            for ($off=0; $off<$$extXMP{Size}; ) {
-                last unless defined $$extXMP{$off};
-                push @offsets, $off;
-                $off += length $$extXMP{$off};
-            }
-            unless ($off == $$extXMP{Size}) {
-                $self->Warn("Incomplete extended XMP (GUID $guid)");
-                next;
-            }
-            if ($guid eq $readGuid or $readGuid eq '2') {
-                $warn = 'Reading non-' if $guid ne $goodGuid;
-                my $buff = '';
-                # assemble XMP all together
-                $buff .= $$extXMP{$_} foreach @offsets;
-                my $tagTablePtr = GetTagTable('Image::ExifTool::XMP::Main');
-                my %dirInfo = (
-                    DataPt      => \$buff,
-                    Parent      => 'APP1',
-                    IsExtended  => 1,
-                );
-                $$path[$pn] = 'APP1';
-                $self->ProcessDirectory(\%dirInfo, $tagTablePtr);
-                pop @$path;
-            } else {
-                $warn = 'Ignored ';
-                $warn .= 'non-' if $guid ne $goodGuid;
-            }
-            $self->Warn("${warn}standard extended XMP (GUID $guid)") if $warn;
-            delete $extendedXMP{$guid};
-        }
-    }
     # print verbose hash message if necessary
     print $out "${indent}(ImageDataHash: $hashsize bytes of JPEG image data)\n" if $hashsize and $verbose;
     # calculate JPEGDigest if requested
@@ -8555,9 +8640,11 @@ sub DoProcessTIFF($$;$)
         }
         # process information in recognized trailers
         if ($raf) {
-            my $trailInfo = IdentifyTrailer($raf);
+            my $trailInfo = $self->IdentifyTrailer($raf);
             if ($trailInfo) {
-                $$trailInfo{ScanForTrailer} = 1;   # scan to find AFCP if necessary
+                # scan to find AFCP if necessary (Note: we are scanning
+                # from a random file position in the TIFF)
+                $$trailInfo{ScanForTrailer} = 1;
                 $self->ProcessTrailers($trailInfo);
             }
             # dump any other known trailer (eg. A100 RAW Data)
@@ -8658,11 +8745,12 @@ sub DoProcessTIFF($$;$)
         for (;;) {
             last unless $extra > 12;
             $raf->Seek($tiffEnd);  # seek back to end of image
-            $trailInfo = IdentifyTrailer($raf);
+            $trailInfo = $self->IdentifyTrailer($raf);
             last unless $trailInfo;
             my $tbuf = '';
             $$trailInfo{OutFile} = \$tbuf;  # rewrite trailer(s)
             $$trailInfo{ScanForTrailer} = 1;   # scan for AFCP if necessary
+            $$self{TrailerStart} = $tiffEnd;
             # rewrite all trailers to buffer
             unless ($self->ProcessTrailers($trailInfo)) {
                 undef $trailInfo;
@@ -8874,7 +8962,7 @@ sub ProcessDirectory($$$;$)
         ($$dirInfo{DirLen} or not defined $$dirInfo{DirLen}))
     {
         my $addr = $$dirInfo{DirStart} + $$dirInfo{DataPos} + ($$dirInfo{Base}||0) + $$self{BASE};
-        if ($$self{PROCESSED}{$addr}) {
+        if ($$self{PROCESSED}{$addr} and not $$dirInfo{NotDup}) {
             $self->Warn("$dirName pointer references previous $$self{PROCESSED}{$addr} directory");
             # patch for bug in Windows phone 7.5 O/S that writes incorrect InteropIFD pointer
             return 0 unless $dirName eq 'GPS' and $$self{PROCESSED}{$addr} eq 'InteropIFD';
@@ -9085,10 +9173,11 @@ sub AddTagToTable($$;$$)
 # Handle simple extraction of new tag information
 # Inputs: 0) ExifTool object ref, 1) tag table reference, 2) tagID, 3) value,
 #         4-N) parameters hash: Index, DataPt, DataPos, Base, Start, Size, Parent,
-#              TagInfo, ProcessProc, RAF, Format, Count
+#              TagInfo, ProcessProc, RAF, Format, Count, MakeTagInfo
 # Returns: tag key or undef if tag not found
 # Notes: if value is not defined, it is extracted from DataPt using TagInfo
 #        Format and Count if provided
+# - set MakeTagInfo to add tag info for unknown tags with name made from tag ID
 sub HandleTag($$$$;%)
 {
     my ($self, $tagTablePtr, $tag, $val, %parms) = @_;
@@ -9100,6 +9189,15 @@ sub HandleTag($$$$;%)
 
     if ($tagInfo) {
         $subdir = $$tagInfo{SubDirectory};
+    } elsif ($parms{MakeTagInfo}) {
+        $self->VPrint(0, $$self{INDENT}, "[adding $tag]\n") if $verbose;
+        my $name = $tag;
+        $name =~ s/([A-Z]) ([A-Z][ A-Z])/${1}_$2/g; # underline between acronyms
+        $name =~ s/([^A-Za-z])([a-z])/$1\u$2/g;     # capitalize words
+        $name =~ tr/-_a-zA-Z0-9//dc;                # remove illegal characters
+        $name = "Tag$name" if length($name) < 2 or $name =~ /^[-0-9]/;
+        $tagInfo = { Name => ucfirst($name) };
+        AddTagToTable($tagTablePtr, $tag, $tagInfo);
     } else {
         return undef unless $verbose;
         $tagInfo = { Name => "tag $tag" };  # create temporary tagInfo hash
@@ -9157,10 +9255,11 @@ sub HandleTag($$$$;%)
                 }
                 $self->Warn("RawConv $tag: " . CleanWarning()) if $evalWarning;
                 return undef unless defined $val;
-                $val = $$val if ref $val eq 'SCALAR';
-                $dataPt = \$val;
+                $dataPt = ref $val eq 'SCALAR' ? $val : \$val;
                 $subdirStart = 0;
-                $subdirLen = length $val;
+                $subdirLen = length $$dataPt;
+            } elsif (not $dataPt) {
+                $dataPt = ref $val eq 'SCALAR' ? $val : \$val;
             }
             if ($$subdir{Start}) {
                 my $valuePtr = 0;
@@ -9169,7 +9268,6 @@ sub HandleTag($$$$;%)
                 $subdirStart += $off;
                 $subdirLen -= $off;
             }
-            $dataPt or $dataPt = \$val;
             # process subdirectory information
             my %dirInfo = (
                 DirName  => $$subdir{DirName} || $$tagInfo{Name},
@@ -9890,6 +9988,7 @@ sub ProcessBinaryData($$$)
                 $subdirBase = eval($$subdir{Base}) + $base;
             }
             my $start = $$subdir{Start} || 0;
+            my $notDup;
             if ($start =~ /\$/) {
                 # ignore directories with a zero offset (ie. missing Nikon ShotInfo entries)
                 next unless $val;
@@ -9900,6 +9999,7 @@ sub ProcessBinaryData($$$)
                 $len = $dataLen - $start unless $len and $len <= $dataLen - $start;
             } else {
                 $start += $dirStart + $entry;
+                $notDup = 1,
             }
             my %subdirInfo = (
                 DataPt   => $dataPt,
@@ -9908,6 +10008,7 @@ sub ProcessBinaryData($$$)
                 DirStart => $start,
                 DirLen   => $len,
                 Base     => $subdirBase,
+                NotDup   => $notDup,
             );
             delete $$self{NO_UNKNOWN};
             $self->ProcessDirectory(\%subdirInfo, $subTablePtr, $$subdir{ProcessProc});

@@ -18,28 +18,34 @@ local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
-
---[[
--- BEGIN MOD.156 - Add Metadata filter
--- showMetadataDialog largely rewritten to add entry field w/ observer and "Open as text" button
---]]
-
-
+local LrPrefs = import 'LrPrefs'
 local LrBinding = import 'LrBinding'
 
 require "Utils"
+require "Log"
 
 
-function showMetadataDialog(column1, column2, column1Length, column2Length, numLines)
+local prefs = LrPrefs.prefsForPlugin( nil )
+
+function showMetadataDialog(photo, column1, column2, column1Length, column2Length, numLines)
 
   local result
 
   LrFunctionContext.callWithContext("showMetaDataDialog", function(context)
 
-    local appWidth, appHeight = LrSystemInfo.appWindowSize()
-    local viewFactory = LrView.osFactory()
+    local f = LrView.osFactory()
     local properties = LrBinding.makePropertyTable( context ) -- make a table
     local delimiter = "\r"  -- carriage return; used to separate individual entries in column1 and column2 strings
+
+    local appWidth, appHeight = LrSystemInfo.appWindowSize()
+    local contentWidth  = appWidth  * .4
+    local contentHeight = appHeight * .7
+
+    if WIN_ENV then
+      local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
+      contentWidth  = contentWidth  * scalingLevel
+      contentHeight = contentHeight * scalingLevel
+    end
 
     local bool_to_number={ [true]=1, [false]=0 }
 
@@ -58,12 +64,13 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     for _ in pairs(tagLabels) do numTags = numTags + 1 end
 
     -- Define the various dialog UI elements
-    local tagFilterLabel = viewFactory:static_text {
-      title = "Show only tags containing:",
+
+    local tagFilterLabel = f:static_text {
+      title = "Show tags containing:",
       alignment = 'right',
     }
 
-  	local tagFilterEntry = viewFactory:edit_field {
+  	local tagFilterEntry = f:edit_field {
   		immediate = true,
   	 	value = LrView.bind( 'tagFilter' ),
       fill_horizonal = 1,
@@ -73,13 +80,8 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
       immediate = true,
     }
 
-    local tagFilter = viewFactory:column {
-      tagFilterLabel, tagFilterEntry,
-      margin_left = 5,
-    }
-
   	-- This function will be called upon user input / whenever "tagFilter" is changed.
-  	local function filterMetadata()
+  	local function tagFilterEntryField()
 
   	  local delimiter = "\r"
   	  local filteredLabels = ''
@@ -101,9 +103,71 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     end
 
   	-- Add observer for tagFilter
-	  properties:addObserver( "tagFilter", filterMetadata )
+	  properties:addObserver( "tagFilter", tagFilterEntryField)
 
-    local myText = viewFactory:static_text {
+
+    local valueFilterLabel = f:static_text {
+      title = "Show values containing:",
+      alignment = 'right',
+    }
+
+  	local valueFilterEntry = f:edit_field {
+  		immediate = true,
+  	 	value = LrView.bind( 'valueFilter' ),
+      fill_horizonal = 1,
+      -- for proper window dimensions on MAC and WIN need to set different properties
+      width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
+      width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
+      immediate = true,
+    }
+
+  	-- This function will be called upon user input / whenever "valueFilter" is changed.
+  	local function valueFilterEntryField()
+
+  	  local delimiter = "\r"
+  	  local filteredLabels = ''
+  	  local filteredValues = ''
+  	  local pattern = string.upper(properties.valueFilter)
+
+	    -- Check each individual tag label if it contains valueFilter string
+	    -- if so, keep them along with the respective values
+      for i=1, numTags do
+        if string.find(string.upper(tagValues[i]), pattern) then
+          filteredLabels = filteredLabels .. tagLabels[i] .. delimiter
+          filteredValues = filteredValues .. tagValues[i] .. delimiter
+        end
+      end
+
+      -- Update view with the filtered entries
+      properties.column1 = filteredLabels
+      properties.column2 = filteredValues
+    end
+
+  	-- Add observer for valueFilter
+	  properties:addObserver( "valueFilter", valueFilterEntryField)
+
+    local filterHint = f:static_text {
+        title = "Hint: use ^ $ . * + for pattern matching",
+        alignment = "right"
+    }
+
+    local filters = f:row{
+      f:column {
+        tagFilterLabel, tagFilterEntry,
+        margin_left = 0,
+      },
+      f:column {
+        valueFilterLabel, valueFilterEntry,
+        margin_left = 0,
+      },
+      f:spacer{fill_horizontal = 1},
+      f:column {
+        f:static_text { title = "" },
+        filterHint
+      }
+    }
+
+    local myText = f:static_text {
       title = LrView.bind "column1",
       selectable = false,
       -- for proper window dimensions on MAC and WIN need to set different properties
@@ -112,7 +176,7 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
       height_in_lines = numLines * bool_to_number[MAC_ENV == true] + 1 * bool_to_number[WIN_ENV == true],  -- #181: numLines for MAC, 1 for WIN
     }
 
-    local myText2 = viewFactory:static_text {
+    local myText2 = f:static_text {
       title = LrView.bind "column2",
       selectable = false,
       -- for proper window dimensions on MAC and WIN need to set different properties
@@ -121,21 +185,21 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
       height_in_lines = numLines * bool_to_number[MAC_ENV == true] + 1 * bool_to_number[WIN_ENV == true],  -- #181: numLines for MAC, 1 for WIN
     }
 
-    local row = viewFactory:row {
+    local row = f:row {
       myText, myText2,
       margin_left = 5,
     }
 
-    local scrollView = viewFactory:scrolled_view {
+    local scrollView = f:scrolled_view {
       row,
-      width = appWidth * .4,  -- don't need such wide display, it's scrollable anyway
-      height = appHeight *.7,
+      width  = contentWidth,
+      height = contentHeight,
     }
 
-    local contents = viewFactory:column {
-      spacing = viewFactory:label_spacing(),
+    local contents = f:column {
+      spacing = f:label_spacing(),
       bind_to_object = properties, -- default bound table is the one we made
-      tagFilter,
+      filters,
       scrollView
     }
 
@@ -144,7 +208,7 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
     properties.column2 = column2
 
     result = LrDialogs.presentModalDialog {
-      title = "Metadata display",
+      title = "Metadata for " .. photo:getRawMetadata("path"),
       resizable = false,  -- resizable dialog makes no sense if scrolled view doesn't resize as well
       cancelVerb = "< exclude >",
       actionVerb = "OK",
@@ -157,6 +221,3 @@ function showMetadataDialog(column1, column2, column1Length, column2Length, numL
   return result
 
 end
---[[
--- END MOD - Add Metadata filter
---]]

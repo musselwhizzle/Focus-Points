@@ -15,32 +15,42 @@
 --]]
 
 local LrSystemInfo = import 'LrSystemInfo'
-local LrApplication = import 'LrApplication'
-local LrView = import 'LrView'
-local LrColor = import 'LrColor'
-local LrPrefs = import 'LrPrefs'
+local LrView       = import 'LrView'
 
 require "Utils"
+require "Log"
+
 
 FocusPointDialog = {}
-local prefs = LrPrefs.prefsForPlugin( nil )
 
-function FocusPointDialog.calculatePhotoDimens(targetPhoto)
+FocusPointDialog.PhotoWidth  = 0
+FocusPointDialog.PhotoHeight = 0
+
+FocusPointDialog.currentPhoto = nil
+FocusPointDialog.errorsEncountered = nil
+
+
+function FocusPointDialog.calculatePhotoDimens(photo)
   local appWidth, appHeight = LrSystemInfo.appWindowSize()
-  local dimens = targetPhoto:getFormattedMetadata("croppedDimensions")
+  local dimens = photo:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
-  local contentWidth = appWidth * .7
-  local contentHeight = appHeight * .7
 
-  if (WIN_ENV == true) then
-    if prefs.screenScaling == nil or prefs.screenScaling == 0 then
-   	  prefs.screenScaling = 1
-    end
-    logDebug('calculatePhotoDimens', prefs.screenScaling ) 
-    contentWidth = contentWidth * prefs.screenScaling
-    contentHeight = contentHeight * prefs.screenScaling
+  -- store for use with drawing variable sized focus boxes around 'focus pixels'
+  FocusPointDialog.PhotoWidth  = w
+  FocusPointDialog.PhotoHeight = h
+
+  local contentWidth  = appWidth  * .8
+  local contentHeight = appHeight * .8
+
+  if WIN_ENV then
+    local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
+    contentWidth  = contentWidth  * scalingLevel
+    contentHeight = contentHeight * scalingLevel
   end
-  
+
+  Log.logInfo("FocusPointDialog",
+    string.format("Image: %s (%sx%spx)", photo:getFormattedMetadata('fileName'), w, h))
+
   local photoWidth
   local photoHeight
   if (w > h) then
@@ -58,29 +68,39 @@ function FocusPointDialog.calculatePhotoDimens(targetPhoto)
         photoHeight = h/w * photoWidth
     end
   end
+
   return photoWidth, photoHeight
 
 end
 
-function FocusPointDialog.createDialog(targetPhoto, photoView)
-  local photoWidth, photoHeight = FocusPointDialog.calculatePhotoDimens(targetPhoto)
-  local myView = nil
 
-  -- temporary for dev'ing
-  local developSettings = targetPhoto:getDevelopSettings()
-  
-  local viewFactory = LrView.osFactory()
-  local myText = viewFactory:static_text {
-    title = "" -- "CL " .. developSettings["CropLeft"] .. ", CT " .. developSettings["CropTop"] .. ", Angle " .. developSettings["CropAngle"],
+function FocusPointDialog.createDialog(photo, photoView, infoView)
+  local myView
+  local f = LrView.osFactory()
+
+  -- view for photo with focus point visualization
+  local column1 = f:column {
+    photoView
   }
-      
-  local column = viewFactory:column {
-    photoView, myText,
-  }
-  
-  myView = viewFactory:view {
-    column,  
-  }
+
+  -- view for textual information on image, camera settings and AF information
+  if infoView ~= nil then
+    local column2 = f:column { fill_vertical = 1,
+      infoView,
+    }
+    local row = f:row {
+      column1, column2
+    }
+    myView = f:view {
+      row,
+    }
+  else
+    -- if infoView is not (yet) supported for a specific make, only include the photoView
+    myView = f:view {
+      column1,
+    }
+  end
+
   return myView
-  
+
 end

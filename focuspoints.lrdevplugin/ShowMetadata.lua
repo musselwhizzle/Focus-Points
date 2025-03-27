@@ -20,78 +20,92 @@ local LrDialogs = import 'LrDialogs'
 local LrTasks = import 'LrTasks'
 local LrFileUtils = import 'LrFileUtils'
 local LrStringUtils = import "LrStringUtils"
+local LrPrefs = import "LrPrefs"
 
+require "FocusPointPrefs"
 require "MetaDataDialog"
 require "ExifUtils"
 require "Utils"
+require "Log"
 
+
+--[[
+  @@public void function showDialog()
+  ----
+  Display dialog to browse metadata and search for specific tags
+--]]
 local function showDialog()
+
+--  Debug.pauseIfAsked()
 
   LrFunctionContext.callWithContext("showDialog", function(context)
 
-  local catalog = LrApplication.activeCatalog()
-  local targetPhoto = catalog:getTargetPhoto()
+    local catalog = LrApplication.activeCatalog()
+    local targetPhoto = catalog:getTargetPhoto()
 
-  LrTasks.startAsyncTask(function(context)
-    --https://forums.adobe.com/thread/359790
+    -- To avoid nil pointer errors in case of "dirty" installation (copy over old files)
+    FocusPointPrefs.InitializePrefs(LrPrefs.prefsForPlugin(nil))
 
-    LrFunctionContext.callWithContext("function", function(dialogContext)
-      local column1, column2, column1Length, column2Length, numLines
+    -- Initialize logging
+    Log.initialize()
 
-        LrFunctionContext.callWithContext("function2", function(dialogContext2)
-          local dialogScope = LrDialogs.showModalProgressDialog {
-            title = "Loading Data",
-            caption = "Reading Metadata",
-            width = 200,
-            cannotCancel = false,
-            functionContext = dialogContext2,
-          }
-          dialogScope:setIndeterminate()
+    FocusPointPrefs.setDisplayScaleFactor()
+    Log.logInfo("System", "Display scaling level " ..
+           math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+    Log.logInfo("Metadata", string.rep("=", 72))
+    Log.logInfo("Metadata", "Image: " .. targetPhoto:getRawMetadata("path"))
 
-          local metaData = ExifUtils.readMetaData(targetPhoto)
-          metaData = ExifUtils.filterInput(metaData)
-          column1, column2, column1Length, column2Length, numLines = splitForColumns(metaData)
 
-          dialogScope:done()
-        end)
+    LrTasks.startAsyncTask(function(context)
+      --https://forums.adobe.com/thread/359790
 
-      LrTasks.sleep(0)
+      LrFunctionContext.callWithContext("function", function(dialogContext)
+        local column1, column2, column1Length, column2Length, numLines
 
-      --[[
-      -- BEGIN MOD - Add Metadata filter
-      -- Creation/presentation of dialog by additional entry field with associated observer moved to MetaDataDialog.lua
-      LrDialogs.presentModalDialog {
-        title = "Metadata display",
-        resizable = true,
-        cancelVerb = "< exclude >",
-        actionVerb = "OK",
-        contents = MetaDataDialog.create(column1, column2, column1Length, column2Length, numLines)
-      }
-      --]]
+          LrFunctionContext.callWithContext("function2", function(dialogContext2)
+            local dialogScope = LrDialogs.showModalProgressDialog {
+              title = "Loading Data",
+              caption = "Reading Metadata",
+              width = 200,
+              cannotCancel = false,
+              functionContext = dialogContext2,
+            }
+            dialogScope:setIndeterminate()
 
-      local result = showMetadataDialog(column1, column2, column1Length, column2Length, numLines)
+            local metaData = ExifUtils.readMetaData(targetPhoto)
+            metaData = ExifUtils.filterInput(metaData)
+            column1, column2, column1Length, column2Length, numLines = splitForColumns(metaData)
 
-      -- Check whether dialog has been left by pressing "Open as text"
-      if result == "other" then
-        -- if so, open metadata file in default application (and keep it)
-        openFileInApp(ExifUtils.getMetaDataFile())
-      else
-        -- otherwise remove the temp file
-        LrFileUtils.delete(metaDataFile)
-      end
-      --[[
-      -- END MOD - Add Metadata filter
-      --]]
+            dialogScope:done()
+          end)
 
+        LrTasks.sleep(0)
+
+        local result = showMetadataDialog(targetPhoto, column1, column2, column1Length, column2Length, numLines)
+
+        -- Check whether dialog has been left by pressing "Open as text"
+        if result == "other" then
+          -- if so, open metadata file in default application (and keep it)
+          openFileInApp(ExifUtils.getMetaDataFile())
+        else
+          -- otherwise remove the temp file
+          LrFileUtils.delete(metaDataFile)
+        end
+      end)
     end)
   end)
-end)
 end
 
-showDialog()
 
-
+--[[
+  @@public table, table, int, int, int, function splitForColumns(table metaData)
+  ----
+  Post-process the metadata table with labels and values
+  to pass each column as a string to the scrolled view element of the dialog.
+  Returns labels, values, maxLabelLength, maxValueLength, numOfLines
+--]]
 function splitForColumns(metaData)
+
   local parts = createParts(metaData)
   local labels = ""
   local values = ""
@@ -103,8 +117,8 @@ function splitForColumns(metaData)
   for k in pairs(parts) do
     local l = parts[k].label
     local v = parts[k].value
-    if l == nil then l = "" end
-    if v == nil then v = "" end
+    if not l then l = "" end
+    if not v then v = "" end
 
     -- limit length of a displayed value string, indicate spillover by dots
     -- the original entry can still be examined by opening the metadata txt file in editor
@@ -116,23 +130,27 @@ function splitForColumns(metaData)
     maxValueLength = math.max(maxValueLength, string.len(v))
     numOfLines = numOfLines + 1
 
-    -- logDebug("ShowMetadata", "l: " .. l)
-    -- logDebug("ShowMetadata", "v: " .. v)
-
     labels = labels .. l .. "\r"
     values = values .. v .. "\r"
   end
 
-  logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
-  logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
-  logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
-  logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
-  logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
+  Log.logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
+  Log.logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
+  Log.logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
+  Log.logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
+  Log.logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
 
   return labels, values, maxLabelLength, maxValueLength, numOfLines
 
 end
 
+
+--[[
+  @@public table function splitForColumns(table metaData)
+  ----
+  Parses ExifTool's text output to fill a table with two columns, representing the labels and values
+  Returns table with two columns label/value
+--]]
 function createParts(metaData)
   local parts = {}
   local num = 1;
@@ -141,7 +159,7 @@ function createParts(metaData)
     local p = {}
     p.label = LrStringUtils.trimWhitespace(label)
     p.value = LrStringUtils.trimWhitespace(value)
-    logDebug("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
+    Log.logFull("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
     return p
   end
 
@@ -153,20 +171,4 @@ function createParts(metaData)
 end
 
 
---[[
--- Original code has a problem with entries that contain filenames with backslash, eg in Photoshop "History" entry.
--- Rewritten using the logic of ExifUtils.readMetaDataAsTable() that seems to work very well
-function createParts(metaData)
-  local parts = {}
-  local num = 1;
-  for i in string.gmatch(metaData, "[^\\\n]+") do
-    logDebug("ShowMetadata", "i = " .. i)
-    p = stringToKeyValue(i, ":")
-    if p ~= nil then
-      parts[num] = p
-      num = num+1
-    end
-  end
-  return parts
-end
---]]
+LrTasks.startAsyncTask( showDialog )

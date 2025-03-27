@@ -112,7 +112,7 @@ $VERSION = '1.26';
         113 => 'Power Zoom +',
         114 => 'Power Zoom -',
         115 => 'Delete',
-        116 => 'Pixel Shift Shooting',
+        116 => 'Pixel Shift Shooting', #Z8 (Z9 fw 5.1 maps as 'Save and Load Power Zoom Position')
         117 => 'Cycle AF-area Mode',
         118 => 'Raw Processing (Current)',  #118-131 are Playback Retouch options
         119 => 'Raw Processing (Multiple)',
@@ -9838,7 +9838,7 @@ my %noYes = ( 0 => 'No', 1 => 'Yes' );
             5 => '5 (Delayed)',
         },
     },
-    11 => {Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
+    11 => { Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
     13 => { # CSa5
         Name => 'StoreByOrientation',
         PrintConv => {
@@ -10149,7 +10149,7 @@ my %noYes = ( 0 => 'No', 1 => 'Yes' );
             5 => '5 (Delayed)',
         },
     },
-    11 => {Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
+    11 => { Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
     13 => { # CSa5
         Name => 'StoreByOrientation',
         PrintConv => {
@@ -10547,7 +10547,7 @@ my %noYes = ( 0 => 'No', 1 => 'Yes' );
             5 => '5 (Delayed)',
         },
     },
-    11 => {Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
+    11 => { Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
     13 => { # CSa5
         Name => 'StoreByOrientation',
         PrintConv => {
@@ -10957,7 +10957,7 @@ my %noYes = ( 0 => 'No', 1 => 'Yes' );
             5 => '5 (Delayed)',
         },
     },
-    11 => {Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
+    11 => { Name => 'AFPointSel',PrintConv => { 0 => 'Use All',1 => 'Use Half' }},    # CSa4
     13 => { # CSa5
         Name => 'StoreByOrientation',
         PrintConv => {

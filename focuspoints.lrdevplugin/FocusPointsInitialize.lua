@@ -14,12 +14,6 @@
   limitations under the License.
 --]]
 
-local LrFileUtils = import 'LrFileUtils'
+require "FocusPointPrefs"
 
-require "Utils"
-
-return {
-
-  -- delete old log file whenever plugin is (re)loaded
-  LrFileUtils.delete(getlogFileName())
-}
+FocusPointPrefs.getLatestVersion()

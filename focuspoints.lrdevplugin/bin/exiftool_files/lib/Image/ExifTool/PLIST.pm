@@ -21,7 +21,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::XMP;
 use Image::ExifTool::GPS;
 
-$VERSION = '1.13';
+$VERSION = '1.15';
 
 sub ExtractObject($$;$);
 sub Get24u($$);
@@ -46,7 +46,7 @@ my %plistType = (
 %Image::ExifTool::PLIST::Main = (
     PROCESS_PROC => \&ProcessPLIST,
     GROUPS => { 0 => 'PLIST', 1 => 'XML', 2 => 'Document' },
-    VARS => { LONG_TAGS => 4 },
+    VARS => { LONG_TAGS => 12 },
     NOTES => q{
         Apple Property List tags.  ExifTool reads both XML and binary-format PLIST
         files, and will extract any existing tags even if they aren't listed below.
@@ -92,6 +92,35 @@ my %plistType = (
         Name => 'GPSMapDatum',
         Groups => { 2 => 'Location' },
     },
+    # slow motion stuff found in AAE files
+    'slowMotion/regions/timeRange/start/flags' => {
+        Name => 'SlowMotionRegionsStartTimeFlags',
+        PrintConv => { BITMASK => {
+            0 => 'Valid',
+            1 => 'Has been rounded',
+            2 => 'Positive infinity',
+            3 => 'Negative infinity',
+            4 => 'Indefinite',
+        }},
+    },
+    'slowMotion/regions/timeRange/start/value'     => 'SlowMotionRegionsStartTimeValue',
+    'slowMotion/regions/timeRange/start/timescale' => 'SlowMotionRegionsStartTimeScale',
+    'slowMotion/regions/timeRange/start/epoch'     => 'SlowMotionRegionsStartTimeEpoch',
+    'slowMotion/regions/timeRange/duration/flags'  => {
+        Name => 'SlowMotionRegionsDurationFlags',
+        PrintConv => { BITMASK => {
+            0 => 'Valid',
+            1 => 'Has been rounded',
+            2 => 'Positive infinity',
+            3 => 'Negative infinity',
+            4 => 'Indefinite',
+        }},
+    },
+    'slowMotion/regions/timeRange/duration/value'     => 'SlowMotionRegionsDurationValue',
+    'slowMotion/regions/timeRange/duration/timescale' => 'SlowMotionRegionsDurationTimeScale',
+    'slowMotion/regions/timeRange/duration/epoch'     => 'SlowMotionRegionsDurationEpoch',
+    'slowMotion/regions' => 'SlowMotionRegions',
+    'slowMotion/rate' => 'SlowMotionRate',
     XMLFileType => {
         # recognize MODD files by their content
         RawConv => q{
@@ -100,6 +129,11 @@ my %plistType = (
             }
             return $val;
         },
+    },
+    adjustmentData => { # AAE file
+        Name => 'AdjustmentData',
+        CompressedPLIST => 1,
+        SubDirectory => { TagTable => 'Image::ExifTool::PLIST::Main' },
     },
 );
 
@@ -180,8 +214,22 @@ sub FoundTag($$$$;$)
     $$et{LastPListTag} = $tagInfo;
     # override file type if applicable
     $et->OverrideFileType($plistType{$tag}) if $plistType{$tag} and $$et{FILE_TYPE} eq 'XMP';
+    # handle compressed PLIST/JSON data
+    my $proc;
+    if ($$tagInfo{CompressedPLIST} and ref $val eq 'SCALAR' and $$val !~ /^bplist00/) {
+        if (eval { require IO::Uncompress::RawInflate }) {
+            my $inflated;
+            if (IO::Uncompress::RawInflate::rawinflate($val => \$inflated)) {
+                $val = \$inflated;
+            } else {
+                $et->Warn("Error inflating PLIST::$$tagInfo{Name}");
+            }
+        } else {
+            $et->Warn('Install IO::Uncompress to decode compressed PLIST data');
+        }
+    }
     # save the tag
-    $et->HandleTag($tagTablePtr, $tag, $val);
+    $et->HandleTag($tagTablePtr, $tag, $val, ProcessProc => $proc);
 
     return 1;
 }
@@ -304,7 +352,7 @@ sub ExtractObject($$;$)
                         my $name = $tag;
                         $name =~ s/([^A-Za-z])([a-z])/$1\u$2/g; # capitalize words
                         $name =~ tr/-_a-zA-Z0-9//dc; # remove illegal characters
-                        $name = "Tag$name" if length($name) < 2 or $name =~ /^[-0-9]/;
+                        $name = 'Tag'.ucfirst($name) if length($name) < 2 or $name =~ /^[-0-9]/;
                         $tagInfo = { Name => ucfirst($name), List => 1 };
                         if ($$plistInfo{DateFormat}) {
                             $$tagInfo{Groups}{2} = 'Time';
@@ -390,39 +438,54 @@ sub ProcessBinaryPLIST($$;$)
 }
 
 #------------------------------------------------------------------------------
-# Extract information from a PLIST file
+# Extract information from a PLIST file (binary, XML or JSON format)
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref, 2) tag table ref
 # Returns: 1 on success, 0 if this wasn't valid PLIST
 sub ProcessPLIST($$;$)
 {
     my ($et, $dirInfo, $tagTablePtr) = @_;
+    my $dataPt = $$dirInfo{DataPt};
+    my ($result, $notXML);
 
-    # process XML PLIST data using the XMP module
-    $$dirInfo{XMPParseOpts}{FoundProc} = \&FoundTag;
-    my $result = Image::ExifTool::XMP::ProcessXMP($et, $dirInfo, $tagTablePtr);
-    delete $$dirInfo{XMPParseOpts};
-
-    unless ($result) {
-        my $buff;
-        my $raf = $$dirInfo{RAF} or return 0;
+    if ($dataPt) {
+        pos($$dataPt) = $$dirInfo{DirStart} || 0;
+        $notXML = 1 unless $$dataPt =~ /\G</g;
+    }
+    unless ($notXML) {
+        # process XML PLIST data using the XMP module
+        $$dirInfo{XMPParseOpts}{FoundProc} = \&FoundTag;
+        $result = Image::ExifTool::XMP::ProcessXMP($et, $dirInfo, $tagTablePtr);
+        delete $$dirInfo{XMPParseOpts};
+        return $result if $result;
+    }
+    my $buff;
+    my $raf = $$dirInfo{RAF};
+    if ($raf) {
         $raf->Seek(0,0) and $raf->Read($buff, 64) or return 0;
-        if ($buff =~ /^bplist0/) {
-            # binary PLIST file
-            my $tagTablePtr = GetTagTable('Image::ExifTool::PLIST::Main');
-            $et->SetFileType('PLIST', 'application/x-plist');
-            $$et{SET_GROUP1} = 'PLIST';
-            unless (ProcessBinaryPLIST($et, $dirInfo, $tagTablePtr)) {
-                $et->Error('Error reading binary PLIST file');
-            }
-            delete $$et{SET_GROUP1};
-            $result = 1;
-        } elsif ($$et{FILE_EXT} and $$et{FILE_EXT} eq 'PLIST' and
-            $buff =~ /^\xfe\xff\x00/)
-        {
-            # (have seen very old PLIST files encoded as UCS-2BE with leading BOM)
-            $et->Error('Old PLIST format currently not supported');
-            $result = 1;
+        $dataPt = \$buff;
+    } else {
+        return 0 unless $dataPt;
+    }
+    if ($$dataPt =~ /^bplist0/) {  # binary PLIST
+        # binary PLIST file
+        my $tagTablePtr = GetTagTable('Image::ExifTool::PLIST::Main');
+        $et->SetFileType('PLIST', 'application/x-plist');
+        $$et{SET_GROUP1} = 'PLIST';
+        unless (ProcessBinaryPLIST($et, $dirInfo, $tagTablePtr)) {
+            $et->Error('Error reading binary PLIST file');
         }
+        delete $$et{SET_GROUP1};
+        $result = 1;
+    } elsif ($$dataPt =~ /^\{"/) { # JSON PLIST
+        $raf and $raf->Seek(0);
+        require Image::ExifTool::JSON;
+        $result = Image::ExifTool::JSON::ProcessJSON($et, $dirInfo);
+    } elsif ($$et{FILE_EXT} and $$et{FILE_EXT} eq 'PLIST' and
+        $$dataPt =~ /^\xfe\xff\x00/)
+    {
+        # (have seen very old PLIST files encoded as UCS-2BE with leading BOM)
+        $et->Error('Old PLIST format currently not supported');
+        $result = 1;
     }
     return $result;
 }

@@ -15,9 +15,7 @@
 --]]
 
 return {
-  -- http://notebook.kulchenko.com/zerobrane/debugging-lightroom-plugins-zerobrane-studio-ide
-  -- tail -f ~/Documents/libraryLogger.log
-	LrSdkVersion = 5.0,
+  LrSdkVersion = 5.0,
   LrSdkMinimumVersion = 5.0,
 
 	LrToolkitIdentifier = 'com.thewhizzbang.focuspoint',
@@ -53,17 +51,9 @@ return {
     },
   },
 
-	VERSION = { major=2, minor=1, revision=0, build=0, },
+	VERSION = { major=3, minor=0, revision=0 },
 
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 
   LrInitPlugin = 'FocusPointsInitialize.lua',
 }
-
---[[
-KNOWN BUGS:
- 1. LrPhoto.getDevelopmentSettings()["Orientation"] return nil. I have no way of knowing if the photo
-        was rotated in development mode
- 2. Orientation must be determined from the metadata. The metdata does not tell me if the camera was upside down
-        e.g. rotation of 180 degrees. It only tells me normal, 90, or 270
---]]

@@ -20,65 +20,68 @@
   PointsRendererFactory.
 --]]
 
-local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
-local LrColor = import 'LrColor'
-local LrErrors = import 'LrErrors'
 local LrApplication = import 'LrApplication'
-local LrPrefs = import "LrPrefs"
+local LrPrefs = import 'LrPrefs'
 
 require "MogrifyUtils"
 require "ExifUtils"
 a = require "affine"
+require "Log"
+
+local prefs = LrPrefs.prefsForPlugin( nil )
 
 DefaultPointRenderer = {}
 
 --[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
 DefaultPointRenderer.funcGetAfPoints = nil
+DefaultPointRenderer.funcGetAfInfo   = nil
+
 
 --[[
 -- Returns a LrView.osFactory():view containg all needed icons to draw the points returned by DefaultPointRenderer.funcGetAfPoints
 -- photo - the selected catalog photo
 -- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
 --]]
-function DefaultPointRenderer.createView(photo, photoDisplayWidth, photoDisplayHeight)
-  local prefs = LrPrefs.prefsForPlugin( nil )
+function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDisplayHeight)
+  -- local prefs = LrPrefs.prefsForPlugin( nil )
   local fpTable = DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
   local viewFactory = LrView.osFactory()
 
-  local photoView = nil
-  local tmpView = nil
-  local overlayViews = nil
+  local photoView, overlayViews
 
-  if fpTable == nil then
-    return photoView
-  end
-  
-  if (WIN_ENV == true) then
+  if WIN_ENV then
     local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
     MogrifyUtils.drawFocusPoints(fpTable)
     photoView = viewFactory:view {
       viewFactory:picture {
         width  = photoDisplayWidth,
         height = photoDisplayHeight,
-        value = fileName, 
+        value = fileName,
       },
     }
-  else 
-    overlayViews = DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
-
-    -- create photo view 
-    tmpView = viewFactory:catalog_photo {
-      width = photoDisplayWidth, 
+  else
+    -- create base view, i.e. only the image
+    local imageView = viewFactory:catalog_photo {
+      width = photoDisplayWidth,
       height = photoDisplayHeight,
       photo = photo,
     }
-    photoView = viewFactory:view {
-      tmpView, overlayViews, 
-      place = 'overlapping', 
-    }
+
+    overlayViews = DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
+
+    if overlayViews then
+      -- create compound view incl. overlays
+      photoView = viewFactory:view {
+        imageView, overlayViews,
+        place = 'overlapping',
+      }
+    else
+      -- no overlays, just display the image
+      photoView = imageView
+    end
   end
-  
+
   return photoView
 end
 
@@ -93,27 +96,34 @@ end
 --   useSmallIcons
 --]]
 function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
-  local developSettings = photo:getDevelopSettings()
-  local metaData = ExifUtils.readMetaDataAsTable(photo)
+--  local metaData = ExifUtils.readMetaDataAsTable(photo)
 
   local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
-  -- We read the rotation written in the Exif just for logging has it happens that the lightrrom rotation already includes it which is pretty handy
-  local exifRotation = DefaultPointRenderer.getShotOrientation(photo, metaData)
+  -- We read the rotation written in the Exif just for logging has it happens that the Lightroom rotation already includes it which is pretty handy
+  local exifRotation = DefaultPointRenderer.getShotOrientation(photo, DefaultDelegates.metaData)
 
+  -- "Dirty fix" for Apple: iPhone OOC JPGs in portrait format are missing rotation information.
+  -- This is neither available in Lightroom, nor does it exist in EXIF
+  -- This is a workaround to set the proper rotation angle to make the transformations work
+  if photo:getFormattedMetadata("cameraMake") == "Apple" then
+    if photoDisplayWidth < photoDisplayHeight and userRotation == 0 then
+      userRotation = -90
+    end
+  end
+
+  local developSettings = photo:getDevelopSettings()
   local cropRotation = developSettings["CropAngle"]
   local cropLeft = developSettings["CropLeft"]
   local cropTop = developSettings["CropTop"]
 
-  logDebug("DefaultPointRenderer", "originalDimensions: " .. originalWidth .. " x " .. originalHeight .. ", cropDimensions: " .. cropWidth .. " x " .. cropHeight .. ", displayDimensions: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
-  logDebug("DefaultPointRenderer", "exifRotation: " .. exifRotation .. "°, userRotation: " .. userRotation .. "°, userMirroring: " .. userMirroring)
-  logDebug("DefaultPointRenderer", "cropRotation: " .. cropRotation .. "°, cropLeft: " .. cropLeft .. ", cropTop: " .. cropTop)
-
+  Log.logDebug("DefaultPointRenderer", "originalDimensions: " .. originalWidth .. " x " .. originalHeight .. ", cropDimensions: " .. cropWidth .. " x " .. cropHeight .. ", displayDimensions: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
+  Log.logDebug("DefaultPointRenderer", "exifRotation: " .. exifRotation .. "°, userRotation: " .. userRotation .. "°, userMirroring: " .. userMirroring)
+  Log.logDebug("DefaultPointRenderer", "cropRotation: " .. cropRotation .. "°, cropLeft: " .. cropLeft .. ", cropTop: " .. cropTop)
 
   -- Calculating transformations
   local cropTransformation = a.rotate(math.rad(-cropRotation)) * a.trans(-cropLeft * originalWidth, -cropTop * originalHeight)
-
   local userRotationTransformation
   local userMirroringTransformation
   local displayScalingTransformation
@@ -140,76 +150,88 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
   local resultingTransformation = userMirroringTransformation * (userRotationTransformation * (displayScalingTransformation * cropTransformation))
   local inverseResultingTransformation = a.inverse(resultingTransformation)
 
-  local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, metaData)
-  if pointsTable == nil then
+  --[[------------------------------------------------------
+   Execute dedicated code (makerDelegates) to read AF information from EXIF makernotes and create table of focus points
+   Table format: { focusPointType, x, y, width, height }
+  --]]
+  local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, DefaultDelegates.metaData)
+  if not pointsTable then
+    Log.logWarn("DefaultPointRenderer", "GetAfPoints() didn't find anything to be visualized.")
     return nil
   end
 
+  --[[------------------------------------------------------
+    Transform focus points (type and coordinates related to original image)
+    to coordinate system for the edited (cropped, rotated etc.) image
+  --]]------------------------------------------------------
+
   local fpTable = {  }
 
-  for key, point in pairs(pointsTable.points) do
-    local template = pointsTable.pointTemplates[point.pointType]
-    if template == nil then
-      logError("DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found.")
-      LrErrors.throwUserError("Point template " .. point.pointType .. " could not be found.")
-      return nil
+  if pointsTable then
+
+    for _, point in pairs(pointsTable.points) do
+      local template = pointsTable.pointTemplates[point.pointType]
+      if not template then
+        Log.logError("DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found.")
+        errorMessage("Internal error:\nUnexpected point type " .. point.pointType)
+        return nil
+      end
+
+      -- Placing icons
+      local x, y = resultingTransformation(point.x, point.y)
+      Log.logInfo("DefaultPointRenderer", "Placing point of type '" .. point.pointType .. "' at position [" .. point.x .. ", " .. point.y .. "] -> ([" .. math.floor(x) .. ", " .. math.floor(y) .. "] on display)")
+
+      local useSmallIcons = false
+      local pointWidth = point.width
+      local pointHeight = point.height
+
+      -- Checking if the distance between corners goes under the value of template.bigToSmallTriggerDist
+      -- If so, we switch to small icons (when available)
+      local x0, y0 = resultingTransformation(0, 0)
+      local xHorizontal, yHorizontal = resultingTransformation(pointWidth, 0)
+      local distHorizontal = math.sqrt((xHorizontal - x0)^2 + (yHorizontal - y0)^2)
+      local xVertical, yVertical = resultingTransformation(0, pointHeight)
+      local distVertical = math.sqrt((xVertical - x0)^2 + (yVertical - y0)^2)
+
+      if template.bigToSmallTriggerDist and (distHorizontal < template.bigToSmallTriggerDist or distVertical < template.bigToSmallTriggerDist) then
+        useSmallIcons = true
+        Log.logFull("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", bigToSmallTriggerDist: " .. template.bigToSmallTriggerDist .. " -> useSmallIcons: TRUE")
+      else
+        Log.logFull("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", bigToSmallTriggerDist: " .. template.bigToSmallTriggerDist .. " -> useSmallIcons: FALSE")
+      end
+
+      -- Checking if the distance between corners goes under the value of template.minCornerDist
+      -- If so, we set pointWidth and/or pointHeight to the corresponding size to garantee this minimum distance
+      local pixX0, pixY0 = inverseResultingTransformation(0, 0)
+      local pixX1, pixY1 = inverseResultingTransformation(template.minCornerDist, 0)
+      local minCornerPhotoDist = math.sqrt((pixX1 - pixX0)^2 + (pixY1 - pixY0)^2)
+
+      if distHorizontal < template.minCornerDist then
+        pointWidth = minCornerPhotoDist
+      end
+      if distVertical < template.minCornerDist then
+        pointHeight = minCornerPhotoDist
+      end
+      Log.logFull("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", minCornerDist: " .. template.minCornerDist .. ", minCornerPhotoDist: " .. minCornerPhotoDist)
+
+      -- Top Left, 0°
+      local tlX, tlY = resultingTransformation(point.x - pointWidth/2, point.y - pointHeight/2)
+      -- Top Right, -90°
+      local trX, trY = resultingTransformation(point.x + pointWidth/2, point.y - pointHeight/2)
+       -- Bottom Right, -180°
+      local brX, brY = resultingTransformation(point.x + pointWidth/2, point.y + pointHeight/2)
+       -- Bottom Left, -270°
+      local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
+
+      local points = {
+        center = { x = x, y = y},
+        tl  = { x = tlX, y = tlY },
+        tr  = { x = trX, y = trY },
+        bl  = { x = blX, y = blY },
+        br  = { x = brX, y = brY },
+      }
+      table.insert(fpTable, { points = points, rotation = cropRotation + userRotation, userMirroring= userMirroring, template = template, useSmallIcons = useSmallIcons})
     end
-
-    -- Placing icons
-    local x, y = resultingTransformation(point.x, point.y)
-    logInfo("DefaultPointRenderer", "Placing point of type '" .. point.pointType .. "' at position [" .. point.x .. ", " .. point.y .. "] -> ([" .. math.floor(x) .. ", " .. math.floor(y) .. "] on display)")
-
-    local useSmallIcons = false
-    local pointWidth = point.width
-    local pointHeight = point.height
-
-    -- Checking if the distance between corners goes under the value of template.bigToSmallTriggerDist
-    -- If so, we switch to small icons (when available)
-    local x0, y0 = resultingTransformation(0, 0)
-    local xHorizontal, yHorizontal = resultingTransformation(pointWidth, 0)
-    local distHorizontal = math.sqrt((xHorizontal - x0)^2 + (yHorizontal - y0)^2)
-    local xVertical, yVertical = resultingTransformation(0, pointHeight)
-    local distVertical = math.sqrt((xVertical - x0)^2 + (yVertical - y0)^2)
-
-    if template.bigToSmallTriggerDist ~= nil and (distHorizontal < template.bigToSmallTriggerDist or distVertical < template.bigToSmallTriggerDist) then
-      useSmallIcons = true
-      logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", bigToSmallTriggerDist: " .. template.bigToSmallTriggerDist .. " -> useSmallIcons: TRUE")
-    else
-      logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", bigToSmallTriggerDist: " .. template.bigToSmallTriggerDist .. " -> useSmallIcons: FALSE")
-    end
-
-    -- Checking if the distance between corners goes under the value of template.minCornerDist
-    -- If so, we set pointWidth and/or pointHeight to the corresponding size to garantee this minimum distance
-    local pixX0, pixY0 = inverseResultingTransformation(0, 0)
-    local pixX1, pixY1 = inverseResultingTransformation(template.minCornerDist, 0)
-    local minCornerPhotoDist = math.sqrt((pixX1 - pixX0)^2 + (pixY1 - pixY0)^2)
-
-    if distHorizontal < template.minCornerDist then
-      pointWidth = minCornerPhotoDist
-    end
-    if distVertical < template.minCornerDist then
-      pointHeight = minCornerPhotoDist
-    end
-    logDebug("DefaultPointRenderer", "distHorizontal: " .. distHorizontal .. ", distVertical: " .. distVertical .. ", minCornerDist: " .. template.minCornerDist .. ", minCornerPhotoDist: " .. minCornerPhotoDist)
-
-    -- Top Left, 0°
-    local tlX, tlY = resultingTransformation(point.x - pointWidth/2, point.y - pointHeight/2)
-    -- Top Right, -90°
-    local trX, trY = resultingTransformation(point.x + pointWidth/2, point.y - pointHeight/2)
-     -- Bottom Right, -180°
-    local brX, brY = resultingTransformation(point.x + pointWidth/2, point.y + pointHeight/2)
-     -- Bottom Left, -270°
-    local blX, blY = resultingTransformation(point.x - pointWidth/2, point.y + pointHeight/2)
-
-    local points = {
-      center = { x = x, y = y},
-      tl  = { x = tlX, y = tlY },
-      tr  = { x = trX, y = trY },
-      bl  = { x = blX, y = blY },
-      br  = { x = brX, y = brY },
-    }
-
-    table.insert(fpTable, { points = points, rotation = cropRotation + userRotation, userMirroring= userMirroring, template = template, useSmallIcons = useSmallIcons})
   end
 
   return fpTable
@@ -227,45 +249,47 @@ function DefaultPointRenderer.createOverlayViews(fpTable, photoDisplayWidth, pho
     place = "overlapping"
   }
 
-  for key, fpPoint in pairs(fpTable) do
-    -- Inserting center icon view
-    if fpPoint.template.center ~= nil then
-      if fpPoint.points.center.x >= 0 and fpPoint.points.center.x <= photoDisplayWidth and fpPoint.points.center.y >= 0 and fpPoint.points.center.y <= photoDisplayHeight then
-        local centerTemplate = fpPoint.template.center
-        if fpPoint.useSmallIcons and fpPoint.template.center_small ~= nil then
-          centerTemplate = fpPoint.template.center_small
-        end    
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.center.x, fpPoint.points.center.y, fpPoint.rotation, fpPoint.userMirroring, centerTemplate.fileTemplate, centerTemplate.anchorX, centerTemplate.anchorY, centerTemplate.angleStep))
-      end  
-    end
+  if fpTable then
 
-    -- Inserting corner icon views
-    if fpPoint.template.corner ~= nil then
-      local cornerTemplate = fpPoint.template.corner
-      if fpPoint.useSmallIcons and fpPoint.template.corner_small ~= nil then
-        cornerTemplate = fpPoint.template.corner_small
+    for _, fpPoint in pairs(fpTable) do
+      -- Inserting center icon view
+      if fpPoint.template.center then
+        if fpPoint.points.center.x >= 0 and fpPoint.points.center.x <= photoDisplayWidth and fpPoint.points.center.y >= 0 and fpPoint.points.center.y <= photoDisplayHeight then
+          local centerTemplate = fpPoint.template.center
+          if fpPoint.useSmallIcons and fpPoint.template.center_small then
+            centerTemplate = fpPoint.template.center_small
+          end
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.center.x, fpPoint.points.center.y, fpPoint.rotation, fpPoint.userMirroring, centerTemplate.fileTemplate, centerTemplate.anchorX, centerTemplate.anchorY, centerTemplate.angleStep))
+        end
       end
-    
-      if fpPoint.points.tl.x >= 0 and fpPoint.points.tl.x <= photoDisplayWidth and fpPoint.points.tl.y >= 0 and fpPoint.points.tl.y <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.tl.x, fpPoint.points.tl.y, fpPoint.rotation, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
-      end
-      if fpPoint.points.tr.x >= 0 and fpPoint.points.tr.x <= photoDisplayWidth and fpPoint.points.tr.y >= 0 and fpPoint.points.tr.y <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.tr.x, fpPoint.points.tr.y, fpPoint.rotation - 90, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
-      end
-      if fpPoint.points.br.x >= 0 and fpPoint.points.br.x <= photoDisplayWidth and fpPoint.points.br.y >= 0 and fpPoint.points.br.y <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.br.x, fpPoint.points.br.y, fpPoint.rotation - 180, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
-      end
-      if fpPoint.points.bl.y >= 0 and fpPoint.points.bl.x <= photoDisplayWidth and fpPoint.points.bl.y >= 0 and fpPoint.points.bl.y <= photoDisplayHeight then
-        table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.bl.x, fpPoint.points.bl.y, fpPoint.rotation - 270, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
+
+      -- Inserting corner icon views
+      if fpPoint.template.corner then
+        local cornerTemplate = fpPoint.template.corner
+        if fpPoint.useSmallIcons and fpPoint.template.corner_small then
+          cornerTemplate = fpPoint.template.corner_small
+        end
+
+        if fpPoint.points.tl.x >= 0 and fpPoint.points.tl.x <= photoDisplayWidth and fpPoint.points.tl.y >= 0 and fpPoint.points.tl.y <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.tl.x, fpPoint.points.tl.y, fpPoint.rotation, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
+        end
+        if fpPoint.points.tr.x >= 0 and fpPoint.points.tr.x <= photoDisplayWidth and fpPoint.points.tr.y >= 0 and fpPoint.points.tr.y <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.tr.x, fpPoint.points.tr.y, fpPoint.rotation - 90, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
+        end
+        if fpPoint.points.br.x >= 0 and fpPoint.points.br.x <= photoDisplayWidth and fpPoint.points.br.y >= 0 and fpPoint.points.br.y <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.br.x, fpPoint.points.br.y, fpPoint.rotation - 180, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
+        end
+        if fpPoint.points.bl.y >= 0 and fpPoint.points.bl.x <= photoDisplayWidth and fpPoint.points.bl.y >= 0 and fpPoint.points.bl.y <= photoDisplayHeight then
+          table.insert(viewsTable, DefaultPointRenderer.createPointView(fpPoint.points.bl.x, fpPoint.points.bl.y, fpPoint.rotation - 270, fpPoint.userMirroring, cornerTemplate.fileTemplate, cornerTemplate.anchorX, cornerTemplate.anchorY, fpPoint.template.angleStep))
+        end
       end
     end
   end
-
   return LrView.osFactory():view(viewsTable)
 end
 
 function DefaultPointRenderer.cleanup()
-  if (WIN_ENV == true) then
+  if WIN_ENV then
     MogrifyUtils.cleanup()
   end
 end
@@ -285,7 +309,12 @@ end
 function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
   local fileRotationStr = ""
 
-  if angleStep ~= nil and angleStep ~= 0 then
+  local function count_substring(text, sub)
+    local _, count = text:gsub(sub, "")
+    return count
+  end
+
+  if angleStep and angleStep ~= 0 then
     local closestAngle = (angleStep * math.floor(0.5 + rotation / angleStep)) % 360
     if horizontalMirroring == -1 then
         fileRotationStr = (630 - closestAngle) % 360
@@ -294,8 +323,16 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
     end
   end
 
-  local fileName = string.format(iconFileTemplate, fileRotationStr)
-  logDebug("createPointView", "fileName: " .. fileName)
+  local fileName
+  if count_substring(iconFileTemplate, "%%s") == 2 then
+    -- two placeholders to be filled in
+    fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
+  else
+    -- just the rotation placeholder to be filled in
+    fileName = string.format(iconFileTemplate, fileRotationStr)
+  end
+
+  Log.logDebug("createPointView", "fileName: " .. fileName)
 
   local viewFactory = LrView.osFactory()
 
@@ -320,9 +357,9 @@ end
 function DefaultPointRenderer.getNormalizedDimensions(photo)
   local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
   local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
+  local userRotation = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
-  if userRotation == 90 or userRotation == -90 then
+  if userRotation == 90 or userRotation == -90 or originalWidth < originalHeight then
     -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
     -- In this methods, width and height refer to the original width and height
     local tmp = originalHeight
@@ -346,14 +383,13 @@ end
 --]]
 function DefaultPointRenderer.getUserRotationAndMirroring(photo)
   -- LR 5 throws an error even trying to access getRawMetadata("orientation")
-  logDebug("DefaultPointRenderer", "LR version: " .. LrApplication.versionTable().major)
   if (LrApplication.versionTable().major < 6) then
     return DefaultPointRenderer.getShotOrientation(photo, ExifUtils.readMetaDataAsTable(photo)), 0
   end
 
   local userRotation = photo:getRawMetadata("orientation")
-  if userRotation == nil then
-    logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
+  if not userRotation then
+  Log.logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
 
     -- Falling back by trying to find the information with exifs.
     -- This is not working when the user rotates or mirrors the image within lightroom
@@ -378,7 +414,7 @@ function DefaultPointRenderer.getUserRotationAndMirroring(photo)
     return 90, -1
   end
 
-  logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
+  Log.logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
   return 0, 0
 end
 
@@ -390,8 +426,8 @@ function DefaultPointRenderer.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
   local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
 
-  local metaOrientation = ExifUtils.findFirstMatchingValue(metaData, { "Orientation" })
-  if metaOrientation == nil then
+  local metaOrientation = ExifUtils.findValue(metaData, "Orientation")
+  if not metaOrientation then
     return 0
   end
 
@@ -406,4 +442,47 @@ function DefaultPointRenderer.getShotOrientation(photo, metaData)
   end
 
   return 0
+end
+
+--[[
+  @@public table DefaultPointRenderer.createFocusPixelBox(x, y)
+  ----
+  According to current viewing option settings, determines shape and size of focus box to be drawn around focus pixel
+--]]
+function DefaultPointRenderer.createFocusPixelBox(x, y)
+  local pointType, size
+
+  if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+  else
+    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+  end
+
+  size = math.min(FocusPointDialog.PhotoWidth, FocusPointDialog.PhotoHeight) * prefs.focusBoxSize
+
+  return {
+    pointTemplates = DefaultDelegates.pointTemplates,
+    points = {
+      {
+        pointType = pointType,
+        x = x,
+        y = y,
+        width  = size,
+        height = size
+      }
+    }
+  }
+end
+
+
+function DefaultPointRenderer.getAfPointsUnknown(photo, metaData)
+  return nil
+end
+
+function DefaultPointRenderer.getCameraInfoUnknown(photo, metaData)
+  return FocusInfo.errorMessage("Camera information not present")
+end
+
+function DefaultPointRenderer.getFocusInfoUnknown(photo, metaData)
+  return FocusInfo.errorMessage("Unknown")
 end

@@ -18,15 +18,18 @@ use Image::ExifTool::XMP;
 use Image::ExifTool::GPS;
 use Image::ExifTool::Protobuf;
 
-$VERSION = '1.12';
+$VERSION = '1.14';
 
 sub ProcessDJIInfo($$$);
+sub ProcessSettings($$$);
 
 %knownProtocol = (
     'dvtm_ac203.proto' => 1,    # Osmo Action 4
     'dvtm_ac204.proto' => 1,    # Osmo Action 5
-    'dvtm_AVATA2.proto' => 1,   # Avanta 2
+    'dvtm_AVATA2.proto' => 1,   # Avata 2
     'dvtm_wm265e.proto' => 1,   # Mavic 3
+    'dvtm_pm320.proto' => 1,    # Matrice 30
+    'dvtm_Mini4_Pro.proto' => 1,    # Matrice 30
 );
 
 my %convFloat2 = (
@@ -195,6 +198,27 @@ my %convFloat2 = (
     },
 );
 
+%Image::ExifTool::DJI::Glamour = (
+    GROUPS => { 0 => 'QuickTime', 1 => 'DJI', 2 => 'Image' },
+    PROCESS_PROC => \&Image::ExifTool::DJI::ProcessSettings,
+    NOTES => 'Glamour settings used by some DJI models.',
+    beauty_enable   => 'BeautyEnable',
+    smoother        => 'Smoother',
+    whitening       => 'Whitening',
+    face_slimming   => 'FaceSlimming',
+    eye_enlarge     => 'EyeEnlarge',
+    nose_slimming   => 'NoseSlimming',
+    mouth_beautify  => 'MouthModify',
+    teeth_whitening => 'TeethWhitening',
+    leg_longer      => 'LegLonger',
+    head_shrinking  => 'HeadShrinking',
+    lipstick        => 'Lipstick',
+    blush           => 'Blush',
+    dark_circle     => 'DarkCircle',
+    acne_spot_removal=>'AcneSpotRemoval',
+    eyebrows        => 'Eyebrows',
+);
+
 # metadata in protobuf format (djmd and dbgi meta types, ref PH)
 %Image::ExifTool::DJI::Protobuf = (
     GROUPS => { 0 => 'Protobuf', 1 => 'DJI', 2 => 'Camera' },
@@ -208,9 +232,10 @@ my %convFloat2 = (
         file name combined with the hierarchical protobuf field numbers.
 
         ExifTool currently extracts timed GPS plus a few other tags from DJI devices
-        which use the following protocols:  dvtm_AVATA2.proto (Avanta 2),
-        dvtm_ac203.proto (Osmo Action 4), dvtm_ac204.proto (Osmo Action 5) and
-        dvtm_wm265e.proto (Mavic 3).
+        which use the following protocols:  dvtm_AVATA2.proto (Avata 2),
+        dvtm_ac203.proto (Osmo Action 4), dvtm_ac204.proto (Osmo Action 5),
+        dvtm_wm265e.proto (Mavic 3), dvtm_pm320.proto (Matrice 30) and
+        dvtm_pm320.proto (Mini 4 Pro).
 
         Note that with the protobuf format, numerical tags missing from the output
         for a given protocol should be considered to have the default value of 0.
@@ -226,13 +251,24 @@ my %convFloat2 = (
 #
 # Osmo Action 4
 #
-    'dvtm_ac203_1-1-5' => 'SerialNumber', # (NC)
+    'dvtm_ac203_1-1-5' => { Name => 'SerialNumber', Notes => 'Osmo Action 4' }, # (NC)
    # dvtm_ac203_1-1-6 - some version number
     'dvtm_ac203_1-1-10' => 'Model',
     'dvtm_ac203_2-3' => {
         Name => 'FrameInfo', 
         SubDirectory => { TagTable => 'Image::ExifTool::DJI::FrameInfo' },
     },
+    'dvtm_ac203_3-2-2-1' => { Name => 'ISO', Format => 'float' },
+    'dvtm_ac203_3-2-4-1' => { # (NC)
+        Name => 'ShutterSpeed',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
+    },
+    'dvtm_ac203_3-2-6-1' => { Name => 'ColorTemperature', Format => 'unsigned' }, # (NC)
+   # dvtm_ac203_3-2-9-1 - looks like Z accerometer measurement, but 2 and 3 don't look like other components
+    'dvtm_ac203_3-2-10-2' => { Name => 'AccelerometerX', Format => 'float' } , # (NC) left/right
+    'dvtm_ac203_3-2-10-3' => { Name => 'AccelerometerY', Format => 'float' } , # (NC) front/back
+    'dvtm_ac203_3-2-10-4' => { Name => 'AccelerometerZ', Format => 'float' } , # (NC) up/down
    # dvtm_ac203_3-4-1-4 - model code?
     'dvtm_ac203_3-4-2-1' => {
         Name => 'GPSInfo',
@@ -255,19 +291,27 @@ my %convFloat2 = (
 #
 # Osmo Action 5
 #
-    'dvtm_ac204_1-1-5' => 'SerialNumber', # (NC)
+    'dvtm_ac204_1-1-5' => { Name => 'SerialNumber', Notes => 'Osmo Action 5' }, # (NC)
    # dvtm_ac204_1-1-6 - some version number
     'dvtm_ac204_1-1-10' => 'Model',
     'dvtm_ac204_2-3' => {
         Name => 'FrameInfo', 
         SubDirectory => { TagTable => 'Image::ExifTool::DJI::FrameInfo' },
     },
+    'dvtm_ac204_3-2-4-1' => { # (NC)
+        Name => 'ShutterSpeed',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
+    },
+    'dvtm_ac204_3-2-6-1' => { Name => 'ColorTemperature', Format => 'unsigned' }, # (NC)
+    'dvtm_ac204_3-2-10-2' => { Name => 'AccelerometerX', Format => 'float' } , # (NC) left/right
+    'dvtm_ac204_3-2-10-3' => { Name => 'AccelerometerY', Format => 'float' } , # (NC) front/back
+    'dvtm_ac204_3-2-10-4' => { Name => 'AccelerometerZ', Format => 'float' } , # (NC) up/down
    # dvtm_ac204_3-4-1-4 - model code?
     'dvtm_ac204_3-4-2-1' => {
         Name => 'GPSInfo',
         SubDirectory => { TagTable => 'Image::ExifTool::DJI::GPSInfo' },
     },
-   # dvtm_ac204_3-2-4-1 - shutter speed? (rational)
     'dvtm_ac204_3-4-2-2' => {
         Name => 'GPSAltitude',
         Groups => { 2 => 'Location' },
@@ -283,11 +327,11 @@ my %convFloat2 = (
         PrintConv => '$self->ConvertDateTime($val)',
     },
 #
-# Avanta 2
+# Avata 2
 #
    # dvtm_AVATA2_1-1-2 - some version number
    # dvtm_AVATA2_1-1-3 - some version number
-    'dvtm_AVATA2_1-1-5' => 'SerialNumber', # (NC)
+    'dvtm_AVATA2_1-1-5' => { Name => 'SerialNumber', Notes => 'Avata 2' }, # (NC)
     'dvtm_AVATA2_1-1-10' => 'Model',
    # dvtm_AVATA2_2-2-1-4 - model code?
     'dvtm_AVATA2_2-2-3-1' => 'SerialNumber2', # (NC)
@@ -305,17 +349,33 @@ my %convFloat2 = (
     },
    # dvtm_AVATA2_3-2-1-4 - model code?
    # dvtm_AVATA2_3-2-1-5 - frame rate?
-   # dvtm_AVATA2_3-2-4-1 - shutter speed? (rational)
+    'dvtm_AVATA2_3-2-2-1' => { Name => 'ISO', Format => 'float' }, # (NC)
+    'dvtm_AVATA2_3-2-4-1' => {
+        Name => 'ShutterSpeed',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
+    },
+    'dvtm_AVATA2_3-2-6-1' => { Name => 'ColorTemperature', Format => 'unsigned' }, # (NC)
+    'dvtm_AVATA2_3-2-10-1' => { # (NC)
+        Name => 'FNumber',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
+    },
    # dvtm_AVATA2_3-4-1-4 - model code?
-   # dvtm_AVATA2_3-4-3-1,2,3 - YPR? (int64s)
+    'dvtm_AVATA2_3-4-3' => { # (NC)
+        Name => 'DroneInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::DroneInfo' },
+    },
     'dvtm_AVATA2_3-4-4-1' => {
         Name => 'GPSInfo',
         SubDirectory => { TagTable => 'Image::ExifTool::DJI::GPSInfo' },
     },
+    'dvtm_AVATA2_3-4-4-2' => { Name => 'AbsoluteAltitude', Format => 'int64s', ValueConv => '$val / 1000' }, # (NC)
+    'dvtm_AVATA2_3-4-5-1' => { Name => 'RelativeAltitude', Format => 'float', ValueConv => '$val / 1000' }, # (NC)
 #
 # Mavic 3
 #
-    'dvtm_wm265e_1-1-5' => 'SerialNumber', # (confirmed)
+    'dvtm_wm265e_1-1-5' => { Name => 'SerialNumber', Notes => 'Mavic 3' }, # (confirmed)
     'dvtm_wm265e_1-1-10' => 'Model',
     'dvtm_wm265e_2-2' => {
         Name => 'FrameInfo', 
@@ -326,7 +386,6 @@ my %convFloat2 = (
     'dvtm_wm265e_3-2-3-1' => {
         Name => 'ShutterSpeed',
         Format => 'rational',
-        ValueConv => '$val =~ m{(.*)/(.*)} ? $1 / $2 : $val',
         PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
     },
    # dvtm_wm265e_3-2-5-1 - unknown rational (xxxx / 1000)
@@ -335,20 +394,111 @@ my %convFloat2 = (
         Name => 'GPSInfo',
         SubDirectory => { TagTable => 'Image::ExifTool::DJI::GPSInfo' },
     },
-    'dvtm_wm265e_3-3-3-1' => { Name => 'DroneRoll',  Format => 'int64s', ValueConv => '$val/10' },
-    'dvtm_wm265e_3-3-3-2' => { Name => 'DronePitch', Format => 'int64s', ValueConv => '$val/10' },
-    'dvtm_wm265e_3-3-3-3' => { Name => 'DroneYaw',   Format => 'int64s', ValueConv => '$val/10' },
-    'dvtm_wm265e_3-3-4-2' => { Name => 'AbsoluteAltitude', ValueConv => '$val / 1000' },
+    'dvtm_wm265e_3-3-3' => {
+        Name => 'DroneInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::DroneInfo' },
+    },
+    'dvtm_wm265e_3-3-4-2' => { Name => 'AbsoluteAltitude', Format => 'int64s', ValueConv => '$val / 1000' },
     'dvtm_wm265e_3-3-5-1' => { Name => 'RelativeAltitude', Format => 'float', ValueConv => '$val / 1000' },
-    'dvtm_wm265e_3-4-3-1' => { Name => 'GimbalPitch',Format => 'int64s', ValueConv => '$val / 10' },
-    'dvtm_wm265e_3-4-3-2' => { Name => 'GimbalRoll', Format => 'int64s', ValueConv => '$val / 10' },
-    'dvtm_wm265e_3-4-3-3' => { Name => 'GimbalYaw',  Format => 'int64s', ValueConv => '$val / 10' },
+    'dvtm_wm265e_3-4-3' => {
+        Name => 'GimbalInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::GimbalInfo' },
+    },
+#
+# Matrice 30
+#
+    'dvtm_pm320_1-1-5' => { Name => 'SerialNumber', Notes => 'Matrice 30' },
+    'dvtm_pm320_1-1-10' => 'Model',
+    'dvtm_pm320_2-2' => {
+        Name => 'FrameInfo', 
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::FrameInfo' },
+    },
+    'dvtm_pm320_3-2-2-1' => { Name => 'ISO', Format => 'float' },
+    'dvtm_pm320_3-2-3-1' => {
+        Name => 'ShutterSpeed',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
+    },
+    'dvtm_pm320_3-2-4-1' => { # (NC)
+        Name => 'FNumber',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
+    },
+    'dvtm_pm320_3-2-6-1' => { Name => 'DigitalZoom', Format => 'float' },
+    'dvtm_pm320_3-3-4-1' => {
+        Name => 'GPSInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::GPSInfo' },
+    },
+    'dvtm_pm320_3-3-3' => {
+        Name => 'DroneInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::DroneInfo' },
+    },
+    'dvtm_pm320_3-3-4-2' => { Name => 'AbsoluteAltitude', Format => 'int64s', ValueConv => '$val / 1000' },
+    'dvtm_pm320_3-3-5-1' => { Name => 'RelativeAltitude', Format => 'float', ValueConv => '$val / 1000' },
+    'dvtm_pm320_3-4-3' => {
+        Name => 'GimbalInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::GimbalInfo' },
+    },
+#
+# Mini 4 Pro
+#
+    'dvtm_Mini4_Pro_1-1-5' => { Name => 'SerialNumber', Notes => 'Mini 4 Pro' },
+    'dvtm_Mini4_Pro_1-1-10' => 'Model',
+    'dvtm_Mini4_Pro_2-3' => {
+        Name => 'FrameInfo', 
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::FrameInfo' },
+    },
+    'dvtm_Mini4_Pro_3-2-7-1' => { Name => 'ISO', Format => 'float' },
+    'dvtm_Mini4_Pro_3-2-10-1' => {
+        Name => 'ShutterSpeed',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintExposureTime($val)',
+    },
+    'dvtm_Mini4_Pro_3-2-11-1' => {
+        Name => 'FNumber',
+        Format => 'rational',
+        PrintConv => 'Image::ExifTool::Exif::PrintFNumber($val)',
+    },
+    'dvtm_Mini4_Pro_3-2-32-1' => { Name => 'ColorTemperature', Format => 'unsigned' },
+   # dvtm_Mini4_Pro_3-2-37-1 - something to do with battery level or time remaining?
+    'dvtm_Mini4_Pro_3-3-4-1' => {
+        Name => 'GPSInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::GPSInfo' },
+    },
+    'dvtm_Mini4_Pro_3-3-3' => {
+        Name => 'DroneInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::DroneInfo' },
+    },
+    'dvtm_Mini4_Pro_3-3-4-2' => { Name => 'AbsoluteAltitude', Format => 'int64s', ValueConv => '$val / 1000' },
+    'dvtm_Mini4_Pro_3-3-5-1' => { Name => 'RelativeAltitude', Format => 'float', ValueConv => '$val / 1000' }, # (NC)
+    'dvtm_Mini4_Pro_3-4-3' => {
+        Name => 'GimbalInfo',
+        SubDirectory => { TagTable => 'Image::ExifTool::DJI::GimbalInfo' },
+    },
+);
+
+%Image::ExifTool::DJI::DroneInfo = (
+    GROUPS => { 0 => 'Protobuf', 1 => 'DJI', 2 => 'Camera' },
+    PROCESS_PROC => \&Image::ExifTool::Protobuf::ProcessProtobuf,
+    VARS => { HEX_ID => 0, ID_LABEL => 'Field #' },
+    1 => { Name => 'DroneRoll',  Format => 'int64s', ValueConv => '$val / 10' },
+    2 => { Name => 'DronePitch', Format => 'int64s', ValueConv => '$val / 10' },
+    3 => { Name => 'DroneYaw',   Format => 'int64s', ValueConv => '$val / 10' },
+);
+
+%Image::ExifTool::DJI::GimbalInfo = (
+    GROUPS => { 0 => 'Protobuf', 1 => 'DJI', 2 => 'Camera' },
+    PROCESS_PROC => \&Image::ExifTool::Protobuf::ProcessProtobuf,
+    VARS => { HEX_ID => 0, ID_LABEL => 'Field #' },
+    1 => { Name => 'GimbalPitch',Format => 'int64s', ValueConv => '$val / 10' },
+    2 => { Name => 'GimbalRoll', Format => 'int64s', ValueConv => '$val / 10' }, # usually 0, so missing
+    3 => { Name => 'GimbalYaw',  Format => 'int64s', ValueConv => '$val / 10' },
 );
 
 %Image::ExifTool::DJI::FrameInfo = (
     GROUPS => { 0 => 'Protobuf', 1 => 'DJI', 2 => 'Video' },
     PROCESS_PROC => \&Image::ExifTool::Protobuf::ProcessProtobuf,
-    VARS => { HEX_ID => 0 },
+    VARS => { HEX_ID => 0, ID_LABEL => 'Field #' },
     1 => { Name => 'FrameWidth',  Format => 'unsigned' },
     2 => { Name => 'FrameHeight', Format => 'unsigned' },
     3 => { Name => 'FrameRate',   Format => 'float' },
@@ -357,7 +507,7 @@ my %convFloat2 = (
 %Image::ExifTool::DJI::GPSInfo = (
     GROUPS => { 0 => 'Protobuf', 1 => 'DJI', 2 => 'Location' },
     PROCESS_PROC => \&Image::ExifTool::Protobuf::ProcessProtobuf,
-    VARS => { HEX_ID => 0 },
+    VARS => { HEX_ID => 0, ID_LABEL => 'Field #' },
     1 => {
         Name => 'CoordinateUnits',
         Format  => 'unsigned',
@@ -380,6 +530,22 @@ my %convFloat2 = (
         PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")',
     },
 );
+
+#------------------------------------------------------------------------------
+# Process DJI beauty settings (ref PH)
+# Inputs: 0) ExifTool ref, 1) dirInfo ref, 2) tag table ref
+# Returns: 1 on success
+sub ProcessSettings($$$)
+{
+    my ($et, $dirInfo, $tagTbl) = @_;
+    $et->VerboseDir($$dirInfo{DirName}, undef, length(${$$dirInfo{DataPt}}));
+    foreach (split /;/, ${$$dirInfo{DataPt}}) {
+        my ($tag, $val) = split /=/;
+        next unless defined $tag and defined $val;
+        $et->HandleTag($tagTbl, $tag, $val, MakeTagInfo => 1);
+    }
+    return 1;
+}
 
 #------------------------------------------------------------------------------
 # Process DJI info (ref PH)
@@ -405,12 +571,7 @@ sub ProcessDJIInfo($$$)
             my $buff = $val;
             $val = \$buff;
         }
-        if (not $$tagTbl{$tag} and $tag=~ /^[-_a-zA-Z0-9]+$/) {
-            my $name = $tag;
-            $name =~ s/_([a-z])/_\U$1/g;
-            AddTagToTable($tagTbl, $tag, { Name => Image::ExifTool::MakeTagName($name) });
-        }
-        $et->HandleTag($tagTbl, $tag, $val);
+        $et->HandleTag($tagTbl, $tag, $val, MakeTagInfo => 1);
     }
     return 1;
 }

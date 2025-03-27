@@ -15,56 +15,23 @@
 --]]
 
 
-local LrApplication = import 'LrApplication'
+local LrDialogs = import 'LrDialogs'
 local LrPathUtils = import 'LrPathUtils'
-local LrLogger = import 'LrLogger'
+local LrFileUtils = import 'LrFileUtils'
 local LrStringUtils = import "LrStringUtils"
-local LrPrefs = import "LrPrefs"
 local LrShell = import "LrShell"
+local LrTasks = import "LrTasks"
+local LrUUID = import "LrUUID"
+
+-- require "FocusPointPrefs"
+-- require "FocusPointDialog"
+require "Info"
+require "Log"
 
 
-local prefs = LrPrefs.prefsForPlugin( nil )
-
---[[----------------------------------------------------------------------------
--- Use the SDK's LrLogger infrastructure to log the plugin's execution to the
--- file "FocusPoints.log" in LrC's log folder (see note below).
-------------------------------------------------------------------------------]]
-
-logName  = "FocusPoints"
-myLogger = LrLogger(logName)
-myLogger:enable("logfile")
-
---[[
--- Retrieves the full path name of the plugin log file.
--- (to support access to file via Plugin Manager dialog)
---
--- LrC 14 logs interface note (Oct 2024):
--- We (Adobe) have changed the log file location for the LrLogger interface.
--- The timestamps are no longer appended to the folders. The updated locations are:
--- Win: C:\Users\<user>\AppData\Local\Adobe\Lightroom\Logs\LrClassicLogs\
--- Mac: /Users/<user>/Library/Logs/Adobe/Lightroom/LrClassicLogs/
---
--- Before LrC 14, plugin logfiles have been stored under Documents/LrClassicLogs
--- on both WIN and MAC computers.
---]]
-function getlogFileName()
-  local userHome = LrPathUtils.getStandardFilePath("home")
-  local logFolder
-  if (LrApplication.versionTable().major < 14) then
-    if (WIN_ENV) then
-      logFolder = "\\Documents\\LrClassicLogs\\"
-    else
-      logFolder = "/Documents/LrClassicLogs/"
-    end
-  else
-    if (WIN_ENV) then
-        logFolder = "\\AppData\\Local\\Adobe\\Lightroom\\Logs\\LrClassicLogs\\"
-      else
-        logFolder = "/Library/Logs/Adobe/Lightroom/LrClassicLogs/"
-    end
-  end
-  return LrPathUtils.child(userHome, LrPathUtils.child(logFolder, logName .. ".log"))
-end
+--[[--------------------------------------------------------------------------------------------------------------------
+   Utilities for string handling
+----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
 -- Breaks a string in 2 parts at the position of the delimiter and returns a key/value table
@@ -90,7 +57,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function split(str, delim)
+function splitoriginal(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -99,6 +66,19 @@ function split(str, delim)
     i = i + 1
   end
   return t
+end
+
+function split(str, delimiters)
+  -- Build a pattern that matches any sequence of characters
+  -- that are not one of the delimiters.
+  -- This is an extension to the original split function that supported a single delimiter
+  if not str then return nil end
+  local pattern = "([^" .. delimiters .. "]+)"
+  local result = {}
+  for token in string.gmatch(str, pattern) do
+    table.insert(result, token)
+  end
+  return result
 end
 
 --[[
@@ -136,70 +116,49 @@ function stringToKeyValue(str, delim)
 end
 
 --[[
--- Logging functions. You are provided 5 levels of logging. Wisely choose the level of the message you want to report
--- to prevent to much messages.
--- Typical use cases:
---   - logDebug - Informations diagnostically helpful to people (developers, IT, sysadmins, etc.)
---   - logInfo - Informations generally useful to log (service start/stop, configuration assumptions, etc)
---   - logWarn - Informations about an unexpected state that won't generate a problem
---   - logError - An error which is fatal to the operation
--- These methods expects 2 parameters:
---   - group - a logical grouping string (limited to 20 chars and converted to upper case) to make it easier to find the messages you are looking for
---   - message - the message to be logged
--- A call to logDebug("ExifUtils", "Searching for 'AF Point Used'") will result in the following log entry
---    EXIFUTILS | Searching for 'AF Point Used'
--- A call to logWarn("FUJIDELEGATE", "Face recognition algorithm returned an unexcepted value") will result in the following log entry
--- FUJIDELEGATE | Face recognition algorithm returned an unexcepted value
+ Gets the nth word from a string
+ @str  the string to split into words
+ @delim the character used for splitting the string
 --]]
-function logDebug(group, message)
-  doLog("DEBUG", group, message)
+function get_nth_Word(str, n, delimiter)
+    delimiter = delimiter or ";" -- Default to semicolon if not provided
+    local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
+    local count = 0
+    for word in string.gmatch(str, pattern) do
+        count = count + 1
+        if count == n then
+            return word:match("^%s*(.-)%s*$") -- Trim leading/trailing spaces
+        end
+    end
+    return nil -- Return nil if n is out of range
 end
 
-function logInfo(group, message)
-  doLog("INFO", group, message)
-end
-
-function logWarn(group, message)
-  doLog("WARN", group, message)
-end
-
-function logError(group, message)
-  doLog("ERROR", group, message)
-end
-
-function doLog(level, group, message)
-  local levels = {
-    NONE = 0,
-    ERROR = 1,
-    WARN = 2,
-    INFO = 3,
-    DEBUG = 4
-  }
-
-  -- Looking for the prefs
-  if prefs.loggingLevel == nil or levels[prefs.loggingLevel] == nil then
-    prefs.loggingLevel = "NONE"
+--[[
+ Wrap text across multiple rows to fit maximum column length
+ @text       the text to wrap across multiple lines
+ @max_length maximum line length
+--]]
+--
+function wrapText(text, delim, max_length)
+  local result = ""
+  local current_line = ""
+  for word in text:gmatch("[^" .. delim .. "]+") do
+    word = word:gsub("^%s*(.-)%s*$", "%1")  -- Trim whitespace
+    if #current_line + #word + 1 > max_length then
+      result = result .. current_line .. "\n"
+      current_line = word
+    else
+      if current_line == "" then
+        current_line = word
+      else
+        current_line = current_line .. ", " .. word
+      end
+    end
   end
-
-  local prefsLevel = levels[prefs.loggingLevel]
-  local msgLevel = levels[level]
-
-  if prefsLevel == 0 or msgLevel == nil or msgLevel > prefsLevel then
-    -- Unknown message log level or level set in preferences higher
-    -- No need to log this one, return
-    return
+  if current_line ~= "" then
+    result = result .. current_line
   end
-
-  local str = string.format("%20s | %s", string.upper(string.sub(group, 1, 20)), message)
-  if level == "ERROR" then
-    myLogger:error(str)
-  elseif level == "WARN" then
-    myLogger:warn(str)
-  elseif level == "INFO" then
-    myLogger:info(str)
-  else
-    myLogger:debug(str)
-  end
+  return result
 end
 
 --[[
@@ -216,6 +175,10 @@ function parseDimens(strDimens)
   return tonumber(w), tonumber(h)
 end
 
+--[[--------------------------------------------------------------------------------------------------------------------
+   Miscellaneous utilities
+----------------------------------------------------------------------------------------------------------------------]]
+
 --[[
 -- Searches for a value in a table and returns the corresponding key
 -- table - table to search inside
@@ -230,35 +193,19 @@ function arrayKeyOf(table, val)
   return nil
 end
 
+
 --[[
--- Transform the coordinates around a center point and scale them
--- x, y - the coordinates to be transformed
--- oX, oY - the coordinates of the center
--- angle - the rotation angle
--- scaleX, scaleY - scaleing factors
+  @@public string getTempFileName()
+  ----
+  Create new UUID name for a temporary file
 --]]
-function transformCoordinates(x, y, oX, oY, angle, scaleX, scaleY)
-  -- Rotation around 0,0
-  local rX = x * math.cos(angle) + y * math.sin(angle)
-  local rY = -x * math.sin(angle) + y * math.cos(angle)
-
-  -- Rotation of origin corner
-  local roX = oX * math.cos(angle) + oY * math.sin(angle)
-  local roY = -oX * math.sin(angle) + oY * math.cos(angle)
-
-  -- Translation so the top left corner become the origin
-  local tX = rX - roX
-  local tY = rY - roY
-
-  -- Let's resize everything to match the view
-  tX = tX * scaleX
-  tY = tY * scaleY
-
-  return tX, tY
+function getTempFileName()
+  local fileName = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
+  return fileName
 end
 
+
 --[[
--- BEGIN MOD - Add Metadata filter
 -- Open filename in associated application as per file extension
 -- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
 --]]
@@ -269,4 +216,147 @@ function openFileInApp(filename)
     LrShell.openFilesInApp({filename}, "open")
   end
 end
--- END MOD - Add Metadata filter
+
+--[[
+  @@public string getPhotoFileName(table)
+  Retrieves name of current photo, used by centralized error handling
+--]]
+function getPhotoFileName(photo)
+  if not photo then
+    photo = FocusPointDialog.currentPhoto
+  end
+  if photo then
+    return photo:getFormattedMetadata( "fileName" )
+  end
+end
+
+
+--[[
+  @@public int getWinScalingFactor()
+  ----
+  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
+  Returns display scaling level as factor (100/scale_in_percent)
+--]]
+function getWinScalingFactor()
+  local output = getTempFileName()
+  local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
+  local result
+
+  -- Query registry value by calling REG.EXE
+  local rc = LrTasks.execute(cmd)
+  Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
+  Log.logDebug("Utils", "REG command: " .. cmd .. ", RC=" .. rc)
+
+  -- Read redirected stdout from temp file and find the line that starts with "AppliedDPI"
+  local regOutput = LrFileUtils.readFile(output)
+  local regOutputStr = "^"
+  local dpiValue, scale
+  for line in string.gmatch(regOutput, ("[^\r\n]+")) do
+    local item = split(line, " ")
+    if item and #item >= 3 then
+      if item[1] == "AppliedDPI" and item[2] == "REG_DWORD" then
+        dpiValue = item[3]
+        scale = math.floor(tonumber(dpiValue) * 100/96 + 0.5)
+      end
+    end
+    regOutputStr = regOutputStr .. line .. "^"
+  end
+  Log.logDebug("Utils", "REG output: " .. regOutputStr)
+
+  -- Set and log the result
+  if dpiValue then
+    result = 100 / scale
+    Log.logDebug("Utils", string.format("DPI scaling level %s = %sdpi ~ %s%%", dpiValue, tonumber(dpiValue), scale))
+  else
+    result = 100 / 125
+    Log.logWarn("Utils", "Unable to retrieve Windows scaling level, using 125% instead")
+  end
+
+  -- Clean up: remove the temp file
+  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
+    Log.logWarn("Utils", "Unable to delete REG output file " .. output)
+  end
+
+  return result
+end
+
+
+--[[ Initial approach to implement update check. Superseded by LrHttp.get(version.txt_URL)
+--   Keep this code as commented out block until http method has been proven reliable.
+--
+function updateExists() -- Method using 'curl'
+  local output = getTempFileName()
+  local singleQuoteWrap = '\'"\'"\''
+  local cmd, result, url
+  local Info = require 'Info.lua'
+
+  if WIN_ENV then
+    -- windows needs " around the entire command and then " around each path
+    cmd = "curl.exe -I " .. FocusPointPrefs.latestReleaseURL .. " > " .. output .. "\""
+  else
+    cmd = "curl -I " .. FocusPointPrefs.latestReleaseURL .. " > '" .. output .. "'"
+  end
+
+  -- Call curl.exe to get 'latest' resolved to 'tags/vX.Y.ZZZ'
+  local rc = LrTasks.execute(cmd)
+  if (rc == 0) then
+    -- Parse curl output to find the resolved URL
+    local curlOutput = LrFileUtils.readFile(output)
+    for line in string.gmatch(curlOutput, ("[^\r\n]+")) do
+      local item = split(line, " ")
+      if item and #item >= 2 then
+        if string.lower(item[1]) == "location:" then
+          url = LrStringUtils.trimWhitespace(item[2])
+          Log.logDebug("ExifUtils", "Update check, URL retrieved for latest release -> " .. url)
+          local major, minor, revision = url:match("v(%d+)%.(%d+)%.(%d+)")
+          if major and minor and revision then
+            -- we have a valid version number from the URL
+            local pluginVersion = Info.VERSION
+            if tonumber(major) > pluginVersion.major-1 then
+              result = true
+            elseif tonumber(major) == pluginVersion.major then
+              if  tonumber(minor) > pluginVersion.minor then
+                result = true
+              elseif tonumber(minor) == pluginVersion.minor then
+                result = tonumber(revision) > pluginVersion.revision
+              end
+            end
+          else
+            Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
+          end
+          break
+        end
+      end
+    end
+    if not url then
+      Log.logWarn("Utils", "Update check command failed, URL of tagged release not found")
+    end
+  else
+    Log.logWarn("Utils", "Update check command failed (rc=" .. rc ..") : " .. cmd)
+  end
+
+  -- Log info message
+  if result then
+    Log.logInfo("System", "Update available for plugin -> " .. url)
+  end
+
+  -- Clean up: remove the temp file
+  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
+    Log.logWarn("Utils", "Unable to delete curl output file " .. output)
+  end
+
+  return result
+end
+--]]
+
+
+--[[
+  @@public void errorMessage(string msg)
+  ----
+  Displays an error message
+  Returns
+--]]
+function errorMessage(msg)
+  FocusPointDialog.errorsEncountered = msg
+  return LrDialogs.confirm(msg, getPhotoFileName(), "Continue", "Stop")
+end

@@ -65,7 +65,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 use Image::ExifTool::XMP;
 
-$VERSION = '4.40';
+$VERSION = '4.45';
 
 sub LensIDConv($$$);
 sub ProcessNikonAVI($$$);
@@ -840,6 +840,73 @@ my %activeDLightingZ7 = (
     5 => 'Extra High',
 );
 
+my %aFAreaModeCD = (   #contrast detect modes
+    0 => 'Contrast-detect', # (D3)
+    1 => 'Contrast-detect (normal area)', # (D90/D5000)
+    # (D90 and D5000 give value of 2 when set to 'Face Priority' and
+    # 'Subject Tracking', but I didn't have a face to shoot at or a
+    #  moving subject to track so perhaps this value changes dynamically)
+    2 => 'Contrast-detect (wide area)', # (D90/D5000)
+    3 => 'Contrast-detect (face priority)', # (ViewNX)
+    4 => 'Contrast-detect (subject tracking)', # (ViewNX)
+    128 => 'Single', #PH (1V3)
+    129 => 'Auto (41 points)', #PH (NC)
+    130 => 'Subject Tracking (41 points)', #PH (NC)
+    131 => 'Face Priority (41 points)', #PH (NC)
+    192 => 'Pinpoint', #PH (Z7)
+    193 => 'Single', #PH (Z7)
+    194 => 'Dynamic', #PH (Z7)
+    195 => 'Wide (S)', #PH (Z7)
+    196 => 'Wide (L)', #PH (Z7)
+    197 => 'Auto', #PH (Z7)
+    198 => 'Auto (People)', #28 (Z7)    #if no faces are detected, will record as 'Auto'.  Camera setting recorded in AFAreaMode field in the MakerNotes area
+    199 => 'Auto (Animal)', #28 (Z7)    #if no animals are detected, will record as 'Auto'.  Camera setting recorded in AFAreaMode field in the MakerNotes area
+    200 => 'Normal-area AF', #28 (D6)
+    201 => 'Wide-area AF', #28 (D6)
+    202 => 'Face-priority AF', #28 (D6)
+    203 => 'Subject-tracking AF', #28 (D6)
+    204 => 'Dynamic Area (S)', #28 (Z9)
+    205 => 'Dynamic Area (M)', #28 (Z9)
+    206 => 'Dynamic Area (L)', #28 (Z9)
+    207 => '3D-tracking', #28 (Z9)
+    208 => 'Wide-Area (C1/C2)', #28 (Z8, Z9)
+);
+
+my %aFAreaModePD = (   #phase detect modes
+    0 => 'Single Area', # (called "Single Point" in manual - PH)
+    1 => 'Dynamic Area', #PH
+    2 => 'Dynamic Area (closest subject)', #PH
+    3 => 'Group Dynamic', #PH
+    4 => 'Dynamic Area (9 points)', #JD/28
+    5 => 'Dynamic Area (21 points)', #28
+    6 => 'Dynamic Area (51 points)', #28
+    7 => 'Dynamic Area (51 points, 3D-tracking)', #PH/28
+    8 => 'Auto-area',
+    9 => 'Dynamic Area (3D-tracking)', #PH (D5000 "3D-tracking (11 points)")
+    10 => 'Single Area (wide)', #PH
+    11 => 'Dynamic Area (wide)', #PH
+    12 => 'Dynamic Area (wide, 3D-tracking)', #PH
+    13 => 'Group Area', #PH
+    14 => 'Dynamic Area (25 points)', #PH
+    15 => 'Dynamic Area (72 points)', #PH
+    16 => 'Group Area (HL)', #28
+    17 => 'Group Area (VL)', #28
+    18 => 'Dynamic Area (49 points)', #28
+    128 => 'Single', #PH (1J1,1J2,1J3,1J4,1S1,1S2,1V2,1V3)
+    129 => 'Auto (41 points)', #PH (1J1,1J2,1J3,1J4,1S1,1S2,1V1,1V2,1V3,AW1)
+    130 => 'Subject Tracking (41 points)', #PH (1J1,1J4,1J3)
+    131 => 'Face Priority (41 points)', #PH (1J1,1J3,1S1,1V2,AW1)
+    # 134 - seen for 1V1[PhaseDetectAF=0] (PH)
+    # 135 - seen for 1J2[PhaseDetectAF=4] (PH)
+    192 => 'Pinpoint', #PH (NC)
+    193 => 'Single', #PH (NC)
+    194 => 'Dynamic', #28 (Z7)
+    195 => 'Wide (S)', #PH (NC)
+    196 => 'Wide (L)', #PH (NC)
+    197 => 'Auto', #PH (NC)
+    199 => 'Auto', #28 (Z7)  Z7 has also been observed to record 197 for Auto-area (same camera, different firmware versions, early production model)
+);
+
 my %aFAreaModeZ9 = (
     0 => 'Pinpoint',
     1 => 'Single',
@@ -852,6 +919,13 @@ my %aFAreaModeZ9 = (
     12 => 'Wide (C1)',
     13 => 'Wide (C2)',
 );
+
+my %aFDetectionMethod = (
+    0 => 'Phase Detect',    #thru viewfinder
+    1 => 'Contrast Detect',  #LiveView
+    2 => 'Hybrid',   #Z-series and D780
+);
+
 
 my %banksZ9 = (
     0 => 'A',
@@ -1021,38 +1095,31 @@ my %iSOAutoHiLimitZ6III = ( #28
     35 => 'ISO Hi 1.7',
 );
 
-my %iSOAutoHiLimitZ7 = (
-    0 => 'ISO 64',
-    1 => 'ISO 80',
-    2 => 'ISO 100',
-    3 => 'ISO 125',
-    4 => 'ISO 160',
-    5 => 'ISO 200',
-    6 => 'ISO 250',
-    7 => 'ISO 320',
-    8 => 'ISO 400',
-    9 => 'ISO 500',
-    10 => 'ISO 640',
-    11 => 'ISO 800',
-    12 => 'ISO 1000',
-    13 => 'ISO 1250',
-    14 => 'ISO 1600',
-    15 => 'ISO 2000',
-    16 => 'ISO 2500',
-    17 => 'ISO 3200',
-    18 => 'ISO 4000',
-    19 => 'ISO 5000',
-    20 => 'ISO 6400',
-    21 => 'ISO 8000',
-    22 => 'ISO 10000',
-    23 => 'ISO 12800',
-    24 => 'ISO 16000',
-    25 => 'ISO 20000',
-    26 => 'ISO 25600',
-    27 => 'ISO Hi 0.3',
-    28 => 'ISO Hi 0.7',
-    29 => 'ISO Hi 1.0',
-    32 => 'ISO Hi 2.0',
+my %isoAutoHiLimitZ7 = (
+    Format => 'int16u',
+    Unknown => 1,
+    ValueConv => '($val-104)/8',
+    ValueConvInv => '8 * ($val + 104)',
+    SeparateTable => 'ISOAutoHiLimitZ7',
+    PrintConv => {
+        0 => 'ISO 64',      17 => 'ISO 3200',
+        1 => 'ISO 80',      18 => 'ISO 4000',
+        2 => 'ISO 100',     19 => 'ISO 5000',
+        3 => 'ISO 125',     20 => 'ISO 6400',
+        4 => 'ISO 160',     21 => 'ISO 8000',
+        5 => 'ISO 200',     22 => 'ISO 10000',
+        6 => 'ISO 250',     23 => 'ISO 12800',
+        7 => 'ISO 320',     24 => 'ISO 16000',
+        8 => 'ISO 400',     25 => 'ISO 20000',
+        9 => 'ISO 500',     26 => 'ISO 25600',
+        10 => 'ISO 640',    27 => 'ISO Hi 0.3',
+        11 => 'ISO 800',    28 => 'ISO Hi 0.7',
+        12 => 'ISO 1000',   29 => 'ISO Hi 1.0',
+        13 => 'ISO 1250',   32 => 'ISO Hi 2.0',
+        14 => 'ISO 1600',
+        15 => 'ISO 2000',
+        16 => 'ISO 2500',
+    },
 );
 
 my %iSOAutoShutterTimeZ9 = (
@@ -1203,29 +1270,23 @@ my %multipleExposureModeZ9 = (
 );
 
 my %nonCPULensApertureZ8 = (    # 2**(val/6) rounded - non-CPU aperture interface, values and storage differ from the Z8
-    12 => 'f/1.2',
-    24 => 'f/1.4',
-    40 => 'f/1.8',
-    48 => 'f/2.0',
-    64 => 'f/2.5',
-    72 => 'f/2.8',
-    84 => 'f/3.3',
-    88 => 'f/3.5',
-    96 => 'f/4.0',
-    104 => 'f/4.5',
-    112 => 'f/5.0',
-    120 => 'f/5.6',
-    128 => 'f/6.3',
-    136 => 'f/7.1',
-    144 => 'f/8',
-    156 => 'f/9.5',
-    168 => 'f/11',
-    180 => 'f/13',
-    188 => 'f/15',
-    192 => 'f/16',
-    204 => 'f/19',
-    216 => 'f/22',
-    313 => 'N/A',     #camera menu shows "--" indicating value has not been set for the lens
+    Format => 'int16u',
+    Unknown => 1,
+    SeparateTable => 'NonCPULensApertureZ8',
+    PrintConv => {
+        12 => 'f/1.2',  128 => 'f/6.3',
+        24 => 'f/1.4',  136 => 'f/7.1',
+        40 => 'f/1.8',  144 => 'f/8',
+        48 => 'f/2.0',  156 => 'f/9.5',
+        64 => 'f/2.5',  168 => 'f/11',
+        72 => 'f/2.8',  180 => 'f/13',
+        84 => 'f/3.3',  188 => 'f/15',
+        88 => 'f/3.5',  192 => 'f/16',
+        96 => 'f/4.0',  204 => 'f/19',
+        104 => 'f/4.5', 216 => 'f/22',
+        112 => 'f/5.0', 313 => 'N/A',     #camera menu shows "--" indicating value has not been set for the lens,
+        120 => 'f/5.6',
+    },
 );
 
 my %offLowNormalHighZ7 = (
@@ -1273,7 +1334,7 @@ my %secondarySlotFunctionZ9 = (
     3 => 'JPG Primary + JPG Secondary',
 );
 
-my %subjectDetectionAreaMZ6III  = ( #28
+my %subjectDetectionAreaMZ6III = ( #28
     0 => 'Off',
     1 => 'All',
     2 => 'Wide (L)',
@@ -1368,6 +1429,25 @@ my %retouchValues = ( #PH
     52 => 'High-contrast Monochrome', # (S3500)
     53 => 'High Key', # (S3500)
     54 => 'Low Key', # (S3500)
+);
+
+# AF points for AFInfo models with 11 focus points
+my %afPoints11 = (
+    0 => '(none)',
+    0x7ff => 'All 11 Points',
+    BITMASK => {
+        0 => 'Center',
+        1 => 'Top',
+        2 => 'Bottom',
+        3 => 'Mid-left',
+        4 => 'Mid-right',
+        5 => 'Upper-left',
+        6 => 'Upper-right',
+        7 => 'Lower-left',
+        8 => 'Lower-right',
+        9 => 'Far Left',
+        10 => 'Far Right',
+    },
 );
 
 # AF point indices for models with 51 focus points, eg. D3 (ref JD/PH)
@@ -1511,7 +1591,7 @@ my %afPoints153 = (
     31 => 'B8',  62 => 'H13', 93 => 'C17', 124 => 'G4',
 );
 
-# AF point indices for models with 81 focus points, eg. Z6/Z7/Z50 (ref 38)
+# AF point indices for models with 81 Auto-area focus points, eg. Z6/Z7/Z50 (ref 38)
 # - 9 rows (A-I) with 9 columns (1-9), center is E5
 #
 #        7   6   5   4   3   2   1   0
@@ -1546,167 +1626,61 @@ my %afPoints81 = (
      17 => 'H6',  34 => 'G7',  51 => 'F8',  68 => 'A9',
 );
 
-# AF point indices for 209 focus point(single-point AF) cameras equipped with Expeed 7 processor eg. Z50ii).  Single-point AF array is 11 rows x 19 columns.  (ref 28)
+# AF point indices for 209/231 focus point(single-point AF) cameras equipped with Expeed 7 processor eg. Z50ii).  Single-point AF array is 11 rows x 19 columns.  (ref 28)
 # - Auto Area AF has 2 additional columns available and provides 231 focus points. Uses 11 rows (A-K) and 21 columns (1-21), center is F11
-my %afPoints209 = (
-      1 => 'A1',    22 => 'B1',    43 => 'C1',   64 => 'D1',     85 => 'E1',   106 => 'F1',   127 => 'G1',   148 => 'H1',
-      2 => 'A2',    23 => 'B2',    44 => 'C2',   65 => 'D2',     86 => 'E2',   107 => 'F2',   128 => 'G2',   149 => 'H2',
-      3 => 'A3',    24 => 'B3',    45 => 'C3',   66 => 'D3',     87 => 'E3',   108 => 'F3',   129 => 'G3',   150 => 'H3',
-      4 => 'A4',    25 => 'B4',    46 => 'C4',   67 => 'D4',     88 => 'E4',   109 => 'F4',   130 => 'G4',   151 => 'H4',
-      5 => 'A5',    26 => 'B5',    47 => 'C5',   68 => 'D5',     89 => 'E5',   110 => 'F5',   131 => 'G5',   152 => 'H5',
-      6 => 'A6',    27 => 'B6',    48 => 'C6',   69 => 'D6',     90 => 'E6',   111 => 'F6',   132 => 'G6',   153 => 'H6',
-      7 => 'A7',    28 => 'B7',    49 => 'C7',   70 => 'D7',     91 => 'E7',   112 => 'F7',   133 => 'G7',   154 => 'H7',
-      8 => 'A8',    29 => 'B8',    50 => 'C8',   71 => 'D8',     92 => 'E8',   113 => 'F8',   134 => 'G8',   155 => 'H8',
-      9 => 'A9',    30 => 'B9',    51 => 'C9',   72 => 'D9',     93 => 'E9',   114 => 'F9',   135 => 'G9',   156 => 'H9',
-     10 => 'A10',   31 => 'B10',   52 => 'C10',  73 => 'D10',    94 => 'E10',  115 => 'F10',  136 => 'G10',  157 => 'H10',
-     11 => 'A11',   32 => 'B11' ,  53 => 'C11',  74 => 'D11',    95 => 'E11',  116 => 'F11',  137 => 'G11',  158 => 'H11',
-     12 => 'A12',   33 => 'B12' ,  54 => 'C12',  75 => 'D12',    96 => 'E12',  117 => 'F12',  138 => 'G12',  159 => 'H12',
-     13 => 'A13',   34 => 'B13' ,  55 => 'C13',  76 => 'D13',    97 => 'E13',  118 => 'F13',  139 => 'G13',  160 => 'H13',
-     14 => 'A14',   35 => 'B14' ,  56 => 'C14',  77 => 'D14',    98 => 'E14',  119 => 'F14',  140 => 'G14',  161 => 'H14',
-     15 => 'A15',   36 => 'B15',   57 => 'C15',  78 => 'D15',    99 => 'E15',  120 => 'F15',  141 => 'G15',  162 => 'H15',
-     16 => 'A16',   37 => 'B16' ,  58 => 'C16',  79 => 'D16',   100 => 'E16',  121 => 'F16',  142 => 'G16',  163 => 'H16',
-     17 => 'A17',   38 => 'B17',   59 => 'C17',  80 => 'D17',   101 => 'E17',  122 => 'F17',  143 => 'G17',  164 => 'H17',
-     18 => 'A18',   39 => 'B18',   60 => 'C18',  81 => 'D18',   102 => 'E18',  123 => 'F18',  144 => 'G18',  165 => 'H18',
-     19 => 'A19',   40 => 'B19',   61 => 'C19',  82 => 'D19',   103 => 'E19',  124 => 'F19',  145 => 'G19',  166 => 'H19',
-     20 => 'A20',   41 => 'B20',   62 => 'C20',  83 => 'D20',   104 => 'E20',  125 => 'F20',  146 => 'G20',  167 => 'H20',
-     21 => 'A21',   42 => 'B21',   63 => 'C21',  84 => 'D21',   105 => 'E21',  126 => 'F21',  147 => 'G21',  168 => 'H21',
+my @afPoints231 = (qw(
+    A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21
+    B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21
+    C1 C2 C3 C4 C5 C6 C7 C8 C9 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 C21
+    D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D21
+    E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21
+    F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21
+    G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13 G14 G15 G16 G17 G18 G19 G20 G21
+    H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21
+    I1 I2 I3 I4 I5 I6 I7 I8 I9 I10 I11 I12 I13 I14 I15 I16 I17 I18 I19 I20 I21
+    J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13 J14 J15 J16 J17 J18 J19 J20 J21
+    K1 K2 K3 K4 K5 K6 K7 K8 K9 K10 K11 K12 K13 K14 K15 K16 K17 K18 K19 K20 K21
+));
 
-    169 => 'I1',   190 => 'J1',   211 => 'K1',
-    170 => 'I2',   191 => 'J2',   212 => 'K2',
-    171 => 'I3',   192 => 'J3',   213 => 'K3',
-    172 => 'I4',   193 => 'J4',   214 => 'K4',
-    173 => 'I5',   194 => 'J5',   215 => 'K5',
-    174 => 'I6',   195 => 'J6',   216 => 'K6',
-    175 => 'I7',   196 => 'J7',   217 => 'K7',
-    176 => 'I8',   197 => 'J8',   218 => 'K8',
-    177 => 'I9',   198 => 'J9',   219 => 'K9',
-    178 => 'I10',  199 => 'J10',  220 => 'K10',
-    179 => 'I11',  200 => 'J11',  221 => 'K11',
-    180 => 'I12',  201 => 'J12',  222 => 'K12',
-    181 => 'I13',  202 => 'J13',  223 => 'K13',
-    182 => 'I14',  203 => 'J14',  224 => 'K14',
-    183 => 'I15',  204 => 'J15',  225 => 'K15',
-    184 => 'I16',  205 => 'J16',  226 => 'K16',
-    185 => 'I17',  206 => 'J17',  227 => 'K17',
-    186 => 'I18',  207 => 'J18',  228 => 'K18',
-    187 => 'I19',  208 => 'J19',  229 => 'K19',
-    188 => 'I20',  209 => 'J20',  230 => 'K20',
-    189 => 'I21',  210 => 'J21',  231 => 'K21',
-);
-
-# AF point indices for 273 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z6iii and Zf).  Single-point AF array is 13 rows x 21 columns  (ref 28)
+# AF point indices for 273/299 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z6iii and Zf).  Single-point AF array is 13 rows x 21 columns  (ref 28)
 # - Auto Area AF has 2 additional columns available and provides 299 focus points. Uses 13 rows (A-M) and 23 columns (1-23), center is G12
 #
-my %afPoints273 = (
-      1 => 'A1',    24 => 'B1',    47 => 'C1',   70 => 'D1',     93 => 'E1',   116 => 'F1',   139 => 'G1',   162 => 'H1',
-      2 => 'A2',    25 => 'B2',    48 => 'C2',   71 => 'D2',     94 => 'E2',   117 => 'F2',   140 => 'G2',   163 => 'H2',
-      3 => 'A3',    26 => 'B3',    49 => 'C3',   72 => 'D3',     95 => 'E3',   118 => 'F3',   141 => 'G3',   164 => 'H3',
-      4 => 'A4',    27 => 'B4',    50 => 'C4',   73 => 'D4',     96 => 'E4',   119 => 'F4',   142 => 'G4',   165 => 'H4',
-      5 => 'A5',    28 => 'B5',    51 => 'C5',   74 => 'D5',     97 => 'E5',   120 => 'F5',   143 => 'G5',   166 => 'H5',
-      6 => 'A6',    29 => 'B6',    52 => 'C6',   75 => 'D6',     98 => 'E6',   121 => 'F6',   144 => 'G6',   167 => 'H6',
-      7 => 'A7',    30 => 'B7',    53 => 'C7',   76 => 'D7',     99 => 'E7',   122 => 'F7',   145 => 'G7',   168 => 'H7',
-      8 => 'A8',    31 => 'B8',    54 => 'C8',   77 => 'D8',    100 => 'E8',   123 => 'F8',   146 => 'G8',   169 => 'H8',
-      9 => 'A9',    32 => 'B9',    55 => 'C9',   78 => 'D9',    101 => 'E9',   124 => 'F9',   147 => 'G9',   170 => 'H9',
-     10 => 'A10',   33 => 'B10',   56 => 'C10',  79 => 'D10',   102 => 'E10',  125 => 'F10',  148 => 'G10',  171 => 'H10',
-     11 => 'A11',   34 => 'B11' ,  57 => 'C11',  80 => 'D11',   103 => 'E11',  126 => 'F11',  149 => 'G11',  172 => 'H11',
-     12 => 'A12',   35 => 'B12' ,  58 => 'C12',  81 => 'D12',   104 => 'E12',  127 => 'F12',  150 => 'G12',  173 => 'H12',
-     13 => 'A13',   36 => 'B13' ,  59 => 'C13',  82 => 'D13',   105 => 'E13',  128 => 'F13',  151 => 'G13',  174 => 'H13',
-     14 => 'A14',   37 => 'B14' ,  60 => 'C14',  83 => 'D14',   106 => 'E14',  129 => 'F14',  152 => 'G14',  175 => 'H14',
-     15 => 'A15',   38 => 'B15',   61 => 'C15',  84 => 'D15',   107 => 'E15',  130 => 'F15',  153 => 'G15',  176 => 'H15',
-     16 => 'A16',   39 => 'B16' ,  62 => 'C16',  85 => 'D16',   108 => 'E16',  131 => 'F16',  154 => 'G16',  177 => 'H16',
-     17 => 'A17',   40 => 'B17',   63 => 'C17',  86 => 'D17',   109 => 'E17',  132 => 'F17',  155 => 'G17',  178 => 'H17',
-     18 => 'A18',   41 => 'B18',   64 => 'C18',  87 => 'D18',   110 => 'E18',  133 => 'F18',  156 => 'G18',  179 => 'H18',
-     19 => 'A19',   42 => 'B19',   65 => 'C19',  88 => 'D19',   111 => 'E19',  134 => 'F19',  157 => 'G19',  180 => 'H19',
-     20 => 'A20',   43 => 'B20',   66 => 'C20',  89 => 'D20',   112 => 'E20',  135 => 'F20',  158 => 'G20',  181 => 'H20',
-     21 => 'A21',   44 => 'B21',   67 => 'C21',  90 => 'D21',   113 => 'E21',  136 => 'F21',  159 => 'G21',  182 => 'H21',
-     22 => 'A22',   45 => 'B22',   68 => 'C22',  91 => 'D22',   114 => 'E22',  137 => 'F22',  160 => 'G22',  183 => 'H22',
-     23 => 'A23',   46 => 'B23',   69 => 'C23',  92 => 'D23',   115 => 'E23',  138 => 'F23',  161 => 'G23',  184 => 'H23',
+my @afPoints299 = (qw(
+    A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21 A22 A23
+    B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23
+    C1 C2 C3 C4 C5 C6 C7 C8 C9 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 C21 C22 C23
+    D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D21 D22 D23
+    E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 E22 E23
+    F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21 F22 F23
+    G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13 G14 G15 G16 G17 G18 G19 G20 G21 G22 G23
+    H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23
+    I1 I2 I3 I4 I5 I6 I7 I8 I9 I10 I11 I12 I13 I14 I15 I16 I17 I18 I19 I20 I21 I22 I23
+    J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13 J14 J15 J16 J17 J18 J19 J20 J21 J22 J23
+    K1 K2 K3 K4 K5 K6 K7 K8 K9 K10 K11 K12 K13 K14 K15 K16 K17 K18 K19 K20 K21 K22 K23
+    L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 L13 L14 L15 L16 L17 L18 L19 L20 L21 L22 L23
+    M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23
+));
 
-    185 => 'I1',   208 => 'J1',   231 => 'K1',   254 => 'L1',   277 => 'M1',
-    186 => 'I2',   209 => 'J2',   232 => 'K2',   255 => 'L2',   278 => 'M2',
-    187 => 'I3',   210 => 'J3',   233 => 'K3',   256 => 'L3',   279 => 'M3',
-    188 => 'I4',   211 => 'J4',   234 => 'K4',   257 => 'L4',   280 => 'M4',
-    189 => 'I5',   212 => 'J5',   235 => 'K5',   258 => 'L5',   281 => 'M5',
-    190 => 'I6',   213 => 'J6',   236 => 'K6',   259 => 'L6',   282 => 'M6',
-    191 => 'I7',   214 => 'J7',   237 => 'K7',   260 => 'L7',   283 => 'M7',
-    192 => 'I8',   215 => 'J8',   238 => 'K8',   261 => 'L8',   284 => 'M8',
-    193 => 'I9',   216 => 'J9',   239 => 'K9',   262 => 'L9',   285 => 'M9',
-    194 => 'I10',  217 => 'J10',  240 => 'K10',  263 => 'L10',  286 => 'M10',
-    195 => 'I11',  218 => 'J11',  241 => 'K11',  264 => 'L11',  287 => 'M11',
-    196 => 'I12',  219 => 'J12',  242 => 'K12',  265 => 'L12',  288 => 'M12',
-    197 => 'I13',  220 => 'J13',  243 => 'K13',  266 => 'L13',  289 => 'M13',
-    198 => 'I14',  221 => 'J14',  244 => 'K14',  267 => 'L14',  290 => 'M14',
-    199 => 'I15',  222 => 'J15',  245 => 'K15',  268 => 'L15',  291 => 'M15',
-    200 => 'I16',  223 => 'J16',  246 => 'K16',  269 => 'L16',  292 => 'M16',
-    201 => 'I17',  224 => 'J17',  247 => 'K17',  270 => 'L17',  293 => 'M17',
-    202 => 'I18',  225 => 'J18',  248 => 'K18',  271 => 'L18',  294 => 'M18',
-    203 => 'I19',  226 => 'J19',  249 => 'K19',  272 => 'L19',  295 => 'M19',
-    204 => 'I20',  227 => 'J20',  250 => 'K20',  273 => 'L20',  296 => 'M20',
-    205 => 'I21',  228 => 'J21',  251 => 'K21',  274 => 'L21',  297 => 'M21',
-    206 => 'I22',  229 => 'J22',  252 => 'K22',  275 => 'L22',  298 => 'M22',
-    208 => 'I23',  230 => 'J23',  253 => 'K23',  276 => 'L23',  299 => 'M23',
-);
-
-# AF point indices for 493 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z8 and Z9).  Single-point AF array is 17 rows x 29 columns  (ref 28)
-# - Auto Area AF uses 15 of the 17 rows (A-Q) and 27 of the 29 columns (1-27), center is H14 (405 of the 493 focus points can be used by Auto-area AF)
+# AF point indices for 405/493 focus point (single-point AF) cameras equipped with Expeed 7 processor (eg. Z8 and Z9).  Single-point AF array is 17 rows x 29 columns  (ref 28)
+# - Auto Area AF uses 15 of the 17 rows (A-O) and 27 of the 29 columns (1-27), center is H14 (405 of the 493 focus points can be used by Auto-area AF)
 #
-my %afPoints493 = (
-      1 => 'A1',    28 => 'B1',    55 => 'C1',   82 => 'D1',    109 => 'E1',   136 => 'F1',   163 => 'G1',   190 => 'H1',
-      2 => 'A2',    29 => 'B2',    56 => 'C2',   83 => 'D2',    110 => 'E2',   137 => 'F2',   164 => 'G2',   191 => 'H2',
-      3 => 'A3',    30 => 'B3',    57 => 'C3',   84 => 'D3',    111 => 'E3',   138 => 'F3',   165 => 'G3',   192 => 'H3',
-      4 => 'A4',    31 => 'B4',    58 => 'C4',   85 => 'D4',    112 => 'E4',   139 => 'F4',   166 => 'G4',   193 => 'H4',
-      5 => 'A5',    32 => 'B5',    59 => 'C5',   86 => 'D5',    113 => 'E5',   140 => 'F5',   167 => 'G5',   194 => 'H5',
-      6 => 'A6',    33 => 'B6',    60 => 'C6',   87 => 'D6',    114 => 'E6',   141 => 'F6',   168 => 'G6',   195 => 'H6',
-      7 => 'A7',    34 => 'B7',    61 => 'C7',   88 => 'D7',    115 => 'E7',   142 => 'F7',   169 => 'G7',   196 => 'H7',
-      8 => 'A8',    35 => 'B8',    62 => 'C8',   89 => 'D8',    116 => 'E8',   143 => 'F8',   170 => 'G8',   197 => 'H8',
-      9 => 'A9',    36 => 'B9',    63 => 'C9',   90 => 'D9',    117 => 'E9',   144 => 'F9',   171 => 'G9',   198 => 'H9',
-     10 => 'A10',   37 => 'B10',   64 => 'C10',  91 => 'D10',   118 => 'E10',  145 => 'F10',  172 => 'G10',  199 => 'H10',
-     11 => 'A11',   38 => 'B11' ,  65 => 'C11',  92 => 'D11',   119 => 'E11',  146 => 'F11',  173 => 'G11',  200 => 'H11',
-     12 => 'A12',   39 => 'B12' ,  66 => 'C12',  93 => 'D12',   120 => 'E12',  147 => 'F12',  174 => 'G12',  201 => 'H12',
-     13 => 'A13',   40 => 'B13' ,  67 => 'C13',  94 => 'D13',   121 => 'E13',  148 => 'F13',  175 => 'G13',  202 => 'H13',
-     14 => 'A14',   41 => 'B14' ,  68 => 'C14',  95 => 'D14',   122 => 'E14',  149 => 'F14',  176 => 'G14',  203 => 'H14',
-     15 => 'A15',   42 => 'B15',   69 => 'C15',  96 => 'D15',   123 => 'E15',  150 => 'F15',  177 => 'G15',  204 => 'H15',
-     16 => 'A16',   43 => 'B16' ,  70 => 'C16',  97 => 'D16',   124 => 'E16',  151 => 'F16',  178 => 'G16',  205 => 'H16',
-     17 => 'A17',   44 => 'B17',   71 => 'C17',  98 => 'D17',   125 => 'E17',  152 => 'F17',  179 => 'G17',  206 => 'H17',
-     18 => 'A18',   45 => 'B18',   72 => 'C18',  99 => 'D18',   126 => 'E18',  153 => 'F18',  180 => 'G18',  207 => 'H18',
-     19 => 'A19',   46 => 'B19',   73 => 'C19',  100 => 'D19',  127 => 'E19',  154 => 'F19',  181 => 'G19',  208 => 'H19',
-     20 => 'A20',   47 => 'B20',   74 => 'C20',  101 => 'D20',  128 => 'E20',  155 => 'F20',  182 => 'G20',  209 => 'H20',
-     21 => 'A21',   48 => 'B21',   75 => 'C21',  102 => 'D21',  129 => 'E21',  156 => 'F21',  183 => 'G21',  210 => 'H21',
-     22 => 'A22',   49 => 'B22',   76 => 'C22',  103 => 'D22',  130 => 'E22',  157 => 'F22',  184 => 'G22',  211 => 'H22',
-     23 => 'A23',   50 => 'B23',   77 => 'C23',  104 => 'D23',  131 => 'E23',  158 => 'F23',  185 => 'G23',  212 => 'H23',
-     24 => 'A24',   51 => 'B24',   78 => 'C24',  105 => 'D24',  132 => 'E24',  159 => 'F24',  186 => 'G24',  213 => 'H24',
-     25 => 'A25',   52 => 'B25',   79 => 'C25',  106 => 'D25',  133 => 'E25',  160 => 'F25',  187 => 'G25',  214 => 'H25',
-     26 => 'A26',   53 => 'B26',   80 => 'C26',  107 => 'D26',  134 => 'E26',  161 => 'F26',  188 => 'G26',  215 => 'H26',
-     27 => 'A27',   54 => 'B27',   81 => 'C27',  108 => 'D27',  135 => 'E27',  162 => 'F27',  189 => 'G27',  216 => 'H27',
-
-    217 => 'I1',   244 => 'J1',   271 => 'K1',   298 => 'L1',   325 => 'M1',   352 => 'N1',   379 => 'O1',
-    218 => 'I2',   245 => 'J2',   272 => 'K2',   299 => 'L2',   326 => 'M2',   353 => 'N2',   380 => 'O2',
-    219 => 'I3',   246 => 'J3',   273 => 'K3',   300 => 'L3',   327 => 'M3',   354 => 'N3',   381 => 'O3',
-    220 => 'I4',   247 => 'J4',   274 => 'K4',   301 => 'L4',   328 => 'M4',   355 => 'N4',   382 => 'O4',
-    221 => 'I5',   248 => 'J5',   275 => 'K5',   302 => 'L5',   329 => 'M5',   356 => 'N5',   383 => 'O5',
-    222 => 'I6',   249 => 'J6',   276 => 'K6',   303 => 'L6',   330 => 'M6',   357 => 'N6',   384 => 'O6',
-    223 => 'I7',   250 => 'J7',   277 => 'K7',   304 => 'L7',   331 => 'M7',   358 => 'N7',   385 => 'O7',
-    224 => 'I8',   251 => 'J8',   278 => 'K8',   305 => 'L8',   332 => 'M8',   359 => 'N8',   386 => 'O8',
-    225 => 'I9',   252 => 'J9',   279 => 'K9',   306 => 'L9',   333 => 'M9',   360 => 'N9',   387 => 'O9',
-    226 => 'I10',  253 => 'J10',  280 => 'K10',  307 => 'L10',  334 => 'M10',  361 => 'N10',  388 => 'O10',
-    227 => 'I11',  254 => 'J11',  281 => 'K11',  308 => 'L11',  335 => 'M11',  362 => 'N11',  389 => 'O11',
-    228 => 'I12',  255 => 'J12',  282 => 'K12',  309 => 'L12',  336 => 'M12',  363 => 'N12',  390 => 'O12',
-    229 => 'I13',  256 => 'J13',  283 => 'K13',  310 => 'L13',  337 => 'M13',  364 => 'N13',  391 => 'O13',
-    230 => 'I14',  257 => 'J14',  284 => 'K14',  311 => 'L14',  338 => 'M14',  365 => 'N14',  392 => 'O14',
-    231 => 'I15',  258 => 'J15',  285 => 'K15',  312 => 'L15',  339 => 'M15',  366 => 'N15',  393 => 'O15',
-    232 => 'I16',  259 => 'J16',  286 => 'K16',  313 => 'L16',  340 => 'M16',  367 => 'N16',  394 => 'O16',
-    233 => 'I17',  260 => 'J17',  287 => 'K17',  314 => 'L17',  341 => 'M17',  368 => 'N17',  395 => 'O17',
-    234 => 'I18',  261 => 'J18',  288 => 'K18',  315 => 'L18',  342 => 'M18',  369 => 'N18',  396 => 'O18',
-    235 => 'I19',  262 => 'J19',  289 => 'K19',  316 => 'L19',  343 => 'M19',  370 => 'N19',  397 => 'O19',
-    236 => 'I20',  263 => 'J20',  290 => 'K20',  317 => 'L20',  344 => 'M20',  371 => 'N20',  398 => 'O20',
-    237 => 'I21',  264 => 'J21',  291 => 'K21',  318 => 'L21',  345 => 'M21',  372 => 'N21',  399 => 'O21',
-    238 => 'I22',  265 => 'J22',  292 => 'K22',  319 => 'L22',  346 => 'M22',  373 => 'N22',  400 => 'O22',
-    239 => 'I23',  266 => 'J23',  293 => 'K23',  320 => 'L23',  347 => 'M23',  374 => 'N23',  401 => 'O23',
-    240 => 'I24',  267 => 'J24',  294 => 'K24',  321 => 'L24',  348 => 'M24',  375 => 'N24',  402 => 'O24',
-    241 => 'I25',  268 => 'J25',  295 => 'K25',  322 => 'L25',  349 => 'M25',  376 => 'N25',  403 => 'O25',
-    242 => 'I26',  269 => 'J26',  296 => 'K26',  323 => 'L26',  350 => 'M26',  377 => 'N26',  404 => 'O26',
-    243 => 'I27',  270 => 'J27',  297 => 'K27',  324 => 'L27',  351 => 'M27',  378 => 'N27',  405 => 'O27',
-);
+my @afPoints405 = (qw(
+    A1 A2 A3 A4 A5 A6 A7 A8 A9 A10 A11 A12 A13 A14 A15 A16 A17 A18 A19 A20 A21 A22 A23 A24 A25 A26 A27
+    B1 B2 B3 B4 B5 B6 B7 B8 B9 B10 B11 B12 B13 B14 B15 B16 B17 B18 B19 B20 B21 B22 B23 B24 B25 B26 B27
+    C1 C2 C3 C4 C5 C6 C7 C8 C9 C10 C11 C12 C13 C14 C15 C16 C17 C18 C19 C20 C21 C22 C23 C24 C25 C26 C27
+    D1 D2 D3 D4 D5 D6 D7 D8 D9 D10 D11 D12 D13 D14 D15 D16 D17 D18 D19 D20 D21 D22 D23 D24 D25 D26 D27
+    E1 E2 E3 E4 E5 E6 E7 E8 E9 E10 E11 E12 E13 E14 E15 E16 E17 E18 E19 E20 E21 E22 E23 E24 E25 E26 E27
+    F1 F2 F3 F4 F5 F6 F7 F8 F9 F10 F11 F12 F13 F14 F15 F16 F17 F18 F19 F20 F21 F22 F23 F24 F25 F26 F27
+    G1 G2 G3 G4 G5 G6 G7 G8 G9 G10 G11 G12 G13 G14 G15 G16 G17 G18 G19 G20 G21 G22 G23 G24 G25 G26 G27
+    H1 H2 H3 H4 H5 H6 H7 H8 H9 H10 H11 H12 H13 H14 H15 H16 H17 H18 H19 H20 H21 H22 H23 H24 H25 H26 H27
+    I1 I2 I3 I4 I5 I6 I7 I8 I9 I10 I11 I12 I13 I14 I15 I16 I17 I18 I19 I20 I21 I22 I23 I24 I25 I26 I27
+    J1 J2 J3 J4 J5 J6 J7 J8 J9 J10 J11 J12 J13 J14 J15 J16 J17 J18 J19 J20 J21 J22 J23 J24 J25 J26 J27
+    K1 K2 K3 K4 K5 K6 K7 K8 K9 K10 K11 K12 K13 K14 K15 K16 K17 K18 K19 K20 K21 K22 K23 K24 K25 K26 K27
+    L1 L2 L3 L4 L5 L6 L7 L8 L9 L10 L11 L12 L13 L14 L15 L16 L17 L18 L19 L20 L21 L22 L23 L24 L25 L26 L27
+    M1 M2 M3 M4 M5 M6 M7 M8 M9 M10 M11 M12 M13 M14 M15 M16 M17 M18 M19 M20 M21 M22 M23 M24 M25 M26 M27
+    N1 N2 N3 N4 N5 N6 N7 N8 N9 N10 N11 N12 N13 N14 N15 N16 N17 N18 N19 N20 N21 N22 N23 N24 N25 N26 N27
+    O1 O2 O3 O4 O5 O6 O7 O8 O9 O10 O11 O12 O13 O14 O15 O16 O17 O18 O19 O20 O21 O22 O23 O24 O25 O26 O27
+));
 
 my %cropHiSpeed = ( #IB
     0 => 'Off',
@@ -3113,15 +3087,30 @@ my %base64coord = (
     },
     0x00b7 => [{
         Name => 'AFInfo2',
+        #  LiveView-enabled DSLRs introduced starting in 2007 (D3/D300)
+        Condition => '$$valPt =~ /^0100/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0100' },
+    },{
+        Name => 'AFInfo2',
+        # All Expeed 5 processor and most Expeed 4 processor models from 2016 - D5, D500, D850, D3400, D3500, D7500 (D5600 is v0100)
+        Condition => '$$valPt =~ /^0101/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0101' },
+    },{
+        Name => 'AFInfo2',
+        # Nikon 1 Series cameras
+        Condition => '$$valPt =~ /^020[01]/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0200' },
+    },{
+        Name => 'AFInfo2',
+        # Expeed 6 processor models - D6, D780, Z5, Z6, Z7, Z30, Z50, Z6_2, Z7_2  and Zfc
+        Condition => '$$valPt =~ /^030[01]/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0300' },
+    },{
+        Name => 'AFInfo2',
         # Expeed 7 processor models - Z8 & Z9 (AFInfo2Version 0400), Z6iii & Zf (AFInfo2Version 0401)
         #  and Z50ii (AFInfo2Version 0402)
         Condition => '$$valPt =~ /^040[012]/',
         SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0400' },
-    },{ #JD
-        # (expeed 5 processor cameras are version 0101, expeed 6 are version 03xx)
-        Name => 'AFInfo2',
-        # (this structure may be byte swapped when rewritten by CaptureNX)
-        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2' },
     }],
     0x00b8 => [{ #PH
         Name => 'FileInfo',
@@ -4134,148 +4123,59 @@ my %base64coord = (
         Name => 'AFPointsInFocus',
         Format => 'int16u',
         PrintConvColumns => 2,
-        PrintConv => {
-            0 => '(none)',
-            0x7ff => 'All 11 Points',
-            BITMASK => {
-                0 => 'Center',
-                1 => 'Top',
-                2 => 'Bottom',
-                3 => 'Mid-left',
-                4 => 'Mid-right',
-                5 => 'Upper-left',
-                6 => 'Upper-right',
-                7 => 'Lower-left',
-                8 => 'Lower-right',
-                9 => 'Far Left',
-                10 => 'Far Right',
-            },
-        },
+        PrintConv => \%afPoints11,
     },
 );
 
-# Nikon AF information for D3 and D300 (ref JD)
-%Image::ExifTool::Nikon::AFInfo2 = (
+%Image::ExifTool::Nikon::AFInfo2V0100 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     DATAMEMBER => [ 0, 4, 6 ],
-    NOTES => "These tags are written by Nikon DSLR's which have the live view feature.",
+    NOTES => q{
+        AF information for Nikon cameras with LiveView that were introduced 2007
+        thru 2015 (and the D5600 in 2016), including D3, D4, D3000, D3100-D3300,
+        D5000-D5600, D6x0, D700, D7000, D7100, D810
+    },
     0 => {
-        # (expeed 5 processor cameras are version 0101, expeed 6 are version 03xx)
         Name => 'AFInfo2Version',
         Format => 'undef[4]',
         Writable => 0,
         RawConv => '$$self{AFInfo2Version} = $val',
     },
-    4 => { #PH
-        Name => 'ContrastDetectAF',
-        RawConv => '$$self{ContrastDetectAF} = $val',
-        PrintConv => {
-            %offOn,
-            2 => 'On (2)', #PH (Z7)
-        },
-        Notes => 'this is Off for the hybrid AF used in Nikon 1 models',
+    4 => {
+        Name => 'AFDetectionMethod',    #specifies phase detect or contrast detect
+        RawConv => '$$self{AFDetectionMethod} = $val',
+        PrintConv => \%aFDetectionMethod ,
     },
     5 => [
         {
             Name => 'AFAreaMode',
-            Condition => 'not $$self{ContrastDetectAF}',
-            Notes => 'ContrastDetectAF Off',
-            PrintConv => {
-                0 => 'Single Area', # (called "Single Point" in manual - PH)
-                1 => 'Dynamic Area', #PH
-                2 => 'Dynamic Area (closest subject)', #PH
-                3 => 'Group Dynamic', #PH
-                4 => 'Dynamic Area (9 points)', #JD/28
-                5 => 'Dynamic Area (21 points)', #28
-                6 => 'Dynamic Area (51 points)', #28
-                7 => 'Dynamic Area (51 points, 3D-tracking)', #PH/28
-                8 => 'Auto-area',
-                9 => 'Dynamic Area (3D-tracking)', #PH (D5000 "3D-tracking (11 points)")
-                10 => 'Single Area (wide)', #PH
-                11 => 'Dynamic Area (wide)', #PH
-                12 => 'Dynamic Area (wide, 3D-tracking)', #PH
-                13 => 'Group Area', #PH
-                14 => 'Dynamic Area (25 points)', #PH
-                15 => 'Dynamic Area (72 points)', #PH
-                16 => 'Group Area (HL)', #28
-                17 => 'Group Area (VL)', #28
-                18 => 'Dynamic Area (49 points)', #28
-                128 => 'Single', #PH (1J1,1J2,1J3,1J4,1S1,1S2,1V2,1V3)
-                129 => 'Auto (41 points)', #PH (1J1,1J2,1J3,1J4,1S1,1S2,1V1,1V2,1V3,AW1)
-                130 => 'Subject Tracking (41 points)', #PH (1J1,1J4,1J3)
-                131 => 'Face Priority (41 points)', #PH (1J1,1J3,1S1,1V2,AW1)
-                # 134 - seen for 1V1[PhaseDetectAF=0] (PH)
-                # 135 - seen for 1J2[PhaseDetectAF=4] (PH)
-                192 => 'Pinpoint', #PH (NC)
-                193 => 'Single', #PH (NC)
-                195 => 'Wide (S)', #PH (NC)
-                196 => 'Wide (L)', #PH (NC)
-                197 => 'Auto', #PH (NC)
-            },
+            Condition => '$$self{AFDetectionMethod} == 0',
+            PrintConv =>  \%aFAreaModePD,     #phase detect
         },
-        { #PH (D3/D90/D5000)
+        {
             Name => 'AFAreaMode',
-            Notes => 'ContrastDetectAF On',
-            PrintConv => {
-                0 => 'Contrast-detect', # (D3)
-                1 => 'Contrast-detect (normal area)', # (D90/D5000)
-                # (D90 and D5000 give value of 2 when set to 'Face Priority' and
-                # 'Subject Tracking', but I didn't have a face to shoot at or a
-                #  moving subject to track so perhaps this value changes dynamically)
-                2 => 'Contrast-detect (wide area)', # (D90/D5000)
-                3 => 'Contrast-detect (face priority)', # (ViewNX)
-                4 => 'Contrast-detect (subject tracking)', # (ViewNX)
-                128 => 'Single', #PH (1V3)
-                129 => 'Auto (41 points)', #PH (NC)
-                130 => 'Subject Tracking (41 points)', #PH (NC)
-                131 => 'Face Priority (41 points)', #PH (NC)
-                192 => 'Pinpoint', #PH (Z7)
-                193 => 'Single', #PH (Z7)
-                194 => 'Dynamic', #PH (Z7)
-                195 => 'Wide (S)', #PH (Z7)
-                196 => 'Wide (L)', #PH (Z7)
-                197 => 'Auto', #PH (Z7)
-                198 => 'Auto (People)', #28 (Z7)    #if no faces are detected, will record as 'Auto'.  Camera setting recorded in AFAreaMode field in the MakerNotes area
-                199 => 'Auto (Animal)', #28 (Z7)    #if no animals are detected, will record as 'Auto'.  Camera setting recorded in AFAreaMode field in the MakerNotes area
-                200 => 'Normal-area AF', #28 (D6)
-                201 => 'Wide-area AF', #28 (D6)
-                202 => 'Face-priority AF', #28 (D6)
-                203 => 'Subject-tracking AF', #28 (D6)
-                204 => 'Dynamic Area (S)', #28 (Z9)
-                205 => 'Dynamic Area (M)', #28 (Z9)
-                206 => 'Dynamic Area (L)', #28 (Z9)
-                207 => '3D-tracking', #28 (Z9)
-                208 => 'Wide-Area (C1/C2)', #28 (Z8, Z9)
-            },
+            PrintConv => \%aFAreaModeCD,      #contrast detect
         },
     ],
     6 => {
-        Name => 'PhaseDetectAF', #JD(AutoFocus), PH(PhaseDetectAF)
-        Notes => 'PrimaryAFPoint and AFPointsUsed below are only valid when this is On',
-        RawConv => '$$self{PhaseDetectAF} = $val',
+        Name => 'FocusPointSchema',
+        RawConv => '$$self{FocusPointSchema} = $val',
+        Hidden => 1,
         PrintConv => {
-            # [observed AFAreaMode values in square brackets for each PhaseDetectAF value]
-            0 => 'Off',
-            1 => 'On (51-point)', #PH
-            2 => 'On (11-point)', #PH
-            3 => 'On (39-point)', #29 (D7000)
-            4 => 'On (73-point)', #PH (1J1[128/129],1J2[128/129/135],1J3/1S1/1V2[128/129/131],1V1[129],AW1[129/131])
-            5 => 'On (5)', #PH (1S2[128/129], 1J4/1V3[129])
-            6 => 'On (105-point)', #PH (1J4/1V3[128/130])
-            7 => 'On (153-point)', #PH (D5/D500/D850)
-            8 => 'On (81-point)', #38
-            9 => 'On (105-point)', #28 (D6)
+            0 => 'Off',       # LiveView or manual focus or no focus
+            1 => '51-point',  # (D3/D3S/D3X/D4/D4S/D300/D300S/D700/D750/D800/D800E/D810/D7100/D7200)
+            2 => '11-point',  # (D90/D3000/D3100/D3200/D3300/D5000/D5100)
+            3 => '39-point',  # (D600/D610/D5200/D5300/D5500/D5600/D7000/Df)
         },
     },
     7 => [
         { #PH/JD
             Name => 'PrimaryAFPoint',
-            # PrimaryAFPoint may only be valid for PhaseDetect - certainly true on the D6, possibly other bodies? (ref 28)
-            Condition => '$$self{PhaseDetectAF} < 2 and $$self{AFInfo2Version} !~ /^03/',
+            Condition => '$$self{FocusPointSchema} == 1',   #51 focus-point models
             Notes => q{
                 models with 51-point AF -- 5 rows (A-E) and 11 columns (1-11): D3, D3S, D3X,
-                D4, D4S, D300, D300S, D700, D800, D800e and D810
+                D4, D4S, D300, D300S, D700, D750, D800, D800E, D810, D7100 and D7200
             },
             PrintConvColumns => 5,
             PrintConv => {
@@ -4283,11 +4183,10 @@ my %base64coord = (
                 %afPoints51,
                 1 => 'C6 (Center)', # (add " (Center)" to central point)
             },
-        },
-        { #10
+        },{ #10
             Name => 'PrimaryAFPoint',
-            Notes => 'models with 11-point AF: D90, D3000, D3100, D5000 and D5100',
-            Condition => '$$self{PhaseDetectAF} == 2',
+            Notes => 'models with 11-point AF: D90, D3000-D3300, D5000 and D5100',
+            Condition => '$$self{FocusPointSchema} == 2',   #11 focus-point models
             PrintConvColumns => 2,
             PrintConv => {
                 0 => '(none)',
@@ -4303,11 +4202,10 @@ my %base64coord = (
                 10 => 'Lower-right',
                 11 => 'Far Right',
             },
-        },
-        { #29
+        },{ #29
             Name => 'PrimaryAFPoint',
-            Condition => '$$self{PhaseDetectAF} == 3',
-            Notes => 'models with 39-point AF: D600 and D7000',
+            Condition => '$$self{FocusPointSchema} == 3',   #39 focus-point models
+            Notes => 'models with 39-point AF: D600, D610, D5200-D5600, D7000 and Df',
             PrintConvColumns => 5,
             PrintConv => {
                 0 => '(none)',
@@ -4315,7 +4213,421 @@ my %base64coord = (
                 1 => 'C6 (Center)', # (add " (Center)" to central point)
             },
         },
+        {
+            Name => 'PrimaryAFPoint',
+            Condition => '$$self{FocusPointSchema} == 0',   #LiveView or manual focus or no focus  (reporting only for purposes of backward compatibility with v13.19 and earlier)
+            PrintConv => { 0 => '(none)', },
+        },
+    ],
+    8 => [
+        { #JD/PH
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 1',   # 51 focus-point models
+            Notes => q{
+                models with 51-point AF -- 5 rows: A1-9, B1-11, C1-11, D1-11, E1-9.  Center
+                point is C6
+            },
+            Format => 'undef[7]',
+            ValueConv => 'join(" ", unpack("H2"x7, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints51) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51) },
+        },
+        { #10
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 2',   #  11 focus-point models
+            Notes => 'models with 11-point AF',
+            # read as int16u in little-endian byte order
+            Format => 'undef[2]',
+            ValueConv => 'unpack("v",$val)',
+            ValueConvInv => 'pack("v",$val)',
+            PrintConvColumns => 2,
+            PrintConv => {
+                0 => '(none)',
+                0x7ff => 'All 11 Points',
+                BITMASK => {
+                    0 => 'Center',
+                    1 => 'Top',
+                    2 => 'Bottom',
+                    3 => 'Mid-left',
+                    4 => 'Upper-left',
+                    5 => 'Lower-left',
+                    6 => 'Far Left',
+                    7 => 'Mid-right',
+                    8 => 'Upper-right',
+                    9 => 'Lower-right',
+                    10 => 'Far Right',
+                },
+            },
+        },
+        { #29/PH
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 3',   # 39 focus-point models
+            Notes => q{
+                models with 39-point AF -- 5 rows: A1-3, B1-11, C1-11, D1-11, E1-3.  Center
+                point is C6
+            },
+            Format => 'undef[5]',
+            ValueConv => 'join(" ", unpack("H2"x5, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints39) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints39) },
+        },
+        {
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 0',   #LiveView or manual focus or no focus  (reporting only for purposes of backward compatibility with v13.19 and earlier)
+            PrintConv => { 0 => '(none)', },
+        },
+    ],
+    0x10 => { #PH (D90 and D5000)
+        Name => 'AFImageWidth',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+        Notes => 'this and the following tags are valid only for contrast-detect AF',
+    },
+    0x12 => { #PH
+        Name => 'AFImageHeight',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x14 => { #PH
+        Name => 'AFAreaXPosition',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Notes => 'center of AF area in AFImage coordinates',
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x16 => { #PH
+        Name => 'AFAreaYPosition',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x18 => { #PH
+        Name => 'AFAreaWidth',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        Notes => 'size of AF area in AFImage coordinates',
+        RawConv => '$val ? $val : undef',
+    },
+    0x1a => { #PH
+        Name => 'AFAreaHeight',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x1c => [
         { #PH
+            Name => 'ContrastDetectAFInFocus',
+            Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+            PrintConv => { 0 => 'No', 1 => 'Yes' },
+        },{ #PH (D500, see forum11190)
+            Name => 'AFPointsSelected',
+            Condition => '$$self{FocusPointSchema} == 7',
+            Format => 'undef[20]',
+            ValueConv => 'join(" ", unpack("H2"x20, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints153) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153) },
+        },
+        # (#28) this is incorrect - [observed values 0, 1, 16, 64, 128, 1024 (mostly 0 & 1), but not tied to the display of focus point in NXStudio]
+        #{ #PH (D3400) (NC "selected")
+        #    Name => 'AFPointsSelected',
+        #    Condition => '$$self{FocusPointSchema} == 2',
+        #    Format => 'int16u',
+        #    PrintConv => \%afPoints11,
+        #},
+    ],
+);
+
+%Image::ExifTool::Nikon::AFInfo2V0101 = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    DATAMEMBER => [ 0, 4, 5, 6 ],
+    NOTES => q{
+        AF information for Nikon cameras D5, D500, D850, D3400, D3500 and D7500
+    },
+    0 => {
+        Name => 'AFInfo2Version',
+        Format => 'undef[4]',
+        Writable => 0,
+        RawConv => '$$self{AFInfo2Version} = $val',
+    },
+    4 => {
+        Name => 'AFDetectionMethod',
+        RawConv => '$$self{AFDetectionMethod} = $val',
+        PrintConv => \%aFDetectionMethod,
+    },
+    5 => [
+        {
+            Name => 'AFAreaMode',
+            Condition => '$$self{AFDetectionMethod} == 0',
+            RawConv => '$$self{AFAreaMode} = $val',
+            PrintConv =>  \%aFAreaModePD,     #phase detect
+        },
+        {
+            Name => 'AFAreaMode',
+            RawConv => '$$self{AFAreaMode} = $val',
+            PrintConv => \%aFAreaModeCD,      #contrast detect
+        },
+    ],
+    6 => {
+        Name => 'FocusPointSchema',
+        RawConv => '$$self{FocusPointSchema} = $val',
+        Hidden => 1,
+        PrintConv => {
+            0 => 'Off',        # LiveView or manual focus or no focus
+            1 => '51-point',   # (D7500)
+            2 => '11-point',   # (D3400/D3500)
+            7 => '153-point',  # (D5/D500/D850)   153 focus points (17 columns x 9 rows) - of these 55 are user selectable (11 columns x 5 rows)
+        },
+    },
+    8 => [
+        { #JD/PH
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 1',   #51 focus-point models
+            Notes => q{
+                models with 51-point AF -- 5 rows: A1-9, B1-11, C1-11, D1-11, E1-9.  Center
+                point is C6
+            },
+            Format => 'undef[7]',
+            ValueConv => 'join(" ", unpack("H2"x7, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints51) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51) },
+        },{ #10
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 2',   #11 focus-point models
+            Notes => 'models with 11-point AF',
+            # read as int16u in little-endian byte order
+            Format => 'undef[2]',
+            ValueConv => 'unpack("v",$val)',
+            ValueConvInv => 'pack("v",$val)',
+            PrintConvColumns => 2,
+            PrintConv => {
+                0 => '(none)',
+                0x7ff => 'All 11 Points',
+                BITMASK => {
+                    0 => 'Center',
+                    1 => 'Top',
+                    2 => 'Bottom',
+                    3 => 'Mid-left',
+                    4 => 'Upper-left',
+                    5 => 'Lower-left',
+                    6 => 'Far Left',
+                    7 => 'Mid-right',
+                    8 => 'Upper-right',
+                    9 => 'Lower-right',
+                    10 => 'Far Right',
+                },
+            },
+        },
+        { #PH (D5,D500, D850)
+            Name => 'AFPointsUsed',  #when focus is not obtained, will report '(none)' otherwise will report a single point from among AFPointsSelected
+            Condition => '$$self{FocusPointSchema} == 7',   #153 focus-point models
+            Notes => q{
+                models with 153-point AF -- 9 rows (A-I) and 17 columns (1-17). Center
+                point is E9
+            },
+            Format => 'undef[20]',
+            ValueConv => 'join(" ", unpack("H2"x20, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints153) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153) },
+        },{
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 0',   #LiveView or manual focus or no focus  (reporting only for purposes of backward compatibility with v13.19 and earlier)
+            PrintConv => { 0 => '(none)', },
+        },
+    ],
+    0x1c => [
+        {#PH
+            Name => 'ContrastDetectAFInFocus',
+            Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+            PrintConv => { 0 => 'No', 1 => 'Yes' },
+        },
+        { #JD/PH
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 1 and
+                         ($$self{AFAreaMode} == 8  or $$self{AFAreaMode} == 9  or $$self{AFAreaMode} == 13 )',   #phase detect 51 focus-point models
+            Format => 'undef[7]',
+            ValueConv => 'join(" ", unpack("H2"x7, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints51) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51) },
+        },{ #PH (D500, see forum11190)
+            Name => 'AFPointsSelected',   # where the viewfinder AF point(s) were positioned when initiating focus in AFAreaMode 3D-tracking Group-area
+                                          # will contain a value regardless of whether or not focus was obtained
+                                          # reflects the focus points displayed by NXStudio when AFAreaMode is Group-area
+            Condition => '$$self{FocusPointSchema} == 7 and
+                         ($$self{AFAreaMode} == 8  or $$self{AFAreaMode} == 9  or $$self{AFAreaMode} == 13 )',   #phase detect 153 focus-point models in Auto-area/3D-tracking/Group-area
+            Format => 'undef[20]',
+            ValueConv => 'join(" ", unpack("H2"x20, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints153) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153) },
+        },
+    ],
+    0x30 => [
+        { #PH (D7500) (NC "in focus")
+            Name => 'AFPointsInFocus',   # refelcts the focus point(s) displayed by NXStudio when AFAreaMode is Auto-area or 3D-tracking.
+                                         # erroneously named as there is no assurance the reported points are in focus
+            Condition => '$$self{FocusPointSchema} == 1',   #51 focus-point models
+            Format => 'undef[7]',
+            ValueConv => 'join(" ", unpack("H2"x7, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints51) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51) },
+        },{ #PH (D500, see forum11190)
+            Name => 'AFPointsInFocus',
+            Condition => '$$self{FocusPointSchema} == 7',   #153 focus-point models
+            Notes => 'AF points in focus at the time time image was captured',
+            Format => 'undef[20]',
+            ValueConv => 'join(" ", unpack("H2"x20, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints153) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153) },
+        },
+    ],
+    0x44 => [    #AFInfoVersion 0100 use 0x08 for this tag.  v0101 could do that as well. The difference is that when Group-area fails to focus..
+                 #...this code (incorrectly) reports a value for PrimaryAFPoint.   Moving this code to the 0x08 slot would correctly report '(none)'...
+                 #...leaving it here for now for compatibility purposes
+        { #PH/JD
+            Name => 'PrimaryAFPoint',
+            Condition => '$$self{FocusPointSchema} == 1',   #51 focus-point models
+            Notes => q{
+               models with 51-point AF -- 5 rows (A-E) and 11 columns (1-11): D7500
+            },
+            PrintConvColumns => 5,
+            PrintConv => {
+                0 => '(none)',
+                %afPoints51,
+                1 => 'C6 (Center)', # (add " (Center)" to central point)
+            },
+        },{ #10
+            Name => 'PrimaryAFPoint',
+            Notes => 'models with 11-point AF: D3400, D3500',
+           Condition => '$$self{FocusPointSchema} == 2',   #11 focus-point models
+            PrintConvColumns => 2,
+            PrintConv => {
+                0 => '(none)',
+                1 => 'Center',
+                2 => 'Top',
+                3 => 'Bottom',
+                4 => 'Mid-left',
+                5 => 'Upper-left',
+                6 => 'Lower-left',
+                7 => 'Far Left',
+                8 => 'Mid-right',
+                9 => 'Upper-right',
+                10 => 'Lower-right',
+                11 => 'Far Right',
+            },
+        },{ #PH
+            Name => 'PrimaryAFPoint',
+            Condition => '$$self{FocusPointSchema} == 7',   #153 focus-point models
+            Notes => q{
+                Nikon models with 153-point AF -- 9 rows (A-I) and 17 columns (1-17): D5,
+                D500 and D850
+            },
+            PrintConvColumns => 5,
+            PrintConv => {
+                0 => '(none)',
+                %afPoints153,
+                1 => 'E9 (Center)',
+           },
+        },{
+            Name => 'PrimaryAFPoint',
+            Condition => '$$self{FocusPointSchema} == 0',   #LiveView or manual focus or no focus  (reporting only for purposes of backward compatibility with v13.19 and earlier)
+            PrintConv => { 0 => '(none)', },
+        },
+    ],
+    0x46 => { #PH
+        Name => 'AFImageWidth',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+        Notes => 'this and the following tags are valid only for contrast-detect AF',
+    },
+    0x48 => { #PH
+        Name => 'AFImageHeight',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x4a => { #PH
+        Name => 'AFAreaXPosition',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Notes => 'center of AF area in AFImage coordinates',
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x4c => { #PH
+        Name => 'AFAreaYPosition',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x4e => { #PH
+        Name => 'AFAreaWidth',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        Notes => 'size of AF area in AFImage coordinates',
+        RawConv => '$val ? $val : undef',
+    },
+    0x50 => { #PH
+        Name => 'AFAreaHeight',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x52 => {
+        Name => 'ContrastDetectAFInFocus',
+        Condition => '$$self{AFDetectionMethod} == 1',   #contrast detect
+        PrintConv => { 0 => 'No', 1 => 'Yes' },
+    },
+);
+
+%Image::ExifTool::Nikon::AFInfo2V0200 = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    DATAMEMBER => [ 0, 6 ],
+    NOTES => q{
+        AF information for Nikon 1 series cameras: Nikon 1 V1, V2, V3, J1, J2, J3,
+        S1, S2 AW1.
+    },
+    0 => {
+        Name => 'AFInfo2Version',
+        Format => 'undef[4]',
+        Writable => 0,
+        RawConv => '$$self{AFInfo2Version} = $val',
+    },
+    5 => {
+        Name => 'AFAreaMode',
+        PrintConv => {
+            128 => 'Single', #PH (1J1,1J2,1J3,1J4,1S1,1S2,1V2,1V3)
+            129 => 'Auto (41 points)', #PH (1J1,1J2,1J3,1J4,1S1,1S2,1V1,1V2,1V3,AW1)
+            130 => 'Subject Tracking (41 points)', #PH (1J1,1J4,1J3)
+            131 => 'Face Priority (41 points)', #PH (1J1,1J3,1S1,1V2,AW1)
+            # 134 - seen for 1V1[PhaseDetectAF=0] (PH)
+            # 135 - seen for 1J2[PhaseDetectAF=4] (PH)
+        },
+    },
+    6 => {
+        Name => 'PhaseDetectAF', #JD(AutoFocus), PH(PhaseDetectAF)
+        Notes => 'PrimaryAFPoint and AFPointsUsed below are only valid when this is On',
+        RawConv => '$$self{PhaseDetectAF} = $val',
+        PrintConv => {
+            # [observed AFAreaMode values in square brackets for each PhaseDetectAF value]
+            4 => 'On (73-point)', #PH (1J1[128/129],1J2[128/129/135],1J3/1S1/1V2[128/129/131],1V1[129],AW1[129/131])
+            5 => 'On (5)', #PH (1S2[128/129], 1J4/1V3[129])
+            6 => 'On (105-point)', #PH (1J4/1V3[128/130])
+        },
+    },
+    7 => [
+       { #PH
             Name => 'PrimaryAFPoint',
             Condition => '$$self{PhaseDetectAF} == 4',
             Notes => 'Nikon 1 models with older 135-point AF and 73-point phase-detect AF',
@@ -4364,84 +4676,8 @@ my %base64coord = (
                 },
             },
         },
-        { #PH
-            Name => 'PrimaryAFPoint',
-            Condition => '$$self{PhaseDetectAF} == 7 and $$self{AFInfo2Version} eq "0100"',
-            Notes => q{
-                Nikon models with 153-point AF -- 9 rows (A-I) and 17 columns (1-17): D5,
-                D500 and D850
-            },
-            PrintConvColumns => 5,
-            PrintConv => {
-                0 => '(none)',
-                %afPoints153,
-                1 => 'E9 (Center)',
-            },
-        },
-        {
-            Name => 'PrimaryAFPoint',
-            Condition => '$$self{AFInfo2Version} eq "0100"',
-            Notes => 'future models?...',
-            PrintConv => {
-                0 => '(none)',
-                1 => 'Center',
-            },
-        },
     ],
     8 => [
-        { #JD/PH
-            Name => 'AFPointsUsed',
-            Condition => '$$self{PhaseDetectAF} < 2 and $$self{AFInfo2Version} !~ /^03/',
-            Notes => q{
-                models with 51-point AF -- 5 rows: A1-9, B1-11, C1-11, D1-11, E1-9.  Center
-                point is C6
-            },
-            Format => 'undef[7]',
-            ValueConv => 'join(" ", unpack("H2"x7, $val))',
-            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPoints(shift, \%afPoints51); },
-            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51); },
-        },
-        { #10
-            Name => 'AFPointsUsed',
-            Condition => '$$self{PhaseDetectAF} == 2',
-            Notes => 'models with 11-point AF',
-            # read as int16u in little-endian byte order
-            Format => 'undef[2]',
-            ValueConv => 'unpack("v",$val)',
-            ValueConvInv => 'pack("v",$val)',
-            PrintConvColumns => 2,
-            PrintConv => {
-                0 => '(none)',
-                0x7ff => 'All 11 Points',
-                BITMASK => {
-                    0 => 'Center',
-                    1 => 'Top',
-                    2 => 'Bottom',
-                    3 => 'Mid-left',
-                    4 => 'Upper-left',
-                    5 => 'Lower-left',
-                    6 => 'Far Left',
-                    7 => 'Mid-right',
-                    8 => 'Upper-right',
-                    9 => 'Lower-right',
-                    10 => 'Far Right',
-                },
-            },
-        },
-        { #29/PH
-            Name => 'AFPointsUsed',
-            Condition => '$$self{PhaseDetectAF} == 3',
-            Notes => q{
-                models with 39-point AF -- 5 rows: A1-3, B1-11, C1-11, D1-11, E1-3.  Center
-                point is C6
-            },
-            Format => 'undef[5]',
-            ValueConv => 'join(" ", unpack("H2"x5, $val))',
-            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPoints(shift, \%afPoints39); },
-            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints39); },
-        },
         { #PH (1AW1,1J1,1J2,1J3,1S1,1V1,1V2)
             Name => 'AFPointsUsed',
             Condition => '$$self{PhaseDetectAF} == 4',
@@ -4453,8 +4689,8 @@ my %base64coord = (
             Format => 'undef[17]',
             ValueConv => 'join(" ", unpack("H2"x17, $val))',
             ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPoints(shift, \%afPoints135); },
-            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints135); },
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints135) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints135) },
         },
         { #PH (1S2)
             Name => 'AFPointsUsed',
@@ -4466,8 +4702,8 @@ my %base64coord = (
             Format => 'undef[21]',
             ValueConv => 'join(" ", unpack("H2"x21, $val))',
             ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPointsGrid(shift, 15); },
-            PrintConvInv => sub { PrintAFPointsGridInv(shift, 15, 21); },
+            PrintConv => sub { PrintAFPointsGrid(shift, 15) },
+            PrintConvInv => sub { PrintAFPointsGridInv(shift, 15, 21) },
         },
         { #PH (1J4,1V3)
             Name => 'AFPointsUsed',
@@ -4479,335 +4715,207 @@ my %base64coord = (
             Format => 'undef[29]',
             ValueConv => 'join(" ", unpack("H2"x29, $val))',
             ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPointsGrid(shift, 21); },
-            PrintConvInv => sub { PrintAFPointsGridInv(shift, 21, 29); },
+            PrintConv => sub { PrintAFPointsGrid(shift, 21) },
+            PrintConvInv => sub { PrintAFPointsGridInv(shift, 21, 29) },
         },
-        { #PH (D5,D500)
+    ],
+);
+
+%Image::ExifTool::Nikon::AFInfo2V0300 = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    DATAMEMBER => [ 0, 4, 6, 7, 46, 48 ],
+    NOTES => q{
+        AF information for Nikon cameras with the Expeed 6 processor: D6, D780, Z5,
+        Z6, Z6ii, Z7, Z7ii, Z50 and Zfc.
+    },
+    0 => {
+        Name => 'AFInfo2Version',
+        Format => 'undef[4]',
+        Writable => 0,
+        RawConv => '$$self{AFInfo2Version} = $val',
+    },
+    4 => {
+        Name => 'AFDetectionMethod',
+        RawConv => '$$self{AFDetectionMethod} = $val',
+        PrintConv => \%aFDetectionMethod ,
+    },
+    5 => [
+        {
+            Name => 'AFAreaMode',
+            Condition => '$$self{AFDetectionMethod} == 0',
+            PrintConv =>  \%aFAreaModePD,     #phase detect
+        },
+        {
+            Name => 'AFAreaMode',
+            PrintConv => \%aFAreaModeCD,      #contrast detect
+        },
+    ],
+    6 => {
+        Name => 'FocusPointSchema',
+        RawConv => '$$self{FocusPointSchema} = $val',
+        Hidden => 1,
+        PrintConv => {
+            0 => 'Off',       # LiveView or manual focus or no focus
+            1 => '51-point',  # (D780)    51 points through the viewfinder, 81/273 points in LiveView
+            8 => '81-point',  # (Z6/Z6ii/Z7/Z7ii/Z30/Z50/Z50ii/Zfc/D780)   81-points refers to the number of auto-area focus points arranged as a 9x9 grid. Number of single-point focus points vary by model.
+            9 => '105-point', # (D6)   arranged as a 15 column x 9 row grid
+        },
+    },
+    7 => {
+        Name => 'AFCoordinatesAvailable',         #0 => 'AFPointsUsed is populated'  1 => 'AFAreaXPosition & AFAreaYPosition are populated'
+        RawConv => '$$self{AFCoordinatesAvailable} = $val',
+        PrintConv => \%noYes ,
+    },
+    0x0a => [
+            { #JD/PH
             Name => 'AFPointsUsed',
-            Condition => '$$self{PhaseDetectAF} == 7',
+            Condition => '$$self{FocusPointSchema} == 1 and $$self{AFCoordinatesAvailable} == 0',   #D780 when AFAreaXYPositions are not populated
             Notes => q{
-                models with 153-point AF -- 9 rows (A-I) and 17 columns (1-17). Center
-                point is E9
+                models with 51-point AF -- 5 rows: A1-9, B1-11, C1-11, D1-11, E1-9.  Center
+                point is C6
             },
-            Format => 'undef[20]',
-            ValueConv => 'join(" ", unpack("H2"x20, $val))',
-            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPoints(shift, \%afPoints153); },
-            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153); },
-        },
-        { #PH
-            Name => 'AFPointsUsed',
-            # version 301 uses a separate field at offset 0x0a for this tag (ref 28)
-            Condition =>  '$$self{AFInfo2Version} !~ /^03/',
             Format => 'undef[7]',
             ValueConv => 'join(" ", unpack("H2"x7, $val))',
             ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => '"Unknown ($val)"',
-            PrintConvInv => '$val=~s/Unknown \\((.*)\\)/$1/; $val',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints51) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51) },
+        },{
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 8 and $$self{AFCoordinatesAvailable} == 0',   # Z6/Z6ii/Z7/Z7ii/Z50/Z50ii/Zfc/D780 when AFAreaXYPositions are not populated
+            Notes => q{
+                models with hybrid detect AF have 81 auto-area points -- 9 rows (A-I) and 9 columns (1-9). Center point is E5
+            },
+            Format => 'undef[11]',
+            ValueConv => 'join(" ", unpack("H2"x11, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints81) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints81) },
+        },{
+            Name => 'AFPointsUsed',
+            Condition => '$$self{FocusPointSchema} == 9 and $$self{AFCoordinatesAvailable} == 0',    # D6 focus-point model when AFAreaXYPositions are not populated
+            Format => 'undef[14]',
+            ValueConv => 'join(" ", unpack("H2"x14, $val))',
+            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
+            PrintConv => sub { PrintAFPoints(shift, \%afPoints105) },
+            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints105) },
         },
-        { #PH
+    ],
+    0x2a => { #PH (Z7)
+        Name => 'AFImageWidth',
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x2c => { #PH (Z7)
+        Name => 'AFImageHeight',
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x2e => { #PH (Z7)
+        Name => 'AFAreaXPosition',
+        Condition => '$$self{AFCoordinatesAvailable} == 1',   # is field populated?
+        RawConv => '$$self{AFAreaXPosition} = $val',
+        Format => 'int16u', # (decodes same byte as 0x2f)
+    },
+    0x2f => [
+    {
+        Name => 'FocusPositionHorizontal',   # 209/231 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 30|Z 50|Z fc)\b/i and $$self{AFAreaXPosition}',   #models Z30, Z50, Zfc
+        ValueConv => 'int($$self{AFAreaXPosition} / 260 )',     #divisor is an estimate (chosen to cause center point to report 'C')
+        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 19 ) },
+    },{
+        Name => 'FocusPositionHorizontal',  #273/299 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 5|Z 6|Z 6_2|D780)\b/i and $$self{AFAreaXPosition}',   #models Z5, Z6, Z6ii, D780
+        ValueConv => 'int($$self{AFAreaXPosition} / 260 )',     #divisor is an estimate (chosen to cause center point to report 'C')
+        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 21 ) },
+    },{
+        Name => 'FocusPositionHorizontal',   #405/493 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 7|Z 7_2)\b/i and $$self{AFAreaXPosition}',   #models Z7/Z7ii
+        ValueConv => 'int($$self{AFAreaXPosition} / 260 )',     #divisor is the measured horizontal pixel separation between adjacent points
+        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 29 ) },
+    },
+    #the only other AFInfoVersion 03xx camera is the D6.  It allows the LiveView focus point to positioned anywhere in the frame, rendering this tag somewhat meaningless for that camera
+    ],
+    0x30 => { #PH (Z7)
+        Name => 'AFAreaYPosition',
+        Condition => '$$self{AFCoordinatesAvailable} == 1',   # is field populated?
+        RawConv => '$$self{AFAreaYPosition} = $val',
+        Format => 'int16u', # (decodes same byte as 0x31)
+    },
+    0x31 => [
+    {
+        Name => 'FocusPositionVertical',   # 209/233 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 30|Z 50|Z fc)\b/i and $$self{AFAreaYPosition}',   #models Z30, Z50, Zfc
+        ValueConv => 'int($$self{AFAreaYPosition} / 286 )',      #divisor is an estimate (chosen to cause center point to report 'C')
+        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 11 ) },
+    },{
+        Name => 'FocusPositionVertical',  #273/299 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 5|Z 6|Z 6_2|D780)\b/i and $$self{AFAreaYPosition}',   #models Z5, Z6, Z6ii, D780
+        ValueConv => 'int($$self{AFAreaYPosition} / 286 )',     #divisor is an estimate (chosen to cause center point to report 'C')
+        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 13 ) },
+    },{
+        Name => 'FocusPositionVertical',   #405/493 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 7|Z 7_2)\b/i and $$self{AFAreaYPosition}',   #models Z7/Z7ii
+        ValueConv => 'int($$self{AFAreaYPosition} / 292 )',     #divisor is the measured vertical pixel separation between adjacent points
+        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 17 ) },
+    },
+    ],
+    0x32 => { #PH
+        Name => 'AFAreaWidth',
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x34 => { #PH
+        Name => 'AFAreaHeight',
+        Format => 'int16u',
+        RawConv => '$val ? $val : undef',
+    },
+    0x38 =>[
+        { #PH/JD
             Name => 'PrimaryAFPoint',
-            Condition => '$$self{PhaseDetectAF} == 1 and $$self{AFInfo2Version} =~ /^03/',
-            Notes => 'newer models with 51-point AF',
+            Condition => '$$self{FocusPointSchema} == 1 and $$self{AFCoordinatesAvailable} == 0',   #51 focus-point models when AFAreaXYPositions are not populated
+            Notes => q{
+                models with 51-point AF -- 5 rows (A-E) and 11 columns (1-11): D3, D3S, D3X,
+                D4, D4S, D300, D300S, D700, D750, D800, D800E, D810, D7100 and D7200
+            },
             PrintConvColumns => 5,
             PrintConv => {
                 0 => '(none)',
                 %afPoints51,
                 1 => 'C6 (Center)', # (add " (Center)" to central point)
             },
-        },
-        { #PH (Z7)
+        },{
             Name => 'PrimaryAFPoint',
-            Condition => '$$self{PhaseDetectAF} == 8 and $$self{AFInfo2Version} =~ /^03/',
+            Condition => '$$self{FocusPointSchema} == 8 and $$self{AFCoordinatesAvailable} == 0',   # Z6/Z6ii/Z7/Z7ii/Z50/Z50ii/Zfc/D780 when AFAreaXYPositions are not populated
+            Notes => q{
+                models with hybrid detect AF have 81 auto-area points -- 9 rows (A-I) and 9 columns (1-9). Center point is E5
+            },
             PrintConvColumns => 5,
             PrintConv => {
                 0 => '(none)',
                 %afPoints81,
                 1 => 'E5 (Center)', # (add " (Center)" to central point)
             },
-        },
-        # this was wrong, but keep the code as a comment in case it may be useful later
-        #{ #PH (Z7) (NC)
-        #    Name => 'PrimaryAFPoint',
-        #    Condition => '$$self{PhaseDetectAF} == 8 and $$self{AFInfo2Version} =~ /^03/',
-        #    Notes => q{
-        #        Nikon models with 493-point AF -- 17 rows (A-Q) and 29 columns (1-29), I15
-        #        at the center
-        #    },
-        #    PrintConv => {
-        #        0 => '(none)',
-        #        246 => 'I15 (Center)',
-        #        OTHER => sub {
-        #            my ($val, $inv) = @_;
-        #            return GetAFPointGrid($val, 29, $inv);
-        #        },
-        #    },
-        #},
-    ],
-    0x0a => [{ #PH (D780)
-        Name => 'AFPointsUsed',
-        Condition => '$$self{PhaseDetectAF} == 1 and $$self{AFInfo2Version} =~ /^03/',
-        Notes => 'newer models with 51-point AF',
-        Format => 'undef[7]',
-        ValueConv => 'join(" ", unpack("H2"x7, $val))',
-        ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints51); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints51); },
-    },{ #38 (Z6/Z7/Z50)
-        Name => 'AFPointsUsed',
-        Condition => '$$self{PhaseDetectAF} == 8 and $$self{AFInfo2Version} =~ /^03/',
-        Notes => q{
-            models with 81-selectable point AF -- 9 rows (A-I) and 9 columns (1-9) for
-            phase detect AF points. Center point is E5
-        },
-        Format => 'undef[11]',
-        ValueConv => 'join(" ", unpack("H2"x11, $val))',
-        ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints81); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints81); },
-    },{ #28 (D6) in any of the 3 Group modes on the D6, the points specify the outer boundaries of the focus point area; otherwise the tag value is consistent with other Nikon bodies
-        Name => 'AFPointsUsed',
-        Condition => '$$self{PhaseDetectAF} == 9 and $$self{AFInfo2Version} =~ /^03/',
-        Notes => q{
-            models with 105-point AF -- 7 rows (A-G) and 15 columns (1-15). Center
-            point is D8
-        },
-        Format => 'undef[14]',
-        ValueConv => 'join(" ", unpack("H2"x14, $val))',
-        ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints105); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints105); },
-    }],
-    0x10 => { #PH (D90 and D5000)
-        Name => 'AFImageWidth',
-        Condition => '$$self{AFInfo2Version} eq "0100"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-        Notes => 'this and the following tags are valid only for contrast-detect AF',
-    },
-    0x12 => { #PH
-        Name => 'AFImageHeight',
-        Condition => '$$self{AFInfo2Version} eq "0100"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x14 => { #PH
-        Name => 'AFAreaXPosition',
-        Condition => '$$self{AFInfo2Version} eq "0100"',
-        Notes => 'center of AF area in AFImage coordinates',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x16 => { #PH
-        Name => 'AFAreaYPosition',
-        Condition => '$$self{AFInfo2Version} eq "0100"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    # AFAreaWidth/Height for the D90 and D5000:
-    #   352x288 (AF normal area),
-    #   704x576 (AF face priority, wide area, subject tracking)
-    0x18 => { #PH
-        Name => 'AFAreaWidth',
-        Condition => '$$self{AFInfo2Version} eq "0100"',
-        Format => 'int16u',
-        Notes => 'size of AF area in AFImage coordinates',
-        RawConv => '$val ? $val : undef',
-    },
-    0x1a => { #PH
-        Name => 'AFAreaHeight',
-        Condition => '$$self{AFInfo2Version} eq "0100"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x1c => [
-        { #PH
-            Name => 'ContrastDetectAFInFocus',
-            Condition => '$$self{AFInfo2Version} eq "0100"',
-            PrintConv => { 0 => 'No', 1 => 'Yes' },
-        },{ #PH (D500, see forum11190)
-            Name => 'AFPointsSelected',
-            Condition => '$$self{AFInfo2Version} eq "0101" and $$self{PhaseDetectAF} == 7',
-            Format => 'undef[20]',
-            ValueConv => 'join(" ", unpack("H2"x20, $val))',
-            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPoints(shift, \%afPoints153); },
-            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153); },
-        },
-    ],
-    # 0x1d - always zero (with or without live view)
-    0x2a => { #PH (Z7)
-        Name => 'AFImageWidth',
-        Condition => '$$self{AFInfo2Version} =~ /^03/',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x2c => { #PH (Z7)
-        Name => 'AFImageHeight',
-        Condition => '$$self{AFInfo2Version} =~ /^03/',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x2e => { #PH (Z7)
-        Name => 'AFAreaXPosition',
-        Condition => q{
-            $$self{ContrastDetectAF} == 2 and $$self{AFInfo2Version} =~ /^03/ or
-            $$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} =~ /^0301/
-        },
-        Format => 'int16u', # (decodes same byte as 0x2f)
-    },
-    0x2f => { #28 (Z7) Still photography range 1-17 for the 493 point Z7 (arranged in a 29x17 grid. Center at x=16, y=10).
-        Name => 'FocusPositionHorizontal',
-        Condition => q{
-            $$self{ContrastDetectAF} == 2 and $$self{AFInfo2Version} =~ /^03/ or
-            $$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} =~ /^0301/
-        },
-        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 29 ); },
-    },
-    0x30 => [
-        { #PH (Z7)
-            Name => 'AFAreaYPosition',
-            Condition => q{
-                $$self{ContrastDetectAF} == 2 and $$self{AFInfo2Version} =~ /^03/ or
-                $$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} =~ /^0301/
-            },
-            Format => 'int16u', # (decodes same byte as 0x31)
-        },{ #PH (D500, see forum11190)
-            Name => 'AFPointsInFocus',
-            Condition => '$$self{AFInfo2Version} eq "0101" and $$self{PhaseDetectAF} == 7',
-            Notes => 'AF points in focus at the time time image was captured',
-            Format => 'undef[20]',
-            ValueConv => 'join(" ", unpack("H2"x20, $val))',
-            ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-            PrintConv => sub { PrintAFPoints(shift, \%afPoints153); },
-            PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints153); },
-        },
-    ],
-    0x31 => { #28 (Z7)
-        Name => 'FocusPositionVertical',
-        Condition => q{
-            $$self{ContrastDetectAF} == 2 and $$self{AFInfo2Version} =~ /^03/ or
-            $$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} =~ /^0301/
-        },
-        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 17 ); },
-    },
-    0x32 => { #PH (Z7)
-        Name => 'AFAreaWidth',
-        Condition => '$$self{AFInfo2Version} =~ /^03/',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x34 => { #PH (Z7)
-        Name => 'AFAreaHeight',
-        Condition => '$$self{AFInfo2Version} =~ /^03/',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x38 => { #28
-        Name => 'PrimaryAFPoint',
-        Condition => '$$self{PhaseDetectAF} == 9 and $$self{AFInfo2Version} =~ /^03/',
-        Notes => q{
-            Nikon models with 105-point AF -- 7 rows (A-G) and 15 columns (1-15): D6
-        },
-        PrintConvColumns => 5,
-        PrintConv => {
-            0 => '(none)',
-            %afPoints105,
-            1 => 'D8 (Center)',
-        },
-    },
-    0x44 => [
-        {
+        },{ #28
             Name => 'PrimaryAFPoint',
-            Condition => '$$self{PhaseDetectAF} == 7 and $$self{AFInfo2Version} eq "0101"',
+            Condition => '$$self{FocusPointSchema} == 9 and $$self{AFCoordinatesAvailable} == 0',   #153 focus-point models when AFAreaXYPositions are not populated
+            Notes => q{
+                Nikon models with 105-point AF -- 7 rows (A-G) and 15 columns (1-15): D6
+            },
             PrintConvColumns => 5,
             PrintConv => {
                 0 => '(none)',
-                %afPoints153,
-                1 => 'E9 (Center)',
+                %afPoints105,
+                1 => 'D8 (Center)',
             },
         },
-        { #PH
-            Name => 'PrimaryAFPoint',
-            Notes => 'D3500',
-            Condition => '$$self{PhaseDetectAF} == 2 and $$self{AFInfo2Version} eq "0101"',
-            PrintConvColumns => 2,
-            PrintConv => {
-                0 => '(none)',
-                1 => 'Center',
-                2 => 'Top',
-                3 => 'Bottom',
-                4 => 'Mid-left',
-                5 => 'Upper-left',
-                6 => 'Lower-left',
-                7 => 'Far Left',
-                8 => 'Mid-right',
-                9 => 'Upper-right',
-                10 => 'Lower-right',
-                11 => 'Far Right',
-            },
-        },
-        {
-            Name => 'PrimaryAFPoint',
-            Condition => '$$self{AFInfo2Version} eq "0101"',
-            Notes => 'future models?...',
-            Priority => 0,
-            PrintConv => {
-                0 => '(none)',
-                1 => 'Center',
-            },
-        },
-    ],
-    0x46 => {
-        Name => 'AFImageWidth',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-        Notes => 'this and the following tags are valid only for contrast-detect AF',
-    },
-    0x48 => {
-        Name => 'AFImageHeight',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x4a => {
-        Name => 'AFAreaXPosition',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        Notes => 'center of AF area in AFImage coordinates',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x4c => {
-        Name => 'AFAreaYPosition',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x4e => {
-        Name => 'AFAreaWidth',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        Format => 'int16u',
-        Notes => 'size of AF area in AFImage coordinates',
-        RawConv => '$val ? $val : undef',
-    },
-    0x50 => {
-        Name => 'AFAreaHeight',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        Format => 'int16u',
-        RawConv => '$val ? $val : undef',
-    },
-    0x52 => {
-        Name => 'ContrastDetectAFInFocus',
-        Condition => '$$self{ContrastDetectAF} == 1 and $$self{AFInfo2Version} eq "0101"',
-        PrintConv => { 0 => 'No', 1 => 'Yes' },
-    },
+    ]
 );
 
 %Image::ExifTool::Nikon::AFInfo2V0400 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
-    DATAMEMBER => [ 0, 5 ],
+    DATAMEMBER => [ 0, 4, 5, 7, 66, 68 ],
     NOTES => q{
         AF information for Nikon cameras with the Expeed 7 processor: The Zf, Z6_3,
         Z8, Z9 and Z50_3.
@@ -4818,7 +4926,12 @@ my %base64coord = (
         Writable => 0,
         RawConv => '$$self{AFInfo2Version} = $val',
     },
-    5 => { #28
+    4 => {
+        Name => 'AFDetectionMethod',
+        RawConv => '$$self{AFDetectionMethod} = $val',
+        PrintConv => \%aFDetectionMethod ,
+    },
+    5 => {
         Name => 'AFAreaMode', #reflects the mode active when the shutter is tripped, not the position of the Focus Mode button (which is recorded in MenuSettingsZ9 tag also named AfAreaMode)
         RawConv => '$$self{AFAreaModeUsed} = $val',
         PrintConv => {
@@ -4834,6 +4947,11 @@ my %base64coord = (
             208 => 'Wide (C1/C2)',
         },
     },
+    7 => {
+        Name => 'AFCoordinatesAvailable',         #0 => 'AFPointsUsed is populated'  1 => 'AFAreaXPosition & AFAreaYPosition are populated'
+        RawConv => '$$self{AFCoordinatesAvailable} = $val',
+        PrintConv => \%noYes ,
+    },
     10 => [{
         # valid only for AFAreaModes where the camera selects the focus point (i.e., AutoArea & 3D-Tracking)
         # and the camera has yet to determine a focus target (in these cases tags AFAreaXPosition and AFAreaYPosition will be zeroes)
@@ -4843,59 +4961,83 @@ my %base64coord = (
         Notes => 'either AFPointsUsed or AFAreaX/YPosition will be set, but not both',
         ValueConv => 'join(" ", unpack("H2"x51, $val))',
         ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints493); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints493); },
+        PrintConv => sub { PrintAFPoints(shift, \@afPoints405) },    #full-frame sensor, 45MP, auto-area focus point configuration
+        PrintConvInv => sub { PrintAFPointsInv(shift, \@afPoints405) },
     },{
         Name => 'AFPointsUsed', # Z6iii and Zf (AFInfo2Version 0401)
         Condition => '$$self{Model} =~ /^NIKON (Z6_3|Z f)\b/i and ($$self{AFAreaModeUsed} == 197 or $$self{AFAreaModeUsed} == 207)',
-        Format => 'undef[35]',
-        ValueConv => 'join(" ", unpack("H2"x35, $val))',
+        Format => 'undef[38]',
+        ValueConv => 'join(" ", unpack("H2"x38, $val))',
         ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints273); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints273); },
+        PrintConv => sub { PrintAFPoints(shift, \@afPoints299) },
+        PrintConvInv => sub { PrintAFPointsInv(shift, \@afPoints299) },   #full-frame sensor, 24MP, auto-area focus point configuration
     },{
         Name => 'AFPointsUsed', # Z50ii (AFInfo2Version 0402)
         Condition => '$$self{Model} =~ /^NIKON Z50_2\b/i and ($$self{AFAreaModeUsed} == 197 or $$self{AFAreaModeUsed} == 207)',
-        Format => 'undef[27]',
-        ValueConv => 'join(" ", unpack("H2"x27, $val))',
+        Format => 'undef[29]',
+        ValueConv => 'join(" ", unpack("H2"x29, $val))',
         ValueConvInv => '$val=~tr/ //d; pack("H*",$val)',
-        PrintConv => sub { PrintAFPoints(shift, \%afPoints209); },
-        PrintConvInv => sub { PrintAFPointsInv(shift, \%afPoints209); },
+        PrintConv => sub { PrintAFPoints(shift, \@afPoints231) },
+        PrintConvInv => sub { PrintAFPointsInv(shift, \@afPoints231) },   #crop sensor, 21MP, auto-area focus point configuration
     }],
     0x3e => {
         Name => 'AFImageWidth',
         Format => 'int16u',
+        RawConv => '$val ? $val : undef',
     },
     0x40 => {
         Name => 'AFImageHeight',
         Format => 'int16u',
+        RawConv => '$val ? $val : undef',
     },
     0x42 => { #28
         Name => 'AFAreaXPosition',            #top left image corner is the origin
+        Condition => '$$self{AFCoordinatesAvailable} == 1',   # is field populated?
+        RawConv => '$$self{AFAreaXPosition} = $val',
         Format => 'int16u', # (decodes same byte as 0x43)
-        RawConv => '$val ? $val : undef',
     },
-    #0x43 => {
-    #    Name => 'FocusPositionHorizontal',
-    #    Notes => q{
-    #        the focus points form a 29x17 grid, but the X,Y coordinate values run from 1,1
-    #        to 30,19.  The horizontal coordinate 11R (5) and the vertical coordinates 6U
-    #        (4) and 2D (12) are not used for some reason
-    #    },
-    #    # 493 focus points for Z9 fall in a 30x19 grid
-    #    # (the 11R (5) position is not used, for a total of 29 columns, ref AlbertShan email)
-    #    PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 29); },
-    #},
+    0x43 => [
+    {
+        Name => 'FocusPositionHorizontal',   # 209/231 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON Z50_2\b/i and $$self{AFAreaXPosition} != 0',   #model Z50ii
+        ValueConv => 'int($$self{AFAreaXPosition} / 260 )',     #divisor is the estimated separation between adjacent points  (informed by the measured Z7ii separation)
+        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 19 ) },
+    },{
+        Name => 'FocusPositionHorizontal',  #273/299 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z6_3|Z f)\b/i and $$self{AFAreaXPosition} != 0',   #models Z6iii and Zf
+        ValueConv => 'int($$self{AFAreaXPosition} / 260 )',     #divisor is the estimated separation between adjacent points  (informed by the measured Z7ii separation)
+        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 21 ) },
+    },{
+        Name => 'FocusPositionHorizontal',   #405/493 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 8|Z 9)\b/i and $$self{AFAreaXPosition} != 0',   #models Z8 and Z9
+        ValueConv => 'int($$self{AFAreaXPosition} / 260 )',     #divisor is the measured horizontal pixel separation between adjacent points
+        PrintConv => sub { my ($val) = @_; PrintAFPointsLeftRight($val, 29 ) },
+    },
+    ],
     0x44 => { #28
         Name => 'AFAreaYPosition',
+        Condition => '$$self{AFCoordinatesAvailable} == 1',   # is field populated?
+        RawConv => '$$self{AFAreaYPosition} = $val',
         Format => 'int16u', # (decodes same byte as 0x45)
-        RawConv => '$val ? $val : undef',
     },
-    #0x45 => {
-    #    Name => 'FocusPositionVertical',
-    #    # (the 6U (4) and 2D (12) are not used, for a total of 17 rows, ref AlbertShan email)
-    #    PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 17); },
-    #},
+    0x45 => [
+    {
+        Name => 'FocusPositionVertical',   # 209/233 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON Z50_2\b/i and $$self{AFAreaYPosition} != 0',   #model Z50ii
+        ValueConv => 'int($$self{AFAreaYPosition} / 286 )',      #divisor chosen to cause center point report 'C'
+        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 11 ) },
+    },{
+        Name => 'FocusPositionVertical',  #273/299 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z6_3|Z f)\b/i and $$self{AFAreaYPosition} != 0',   #models Z6iii and Zf
+        ValueConv => 'int($$self{AFAreaYPosition} / 286 )',     #divisor chosen to cause center point report 'C'
+        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 13 ) },
+    },{
+        Name => 'FocusPositionVertical',   #405/493 focus point cameras
+        Condition => '$$self{Model} =~ /^NIKON (Z 8|Z 9)\b/i and $$self{AFAreaYPosition} != 0',   #models Z8 and Z9
+        ValueConv => 'int($$self{AFAreaYPosition} / 292 )',     #divisor is the measured vertical pixel separation between adjacent points
+        PrintConv => sub { my ($val) = @_; PrintAFPointsUpDown($val, 17 ) },
+    },
+    ],
     0x46 => {
         Name => 'AFAreaWidth',
         Format => 'int16u',
@@ -5711,7 +5853,10 @@ my %nikonFocalConversions = (
             44 => 'Nikkor Z 70-180mm f/2.8', #28
             45 => 'Nikkor Z 600mm f/6.3 VR S', #28
             46 => 'Nikkor Z 135mm f/1.8 S Plena', #28
+            47 => 'Nikkor Z 35mm f/1.2 S', #28
             48 => 'Nikkor Z 28-400mm f/4-8 VR', #30
+            51 => 'Nikkor Z 35mm f/1.4', #28
+            52 => 'Nikkor Z 50mm f/1.4', #28
             2305 => 'Laowa FFII 10mm F2.8 C&D Dreamer', #30
             32768 => 'Nikkor Z 400mm f/2.8 TC VR S TC-1.4x', #28
             32769 => 'Nikkor Z 600mm f/4 TC VR S TC-1.4x', #28
@@ -5778,7 +5923,7 @@ my %nikonFocalConversions = (
         Name => 'LensDriveEnd',     # byte contains: 1 at CFD/MOD; 2 at Infinity; 0 otherwise
         Condition => '$$self{LensID} and $$self{LensID} != 0 and $$self{FocusMode} ne "Manual"',   #valid for Z-mount lenses in focus modes other than M
         Format => 'int8u',
-        RawConv => 'unless (defined $$self{FocusDistanceRangeWidth} and not $$self{FocusDistanceRangeWidth}) { if ($val == 0 ) {$$self{LensDriveEnd} = "No"} else { $$self{LensDriveEnd} = "CFD"}; } else{ $$self{LensDriveEnd} = "Inf"}',
+        RawConv => 'unless (defined $$self{FocusDistanceRangeWidth} and not $$self{FocusDistanceRangeWidth}) { if ($val == 0 ) {$$self{LensDriveEnd} = "No"} else { $$self{LensDriveEnd} = "CFD"} } else{ $$self{LensDriveEnd} = "Inf"}',
         Unknown => 1,
     },
     0x58 => { #28
@@ -9021,19 +9166,19 @@ my %nikonFocalConversions = (
   # 0x00 - int32u size of this directory
     0x10 => [
         {
-            Name => 'MenuSettingsOffsetZ8',
+            Name => 'MenuSettingsOffsetZ8v1',
             Condition => '$$self{FirmwareVersion} and $$self{FirmwareVersion} lt "02.00"',
             Format => 'int32u',
-            Notes => 'Firmware versions 1.0.0 and 1.1.0',
+            Notes => 'Firmware versions 1.00 and 1.10',
             SubDirectory => {
-                TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ8',
+                TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ8v1',
                 Start => '$dirStart + $val',
             },
         },
         {
             Name => 'MenuSettingsOffsetZ8v2',
             Condition => '$$self{FirmwareVersion} and $$self{FirmwareVersion} ge "02.00"',
-            Notes => 'Firmware version 2.0',
+            Notes => 'Firmware version 2.00 and 2.10',
             Format => 'int32u',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ8v2',
@@ -9062,7 +9207,7 @@ my %nikonFocalConversions = (
         {
             Name => 'MenuSettingsOffsetZ9v3',
             Condition => '$$self{FirmwareVersion} and $$self{FirmwareVersion} lt "04.00"',
-            Notes => 'Firmware versions 3.0 and v3.10',
+            Notes => 'Firmware versions 3.00 and v3.10',
             Format => 'int32u',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ9v3',
@@ -9071,7 +9216,7 @@ my %nikonFocalConversions = (
         },
         {
             Name => 'MenuSettingsOffsetZ9v4',
-            Notes => 'Firmware versions 4.0 and later',
+            Notes => 'Firmware versions 4.00 and higher',
             Format => 'int32u',
             SubDirectory => {
                 TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ9v4',
@@ -9231,7 +9376,7 @@ my %nikonFocalConversions = (
     },
 );
 
-%Image::ExifTool::Nikon::MenuSettingsZ6III  = (
+%Image::ExifTool::Nikon::MenuSettingsZ6III = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     NOTES => 'These tags are used by the Z6III.',
@@ -9418,7 +9563,7 @@ my %nikonFocalConversions = (
         SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ6III' },
     },
     2300 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
-    2302 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    2302 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9, SeparateTable => 'TimeZone' },
     2308 => { Name => 'MonitorBrightness',  PrintConv => \%monitorBrightnessZ9, Unknown => 1 },        # settings: -5 to +5 and Lo1, Lo2, Hi1, Hi2
     2444 => { Name => 'EmptySlotRelease',   PrintConv => { 0 => 'Disable Release', 1 => 'Enable Release' }, Unknown => 1 },
     2450 => { Name => 'EnergySavingMode',   PrintConv => \%offOn, Unknown => 1 },
@@ -9428,7 +9573,7 @@ my %nikonFocalConversions = (
     2496 => { Name => 'AirplaneMode',       PrintConv => \%offOn, Unknown => 1 },
 ),
 
-%Image::ExifTool::Nikon::MenuSettingsZ7II  = (
+%Image::ExifTool::Nikon::MenuSettingsZ7II = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     DATAMEMBER => [ 90, 176, 180, 328, 352, 858 ],
@@ -9513,7 +9658,7 @@ my %nikonFocalConversions = (
         PrintConv => \%offOn,
     },
     #324 => {Name => 'FlickerReductionShooting',}, # redundant with tag in NikonSettings
-    326 => { Name => 'NikonMeteringMode',   PrintConv => \%meteringModeZ7},
+    326 => { Name => 'NikonMeteringMode',   PrintConv => \%meteringModeZ7 },
     328 => {
         Name => 'FlashControlMode', # this and nearby tag values for flash may be set from either the Photo Shooting Menu or using the Flash unit menu
         RawConv => '$$self{FlashControlMode} = $val',
@@ -9589,11 +9734,7 @@ my %nikonFocalConversions = (
     516 => {
         Name => 'MovieISOAutoManualMode',
         Condition => '$$self{Model} =~ /^NIKON 7/',    #ISO ranges vary by model.  These mappings are for the Z7 and Z7II
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
+        %isoAutoHiLimitZ7,
     },
     #520 => MovieWhiteBalanceSameAsPhoto
     568 => { Name => 'MovieActiveD-Lighting',      PrintConv => \%activeDLightingZ7,  Unknown => 1 },
@@ -9644,16 +9785,19 @@ my %nikonFocalConversions = (
     #859 => HDMIViewAssist
 );
 
-%Image::ExifTool::Nikon::MenuSettingsZ8  = (
+%Image::ExifTool::Nikon::MenuSettingsZ8 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
-    DATAMEMBER => [ 152, 200, 204, 244, 440, 548, 554, 570, 596 ],
-    IS_SUBDIR => [ 943 ],
-    NOTES => 'These tags are used by the Z8 firmware 1.00.',
+    DATAMEMBER => [ 72, 152, 200, 204, 244, 440, 548, 554, 570, 596 ],
+    NOTES => 'These tags are common to all Z8 firmware versions.',
     72 => {
         Name => 'HighFrameRate',        #CH and C30/C60/C120 but not CL
         PrintConv => \%highFrameRateZ9,
+        Hook => '$varSize += 4 if $$self{FirmwareVersion} and $$self{FirmwareVersion} ge "02.10"',
     },
+#
+# firmware 2.10 adds 4 bytes somewhere in the range 105-107 (hence the Hook above)
+#
     152 => {
         Name => 'MultipleExposureMode',
         RawConv => '$$self{MultipleExposureMode} = $val',
@@ -9722,23 +9866,9 @@ my %nikonFocalConversions = (
     286 => { Name => 'PhotoShootingMenuBank', PrintConv => \%banksZ9 },
     288 => { Name => 'ExtendedMenuBanks',     PrintConv => \%offOn }, # single tag from both Photo & Video menus
     324 => { Name => 'PhotoShootingMenuBankImageArea', PrintConv => \%imageAreaZ9 },
-    338 => { Name => 'AutoISO', PrintConv => \%offOn },
-    340 => {
-        Name => 'ISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    342 => {
-        Name => 'ISOAutoFlashLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    338 => { Name => 'AutoISO',               PrintConv => \%offOn },
+    340 => { Name => 'ISOAutoHiLimit',        %isoAutoHiLimitZ7 },
+    342 => { Name => 'ISOAutoFlashLimit',     %isoAutoHiLimitZ7 },
     350 => {
         Name => 'ISOAutoShutterTime', # shutter speed is 2 ** (-$val/24)
         ValueConv => '$val / 8',
@@ -9794,24 +9924,10 @@ my %nikonFocalConversions = (
         Mask => 0x01, # without the mask 4 => 'FX'  5 => DX   only the 2nd Z-series field encountered with a mask.
         PrintConv => \%imageAreaZ9b,
     },
-    740 => { Name => 'MovieType', PrintConv => \%movieTypeZ9, Unknown => 1 },
-    742 => {
-        Name => 'MovieISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    740 => { Name => 'MovieType',                  PrintConv => \%movieTypeZ9, Unknown => 1 },
+    742 => { Name => 'MovieISOAutoHiLimit',        %isoAutoHiLimitZ7 },
     744 => { Name => 'MovieISOAutoControlManualMode', PrintConv => \%offOn, Unknown => 1 },
-    746 => {
-        Name => 'MovieISOAutoManualMode',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    746 => { Name => 'MovieISOAutoManualMode',     %isoAutoHiLimitZ7 },
     820 => { Name => 'MovieActiveD-Lighting',      PrintConv => \%activeDLightingZ7, Unknown => 1 },
     822 => { Name => 'MovieHighISONoiseReduction', PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
     828 => { Name => 'MovieFlickerReduction',      PrintConv => \%movieFlickerReductionZ9 },
@@ -9831,14 +9947,26 @@ my %nikonFocalConversions = (
     887 => { Name => 'MovieDXCropAlert',           PrintConv => \%offOn, Unknown => 1 },
     888 => { Name => 'MovieSubjectDetection',      PrintConv => \%subjectDetectionZ9, Unknown => 1 },
     896 => { Name => 'MovieHighResZoom',           PrintConv =>  \%offOn, Unknown => 1 },
+);
+
+%Image::ExifTool::Nikon::MenuSettingsZ8v1 = (
+    %binaryDataAttrs,
+    GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
+    NOTES => 'These tags are used by the Z8 firmware 1.00 and 1.10.',
+    IS_SUBDIR => [ 0, 943 ],
+    0 => {
+        Name => 'MenuSettingsZ8',
+        Format => 'undef[943]',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ8' },
+    },
     943 => {
         Name => 'CustomSettingsZ8',
         Format => 'undef[730]',
         SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ8' },
     },
-    1698 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
-    1684 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    1684 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9, SeparateTable => 'TimeZone' },
     1690 => { Name => 'MonitorBrightness',  PrintConv => \%monitorBrightnessZ9, Unknown => 1 },        # settings: -5 to +5.  Added with firmware 3.0:  Lo1, Lo2, Hi1, Hi2
+    1698 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
     1712 => { Name => 'AFFineTune',         PrintConv => \%offOn, Unknown => 1 },
     1716 => { Name => 'NonCPULens1FocalLength',  Format => 'int16u', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},  #should probably hide altogther if $val is 0
     1718 => { Name => 'NonCPULens2FocalLength',  Format => 'int16u', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
@@ -9860,26 +9988,26 @@ my %nikonFocalConversions = (
     1750 => { Name => 'NonCPULens18FocalLength', Format => 'int16u', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
     1752 => { Name => 'NonCPULens19FocalLength', Format => 'int16u', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
     1754 => { Name => 'NonCPULens20FocalLength', Format => 'int16u', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},
-    1756 => { Name => 'NonCPULens1MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1758 => { Name => 'NonCPULens2MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1760 => { Name => 'NonCPULens3MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1762 => { Name => 'NonCPULens4MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1764 => { Name => 'NonCPULens5MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1766 => { Name => 'NonCPULens6MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1768 => { Name => 'NonCPULens7MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1770 => { Name => 'NonCPULens8MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1772 => { Name => 'NonCPULens9MaxAperture',  Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1774 => { Name => 'NonCPULens10MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1776 => { Name => 'NonCPULens11MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1778 => { Name => 'NonCPULens12MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1780 => { Name => 'NonCPULens13MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1782 => { Name => 'NonCPULens14MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1784 => { Name => 'NonCPULens15MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1786 => { Name => 'NonCPULens16MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1788 => { Name => 'NonCPULens17MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1790 => { Name => 'NonCPULens18MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1792 => { Name => 'NonCPULens19MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
-    1794 => { Name => 'NonCPULens20MaxAperture', Format => 'int16u', PrintConv => \%nonCPULensApertureZ8, Unknown => 1},
+    1756 => { Name => 'NonCPULens1MaxAperture',  %nonCPULensApertureZ8 },
+    1758 => { Name => 'NonCPULens2MaxAperture',  %nonCPULensApertureZ8},
+    1760 => { Name => 'NonCPULens3MaxAperture',  %nonCPULensApertureZ8},
+    1762 => { Name => 'NonCPULens4MaxAperture',  %nonCPULensApertureZ8},
+    1764 => { Name => 'NonCPULens5MaxAperture',  %nonCPULensApertureZ8},
+    1766 => { Name => 'NonCPULens6MaxAperture',  %nonCPULensApertureZ8},
+    1768 => { Name => 'NonCPULens7MaxAperture',  %nonCPULensApertureZ8},
+    1770 => { Name => 'NonCPULens8MaxAperture',  %nonCPULensApertureZ8},
+    1772 => { Name => 'NonCPULens9MaxAperture',  %nonCPULensApertureZ8},
+    1774 => { Name => 'NonCPULens10MaxAperture', %nonCPULensApertureZ8},
+    1776 => { Name => 'NonCPULens11MaxAperture', %nonCPULensApertureZ8},
+    1778 => { Name => 'NonCPULens12MaxAperture', %nonCPULensApertureZ8},
+    1780 => { Name => 'NonCPULens13MaxAperture', %nonCPULensApertureZ8},
+    1782 => { Name => 'NonCPULens14MaxAperture', %nonCPULensApertureZ8},
+    1784 => { Name => 'NonCPULens15MaxAperture', %nonCPULensApertureZ8},
+    1786 => { Name => 'NonCPULens16MaxAperture', %nonCPULensApertureZ8},
+    1788 => { Name => 'NonCPULens17MaxAperture', %nonCPULensApertureZ8},
+    1790 => { Name => 'NonCPULens18MaxAperture', %nonCPULensApertureZ8},
+    1792 => { Name => 'NonCPULens19MaxAperture', %nonCPULensApertureZ8},
+    1794 => { Name => 'NonCPULens20MaxAperture', %nonCPULensApertureZ8},
     1808 => { Name => 'HDMIOutputResolution', PrintConv => \%hDMIOutputResolutionZ9 },
     1826 => { Name => 'AirplaneMode',       PrintConv => \%offOn, Unknown => 1 },
     1827 => { Name => 'EmptySlotRelease',   PrintConv => { 0 => 'Disable Release', 1 => 'Enable Release' }, Unknown => 1 },
@@ -9887,201 +10015,26 @@ my %nikonFocalConversions = (
     1890 => { Name => 'USBPowerDelivery',   PrintConv => \%offOn, Unknown => 1 },
     1899 => { Name => 'SensorShield',       PrintConv => { 0 => 'Stays Open', 1 => 'Closes' }, Unknown => 1 },
 );
-%Image::ExifTool::Nikon::MenuSettingsZ8v2  = (
+
+%Image::ExifTool::Nikon::MenuSettingsZ8v2 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
-    DATAMEMBER => [ 152, 200, 204, 244, 440, 548, 554, 570, 596, 2046 ],
-    IS_SUBDIR => [ 943 ],
-    NOTES => 'These tags are used by the Z8 firmware 1.00.',
-    72 => {
-        Name => 'HighFrameRate',        #CH and C30/C60/C120 but not CL
-        PrintConv => \%highFrameRateZ9,
+    DATAMEMBER => [ 0, 2046 ],
+    IS_SUBDIR => [ 0, 943 ],
+    NOTES => 'These tags are used by the Z8 firmware 2.00 and 2.10.',
+    0 => {
+        Name => 'MenuSettingsZ8',
+        Format => 'undef[943]',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::MenuSettingsZ8' },
+        Hook => '$varSize += 4 if $$self{FirmwareVersion} and $$self{FirmwareVersion} ge "02.10"',
     },
-    152 => {
-        Name => 'MultipleExposureMode',
-        RawConv => '$$self{MultipleExposureMode} = $val',
-        PrintConv => \%multipleExposureModeZ9,
-    },
-    154 => {Name => 'MultiExposureShots', Condition => '$$self{MultipleExposureMode} != 0'},  #range 2-9
-    184 => {
-        Name => 'IntervalDurationHours',
-        Format => 'int32u',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-    },
-    188 => {
-        Name => 'IntervalDurationMinutes',
-        Format => 'int32u',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-    },
-    192 => {
-        Name => 'IntervalDurationSeconds',
-        Format => 'int32u',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-    },
-    200 => {
-        Name => 'Intervals',
-        Format => 'int32u',
-        RawConv => '$$self{IntervalShootingIntervals} = $val',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-    },
-    204 => {
-        Name => 'ShotsPerInterval',
-        Format => 'int32u',
-        RawConv => '$$self{IntervalShootingShotsPerInterval} = $val',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-    },
-    208 => {
-        Name => 'IntervalExposureSmoothing',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-        Format => 'int8u',
-        PrintConv => \%offOn,
-    },
-    210 => {
-        Name => 'IntervalPriority',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{IntervalShooting} > 0',
-        Format => 'int8u',
-        PrintConv => \%offOn,
-    },
-    244 => {
-        Name => 'FocusShiftNumberShots',    #1-300
-        RawConv => '$$self{FocusShiftNumberShots} = $val',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
-    },
-    248 => {
-        Name => 'FocusShiftStepWidth',     #1(Narrow) to 10 (Wide)
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
-    },
-    252 => {
-        Name => 'FocusShiftInterval',
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
-        PrintConv => '$val == 1? "1 Second" : sprintf("%.0f Seconds",$val)',
-    },
-    256 => {
-        Name => 'FocusShiftExposureLock',
-        Unknown => 1,
-        PrintConv => \%offOn,
-        Condition => '$$self{ShutterMode} and $$self{ShutterMode} ne 96 and $$self{FocusShiftShooting} > 0',     #not valid for C30/C60/C120
-    },
-    286 => { Name => 'PhotoShootingMenuBank', PrintConv => \%banksZ9 },
-    288 => { Name => 'ExtendedMenuBanks',     PrintConv => \%offOn }, # single tag from both Photo & Video menus
-    324 => { Name => 'PhotoShootingMenuBankImageArea', PrintConv => \%imageAreaZ9 },
-    338 => { Name => 'AutoISO', PrintConv => \%offOn },
-    340 => {
-        Name => 'ISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    342 => {
-        Name => 'ISOAutoFlashLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    350 => {
-        Name => 'ISOAutoShutterTime', # shutter speed is 2 ** (-$val/24)
-        ValueConv => '$val / 8',
-        Format => 'int16s',
-        PrintConv => \%iSOAutoShutterTimeZ9,
-    },
-    432 => { Name => 'MovieVignetteControl',    PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
-    434 => { Name => 'DiffractionCompensation', PrintConv => \%offOn }, # value can be set from both the Photo Shoot Menu and the Video Shooting Menu
-    436 => { Name => 'FlickerReductionShooting',PrintConv => \%offOn },
-    440 => {
-        Name => 'FlashControlMode', # this and nearby tag values for flash may be set from either the Photo Shooting Menu or using the Flash unit menu
-        RawConv => '$$self{FlashControlMode} = $val',
-        PrintConv => \%flashControlModeZ7,
-    },
-    548 => { Name => 'AFAreaMode', RawConv => '$$self{AFAreaMode} = $val', PrintConv => \%aFAreaModeZ9},
-    550 => { Name => 'VRMode',   PrintConv => \%vRModeZ9},
-    554 => {
-        Name => 'BracketSet',
-        RawConv => '$$self{BracketSet} = $val',
-        PrintConv => \%bracketSetZ9,
-    },
-    556 => {
-        Name => 'BracketProgram',
-        Condition => '$$self{BracketSet} < 3',
-        Notes => 'AE and/or Flash Bracketing',
-        PrintConv => \%bracketProgramZ9,
-    },
-    558 => {
-        Name => 'BracketIncrement',
-        Condition => '$$self{BracketSet} < 3',
-        Notes => 'AE and/or Flash Bracketing',
-        PrintConv => \%bracketIncrementZ9,
-    },
-    570 => { Name => 'HDR',                   RawConv => '$$self{HDR} = $val', PrintConv => \%multipleExposureModeZ9 },
-    #572  HDRSaveRaw 0=> No; 1=> Yes
-    576 => { Name => 'SecondarySlotFunction', PrintConv => \%secondarySlotFunctionZ9 },
-    582 => { Name => 'HDRLevel',              Condition => '$$self{HDR} ne 0', PrintConv => \%hdrLevelZ8 },
-    586 => { Name => 'Slot2JpgSize',          PrintConv => { 0 => 'Large (8256x5504)', 1 => 'Medium (6192x4128)', 2 => 'Small (4128x2752)' }, Unknown => 1},
-    592 => { Name => 'DXCropAlert',           PrintConv => \%offOn },
-    594 => { Name => 'SubjectDetection',      PrintConv => \%subjectDetectionZ9 },
-    596 => {
-        Name => 'DynamicAFAreaSize',
-        Condition => '$$self{AFAreaMode} == 2',
-        RawConv => '$$self{DynamicAFAreaSize} = $val',
-        PrintConv => \%dynamicAfAreaModesZ9,
-    },
-    618 => { Name => 'ToneMap',                    PrintConv => { 0 => 'SDR', 1 => 'HLG' }, Unknown => 1 },
-    622 => { Name => 'PortraitImpressionBalance',  PrintConv => \%portraitImpressionBalanceZ8 },
-    636 => { Name => 'HighFrequencyFlickerReduction', PrintConv => \%offOn, Unknown => 1 }, # new with firmware 3.0
-    730 => {
-        Name => 'MovieImageArea',
-        Unknown => 1,
-        Mask => 0x01, # without the mask 4 => 'FX'  5 => DX   only the 2nd Z-series field encountered with a mask.
-        PrintConv => \%imageAreaZ9b,
-    },
-    #736 => { Name => 'MovieSlowMotion', PrintConv => \%movieSlowMotion,  Unknown => 1 },   #only valid for MovieType H.264 8-bit
-    740 => { Name => 'MovieType',        PrintConv => \%movieTypeZ9,      Unknown => 1 },
-    742 => {
-        Name => 'MovieISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    744 => { Name => 'MovieISOAutoControlManualMode', PrintConv => \%offOn, Unknown => 1 },
-    746 => {
-        Name => 'MovieISOAutoManualMode',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    820 => { Name => 'MovieActiveD-Lighting',      PrintConv => \%activeDLightingZ7, Unknown => 1 },
-    822 => { Name => 'MovieHighISONoiseReduction', PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
-    828 => { Name => 'MovieFlickerReduction',      PrintConv => \%movieFlickerReductionZ9 },
-    830 => { Name => 'MovieMeteringMode',          PrintConv => \%meteringModeZ7, Unknown => 1 },
-    832 => { Name => 'MovieFocusMode',             PrintConv => \%focusModeZ7, Unknown => 1 },
-    834 => { Name => 'MovieAFAreaMode',            PrintConv => \%aFAreaModeZ9 },
-    836 => { Name => 'MovieVRMode',                PrintConv => \%vRModeZ9, Unknown => 1 },
-    840 => { Name => 'MovieElectronicVR',          PrintConv => \%offOn, Unknown => 1 }, # distinct from MoveieVRMode
-    842 => { Name => 'MovieSoundRecording',        PrintConv => { 0 => 'Off', 1 => 'Auto', 2 => 'Manual' }, Unknown => 1 },
-    844 => { Name => 'MicrophoneSensitivity',      Unknown => 1 }, # 1-20
-    846 => { Name => 'MicrophoneAttenuator',       PrintConv => \%offOn, Unknown => 1 }, # distinct from MoveieVRMode
-    848 => { Name => 'MicrophoneFrequencyResponse',PrintConv => { 0 => 'Wide Range', 1 => 'Vocal Range' }, Unknown => 1 },
-    850 => { Name => 'WindNoiseReduction',         PrintConv =>  \%offOn, Unknown => 1 },
-    878 => { Name => 'MovieFrameSize',             PrintConv => \%movieFrameSizeZ9, Unknown => 1 },
-    880 => { Name => 'MovieFrameRate',             PrintConv => \%movieFrameRateZ7, Unknown => 1 },
-    886 => { Name => 'MicrophoneJackPower',        PrintConv => \%offOn, Unknown => 1 },
-    887 => { Name => 'MovieDXCropAlert',           PrintConv => \%offOn, Unknown => 1 },
-    888 => { Name => 'MovieSubjectDetection',      PrintConv => \%subjectDetectionZ9, Unknown => 1 },
-    896 => { Name => 'MovieHighResZoom',           PrintConv =>  \%offOn, Unknown => 1 },
     943 => {
         Name => 'CustomSettingsZ8',
         Format => 'undef[755]',
         SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ8' },
     },
     1698 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
-    1700 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    1700 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9, SeparateTable => 'TimeZone' },
     1706 => { Name => 'MonitorBrightness',  PrintConv => \%monitorBrightnessZ9, Unknown => 1 },        # settings: -5 to +5.  Added with firmware 3.0:  Lo1, Lo2, Hi1, Hi2
     1728 => { Name => 'AFFineTune',         PrintConv => \%offOn, Unknown => 1 },
     1732 => { Name => 'NonCPULens1FocalLength',  Format => 'int16u', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},  #should probably hide altogther if $val is 0
@@ -10141,7 +10094,8 @@ my %nikonFocalConversions = (
     2062 => { Name => 'PlaybackButtonPlaybackMode',  %buttonsZ9},     #CSf2
     2064 => { Name => 'BracketButtonPlaybackMode',   %buttonsZ9},     #CSf2
 );
-%Image::ExifTool::Nikon::MenuSettingsZ9  = (
+
+%Image::ExifTool::Nikon::MenuSettingsZ9 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     DATAMEMBER => [ 140, 188, 192, 232, 308, 424, 528, 534, 576 ],
@@ -10192,22 +10146,8 @@ my %nikonFocalConversions = (
     308 => { Name => 'PhotoShootingMenuBankImageArea', RawConv => '$$self{ImageArea} = $val', PrintConv => \%imageAreaZ9 },
     #310 ImageQuality
     322 => { Name => 'AutoISO', PrintConv => \%offOn },
-    324 => {
-        Name => 'ISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    326 => {
-        Name => 'ISOAutoFlashLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    324 => { Name => 'ISOAutoHiLimit',    %isoAutoHiLimitZ7 },
+    326 => { Name => 'ISOAutoFlashLimit', %isoAutoHiLimitZ7 },
     #332 ISOAutoShutterTime - Auto setting 0=> 'Auto (Slowest)', 1 => 'Auto (Slower)', 2=> 'Auto', 3=> 'Auto (Faster)', 4=> 'Auto (Fastest)'
     334 => {
         Name => 'ISOAutoShutterTime',         #shutter speed is 2 ** (-$val/24)
@@ -10297,23 +10237,9 @@ my %nikonFocalConversions = (
         PrintConv => \%imageAreaZ9b,
     },
     614 => { Name => 'MovieType', PrintConv => \%movieTypeZ9, Unknown => 1 },
-    616 => {
-        Name => 'MovieISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    616 => { Name => 'MovieISOAutoHiLimit',     %isoAutoHiLimitZ7 },
     618 => { Name => 'MovieISOAutoControlManualMode', PrintConv => \%offOn, Unknown => 1 },
-    620 => {
-        Name => 'MovieISOAutoManualMode',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    620 => { Name => 'MovieISOAutoManualMode',  %isoAutoHiLimitZ7 },
     696 => { Name => 'MovieActiveD-Lighting',   PrintConv => \%activeDLightingZ7, Unknown => 1 },
     698 => { Name => 'MovieHighISONoiseReduction', PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
     704 => { Name => 'MovieFlickerReduction',   PrintConv => \%movieFlickerReductionZ9 },
@@ -10339,7 +10265,7 @@ my %nikonFocalConversions = (
         SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ9' },
     },
     1426 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
-    1428 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    1428 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9, SeparateTable => 'TimeZone' },
     1434 => { Name => 'MonitorBrightness',  ValueConv => '$val - 5', Unknown => 1 },        # settings: -5 to +5
     1456 => { Name => 'AFFineTune',         PrintConv => \%offOn, Unknown => 1 },
     1552 => { Name => 'HDMIOutputResolution', PrintConv => \%hDMIOutputResolutionZ9 },
@@ -10352,7 +10278,7 @@ my %nikonFocalConversions = (
     1645 => { Name => 'SensorShield',       PrintConv => { 0 => 'Stays Open', 1 => 'Closes' }, Unknown => 1 },
 );
 
-%Image::ExifTool::Nikon::MenuSettingsZ9v3  = (
+%Image::ExifTool::Nikon::MenuSettingsZ9v3 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     DATAMEMBER => [ 154, 204, 208, 248, 328, 444, 548, 554, 596 ],
@@ -10404,22 +10330,8 @@ my %nikonFocalConversions = (
     292 => { Name => 'ExtendedMenuBanks',     PrintConv => \%offOn }, # single tag from both Photo & Video menus
     328 => { Name => 'PhotoShootingMenuBankImageArea', RawConv => '$$self{ImageArea} = $val', PrintConv => \%imageAreaZ9 },
     342 => { Name => 'AutoISO', PrintConv => \%offOn },
-    344 => {
-        Name => 'ISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    346 => {
-        Name => 'ISOAutoFlashLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    344 => { Name => 'ISOAutoHiLimit',    %isoAutoHiLimitZ7 },
+    346 => { Name => 'ISOAutoFlashLimit', %isoAutoHiLimitZ7 },
     354 => {
         Name => 'ISOAutoShutterTime', # shutter speed is 2 ** (-$val/24)
         ValueConv => '$val / 8',
@@ -10498,23 +10410,9 @@ my %nikonFocalConversions = (
         PrintConv => \%imageAreaZ9b,
     },
     656 => { Name => 'MovieType', PrintConv => \%movieTypeZ9, Unknown => 1 },
-    658 => {
-        Name => 'MovieISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    658 => { Name => 'MovieISOAutoHiLimit',        %isoAutoHiLimitZ7 },
     660 => { Name => 'MovieISOAutoControlManualMode', PrintConv => \%offOn, Unknown => 1 },
-    662 => {
-        Name => 'MovieISOAutoManualMode',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    662 => { Name => 'MovieISOAutoManualMode',     %isoAutoHiLimitZ7 },
     736 => { Name => 'MovieActiveD-Lighting',      PrintConv => \%activeDLightingZ7, Unknown => 1 },
     738 => { Name => 'MovieHighISONoiseReduction', PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
     744 => { Name => 'MovieFlickerReduction',      PrintConv => \%movieFlickerReductionZ9 },
@@ -10541,7 +10439,7 @@ my %nikonFocalConversions = (
         SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ9' },
     },
     1474 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
-    1476 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    1476 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9, SeparateTable => 'TimeZone' },
     1482 => { Name => 'MonitorBrightness',  PrintConv => \%monitorBrightnessZ9, Unknown => 1 },        # settings: -5 to +5.  Added with firmware 3.0:  Lo1, Lo2, Hi1, Hi2
     1504 => { Name => 'AFFineTune',         PrintConv => \%offOn, Unknown => 1 },
     1600 => { Name => 'HDMIOutputResolution', PrintConv => \%hDMIOutputResolutionZ9 },
@@ -10585,16 +10483,21 @@ my %nikonFocalConversions = (
     #1936 FocusPointDisplayOption3DTrackingColor CSa11-d 0=> 'White', 1= => 'Red'
 );
 
-%Image::ExifTool::Nikon::MenuSettingsZ9v4  = (
+# firmware version 4.x/5.x menu settings (ref 28)
+%Image::ExifTool::Nikon::MenuSettingsZ9v4 = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
-    DATAMEMBER => [ 154, 204, 208, 248, 328, 444, 548, 554, 570, 596 ],
+    DATAMEMBER => [ 72, 154, 204, 208, 248, 328, 444, 548, 554, 570, 596 ],
     IS_SUBDIR => [ 847 ],
-    NOTES => 'These tags are used by the Z9 firmware 4.0.0 and 4.1.0',
+    NOTES => 'These tags are used by the Z9 firmware 4.00, 4.10, 5.00 and 5.10.',
     72 => {
         Name => 'HighFrameRate',        #CH and C30/C60/C120 but not CL
         PrintConv => \%highFrameRateZ9,
+        Hook => '$varSize += 4 if $$self{FirmwareVersion} and $$self{FirmwareVersion} ge "05.10"',
     },
+#
+# Note: Offsets after this are shifted by +4 for firmware 5.1 (see Hook above)
+#
     154 => {
         Name => 'MultipleExposureMode',
         RawConv => '$$self{MultipleExposureMode} = $val',
@@ -10638,22 +10541,8 @@ my %nikonFocalConversions = (
     328 => { Name => 'PhotoShootingMenuBankImageArea', RawConv => '$$self{ImageArea} = $val', PrintConv => \%imageAreaZ9 },
     #334  JPGCompression     0 => 'Size Priority', 1 => 'Optimal Quality',
     342 => { Name => 'AutoISO', PrintConv => \%offOn },
-    344 => {
-        Name => 'ISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
-    346 => {
-        Name => 'ISOAutoFlashLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    344 => { Name => 'ISOAutoHiLimit',    %isoAutoHiLimitZ7 },
+    346 => { Name => 'ISOAutoFlashLimit', %isoAutoHiLimitZ7 },
     354 => {
         Name => 'ISOAutoShutterTime', # shutter speed is 2 ** (-$val/24)
         ValueConv => '$val / 8',
@@ -10735,23 +10624,9 @@ my %nikonFocalConversions = (
         PrintConv => \%imageAreaZ9b,
     },
     656 => { Name => 'MovieType', PrintConv => \%movieTypeZ9, Unknown => 1 },
-    658 => {
-        Name => 'MovieISOAutoHiLimit',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    658 => { Name => 'MovieISOAutoHiLimit',        %isoAutoHiLimitZ7 },
     660 => { Name => 'MovieISOAutoControlManualMode', PrintConv => \%offOn, Unknown => 1 },
-    662 => {
-        Name => 'MovieISOAutoManualMode',
-        Format => 'int16u',
-        Unknown => 1,
-        ValueConv => '($val-104)/8',
-        ValueConvInv => '8 * ($val + 104)',
-        PrintConv => \%iSOAutoHiLimitZ7,
-    },
+    662 => { Name => 'MovieISOAutoManualMode',     %isoAutoHiLimitZ7 },
     736 => { Name => 'MovieActiveD-Lighting',      PrintConv => \%activeDLightingZ7, Unknown => 1 },
     738 => { Name => 'MovieHighISONoiseReduction', PrintConv => \%offLowNormalHighZ7, Unknown => 1 },
     744 => { Name => 'MovieFlickerReduction',      PrintConv => \%movieFlickerReductionZ9 },
@@ -10778,7 +10653,7 @@ my %nikonFocalConversions = (
         SubDirectory => { TagTable => 'Image::ExifTool::NikonCustom::SettingsZ9v4' },
     },
     1498 => { Name => 'Language',           PrintConv => \%languageZ9, Unknown => 1 },
-    1500 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9 },
+    1500 => { Name => 'TimeZone',           PrintConv => \%timeZoneZ9, SeparateTable => 'TimeZone' },
     1506 => { Name => 'MonitorBrightness',  PrintConv => \%monitorBrightnessZ9, Unknown => 1 },        # settings: -5 to +5.  Added with firmware 3.0:  Lo1, Lo2, Hi1, Hi2
     1528 => { Name => 'AFFineTune',         PrintConv => \%offOn, Unknown => 1 },
     1532 => { Name => 'NonCPULens1FocalLength',  Format => 'int16s', PrintConv => 'sprintf("%.1fmm",$val/10)',  Unknown => 1},  #should probably hide altogther if $val is 0
@@ -12166,6 +12041,7 @@ my %nikonFocalConversions = (
         Name => 'FirmwareVersion51',
         Format => 'string[8]',
         Writable => 0,
+        ValueConv => 'join ".", $val =~ /../g',
     },
     10 => {
         Name => 'NEFCompression',
@@ -12180,9 +12056,10 @@ my %nikonFocalConversions = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes' },
     0 => {
-        Name => 'FirmwareVersion',
+        Name => 'FirmwareVersion56',
         Format => 'string[4]',
         Writable => 0,
+        ValueConv => '$val =~ s/(\d{2})/$1./; $val',
     },
     4 => {
         Name => 'BurstGroupID',    #all frames shot within a burst (using CL/CH/C30/C60/C120) will share the same BurstGroupID.  Value will be > 0 for all images shot in continuous modes (or via Pixel Shift).  0 for single-frame.
@@ -12231,7 +12108,6 @@ my %nikonFocalConversions = (
             3 => 'On (Required)',
         },
     },
-    #0x10  Degree of radial distortion correction polynomial? (always 4? - decodes for the first 3 coefficients follow, the 4th at 0x2c/0x30 seems to always be 0)
     0x14 => {
         Name => 'RadialDistortionCoefficient1',
         Format => 'rational64s',
@@ -13107,10 +12983,33 @@ my %nikonFocalConversions = (
             6 => 'High',
         },
     },
-    0x20000b7 => {
+    0x20000b7 => [{
         Name => 'AFInfo2',
-        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2' },
-    },
+        #  LiveView-enabled DSLRs introduced starting in 2007 (D3/D300)
+        Condition => '$$valPt =~ /^0100/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0100' },
+    },{
+        Name => 'AFInfo2',
+        # All Expeed 5 processor and most Expeed 4 processor models from 2016 - D5, D500, D850, D3400, D3500, D7500 (D5600 is v0100)
+        Condition => '$$valPt =~ /^0101/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0101' },
+    },{
+        Name => 'AFInfo2',
+        # Nikon 1 Series cameras
+        Condition => '$$valPt =~ /^020[01]/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0200' },
+    },{
+        Name => 'AFInfo2',
+        # Expeed 6 processor models - D6, D780, Z5, Z6, Z7, Z30, Z50, Z6_2, Z7_2  and Zfc
+        Condition => '$$valPt =~ /^030[01]/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0300' },
+    },{
+        Name => 'AFInfo2',
+        # Expeed 7 processor models - Z8 & Z9 (AFInfo2Version 0400), Z6iii & Zf (AFInfo2Version 0401)
+        #  and Z50ii (AFInfo2Version 0402)
+        Condition => '$$valPt =~ /^040[012]/',
+        SubDirectory => { TagTable => 'Image::ExifTool::Nikon::AFInfo2V0400' },
+    }],
     # 0x20000c0 - undef[8]
     0x20000c3 => {
         Name => 'BarometerInfo',
@@ -13248,10 +13147,33 @@ my %nikonFocalConversions = (
     },
     AutoFocus => {
         Require => {
-            0 => 'Nikon:PhaseDetectAF',
-            1 => 'Nikon:ContrastDetectAF',
+            0 => 'Nikon:FocusMode',
         },
-        ValueConv => '($val[0] or $val[1]) ? 1 : 0',
+        ValueConv => '($val[0] =~ /^Manual/i) ? 0 : 1',
+        PrintConv => \%offOn,
+    },
+    PhaseDetectAF => {
+       Require => {
+            0 => 'Nikon:FocusPointSchema',
+            1 => 'Nikon:AFDetectionMethod',
+        },
+        ValueConv => '(($val[1]) == 0) ?  ($val[0]) : 0',     # for backward compatibility,  report FocusPointSchema when AFDetectionMethod indicates Phase Detect is on
+        PrintConv => {
+            0 => 'Off',            #contrast detect or hybrid detect
+            1 => 'On (51-point)',  #PH
+            2 => 'On (11-point)',  #PH
+            3 => 'On (39-point)',  #29 (D7000)
+            7 => 'On (153-point)', #PH (D5/D500/D850)
+            #8 => 'On (81-point)', #38  will not see this value - only available in hybrid detect
+            9 => 'On (105-point)', #28 (D6)
+        },
+    },
+    ContrastDetectAF => {
+        Require => {
+            0 => 'Nikon:FocusMode',
+            1 => 'Nikon:AFDetectionMethod',
+        },
+        ValueConv => '(($val[0] !~ /^Manual/i) and ($val[1] == 1)) ? 1 : 0',
         PrintConv => \%offOn,
     },
 );
@@ -13289,7 +13211,7 @@ sub ProcessNikonAVI($$$)
 #------------------------------------------------------------------------------
 # Print conversion for Nikon AF points
 # Inputs: 0) value to convert (as a string of hex bytes),
-#         1) lookup for AF point bit number (starting at 1)
+#         1) lookup for AF point bit number (starting at 1), or array ref
 sub PrintAFPoints($$)
 {
     my ($val, $afPoints) = @_;
@@ -13301,7 +13223,7 @@ sub PrintAFPoints($$)
         next unless $dat[$i];
         for ($j=0; $j<8; ++$j) {
             next unless $dat[$i] & (1 << $j);
-            my $point = $$afPoints{$i*8 + $j + 1};
+            my $point = ref $afPoints eq 'HASH' ? $$afPoints{$i*8+$j+1} : $$afPoints[$i*8+$j];
             push @points, $point if defined $point;
         }
     }
@@ -13316,17 +13238,21 @@ sub PrintAFPoints($$)
 
 #------------------------------------------------------------------------------
 # Inverse print conversion for AF points
-# Inputs: 0) AF point string, 1) AF point lookup
+# Inputs: 0) AF point string, 1) AF point hash or array ref
 # Returns: AF point data as a string of hex bytes
 sub PrintAFPointsInv($$)
 {
     my ($val, $afPoints) = @_;
     my @points = ($val =~ /[A-Za-z]\d+/g);
-    my $size = int((scalar(keys %$afPoints) + 7) / 8);
+    my $size = int((scalar(ref $afPoints eq 'HASH' ? keys %$afPoints : @$afPoints) + 7) / 8);
     my @dat = (0) x $size;
     if (@points) {
         my (%bitNum, $point);
-        $bitNum{$$afPoints{$_}} = $_ foreach keys %$afPoints; # build reverse lookup
+        if (ref $afPoints eq 'HASH') {
+            $bitNum{$$afPoints{$_}} = $_ foreach keys %$afPoints; # build reverse lookup
+        } else {
+            $bitNum{$$afPoints[$_]} = $_ + 1 foreach 0..$#$afPoints;
+        }
         foreach $point (@points) {
             my $bitNum = $bitNum{uc $point} or next;
             my $byte = int(($bitNum - 1) / 8);
@@ -13402,7 +13328,7 @@ sub PrintAFPointsGridInv($$$)
 sub PrintAFPointsLeftRight($$)
 {
     my ($col, $ncol) = @_;
-    my $center = 1 + ($ncol + 1)/2;
+    my $center = ($ncol + 1) / 2;
     return 'n/a' if $col == 0;   #out of focus
     return 'C' if $col == $center;
     return sprintf('%d', $center - $col) . 'L of Center' if $col < $center;
@@ -13416,7 +13342,7 @@ sub PrintAFPointsLeftRight($$)
 sub PrintAFPointsUpDown($$)
 {
     my ($row, $nrow) = @_;
-    my $center = 1 + ($nrow + 1)/2;
+    my $center = ($nrow + 1) / 2;
     return 'n/a' if $row == 0;     #out of focus
     return 'C' if $row == $center;
     return sprintf('%d', $center - $row) . 'U from Center' if $row < $center;

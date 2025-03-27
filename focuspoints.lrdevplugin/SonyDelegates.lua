@@ -20,121 +20,329 @@
 --]]
 
 local LrStringUtils = import "LrStringUtils"
+local LrView = import "LrView"
 require "Utils"
+require "Log"
 
--- Sony says PDAF covers approximately 68% of the sensor
--- a7r3 images are 7952x5304 pixels, 3:2
--- sensor is 42 MP, 68% of which is 28,680,637.44
--- Focal Plane AF Point Area value is "640 428"
--- 640 * 428 * 10^2 == 27,392,000
--- 6400x4280, margins - left/right 776, top/bottom 512
-
-local pdafScale = 10 -- this is a guess
-local focusLocationSize = 120
-local pdafPointSize = 85
 
 SonyDelegates = {}
 
+-- To trigger display whether focus points have been detected or not
+SonyDelegates.focusPointsDetected = false
+
+-- Tag that indicates that makernotes / AF section is present
+SonyDelegates.metaKeyAfInfoSection = "Sony Model ID"
+
+-- AF relevant tags
+SonyDelegates.metaKeyAfFocusMode                 = "Focus Mode"
+SonyDelegates.metaKeyAfFocusLocation             = "Focus Location"
+SonyDelegates.metaKeyAfFocusPosition2            = "Focus Position 2"
+SonyDelegates.metaKeyAfAreaModeSetting           = "AF Area Mode Setting"
+SonyDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
+SonyDelegates.metaKeyAfTracking                  = "AF Tracking"
+SonyDelegates.metaKeyAfFocalPlaneAFPointsUsed    = "Focal Plane AF Points Used"
+SonyDelegates.metaKeyAfFocalPlaneAFPointArea     = "Focal Plane AF Point Area"
+SonyDelegates.metaKeyAfFocalPlaneAFPointLocation = "Focal Plane AF Point Location %s"
+SonyDelegates.metaKeyAfFacesDetected             = "Faces Detected"
+SonyDelegates.metaKeyAfFacePosition              = "Face %s Position"
+SonyDelegates.metaKeyAfSonyImageWidth            = "Sony Image Width"
+SonyDelegates.metaKeyAfSonyImageHeight           = "Sony Image Height"
+SonyDelegates.metaKeyAfPointsUsed                = "AF Points Used"
+
+-- Image and Camera Settings relevant tags
+SonyDelegates.metaKeySceneMode                   = "Scene Mode"
+SonyDelegates.metaKeyImageStabilization          = "Image Stabilization"
+
+-- relevant metadata values
+SonyDelegates.metaValueNA                         = "N/A"
+
+
 --[[
--- metaData - the metadata as read by exiftool
+  public table SonyDelegates.getAfPoints(photo, metaData)
+  ----
+  Get autofocus points and frames for detected face from metadata
 --]]
 function SonyDelegates.getAfPoints(photo, metaData)
-  local focusPoint = ExifUtils.findFirstMatchingValue(metaData, { "Focus Location" })
-  if focusPoint == nil then
-    return nil
-  end
-  local values = split(focusPoint, " ")
-  local imageWidth = LrStringUtils.trimWhitespace(values[1])
-  local imageHeight = LrStringUtils.trimWhitespace(values[2])
-  local x = LrStringUtils.trimWhitespace(values[3])
-  local y = LrStringUtils.trimWhitespace(values[4])
-  if imageWidth == nil or imageHeight == nil or x == nil or y == nil then
-    return nil
-  end
+
+  SonyDelegates.focusPointsDetected = false
 
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  local xScale = orgPhotoWidth / imageWidth
-  local yScale = orgPhotoHeight / imageHeight
+  local result
 
-  logInfo("Sony", "Focus location at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
+  local focusPoint = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusLocation)
+  if focusPoint then
+    Log.logInfo("Sony",
+      string.format("Focus point tag '%s' found", SonyDelegates.metaKeyAfFocusLocation))
 
-  local result = {
-    pointTemplates = DefaultDelegates.pointTemplates,
-    points = {
-      {
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS,
-        x = x * xScale,
-        y = y * yScale,
-        width = focusLocationSize * xScale,
-        height = focusLocationSize * yScale
-      }
-    }
-  }
+    local values = split(focusPoint, " ")
+    local imageWidth = LrStringUtils.trimWhitespace(values[1])
+    local imageHeight = LrStringUtils.trimWhitespace(values[2])
+
+    if imageWidth and imageHeight then
+      if (imageWidth ~= "0") and (imageHeight ~= "0") then
+        local xScale = orgPhotoWidth / imageWidth
+        local yScale = orgPhotoHeight / imageHeight
+        local x = LrStringUtils.trimWhitespace(values[3]) * xScale
+        local y = LrStringUtils.trimWhitespace(values[4]) * yScale
+        local pdafPointSize = imageWidth * 0.039/2  -- #TODO is 0.039/2 be different for other models?
+
+        SonyDelegates.focusPointsDetected = true
+
+        Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+          math.floor(x), math.floor(y), math.floor(pdafPointSize), math.floor(pdafPointSize)))
+
+        result = {
+          pointTemplates = DefaultDelegates.pointTemplates,
+          points = {
+            {
+              pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
+              x = x,
+              y = y,
+              width  = pdafPointSize,
+              height = pdafPointSize
+            }
+          }
+        }
+      else
+        -- focus location string is "0 0 0 0" -> the focus point is a PDAF point #FIXME but which one exactly?
+        Log.logWarn("Sony",
+          string.format("Unusal CAF focus location: '%s'", focusPoint))
+      end
+    else
+      Log.logError("Sony",
+        string.format("No valid information on image width/height found"))
+      Log.logWarn("Sony", FocusInfo.msgImageNotOoc)
+    end
+  else
+    -- no focus points found - handled on upper layers
+    Log.logWarn("Sony",
+      string.format("Focus point tag '%s' tag not found", SonyDelegates.metaKeyAfFocusLocation))
+  end
 
   -- Let's see if we used any PDAF points
-  local numPdafPointsStr = ExifUtils.findFirstMatchingValue(metaData, { "Focal Plane AF Points Used" })
-  if numPdafPointsStr == nil then
-    return result
-  end
-  local numPdafPoints = LrStringUtils.trimWhitespace(numPdafPointsStr)
-  if numPdafPoints == nil then
-    return result
-  end
-  logDebug("Sony", "PDAF AF points used: " .. numPdafPoints)
+  local numPdafPointsStr = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocalPlaneAFPointsUsed)
+  if numPdafPointsStr then
 
-  local pdafDimensionsStr = ExifUtils.findFirstMatchingValue(metaData, { "Focal Plane AF Point Area" })
-  if pdafDimensionsStr == nil then
-    return result
-  end
-  local pdafDimensions = split(pdafDimensionsStr, " ")
-  local pdafWidth = LrStringUtils.trimWhitespace(pdafDimensions[1])
-  local pdafHeight = LrStringUtils.trimWhitespace(pdafDimensions[2])
-  if pdafWidth == nil or pdafHeight == nil then
-    return result
-  end
-  logDebug("Sony", "PDAF AF area dimentions: " .. pdafWidth .. "x" .. pdafHeight)
-  logDebug("Sony", "PDAF scale: " .. pdafScale)
-  local pdafScaledWidth = pdafWidth * pdafScale
-  logDebug("Sony", "PDAF scaled width: " .. pdafScaledWidth)
-  local pdafScaledHeight = pdafHeight * pdafScale
-  logDebug("Sony", "PDAF scaled height: " .. pdafScaledHeight)
-  local pdafXOffset = (imageWidth - pdafScaledWidth) / 2
-  logDebug("Sony", "PDAF x offset: " .. pdafXOffset)
-  local pdafYOffset = (imageHeight - pdafScaledHeight) / 2
-  logDebug("Sony", "PDAF y offset: " .. pdafYOffset)
+    local numPdafPoints = LrStringUtils.trimWhitespace(numPdafPointsStr)
+    if numPdafPoints then
+      Log.logInfo("Sony", "PDAF points used: " .. numPdafPoints)
 
-  -- show the PDAF area
-  table.insert(result.points, {
-    pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE,
-    x = pdafXOffset + (pdafScaledWidth / 2),
-    y = pdafYOffset + (pdafScaledHeight / 2),
-    width = pdafScaledWidth,
-    height = pdafScaledHeight
-  })
+      local pdafDimensionsStr = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocalPlaneAFPointArea)
+      if pdafDimensionsStr then
 
-  for i=1, numPdafPoints do
-    local pdafPointStr = ExifUtils.findFirstMatchingValue(metaData, { "Focal Plane AF Point Location " .. i })
-    if pdafPointStr == nil then
-      return result
+        local pdafDimensions = split(pdafDimensionsStr, " ")
+        local pdafWidth = LrStringUtils.trimWhitespace(pdafDimensions[1])
+        local pdafHeight = LrStringUtils.trimWhitespace(pdafDimensions[2])
+        if pdafWidth and pdafHeight then
+
+          for i=1, numPdafPoints do
+            local pdafPointStr = ExifUtils.findValue(
+                    metaData, string.format(SonyDelegates.metaKeyAfFocalPlaneAFPointLocation, i))
+            if pdafPointStr then
+
+              local pdafPoint = split(pdafPointStr, " ")
+              local x = LrStringUtils.trimWhitespace(pdafPoint[1])
+              local y = LrStringUtils.trimWhitespace(pdafPoint[2])
+              if x and y then
+                Log.logDebug("Sony", "PDAF unscaled point at [" .. x .. ", " .. y .. "]")
+                -- #FIXME Does this really need to be scaled?
+                -- #FIXME What else than the original image size could be imageWidth and ImageHeight?
+                local imageWidth, imageHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+                local xScale = orgPhotoWidth / imageWidth
+                local yScale = orgPhotoHeight / imageHeight
+                local pdafX = (imageWidth*x/pdafWidth)*xScale
+                local pdafY = (imageHeight*y/pdafHeight)*yScale
+                local pdafPointSize = imageWidth*0.039/2  -- #TODO is 0.039/2 be different for other models?
+                Log.logInfo("Sony", "PDAF scaled point at [" .. math.floor(pdafX) .. ", " .. math.floor(pdafY) .. "]")
+                if not SonyDelegates.focusPointsDetected then
+                  -- this is actually the focus point!
+                  Log.logInfo("Sony", "Focus location at [" .. math.ceil(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
+                  SonyDelegates.focusPointsDetected = true
+                  result = {
+                    pointTemplates = DefaultDelegates.pointTemplates,
+                    points = {
+                      {
+                        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
+                        x = pdafX,
+                        y = pdafY,
+                        width = pdafPointSize,
+                        height = pdafPointSize
+                      }
+                    }
+                  }
+                else
+                  -- add the PDAF point as inactive point
+                  table.insert(result.points, {
+                    pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE,
+                    x = pdafX,
+                    y = pdafY,
+                    width = pdafPointSize,
+                    height = pdafPointSize
+                  })
+                end
+              end
+            end
+          end
+        end
+      end
     end
-    local pdafPoint = split(pdafPointStr, " ")
-    local x = LrStringUtils.trimWhitespace(pdafPoint[1])
-    local y = LrStringUtils.trimWhitespace(pdafPoint[2])
-    if x == nil or y == nil then
-      return result
-    end
-    logDebug("Sony", "PDAF unscaled point at [" .. x .. ", " .. y .. "]")
-    local pdafX = (pdafXOffset + (x * pdafScale)) * xScale
-    local pdafY = (pdafYOffset + (y * pdafScale)) * yScale
-    logInfo("Sony", "PDAF point at [" .. math.floor(pdafX) .. ", " .. math.floor(pdafY) .. "]")
-    table.insert(result.points, {
-      pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE,
-      x = pdafX,
-      y = pdafY,
-      width = pdafPointSize * xScale,
-      height = pdafPointSize * yScale
-    })
   end
 
+  -- Let see if we have detected faces
+  local detectedFaces = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFacesDetected)
+  if detectedFaces and detectedFaces > "0" then
+    for i=1, detectedFaces, 1 do
+      local currFaceTag = string.format(SonyDelegates.metaKeyAfFacePosition, i)
+      local coordinatesStr = ExifUtils.findValue(metaData, currFaceTag)
+      if coordinatesStr ~= nil then
+        -- format as per https://exiftool.org/TagNames/Sony.html:
+        -- scaled to return the top, left, height and width of detected face,
+        -- with coordinates relative to the full-sized unrotated image and increasing Y downwards)
+        local coordinatesTable = split(coordinatesStr, " ")
+        local w = coordinatesTable[3]
+        local h = coordinatesTable[4]
+        local x = coordinatesTable[2] + w/2
+        local y = coordinatesTable[1] + h/2
+        Log.logInfo("Sony", "Face detected at [" .. x .. ", " .. y .. "]")
+        local face = {
+          pointType = DefaultDelegates.POINTTYPE_FACE,
+          x = x,
+          y = y,
+          width  = w,
+          height = h,
+        }
+        if result then
+          table.insert(result.points, face)
+        else
+          -- an image can have detected face but no focus point!
+          result = {
+            pointTemplates = DefaultDelegates.pointTemplates,
+            points = { face }
+          }
+        end
+      end
+    end
+  end
   return result
+end
+
+
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
+
+--[[
+  @@public table SonyDelegates.addInfo(string title, string key, table props, table metaData)
+  ----
+  Creates the view element for an item to add to a info section and creates/populates the corresponding property
+--]]
+function SonyDelegates.addInfo(title, key, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Helper function to create and populate the property corresponding to metadata key
+  local function populateInfo(key)
+    local value
+    if type(key) == "string" then
+      value = ExifUtils.findValue(metaData, key)
+    else
+      -- type(key) == "table"
+      value = ExifUtils.findFirstMatchingValue(metaData, key)
+    end
+    if (value == nil) then
+      props[key] = SonyDelegates.metaValueNA
+    else
+      -- everything else is the default case!
+      props[key] = value
+    end
+  end
+
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
+
+  -- Create and populate property with designated value
+  populateInfo(key)
+
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= SonyDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
+    }
+    -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
+    if (key == SonyDelegates.metaKeyAfTracking) and string.find(string.lower(props[key]), "face") then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        SonyDelegates.addInfo("Faces Detected", SonyDelegates.metaKeyAfFacesDetected, props, metaData)
+      }
+    else
+      -- add row as composed
+      return result
+    end
+  else
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
+  end
+end
+
+
+--[[
+  @@public table function SonyDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  -- if any, otherwise return an empty column
+--]]
+function SonyDelegates.getImageInfo(photo, props, metaData)
+  local imageInfo
+  return imageInfo
+end
+
+
+--[[
+  @@public table function SonyDelegates.getCameraInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  -- if any, otherwise return an empty column
+--]]
+function SonyDelegates.getCameraInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local cameraInfo
+  -- append maker specific entries to the "Camera Settings" section
+  cameraInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    SonyDelegates.addInfo("Scene Mode"         , SonyDelegates.metaKeySceneMode         , props, metaData),
+    SonyDelegates.addInfo("Image Stabilization", SonyDelegates.metaKeyImageStabilization, props, metaData),
+  }
+  return cameraInfo
+end
+
+
+--[[
+  @@public table SonyDelegates.getFocusInfo(table photo, table info, table metaData)
+  ----
+  Constructs and returns the view to display the items in the "Focus Information" group
+--]]
+function SonyDelegates.getFocusInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Check if makernotes AF section is (still) present in metadata of file
+  local errorMessage = FocusInfo.afInfoMissing(metaData, SonyDelegates.metaKeyAfInfoSection)
+  if errorMessage then
+    -- if not, finish this section with predefined error message
+    return errorMessage
+  end
+
+  -- Create the "Focus Information" section
+
+  local focusInfo = f:column {
+      fill = 1,
+      spacing = 2,
+      FocusInfo.FocusPointsStatus(SonyDelegates.focusPointsDetected),
+      SonyDelegates.addInfo("Focus Mode"          , SonyDelegates.metaKeyAfFocusMode             , props, metaData),
+      SonyDelegates.addInfo("AF Area Mode Setting", SonyDelegates.metaKeyAfAreaModeSetting       , props, metaData),
+      SonyDelegates.addInfo("AF Area Mode"        , SonyDelegates.metaKeyAfAreaMode              , props, metaData),
+      SonyDelegates.addInfo("AF Tracking"         , SonyDelegates.metaKeyAfTracking              , props, metaData),
+--    SonyDelegates.addInfo("PDAF Point Used"     , SonyDelegates.metaKeyAfFocalPlaneAFPointsUsed, props, metaData),
+      }
+  return focusInfo
 end
