@@ -34,6 +34,8 @@ SonyDelegates.focusPointsDetected = false
 SonyDelegates.metaKeyAfInfoSection = "Sony Model ID"
 
 -- AF relevant tags
+SonyDelegates.metaKeyExifImageWidth              = "Exif Image Width"
+SonyDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 SonyDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 SonyDelegates.metaKeyAfFocusLocation             = "Focus Location"
 SonyDelegates.metaKeyAfFocusPosition2            = "Focus Position 2"
@@ -66,7 +68,20 @@ function SonyDelegates.getAfPoints(photo, metaData)
 
   SonyDelegates.focusPointsDetected = false
 
+  -- Get orginal dimensions (in native aspect ratio)
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+
+  -- Exif Image dimensions may differ from original for photos taken with non-native aspect ratio
+  local exifImageWidth  = ExifUtils.findValue(metaData, SonyDelegates.metaKeyExifImageWidth)
+  local exifImageHeight = ExifUtils.findValue(metaData, SonyDelegates.metaKeyExifImageHeight)
+  if not (exifImageWidth and exifImageHeight) then
+    Log.logError("Sony",
+      string.format("No valid information on image width/height. Relevant tags '%s' / '%s' not found",
+        SonyDelegates.metaKeyExifImageWidth, SonyDelegates.metaKeyExifImageHeight))
+    Log.logWarn("Sony", FocusInfo.msgImageNotOoc)
+    return nil
+  end
+
   local result
 
   local focusPoint = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusLocation)
@@ -80,29 +95,23 @@ function SonyDelegates.getAfPoints(photo, metaData)
 
     if imageWidth and imageHeight then
       if (imageWidth ~= "0") and (imageHeight ~= "0") then
-        local xScale = orgPhotoWidth / imageWidth
-        local yScale = orgPhotoHeight / imageHeight
-        local x = LrStringUtils.trimWhitespace(values[3]) * xScale
-        local y = LrStringUtils.trimWhitespace(values[4]) * yScale
-        local pdafPointSize = imageWidth * 0.039/2  -- #TODO is 0.039/2 be different for other models?
+
+        local fpW = LrStringUtils.trimWhitespace(values[1])
+        local fpH = LrStringUtils.trimWhitespace(values[2])
+        local fpX = LrStringUtils.trimWhitespace(values[3])
+        local fpY = LrStringUtils.trimWhitespace(values[4])
+
+        -- Consider coordinate shift in case the photo has been taken using an aspect ratio other than native 3:2
+        local x = fpX + (orgPhotoWidth  - fpW) / 2
+        local y = fpY + (orgPhotoHeight - fpH) / 2
 
         SonyDelegates.focusPointsDetected = true
 
-        Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
-          math.floor(x), math.floor(y), math.floor(pdafPointSize), math.floor(pdafPointSize)))
+        Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s]",
+          math.floor(x), math.floor(y)))
 
-        result = {
-          pointTemplates = DefaultDelegates.pointTemplates,
-          points = {
-            {
-              pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
-              x = x,
-              y = y,
-              width  = pdafPointSize,
-              height = pdafPointSize
-            }
-          }
-        }
+        result = DefaultPointRenderer.createFocusPixelBox(x, y)
+
       else
         -- focus location string is "0 0 0 0" -> the focus point is a PDAF point #FIXME but which one exactly?
         Log.logWarn("Sony",
@@ -131,29 +140,34 @@ function SonyDelegates.getAfPoints(photo, metaData)
       if pdafDimensionsStr then
 
         local pdafDimensions = split(pdafDimensionsStr, " ")
-        local pdafWidth = LrStringUtils.trimWhitespace(pdafDimensions[1])
+        local pdafWidth  = LrStringUtils.trimWhitespace(pdafDimensions[1])
         local pdafHeight = LrStringUtils.trimWhitespace(pdafDimensions[2])
         if pdafWidth and pdafHeight then
 
           for i=1, numPdafPoints do
             local pdafPointStr = ExifUtils.findValue(
                     metaData, string.format(SonyDelegates.metaKeyAfFocalPlaneAFPointLocation, i))
-            if pdafPointStr then
 
+            if pdafPointStr then
               local pdafPoint = split(pdafPointStr, " ")
-              local x = LrStringUtils.trimWhitespace(pdafPoint[1])
-              local y = LrStringUtils.trimWhitespace(pdafPoint[2])
-              if x and y then
-                Log.logDebug("Sony", "PDAF unscaled point at [" .. x .. ", " .. y .. "]")
-                -- #FIXME Does this really need to be scaled?
-                -- #FIXME What else than the original image size could be imageWidth and ImageHeight?
-                local imageWidth, imageHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-                local xScale = orgPhotoWidth / imageWidth
-                local yScale = orgPhotoHeight / imageHeight
-                local pdafX = (imageWidth*x/pdafWidth)*xScale
-                local pdafY = (imageHeight*y/pdafHeight)*yScale
-                local pdafPointSize = imageWidth*0.039/2  -- #TODO is 0.039/2 be different for other models?
-                Log.logInfo("Sony", "PDAF scaled point at [" .. math.floor(pdafX) .. ", " .. math.floor(pdafY) .. "]")
+              local pdafX = LrStringUtils.trimWhitespace(pdafPoint[1])
+              local pdafY = LrStringUtils.trimWhitespace(pdafPoint[2])
+              if pdafX and pdafY then
+                Log.logDebug("Sony", "PDAF unscaled point at [" .. pdafX .. ", " .. pdafY .. "]")
+
+                local xScale = exifImageWidth  / pdafWidth
+                local yScale = exifImageHeight / pdafHeight
+
+                local x = pdafX * xScale
+                local y = pdafY * yScale
+
+                -- Consider coordinate shift in case the photo has been taken using an aspect ratio other than native 3:2
+                x = x + (orgPhotoWidth  - exifImageWidth ) / 2
+                y = y + (orgPhotoHeight - exifImageHeight) / 2
+
+                local pdafPointSize = orgPhotoWidth * 0.039/2  -- #TODO is 0.039/2 be different for other models?
+                Log.logInfo("Sony", "PDAF scaled point at [" .. math.floor(x) .. ", " .. math.floor(x) .. "]")
+
                 if not SonyDelegates.focusPointsDetected then
                   -- this is actually the focus point!
                   Log.logInfo("Sony", "Focus location at [" .. math.ceil(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
@@ -163,8 +177,8 @@ function SonyDelegates.getAfPoints(photo, metaData)
                     points = {
                       {
                         pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
-                        x = pdafX,
-                        y = pdafY,
+                        x = x,
+                        y = y,
                         width = pdafPointSize,
                         height = pdafPointSize
                       }
@@ -174,8 +188,8 @@ function SonyDelegates.getAfPoints(photo, metaData)
                   -- add the PDAF point as inactive point
                   table.insert(result.points, {
                     pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE,
-                    x = pdafX,
-                    y = pdafY,
+                    x = x,
+                    y = y,
                     width = pdafPointSize,
                     height = pdafPointSize
                   })
