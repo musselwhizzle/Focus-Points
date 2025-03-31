@@ -128,6 +128,15 @@ The logging mechanism offers a fin grain hierarchy of levels which information s
 Also, "Auto" logging will start on an empty log file for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.  
 
 
+**Updates**
+
+During operation, the plugin checks whether an updated version is available for download.
+In case there is an update, this will be highlighted and the website can be opened by clicking the button to download. In order to install the update, perform the steps under [Installation](#21-installation) and reload the plugin.    
+
+If an update is available, this will also be displayed in the status area of the focus point viewer, if the "Display message" checkbox is checked:
+
+<img src="../screens/UpdateAvailable.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+
 
 ### 2.3 Focus Point Viewer
 Once the plugin has been installed, it can be invoked with one or more photos selected:
@@ -321,7 +330,7 @@ Remark: The display of "AF Tracking Sensitivity" and "AF Point Switching" in the
 
 Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
 
-On Sony, the size of the focus point box is determined by the size of a PDAF point (or focal plane autofocus point, in Sony terminology). So, the color of the box can be changed in plugin preferenes but not its size.
+For Sony, the focus point of an image is given by the (x,y) coordinates of the 'focus pixel". So, for improved visualization you can choose focus box size and color in the plugin's preferences. 
 
 As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. Sony also doesn't have a focus distance tag, so there is no Depth of Field section either.
 
