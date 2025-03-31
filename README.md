@@ -12,7 +12,7 @@ For details on scope and limitations as well as comprehensive operating instruct
 
 Current Release
 --------
-## V3.0, April xx, 2025
+## V3.0, March 31, 2025
 
 ### New features and changes:
  
