@@ -1,7 +1,7 @@
 Change history
 =======
 
-## V3.0, March 28, 2025
+## V3.0, March 31, 2025
 
 ### New features and changes:
  
