@@ -135,10 +135,6 @@ sub ProcessJPEG_HDR($$$);
         Condition => '$$valPt =~ /^FPXR\0/',
         SubDirectory => { TagTable => 'Image::ExifTool::FlashPix::Main' },
       }, {
-        Name => 'QualcommDualCamera',
-        Condition => '$$valPt =~ /^Qualcomm Dual Camera Attributes/',
-        SubDirectory => { TagTable => 'Image::ExifTool::Qualcomm::DualCamera' },
-      }, {
         Name => 'InfiRayFactory',
         Condition => '$$self{HasIJPEG}"',
         SubDirectory => { TagTable => 'Image::ExifTool::InfiRay::Factory' },
@@ -206,7 +202,7 @@ sub ProcessJPEG_HDR($$$);
         Groups => { 0 => 'APP6', 1 => 'DJI' },
         Notes => 'DJI Thermal Analysis Tool record',
         ValueConv => 'substr($val,7)',
-      # also seen Motorola APP6 "MMIMETA\0", with sub-types: AL3A,ALED,MMI0,MOTD,QC3A,LMB1
+      # also seen Motorola APP6 "MMIMETA\0", with sub-types: AL3A,ALED,MMI0,MOTD,QC3A
     }],
     APP7 => [{
         Name => 'Pentax',

@@ -4,7 +4,6 @@
 # Description:  Darwin Core XMP tags
 #
 # Revisions:    2013-01-28 - P. Harvey Created
-#               2025-03-09 - Herb forum17172 changes dwc.tdwg.org 2023
 #
 # References:   1) http://rs.tdwg.org/dwc/index.htm
 #               2) https://exiftool.org/forum/index.php/topic,4442.0/all.html
@@ -16,7 +15,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool::XMP;
 
-$VERSION = '1.08';
+$VERSION = '1.07';
 
 my %dateTimeInfo = (
     # NOTE: Do NOT put "Groups" here because Groups hash must not be common!
@@ -36,7 +35,7 @@ my %event = (
     STRUCT_NAME => 'DarwinCore Event',
     NAMESPACE => 'dwc',
     day                 => { Writable => 'integer', Groups => { 2 => 'Time' } },
-    earliestDate        => { %dateTimeInfo, Groups => { 2 => 'Time' } },     # dwc.tdwg.org removed 2023
+    earliestDate        => { %dateTimeInfo, Groups => { 2 => 'Time' } },
     endDayOfYear        => { Writable => 'integer', Groups => { 2 => 'Time' } },
     eventDate           => { %dateTimeInfo, Groups => { 2 => 'Time' } },
     eventID             => { Avoid => 1, Notes => 'avoided in favor of XMP-iptcExt:EventID' },
@@ -64,7 +63,7 @@ my %event = (
     fieldNotes          => { },
     fieldNumber         => { },
     habitat             => { },
-    latestDate          => { %dateTimeInfo, Groups => { 2 => 'Time' } },      # dwc.tdwg.org removed 2023
+    latestDate          => { %dateTimeInfo, Groups => { 2 => 'Time' } },
     month               => { Writable => 'integer', Groups => { 2 => 'Time' } },
     parentEventID       => { },
     samplingEffort      => { },
@@ -74,7 +73,6 @@ my %event = (
     startDayOfYear      => { Writable => 'integer', Groups => { 2 => 'Time' } },
     verbatimEventDate   => { Groups => { 2 => 'Time' } },
     year                => { Writable => 'integer', Groups => { 2 => 'Time' } },
-    eventType           => { },                                               # dwc.tdwg.org added 2023
 );
 
 # Darwin Core tags
@@ -163,7 +161,6 @@ my %event = (
             measurementType             => { },
             measurementUnit             => { },
             measurementValue            => { },
-            parentMeasurementID         => { },          # dwc.tdwg.org added 2023
         },
     },
     Occurrence => {
@@ -173,25 +170,25 @@ my %event = (
             associatedMedia             => { },
             associatedOccurrences       => { },
             associatedReferences        => { },
-            associatedSequences         => { },         # dwc.tdwg.org removed 2023
+            associatedSequences         => { },
             associatedTaxa              => { },
             behavior                    => { },
             catalogNumber               => { },
-            disposition                 => { },         # dwc.tdwg.org removed 2023
+            disposition                 => { },
             establishmentMeans          => { },
             individualCount             => { },
-            individualID                => { },         # dwc.tdwg.org removed 2023
+            individualID                => { },
             lifeStage                   => { },
             occurrenceDetails           => { },
-            occurrenceID                => { },         # dwc.tdwg.org removed 2023
+            occurrenceID                => { },
             occurrenceRemarks           => { },
             occurrenceStatus            => { },
             organismQuantity            => { },
             organismQuantityType        => { },
             otherCatalogNumbers         => { },
             preparations                => { },
-            previousIdentifications     => { },         # dwc.tdwg.org removed 2023
-            recordedBy                  => { },         # dwc.tdwg.org removed 2023
+            previousIdentifications     => { },
+            recordedBy                  => { },
             recordNumber                => { },
             reproductiveCondition       => { },
             sex                         => { },
@@ -200,8 +197,6 @@ my %event = (
             georeferenceVerificationStatus => { },
             pathway                     => { },
             recordedByID                => { },
-            caste                       => { },         # dwc.tdwg.org added 2023
-            vitality                    => { },         # dwc.tdwg.org added 2023
         },
     },
     OccurrenceOccurrenceDetails => { Name => 'OccurrenceDetails', Flat => 1 },
@@ -212,7 +207,7 @@ my %event = (
         Struct => {
             STRUCT_NAME => 'DarwinCore Organism',
             NAMESPACE => 'dwc',
-            associatedOccurrences       => { },          # dwc.tdwg.org removed 2023
+            associatedOccurrences       => { },
             associatedOrganisms         => { },
             organismID                  => { },
             organismName                => { },
@@ -296,12 +291,6 @@ my %event = (
             taxonomicStatus             => { },
             verbatimTaxonRank           => { },
             vernacularName              => { Writable => 'lang-alt' },
-            superFamily                 => { },     # dwc.tdwg.org added 2023 
-            subFamily                   => { },     # dwc.tdwg.org added 2023
-            tribe                       => { },     # dwc.tdwg.org added 2023
-            subTribe                    => { },     # dwc.tdwg.org added 2023
-            genericName                 => { },     # dwc.tdwg.org added 2023
-            infragenericEpithet         => { },     # dwc.tdwg.org added 2023
         },
     },
     TaxonTaxonConceptID => { Name => 'TaxonConceptID',  Flat => 1 },
@@ -332,7 +321,7 @@ my %event = (
             georeferenceProtocol        => { },
             georeferenceRemarks         => { },
             georeferenceSources         => { },
-            georeferenceVerificationStatus => { },      # dwc.tdwg.org removed 2023    
+            georeferenceVerificationStatus => { },
             higherGeography             => { },
             higherGeographyID           => { },
             island                      => { },
