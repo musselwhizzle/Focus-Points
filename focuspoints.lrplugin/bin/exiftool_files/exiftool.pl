@@ -11,9 +11,7 @@ use strict;
 use warnings;
 require 5.004;
 
-my $version = '13.25';
-
-$^W = 1;    # enable global warnings
+my $version = '13.20';
 
 # add our 'lib' directory to the include list BEFORE 'use Image::ExifTool'
 my $exePath;
@@ -1555,11 +1553,10 @@ if ($textOut2) {
         undef $textOut2;
         next;
     }
-    # make sure we can write the output text file before processing all input files
     CreateDirectory($textOut2);  # create directory if necessary
     if ($mt->Open(\*OUTFILE, $textOut2, '>')) {
-        close(\*OUTFILE);
-        unlink($textOut2);  # (this was just a test)
+        $tmpText = $textOut2;   # delete if command aborted
+        $textOut2 = \*OUTFILE;
     } else {
         Error("Error creating $textOut2\n");
         undef $textOut2;
@@ -1973,36 +1970,27 @@ if ($textOut) {
 } else {
     print $sectTrailer if $sectTrailer;
     print $fileTrailer if $fileTrailer and not $fileHeader;
-    # print CSV or SVG output file if necessary
-    my ($fp, $err);
-    if ($textOut2) {
-        if ($mt->Open(\*OUTFILE, $textOut2, '>')) {
-            $fp = \*OUTFILE;
-        } else {
-            Error("Error creating $textOut2\n");
+    # print CSV information if necessary
+    my $err;
+    PrintCSV($textOut2) if $csv and not $isWriting;
+    # print SVG plot
+    if ($plot) {
+        $plot->Draw($textOut2 || \*STDOUT);
+        if ($$plot{Error}) {
+            Error("Error: $$plot{Error}\n");
             $err = 1;
+        } elsif ($$plot{Warn}) {
+            Warn("Warning: $$plot{Warn}\n");
         }
     }
-    unless ($err) {
-        PrintCSV($fp) if $csv and not $isWriting;
-        # print SVG plot
-        if ($plot) {
-            $plot->Draw($fp || \*STDOUT);
-            if ($$plot{Error}) {
-                Error("Error: $$plot{Error}\n");
-                $err = 1;
-            } elsif ($$plot{Warn}) {
-                Warn("Warning: $$plot{Warn}\n");
-            }
-        }
-    }
-    if ($fp) {
-        close($fp) or $err = 1;
+    if ($textOut2) {
+        close($textOut2) or $err = 1;
         if ($err) {
-            $mt->Unlink($textOut2);
+            $mt->Unlink($tmpText);
         } else {
             $created{$textOut2} = 1;
         }
+        undef $tmpText;
     }
 }
 
@@ -4954,7 +4942,7 @@ sub PrintTagList($@)
     my $msg = shift;
     print $msg, ":\n" unless $quiet;
     my $tag;
-    if (($outFormat < 0 or $verbose) and $msg =~ /file extensions$/ and @_) {
+    if ($outFormat < 0 and $msg =~ /file extensions$/ and @_) {
         foreach $tag (@_) {
             printf("  %-11s %s\n", $tag, GetFileType($tag, 1));
         }

@@ -217,9 +217,7 @@ sub ProcessProtobuf($$$;$)
                 } elsif (length($buff) % 4) {
                     $val = '0x' . unpack('H*', $buff);
                 } else {
-                    my $n = length($buff) / 4;
-                    # (do this instead of '(H8)*' because older Perl version didn't support this)
-                    $val = '0x' . join(' ', unpack("(H8)$n", $buff)); # (group in 4-byte blocks)
+                    $val = '0x' . join(' ', unpack('(H8)*', $buff)); # (group in 4-byte blocks)
                 }
                 $val .= $rat if $rat;
             }
