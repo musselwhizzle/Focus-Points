@@ -14,11 +14,13 @@
   limitations under the License.
 --]]
 
-local LrTasks = import 'LrTasks'
-local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
+local LrTasks       = import 'LrTasks'
+local LrFileUtils   = import 'LrFileUtils'
+local LrPathUtils   = import 'LrPathUtils'
 local LrStringUtils = import "LrStringUtils"
+local LrErrors      = import "LrErrors"
 
+require "Utils"
 require "Log"
 
 
@@ -57,7 +59,6 @@ function ExifUtils.getExifCmd(targetPhoto)
     path = string.gsub(path, "'", singleQuoteWrap)
     cmd = "'".. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'"
   end
- Log.logDebug("ExifUtils", "ExifTool command: " .. cmd)
 
   return cmd, metaDataFile
 end
@@ -65,9 +66,18 @@ end
 
 function ExifUtils.readMetaData(targetPhoto)
   local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
-  LrTasks.execute(cmd)
-  local fileInfo = LrFileUtils.readFile(metaDataFile)
-  return fileInfo
+  local rc = LrTasks.execute(cmd)
+  Log.logDebug("ExifUtils", "ExifTool command: " .. cmd)
+  if rc ~= 0 then
+    local errorText = "Unable to read photo metadata (ExifTool rc=" .. rc .. ")"
+    Log.logError("ExifUtils", errorText)
+    errorMessage(errorText)
+    LrErrors.throwUserError("Fatal Error. Plugin execution stopped")
+    -- LrErrors.throwUserError(getPhotoFileName(targetPhoto) .. "\nFATAL error reading metadata (ExifTool rc=" .. rc .. ")")
+  else
+    local fileInfo = LrFileUtils.readFile(metaDataFile)
+    return fileInfo
+  end
 end
 
 
