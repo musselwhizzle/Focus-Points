@@ -63,10 +63,15 @@ end
 --]]
 function FocusPointPrefs.setDisplayScaleFactor()
   local prefs = LrPrefs.prefsForPlugin( nil )
-  if prefs.screenScaling ~= 0 then
-    FocusPointPrefs.displayScaleFactor = prefs.screenScaling
+  if WIN_ENV then
+    if prefs.screenScaling ~= 0 then
+      FocusPointPrefs.displayScaleFactor = prefs.screenScaling
+    else
+      FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
+    end
   else
-    FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
+    -- just to be safe, normally, this branch should never be executed
+    FocusPointPrefs.displayScaleFactor = 1.0
   end
 end
 
@@ -174,9 +179,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
   -- Width of the drop-down lists in px, to make the naming aligned across rows
   local dropDownWidth = LrView.share('-Medium-')
 
-  return {
-    {
-      title = "Screen Scaling (only for Windows)",
+  local scalingSection = {}
+  if WIN_ENV then
+    scalingSection = {
+      title = "Screen Scaling",
       viewFactory:row {
         bind_to_object = prefs,
         spacing = viewFactory:control_spacing(),
@@ -198,7 +204,11 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           title = 'Select "Auto" for same display scale factor as on Windows OS (Display Settings -> Scale)'
         }
       },
-    },
+    }
+  end
+
+  return {
+    scalingSection,
     {
       title = "Viewing Options",
       viewFactory:row {

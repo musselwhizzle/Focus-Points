@@ -53,9 +53,12 @@ local function showDialog()
     -- Initialize logging for non-Auto modes
     if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
 
+    -- Set scale factor for sizing of dialog window
+    if WIN_ENV then
     FocusPointPrefs.setDisplayScaleFactor()
     Log.logInfo("System", "Display scaling level " ..
            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+    end
 
     -- Find the index 'current' of the target photo in set of selectedPhotos
     for i, photo in ipairs(selectedPhotos) do

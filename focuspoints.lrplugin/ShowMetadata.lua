@@ -49,9 +49,13 @@ local function showDialog()
     -- Initialize logging
     Log.initialize()
 
-    FocusPointPrefs.setDisplayScaleFactor()
-    Log.logInfo("System", "Display scaling level " ..
-           math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+    -- Set scale factor for sizing of dialog window
+    if WIN_ENV then
+      FocusPointPrefs.setDisplayScaleFactor()
+      Log.logInfo("System", "Display scaling level " ..
+              math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+    end
+
     Log.logInfo("Metadata", string.rep("=", 72))
     Log.logInfo("Metadata", "Image: " .. targetPhoto:getRawMetadata("path"))
 
