@@ -8,6 +8,8 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 
 For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
 
+<br>
+
 <img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
 
 Current Release
