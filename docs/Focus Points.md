@@ -89,7 +89,7 @@ _Windows_: Click the "Add" button and select the plugin.<br>
 _MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise Click on the „Add“ button and select the plugin.
 
 
-5. Once installed, select one or more photos and invoke the plugin via
+Once installed, select one or more photos and invoke the plugin via
   * Library -> Plug-in Extras -> Show Focus Point, or  
   * File -> Plug-in Extras -> Show Focus Point
 
