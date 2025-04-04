@@ -73,12 +73,27 @@ Other cases where the Focus Points plugin will not be able to display meaningful
 This section explains how the plugin is used.
 
 ### 2.1 Installation
-1. Unless you have been given a special link (e.g. for a pre-release) download the _**source code.zip**_ file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest).
-2. Unzip and rename the extracted folder from "focuspoints.lrdevplugin" to "focuspoints.lrplugin"
-3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step) 
-4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
-5. Once installed, in Library mode with one or multiple photos selected go to "Library -> Plug-in Extras -> Focus Point" 
-   or alternatively (also in Develop mode) "File -> Plug-in Extras -> Focus Point".
+1. Unless you have been given a special link (e.g. for a pre-release) download the **source code.zip** file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of that page to find the download link). A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>
+_MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+
+
+2. If needed, unzip this file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
+
+
+3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
+_MAC users_: if you have to navigate into the content of the „adobe lightroom classic.app", use the control-click and choose  „show package content“. 
+
+
+4. Open Lightroom and go to File -> Plug-in Manager.<br>
+_Windows_: Click the "Add" button and select the plugin.<br>
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise Click on the „Add“ button and select the plugin.
+
+
+5. Once installed, select one or more photos and invoke the plugin via
+  * Library -> Plug-in Extras -> Show Focus Point, or  
+  * File -> Plug-in Extras -> Show Focus Point
+
+<br>
 
 
 ### 2.2 Configuration and Settings

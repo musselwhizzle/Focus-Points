@@ -12,10 +12,10 @@ For details on scope and limitations as well as comprehensive operating instruct
 
 Current Release
 --------
-## V3.0, March 31, 2025
+## V3.0.2, April 4, 2025
 
 ### New features and changes:
- 
+
 * **Improved user interface**
   * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
   * Side-by-side presentation of focus point display and camera settings / focus information to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
@@ -25,23 +25,22 @@ Current Release
   * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
   * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
   * Automatic check for updates [#224](https://github.com/musselwhizzle/Focus-Points/issues/224)
-  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221)
-  
+  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221) 
 
 * **Camera specific improvements to focus point detection and display**
   * Nikon: added full support of Mirrorless and all DSLRs with 39 or more autofocus points  [#203](https://github.com/musselwhizzle/Focus-Points/issues/203), [#208](https://github.com/musselwhizzle/Focus-Points/issues/208),  [#209](https://github.com/musselwhizzle/Focus-Points/issues/209), [#211](https://github.com/musselwhizzle/Focus-Points/issues/211), [#212](https://github.com/musselwhizzle/Focus-Points/issues/212).
-  * Sony: unified implementation for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213). Fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Fixed incorrect position of focus point display of in-camera cropped images (1:1, 4:3, 16:9) [#228](https://github.com/musselwhizzle/Focus-Points/issues/228) 
+  * Sony: unified implementation for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213). Fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Fixed incorrect position of focus point display of in-camera cropped images (1:1, 4:3, 16:9) [#228](https://github.com/musselwhizzle/Focus-Points/issues/228)
   * Face detection frames added for Sony [#222](https://github.com/musselwhizzle/Focus-Points/issues/222), Panasonic [#223](https://github.com/musselwhizzle/Focus-Points/issues/223), Olympus [#219](https://github.com/musselwhizzle/Focus-Points/issues/219), Apple [#218](https://github.com/musselwhizzle/Focus-Points/issues/218). 
   * Face and subjection detection frames added for Fuji [#165](https://github.com/musselwhizzle/Focus-Points/issues/165).
   * Pentax: Fixed a problem that prevented the plugin from recognizing K-3, K-1 and K-1 Mark II [#206](https://github.com/musselwhizzle/Focus-Points/issues/206).
    
+* **Bugfixes**
+  * ExifTool unable to read metadata on MAC [#235](https://github.com/musselwhizzle/Focus-Points/issues/235)
+  * Evaluation of System display scale factor (call to REG.EXE) should not be done on MAC [#240](https://github.com/musselwhizzle/Focus-Points/issues/240)
 
-
-* Includes ExifTool 13.25 (Mar. 11, 2025)
- 
-
-* Comprehensive user documentation
-
+* **Other**
+  * Includes ExifTool 13.25 (Mar. 11, 2025)
+   * Comprehensive user documentation
 
 **Supported cameras:**  
 See below.
@@ -104,13 +103,22 @@ Supported Cameras
 
 <br>
 
-Installing
+Installation
 --------
 **Installation steps**
-1. Download _**source code.zip**_ from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named _**Focus-Points-[plugin version].zip**_ will be downloaded to your computer.
-2. Unzip this file and inside the extracted content locate the folder **focuspoints.lrplugin**
-3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this folder, the Plugin Manager will show you (see next step) 
-4. Open Lightroom and go to File -> Plug-in Manager. Then click the "Add" button and select the folder
+1. Download **source code.zip** from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+
+
+2. If needed, unzip this file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
+
+
+3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
+_MAC users_: if you have to navigate into the content of the „adobe lightroom classic.app", use the control-click and choose  „show package content“. 
+
+
+4. Open Lightroom and go to File -> Plug-in Manager.<br>
+_Windows_: Click the "Add" button and select the plugin.<br>
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise Click on the „Add“ button and select the plugin.
 
 Once installed, select one or more photos and invoke the plugin via
 * Library -> Plug-in Extras -> Show Focus Point, or  
