@@ -1,6 +1,15 @@
 Change history
 =======
 
+## V3.0.2, April 4, 2025
+
+### New features and changes:
+
+* **Bugfixes**
+  * ExifTool unable to read metadata on MAC [#235](https://github.com/musselwhizzle/Focus-Points/issues/235)
+  * Evaluation of System display scale factor (call to REG.EXE) should not be done on MAC [#240](https://github.com/musselwhizzle/Focus-Points/issues/240)
+
+
 ## V3.0, March 31, 2025
 
 ### New features and changes:
