@@ -1,6 +1,14 @@
 Change history
 =======
 
+## V3.0.3, April 6, 2025
+
+### New features and changes:
+
+* **Bugfixes**
+  * Update check results in internal error when remote version.txt file cannot be accessed [#245](https://github.com/musselwhizzle/Focus-Points/issues/245)
+
+
 ## V3.0.2, April 4, 2025
 
 ### New features and changes:
