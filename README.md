@@ -36,7 +36,7 @@ Current Release
   * Face and subjection detection frames added for Fuji [#165](https://github.com/musselwhizzle/Focus-Points/issues/165).
   * Pentax: Fixed a problem that prevented the plugin from recognizing K-3, K-1 and K-1 Mark II [#206](https://github.com/musselwhizzle/Focus-Points/issues/206).
    
-* **Bugfixes**
+* **Bugfixes (on top of 3.0.0)**
   * ExifTool unable to read metadata on MAC [#235](https://github.com/musselwhizzle/Focus-Points/issues/235)
   * Evaluation of System display scale factor (call to REG.EXE) should not be done on MAC [#240](https://github.com/musselwhizzle/Focus-Points/issues/240)
   * Update check results in internal error when remote version.txt file cannot be accessed [#245](https://github.com/musselwhizzle/Focus-Points/issues/245)
