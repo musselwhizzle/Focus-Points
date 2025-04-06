@@ -96,7 +96,10 @@ function FocusPointPrefs.getLatestVersion()
   local prefs = LrPrefs.prefsForPlugin( nil )
   -- Need to execute this as a collaborative task
   LrTasks.startAsyncTask(function()
-    prefs.latestVersion = string.match(LrHttp.get(FocusPointPrefs.latestVersionFile), "v%d+%.%d+%.%d+")
+    local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
+    if latestVersionNumber then
+      prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+")
+    end
   end)
 end
 
