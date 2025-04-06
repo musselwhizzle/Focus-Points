@@ -14,7 +14,7 @@ For details on scope and limitations as well as comprehensive operating instruct
 
 Current Release
 --------
-## V3.0.2, April 4, 2025
+## V3.0.3, April 6, 2025
 
 ### New features and changes:
 
@@ -39,6 +39,7 @@ Current Release
 * **Bugfixes**
   * ExifTool unable to read metadata on MAC [#235](https://github.com/musselwhizzle/Focus-Points/issues/235)
   * Evaluation of System display scale factor (call to REG.EXE) should not be done on MAC [#240](https://github.com/musselwhizzle/Focus-Points/issues/240)
+  * Update check results in internal error when remote version.txt file cannot be accessed [#245](https://github.com/musselwhizzle/Focus-Points/issues/245)
 
 * **Other**
   * Includes ExifTool 13.25 (Mar. 11, 2025)
