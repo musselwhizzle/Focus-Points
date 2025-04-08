@@ -138,7 +138,7 @@ Currently, the following types of AF-points and visualization frames will be dis
 * <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face or subject was detected by the camera at this position
 * <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> Part of the image used by the camera in 'crop mode'.
 
-As different implementations of focus point rendering are required for Windows and macOS, the display of focus points looks different on both operating systems. On macOS, focus points and frames for face/subject detection and crops are indicated by the corners only while on Windows all frames have solid lines. Availabilty of the same method(s) on both platforms (ideally selected by the user) would be desirable, but it's a technical challenge to make the MAC method available on WIN and vice versa.
+As different implementations of focus point rendering are required for Windows and macOS, the display of focus points looks different on both operating systems. On macOS, focus points and frames for face/subject detection and crops are indicated by the corners only while on Windows all frames have solid lines. Availability of the same method(s) on both platforms (ideally selected by the user) would be desirable, but it's a technical challenge to make the MAC method available on WIN and vice versa.
 
 On macOS, the focus point display of title photo looks like this:
 
