@@ -41,7 +41,7 @@ require "Log"
 PentaxDelegates = {}
 
 PentaxDelegates.supportedModels = {
-    "k-1 mark ii", "k-1", "k-3 ii", "k-3", "k-3_relative",
+    "k-1 mark ii", "k-1", "k-3 mark iii", "k-3 ii", "k-3", "k-3_relative",
     "k-5 ii s", "k-5 ii", "k-5",
     "k-7", "k-30", "k-50", "k-70", "k-500",
     "k-r", "k-s1", "k-s2", "k-x",
@@ -53,6 +53,9 @@ PentaxDelegates.supportedModels = {
 PentaxDelegates.focusPointsDetected = false
 
 PentaxDelegates.metaKeyAfInfoSection = "Pentax Version"
+PentaxDelegates.metaKeyFocusMode     = "Focus Mode"
+
+PentaxDelegates.metaValueNA          = "N/A"
 
 function PentaxDelegates.getAfPoints(photo, metaData)
   PentaxDelegates.focusPointsDetected = false
@@ -64,7 +67,11 @@ function PentaxDelegates.getAfPoints(photo, metaData)
     if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
       result = PentaxDelegates.getAfPointsPhase(photo, metaData)
     elseif focusMode[1] == "Contrast-detect" then
-      result = PentaxDelegates.getAfPointsContrast(photo, metaData)
+      if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
+        Log.logError("Pentax", "Decoding of contrast AF information for K-3 III not yet supported by exiftool")
+      else
+        result = PentaxDelegates.getAfPointsContrast(photo, metaData)
+      end
   --[[
     elseif focusMode == "Manual" then
       LrErrors.throwUserError("Manual focus: no useful focusing information found.")
@@ -85,11 +92,15 @@ end
 --]]
 function PentaxDelegates.getAfPointsPhase(photo, metaData)
 
-  local afPointsSelected = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
+  local afPointsSelected = ExifUtils.findFirstMatchingValue(metaData, { "AF Points", "AF Point Selected" })
   if afPointsSelected == nil then
     afPointsSelected = {}
   else
-    afPointsSelected = splitTrim(afPointsSelected, ";") -- pentax separates with ';'
+    if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
+      afPointsSelected = splitTrim(afPointsSelected, ".") -- only for exiftool 13.27 !!
+    else
+      afPointsSelected = splitTrim(afPointsSelected, ";") -- pentax separates with ';'
+    end
     afPointsSelected = PentaxDelegates.fixCenter(afPointsSelected)
   end
   local afPointsInFocus = ExifUtils.findFirstMatchingValue(metaData, { "AF Points In Focus" })
@@ -128,17 +139,27 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     end
 
     local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
-    local isInFocus = arrayKeyOf(afPointsInFocus, key) ~= nil
-    local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
-    if isInFocus and isSelected then
-      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
-      PentaxDelegates.focusPointsDetected = true
-    elseif isInFocus then
-      pointType = DefaultDelegates.POINTTYPE_AF_INFOCUS
-      PentaxDelegates.focusPointsDetected = true
-    elseif isSelected then
-      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
-      PentaxDelegates.focusPointsDetected = true
+    if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
+      -- in this early stage, use custom handling of focus points for this model
+      pointType = DefaultDelegates.POINTTYPE_CROP
+      local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
+      if isSelected then
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
+        PentaxDelegates.focusPointsDetected = true
+      end
+    else
+      local isInFocus = arrayKeyOf(afPointsInFocus, key) ~= nil
+      local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
+      if isInFocus and isSelected then
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
+        PentaxDelegates.focusPointsDetected = true
+      elseif isInFocus then
+        pointType = DefaultDelegates.POINTTYPE_AF_INFOCUS
+        PentaxDelegates.focusPointsDetected = true
+      elseif isSelected then
+        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
+        PentaxDelegates.focusPointsDetected = true
+      end
     end
 
     table.insert(result.points, {
@@ -169,8 +190,14 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
     points = {}
   }
 
-  local contrastAfMode = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
+  local contrastAfMode
+  if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
+    contrastAfMode = ExifUtils.findFirstMatchingValue(metaData, { "AF Points" })
+    contrastAfMode = splitTrim(contrastAfMode, ".") -- only for exiftool 13.27 !!
+  else
+    contrastAfMode = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
     contrastAfMode = splitTrim(contrastAfMode, ";") -- pentax separates with ';'
+  end
   local faceDetectSize = ExifUtils.findFirstMatchingValue(metaData, { "Face Detect Frame Size" })
     faceDetectSize = splitTrim(faceDetectSize, " ")
   local facesDetected = ExifUtils.findFirstMatchingValue(metaData, { "Faces Detected" })
@@ -241,6 +268,53 @@ function PentaxDelegates.fixCenter(points)
   return points
 end
 
+--[[--------------------------------------------------------------------------------------------------------------------
+   Start of section that deals with display of maker specific metadata
+----------------------------------------------------------------------------------------------------------------------]]
+
+--[[
+  @@public table PentaxDelegates.addInfo(string title, string key, table props, table metaData)
+  ----
+  Create view element for adding an item to the info section; creates and populates the corresponding view property
+--]]
+function PentaxDelegates.addInfo(title, key, props, metaData)
+  local f = LrView.osFactory()
+
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
+
+  -- Create and populate property with designated value
+  local function populateInfo(key)
+    local value = ExifUtils.findValue(metaData, key)
+    if not value then
+      props[key] = PentaxDelegates.metaValueNA
+    else
+      props[key] = value
+    end
+  end
+
+  -- Avoid issues with implicite followers that do not exist for all models
+  if not key then return nil end
+
+  -- Create and populate property with designated value
+  populateInfo(key)
+
+  -- Check if there is (meaningful) content to add
+  if props[key] and props[key] ~= PentaxDelegates.metaValueNA then
+    -- compose the row to be added
+    local result = f:row {
+      f:column{f:static_text{title = title .. ":", font="<system>"}},
+      f:spacer{fill_horizontal = 1},
+      f:column{f:static_text{title = props[key], font="<system>"}}
+    }
+    -- add row as composed
+    return result
+  else
+    -- we won't display any "N/A" entries - return empty row
+    return FocusInfo.emptyRow()
+  end
+end
+
 
 --[[
   @@public boolean PentaxDelegates.modelSupported(model)
@@ -284,7 +358,10 @@ function PentaxDelegates.getFocusInfo(photo, props, metaData)
       fill = 1,
       spacing = 2,
       FocusInfo.FocusPointsStatus(PentaxDelegates.focusPointsDetected),
-      f:row {f:static_text {title = "Details not yet implemented", font="<system>"}}
+      PentaxDelegates.addInfo("Focus Mode",                 PentaxDelegates.metaKeyFocusMode,               props, metaData),
+      f:row {f:static_text {title = "", font="<system>"}},
+      f:row {f:static_text {title = "... more entries to be listed here ...", font="<system>"}}
       }
+
   return focusInfo
 end
