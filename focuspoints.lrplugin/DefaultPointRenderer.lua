@@ -307,7 +307,7 @@ end
 -- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
 --]]
 function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
-  local fileRotationStr = ""
+  local fileRotationStr
 
   local function count_substring(text, sub)
     local _, count = text:gsub(sub, "")

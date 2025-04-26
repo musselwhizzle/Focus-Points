@@ -297,7 +297,7 @@ function FocusInfo.createInfoView(photo, props)
 
   local imageInfo, cameraInfo, focusInfo = FocusInfo.getMakerInfo(photo, props)
 
-  local defaultInfo =
+  local infoView =
   f:column{ fill_vertical = 1,
       f:column { fill = 1, spacing = 2,
           f:group_box { title = "Image information:  ", fill = 1, font = "<system/bold>",
@@ -333,5 +333,5 @@ function FocusInfo.createInfoView(photo, props)
       f:spacer { fill_vertical = 100 },
       FocusInfo.pluginStatus(),
   }
-  return defaultInfo
+  return infoView
 end

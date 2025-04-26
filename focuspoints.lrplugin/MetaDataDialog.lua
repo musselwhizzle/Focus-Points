@@ -18,14 +18,11 @@ local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
-local LrPrefs = import 'LrPrefs'
 local LrBinding = import 'LrBinding'
 
 require "Utils"
 require "Log"
 
-
-local prefs = LrPrefs.prefsForPlugin( nil )
 
 function showMetadataDialog(photo, column1, column2, column1Length, column2Length, numLines)
 

@@ -170,8 +170,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
   for key, _ in pairs(afAreaXPositions) do
     local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everything is referenced from the center,
     local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
-    local width = 0
-    local height = 0
+    local width = 0.0
+    local height = 0.0
     if afPointWidths[key] == nil then
       width = afPointWidth * xScale
     else

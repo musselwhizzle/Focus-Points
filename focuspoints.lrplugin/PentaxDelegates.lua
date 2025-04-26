@@ -31,8 +31,7 @@
   2017.03.29 - roguephysicist: works for Pentax K-50 with both phase and contrast detection
 --]]
 
-local LrErrors = import 'LrErrors'
-local LrView = import "LrView"
+local LrView   = import "LrView"
 
 require "Utils"
 require "Log"
@@ -40,39 +39,63 @@ require "Log"
 
 PentaxDelegates = {}
 
+PentaxDelegates.K3iii = "pentax k3 mark iii"
+
 PentaxDelegates.supportedModels = {
-    "k-1 mark ii", "k-1", "k-3 mark iii", "k-3 ii", "k-3", "k-3_relative",
+    "k-1 mark ii", "k-1", "k-3 mark iii", "k-3 ii", "k-3", "kp",
     "k-5 ii s", "k-5 ii", "k-5",
     "k-7", "k-30", "k-50", "k-70", "k-500",
-    "k-r", "k-s1", "k-s2", "k-x",
-    "k10d", "k20d", "k100d super", "k100d",
-    "k110d", "k200d", "kp",
+    "k-r", "k-s1", "k-s2", "k-x", "k-01",
+    "k10d", "k20d", "k100d super", "k100d", "k110d", "k200d",
     "_a_ist d", "_a_ist ds", "_a_ist ds2"
 }
 
+PentaxDelegates.prioritizedModels = {
+    "k-1 mark ii", "k-1", "k-3 mark iii", "k-3 ii", "k-3", "kp"
+}
+
+-- To trigger display whether focus points have been detected or not
 PentaxDelegates.focusPointsDetected = false
 
-PentaxDelegates.metaKeyAfInfoSection = "Pentax Version"
-PentaxDelegates.metaKeyFocusMode     = "Focus Mode"
+-- Tag which indicates that makernotes / AF section is present
+PentaxDelegates.metaKeyAfInfoSection        = "Pentax Version"
 
+-- AF relevant tags
+PentaxDelegates.metaKeyFocusMode            = "Focus Mode"
+PentaxDelegates.metaKeyContrastDetect       = "Contrast-detect"
+PentaxDelegates.metaKeyAfPointsSelected     = "AF Points Selected"
+PentaxDelegates.metaKeyAfPointSelected      = "AF Point Selected"
+PentaxDelegates.metaKeyAfPoints             = "AF Points"
+PentaxDelegates.metaKeyAfPointsInFocus      = "AF Points In Focus"
+PentaxDelegates.metaKeyContrastDetectAfArea = "Contrast Detect AF Area"
+PentaxDelegates.metaKeyFaceDetectFrameSize  = "Face Detect Frame Size"
+PentaxDelegates.metaKeyFacesDetected        = "Faces Detected"
+
+-- Image and Camera Settings relevant tags
+PentaxDelegates.metaKeyExposureProgram      = "Exposure Program"
+PentaxDelegates.metaKeyPictureMode          = "Picture Mode"
+PentaxDelegates.metaKeyDriveMode            = "Drive Mode"
+PentaxDelegates.metaKeyShakeReduction       = "Shake Reduction"
+
+-- relevant metadata values
 PentaxDelegates.metaValueNA          = "N/A"
 
 function PentaxDelegates.getAfPoints(photo, metaData)
   PentaxDelegates.focusPointsDetected = false
 
   local result
-  local focusMode = splitTrim(ExifUtils.findValue(metaData, "Focus Mode"), " ")
+  local focusMode = splitTrim(ExifUtils.findValue(metaData, PentaxDelegates.metaKeyFocusMode), " ")
 
   if focusMode then
     if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
       result = PentaxDelegates.getAfPointsPhase(photo, metaData)
     elseif focusMode[1] == "Contrast-detect" then
-      if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
+      if DefaultDelegates.cameraModel == PentaxDelegates.K3iii then
         Log.logError("Pentax", "Decoding of contrast AF information for K-3 III not yet supported by exiftool")
       else
         result = PentaxDelegates.getAfPointsContrast(photo, metaData)
       end
-  --[[
+  --[[ #TODO which other modes can occur ??? And how to respond to this?
     elseif focusMode == "Manual" then
       LrErrors.throwUserError("Manual focus: no useful focusing information found.")
     else
@@ -92,22 +115,43 @@ end
 --]]
 function PentaxDelegates.getAfPointsPhase(photo, metaData)
 
-  local afPointsSelected = ExifUtils.findFirstMatchingValue(metaData, { "AF Points", "AF Point Selected" })
+  local afPointsSelected, afPointSelected
+  if DefaultDelegates.cameraModel == "pentax k-1"
+  or DefaultDelegates.cameraModel == "pentax k-1 mark ii" then
+    afPointsSelected = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyAfPointsSelected)
+  elseif DefaultDelegates.cameraModel == PentaxDelegates.K3iii then
+    afPointsSelected = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyAfPoints)
+  else
+    afPointSelected = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyAfPointSelected)
+  end
+
+  -- AFPointsSelected: list of user selected focus points for K-1 and K-3 (incl. 'mark' versions)
   if afPointsSelected == nil then
     afPointsSelected = {}
   else
-    if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
+    if DefaultDelegates.cameraModel == PentaxDelegates.K3iii then
       afPointsSelected = splitTrim(afPointsSelected, ".") -- only for exiftool 13.27 !!
     else
-      afPointsSelected = splitTrim(afPointsSelected, ";") -- pentax separates with ';'
+      afPointsSelected = splitTrim(afPointsSelected, ",") -- comma separated!
     end
     afPointsSelected = PentaxDelegates.fixCenter(afPointsSelected)
   end
-  local afPointsInFocus = ExifUtils.findFirstMatchingValue(metaData, { "AF Points In Focus" })
+
+  -- AFPointSelected: list of user selected focus points for all models except K-1 and K-3
+  -- #TODO Check if this short list really covers all AF modes!
+  if afPointSelected == nil then
+    afPointSelected = {}
+  else
+    afPointSelected = splitTrim(afPointSelected, ";") -- semicolon separated
+    afPointSelected = PentaxDelegates.fixCenter(afPointSelected)
+  end
+
+  -- AFPointsInFocus: list of focus points used by the camera to focus the image
+  local afPointsInFocus = ExifUtils.findValue(metaData,PentaxDelegates.metaKeyAfPointsInFocus)
   if afPointsInFocus == nil then
     afPointsInFocus = {}
   else
-    afPointsInFocus = splitTrim(afPointsInFocus, ",")
+    afPointsInFocus = splitTrim(afPointsInFocus, ",") -- comma separated!
     afPointsInFocus = PentaxDelegates.fixCenter(afPointsInFocus)
   end
 
@@ -116,15 +160,28 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     points = {}
   }
 
-  local focusPointsMap, focusPointDimens = PointsUtils.readIntoTable(DefaultDelegates.cameraMake,
-                                                           DefaultDelegates.cameraModel .. ".txt")
+  -- Read coordinates of focus points and dimensions of full size image
+  local focusPointsMap, focusPointDimens, fullSizeDimens = PointsUtils.readIntoTable(
+          DefaultDelegates.cameraMake,DefaultDelegates.cameraModel .. ".txt")
 
   if (focusPointsMap == nil) then
-    -- model not supported
+    -- model not supported #TODO Can we ever get there?
     return
   end
 
-  for key,value in pairs(focusPointsMap) do
+  -- Calculate scaling factors that are required in case the image is a JPG OOC in low resolution
+  local xScale, yScale
+  if #fullSizeDimens ~= 0 then  -- #TODO can be removed once all mapping files have been updated to new format!
+    local imageWidth, imageHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+    xScale = imageWidth  / fullSizeDimens[1]
+    yScale = imageHeight / fullSizeDimens[2]
+  else
+    xScale = 1
+    yScale = 1
+  end
+
+  -- Loop over all sensor focus points and mark them for rendering insert them according to their status
+  for key, _value in pairs(focusPointsMap) do
     local pointsMap = focusPointsMap[key]
     local x = pointsMap[1]
     local y = pointsMap[2]
@@ -139,8 +196,8 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
     end
 
     local pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
-    if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
-      -- in this early stage, use custom handling of focus points for this model
+    if DefaultDelegates.cameraModel == PentaxDelegates.K3iii then
+      -- #TODO in this early stage, use custom handling of focus points for this model
       pointType = DefaultDelegates.POINTTYPE_CROP
       local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
       if isSelected then
@@ -148,13 +205,14 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
         PentaxDelegates.focusPointsDetected = true
       end
     else
-      local isInFocus = arrayKeyOf(afPointsInFocus, key) ~= nil
-      local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil
+      local isInFocus  = arrayKeyOf(afPointsInFocus, key) ~= nil
+      local isSelected = arrayKeyOf(afPointsSelected, key) ~= nil or
+                         arrayKeyOf(afPointSelected, key) ~= nil
       if isInFocus and isSelected then
-        pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
         PentaxDelegates.focusPointsDetected = true
       elseif isInFocus then
-        pointType = DefaultDelegates.POINTTYPE_AF_INFOCUS
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
         PentaxDelegates.focusPointsDetected = true
       elseif isSelected then
         pointType = DefaultDelegates.POINTTYPE_AF_SELECTED
@@ -162,12 +220,13 @@ function PentaxDelegates.getAfPointsPhase(photo, metaData)
       end
     end
 
+    -- Insert the focus point in the table used for rendering
     table.insert(result.points, {
       pointType = pointType,
-      x = x,
-      y = y,
-      width = width,
-      height = height
+      x = x * xScale,
+      y = y * yScale,
+      width = width * xScale,
+      height = height * yScale
     })
 
   end
@@ -179,45 +238,50 @@ end
   liveview mode returns typical points table
 --]]
 function PentaxDelegates.getAfPointsContrast(photo, metaData)
-  -- local imageSize = ExifUtils.findFirstMatchingValue(metaData, { "Default Crop Size" })
-  -- imageSize = splitTrim(imageSize, " ")
-    -- Can image size be obtained from lightroom directly? Or is accessing the metadata faster?
-    -- !!! DefaultCropSize not found in most test files !?!?
-  local w, h = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  local imageSize = {w, h}
+
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {}
   }
 
-  local contrastAfMode
-  if DefaultDelegates.cameraModel == "pentax k-3 mark iii" then
-    contrastAfMode = ExifUtils.findFirstMatchingValue(metaData, { "AF Points" })
-    contrastAfMode = splitTrim(contrastAfMode, ".") -- only for exiftool 13.27 !!
-  else
-    contrastAfMode = ExifUtils.findFirstMatchingValue(metaData, { "AF Point Selected" })
-    contrastAfMode = splitTrim(contrastAfMode, ";") -- pentax separates with ';'
-  end
-  local faceDetectSize = ExifUtils.findFirstMatchingValue(metaData, { "Face Detect Frame Size" })
-    faceDetectSize = splitTrim(faceDetectSize, " ")
-  local facesDetected = ExifUtils.findFirstMatchingValue(metaData, { "Faces Detected" })
+  -- make sure imageSize dimensions are in horizontal shotOrientation and thus
+  -- same as FaceDetectArea and ContrastDetectArea
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local imageSize = {orgPhotoWidth, orgPhotoHeight}
+
+  -- ContrastDetectAFArea gives the relevant area of contrast AF, related to FaceDetectFrameSize
+  local contrastDetectArea = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyContrastDetectAfArea)
+  if contrastDetectArea then contrastDetectArea = splitTrim(contrastDetectArea, " ") end
+
+  local faceDetectSize = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyFaceDetectFrameSize)
+  if faceDetectSize then faceDetectSize = splitTrim(faceDetectSize, " ") end
+
+  -- Have any faces been detected?
+  local facesDetected = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyFacesDetected)
+  if facesDetected then
     facesDetected = tonumber(facesDetected)
+  else
+    facesDetected = 0
+  end
 
-  if contrastAfMode then
-    if (contrastAfMode[1] == "Face Detect AF" and facesDetected > 0) then
--- #FIXME   or (contrastAfMode[1] == "Auto"           and facesDetected > 0)then
-      local faces = {}
-      for face=1,facesDetected do
-        local facePosition = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Position" })
-          facePosition = splitTrim(facePosition, " ")
-        local faceSize = ExifUtils.findFirstMatchingValue(metaData, { "Face " .. face .. " Size" })
-          faceSize = splitTrim(faceSize, " ")
-        faces[face] = {facePosition, faceSize}
+  if facesDetected > 0 and faceDetectSize then
+  -- #TODO this needs more testing - based on more test images!
+    local faces = {}
+    for f=1, facesDetected do
 
-        local afAreaXPosition = faces[face][1][1]*imageSize[1]/faceDetectSize[1]
-        local afAreaYPosition = faces[face][1][2]*imageSize[2]/faceDetectSize[2]
-        local afAreaWidth = faces[face][2][1]*imageSize[1]/faceDetectSize[1]
-        local afAreaHeight = faces[face][2][2]*imageSize[2]/faceDetectSize[2]
+      local facePosition = ExifUtils.findValue(metaData, "Face " .. f .. " Position")
+      local faceSize     = ExifUtils.findValue(metaData, "Face " .. f .. " Size")
+
+      if facePosition and faceSize then
+        facePosition = splitTrim(facePosition, " ")
+        faceSize = splitTrim(faceSize, " ")
+        faces[f] = {facePosition, faceSize}
+
+        -- Calculate px coordinates for full size image
+        local afAreaXPosition = faces[f][1][1] * imageSize[1] / faceDetectSize[1]
+        local afAreaYPosition = faces[f][1][2] * imageSize[2] / faceDetectSize[2]
+        local afAreaWidth     = faces[f][2][1] * imageSize[1] / faceDetectSize[1]
+        local afAreaHeight    = faces[f][2][2] * imageSize[2] / faceDetectSize[2]
 
         PentaxDelegates.focusPointsDetected = true
         if afAreaWidth > 0 and afAreaHeight > 0 then
@@ -229,29 +293,32 @@ function PentaxDelegates.getAfPointsContrast(photo, metaData)
             height = afAreaHeight
           })
         end
+      else
+        Log.logError("Pentax", string.format(
+          "Inconsistent face detect information. Tags 'Face % Position' and/or 'Face % Size'  missing or empty",
+          f, f))
+       return result
       end
-    elseif (contrastAfMode[1] == "Face Detect AF" and facesDetected == 0) then
-      LrErrors.throwUserError(getPhotoFileName(photo) .. "Face Detect AF mode enabled, but no faces detected.")
-    else -- 'Automatic Tracking AF', 'Fixed Center', 'AF Select'
-      local contrastDetectArea = ExifUtils.findFirstMatchingValue(metaData, { "Contrast Detect AF Area" })
-        contrastDetectArea = splitTrim(contrastDetectArea, " ")
+    end
 
-      local afAreaXPosition = (contrastDetectArea[1]+0.5*contrastDetectArea[3])*imageSize[1]/faceDetectSize[1]
-      local afAreaYPosition = (contrastDetectArea[2]+0.5*contrastDetectArea[4])*imageSize[2]/faceDetectSize[2]
-      local afAreaWidth = contrastDetectArea[3]*imageSize[1]/faceDetectSize[1]
-      local afAreaHeight = contrastDetectArea[4]*imageSize[2]/faceDetectSize[2]
+  elseif contrastDetectArea then
 
-      if (afAreaWidth ~= 0) and (afAreaHeight ~= 0) then
-        PentaxDelegates.focusPointsDetected = true
-        if afAreaWidth > 0 and afAreaHeight > 0 then
-          table.insert(result.points, {
-            pointType = DefaultDelegates.POINTTYPE_FACE,
-            x = afAreaXPosition,
-            y = afAreaYPosition,
-            width = afAreaWidth,
-            height = afAreaHeight
-          })
-        end
+    -- scale contrast AF area
+    local afAreaXPosition = (contrastDetectArea[1]+0.5*contrastDetectArea[3])*imageSize[1]/faceDetectSize[1]
+    local afAreaYPosition = (contrastDetectArea[2]+0.5*contrastDetectArea[4])*imageSize[2]/faceDetectSize[2]
+    local afAreaWidth = contrastDetectArea[3]*imageSize[1]/faceDetectSize[1]
+    local afAreaHeight = contrastDetectArea[4]*imageSize[2]/faceDetectSize[2]
+
+    if (afAreaWidth ~= 0) and (afAreaHeight ~= 0) then
+      PentaxDelegates.focusPointsDetected = true
+      if afAreaWidth > 0 and afAreaHeight > 0 then
+        table.insert(result.points, {
+          pointType = DefaultDelegates.POINTTYPE_FACE,
+          x = afAreaXPosition,
+          y = afAreaYPosition,
+          width = afAreaWidth,
+          height = afAreaHeight
+        })
       end
     end
   end
@@ -280,14 +347,39 @@ end
 function PentaxDelegates.addInfo(title, key, props, metaData)
   local f = LrView.osFactory()
 
+  local function escape(text)
+    if text then
+      return string.gsub(text, "&", "&&")
+    else
+      return nil
+    end
+  end
+
   -- Avoid issues with implicite followers that do not exist for all models
   if not key then return nil end
 
-  -- Create and populate property with designated value
+  -- Creates and populates the property corresponding to metadata key
   local function populateInfo(key)
-    local value = ExifUtils.findValue(metaData, key)
+  local value = ExifUtils.findValue(metaData, key)
+
     if not value then
       props[key] = PentaxDelegates.metaValueNA
+
+    elseif (key == PentaxDelegates.metaKeyAfPointSelected)
+    and PentaxDelegates.modelPrioritized(DefaultDelegates.cameraModel) then
+      props[key] = PentaxDelegates.focusingArea(value)
+
+    elseif (key == PentaxDelegates.metaKeyPictureMode) then
+      -- Extract 'mode' part of PictureMode tag by removing the trailing 'EV steps' portion
+      local pictureMode = splitTrim(value,  ";")
+      local exposureProgram = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyExposureProgram)
+      if string.lower(pictureMode[1]) ~= string.lower(exposureProgram) then
+        props[key] = escape(pictureMode[1])
+      else
+        -- in case PictureMode is a duplicate of ExposureProgram we skip this entry
+        props[key] = PentaxDelegates.metaValueNA
+      end
+
     else
       props[key] = value
     end
@@ -300,19 +392,54 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= PentaxDelegates.metaValueNA then
-    -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = props[key], font="<system>"}}
-    }
-    -- add row as composed
-    return result
-  else
+  if props[key] and props[key] == PentaxDelegates.metaValueNA then
     -- we won't display any "N/A" entries - return empty row
     return FocusInfo.emptyRow()
   end
+
+  -- compose the row to be added
+  local result = f:row {
+    f:column{f:static_text{title = title .. ":", font="<system>"}},
+    f:spacer{fill_horizontal = 1},
+    f:column{f:static_text{title = props[key], font="<system>"}}
+  }
+  -- add row as composed
+  return result
+
+end
+
+
+--[[
+  @@public string PentaxDelegates.focusingArea(AFPointSelected)
+  ----
+  Determines the focusing area (or AF active area) from AFPointSelected tag
+  according to the terminology of Pentax user manuals for K-1, K-3 and KP models
+--]]
+function PentaxDelegates.focusingArea(AFPointSelected)
+
+  local value = splitTrim(AFPointSelected,  ";")
+  local model = DefaultDelegates.cameraModel
+  local result
+
+  if value then
+    -- Parse possible values of 'AFPointSelected' according to https://exiftool.org/TagNames/Pentax.html
+    if     value[1] == "AF Select" then                    result = "Live View Select"
+    elseif value[1] == "Face Detect af" then               result = "Face Detection"
+    elseif value[1] == "Automatic Tracking af" then        result = "Tracking"
+    elseif value[1] == "Fixed Center" then                 result = "Spot (Center)"
+    elseif value[1] == "Auto" then                         result = "Auto (All Points)"
+    elseif value[1] == "None" then                         result = "None"
+    elseif string.find(value[1], "Zone Select") then
+      if model == PentaxDelegates.K3iii then               result = "Zone Select (21-point)"
+      else                                                 result = "Zone Select (9-point)" end
+    elseif #value == 2 and value[2] ~= "Single Point" then result = value[2]
+    else
+      result = "Select (1-point)"
+    end
+  else
+    result = "Undefined"
+  end
+  return result
 end
 
 
@@ -329,6 +456,40 @@ function PentaxDelegates.modelSupported(currentModel)
     end
   end
   return false
+end
+
+--[[
+  @@public boolean PentaxDelegates.modelPrioritized(model)
+  ----
+  Checks whether the camera model is prioritized or not
+--]]
+function PentaxDelegates.modelPrioritized(currentModel)
+  local m = string.match(string.lower(currentModel), "pentax (.+)")
+  for _, model in ipairs(PentaxDelegates.prioritizedModels) do
+    if m == model then
+      return true
+    end
+  end
+  return false
+end
+
+
+--[[
+  @@public table function PentaxDelegates.getCameraInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  -- if any, otherwise return an empty column
+--]]
+function PentaxDelegates.getCameraInfo(photo, props, metaData)
+  local f = LrView.osFactory()
+  local cameraInfo
+  -- append maker specific entries to the "Camera Settings" section
+  cameraInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    PentaxDelegates.addInfo("Picture Mode"           , PentaxDelegates.metaKeyPictureMode          , props, metaData),
+    PentaxDelegates.addInfo("Shake Reduction"        , PentaxDelegates.metaKeyShakeReduction       , props, metaData),
+  }
+  return cameraInfo
 end
 
 
@@ -359,6 +520,7 @@ function PentaxDelegates.getFocusInfo(photo, props, metaData)
       spacing = 2,
       FocusInfo.FocusPointsStatus(PentaxDelegates.focusPointsDetected),
       PentaxDelegates.addInfo("Focus Mode",                 PentaxDelegates.metaKeyFocusMode,               props, metaData),
+      PentaxDelegates.addInfo("Focusing Area",              PentaxDelegates.metaKeyAfPointSelected,         props, metaData),
       f:row {f:static_text {title = "", font="<system>"}},
       f:row {f:static_text {title = "... more entries to be listed here ...", font="<system>"}}
       }

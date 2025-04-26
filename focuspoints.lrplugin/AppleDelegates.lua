@@ -100,26 +100,37 @@ function AppleDelegates.getAfPoints(photo, metaData)
           AppleDelegates.metaKeySubjectArea, subjectAreaStr))
 
       local subjectArea = split(subjectAreaStr, ", ")
-      local x = subjectArea[1] * xScale
-      local y = subjectArea[2] * yScale
-      local w = subjectArea[3] * xScale
-      local h = subjectArea[4] * yScale
+      if subjectArea and #subjectArea == 4 then
+        local x = subjectArea[1] * xScale
+        local y = subjectArea[2] * yScale
+        local w = subjectArea[3] * xScale
+        local h = subjectArea[4] * yScale
 
-      if w > 0 and h > 0 then
-        table.insert(result.points, {
+        if w > 0 and h > 0 then
+          table.insert(result.points, {
             pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
             x = x,
             y = y,
             width = w,
             height = h
           })
+
+          Log.logInfo("Apple",
+            string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+            math.floor(x), math.floor(y), math.floor(w), math.floor(h)))
+
+          AppleDelegates.focusPointsDetected = true
+
+        else
+          Log.logWarn("Apple",
+           string.format("Unexpected format for '%s' tag: %s",
+           AppleDelegates.metaKeySubjectArea, subjectAreaStr))
+        end
+      else
+        Log.logWarn("Apple",
+          string.format("Unexpected format for '%s' tag: %s",
+          AppleDelegates.metaKeySubjectArea, subjectAreaStr))
       end
-
-      Log.logInfo("Apple",
-        string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
-        math.floor(x), math.floor(y), math.floor(w), math.floor(h)))
-
-      AppleDelegates.focusPointsDetected = true
     else
       Log.logWarn("Apple",
         string.format("'%s' tag not found.", AppleDelegates.metaKeySubjectArea))

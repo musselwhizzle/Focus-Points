@@ -220,7 +220,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
 
   -- Creates and populates the property corresponding to metadata key
   local function populateInfo(key)
-    local value = ExifUtils.findValue(metaData, key)
+  local value = ExifUtils.findValue(metaData, key)
 
     if not value then
       props[key] = OlympusDelegates.metaValueNA
@@ -282,7 +282,7 @@ end
 function OlympusDelegates.getFocusMode(focusModeValue)
 
   local f = splitTrim(focusModeValue:gsub(", Imager AF", ""), ";,")
-  if #f > 1 then
+  if f and #f > 1 then
     local m = f[2]
     if (m == "MF") then
       --MF

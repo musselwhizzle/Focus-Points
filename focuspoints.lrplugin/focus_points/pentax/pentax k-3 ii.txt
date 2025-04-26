@@ -7,6 +7,9 @@
 -- point dimensions
 focusPointDimens = {150, 150}
 
+-- full size image dimensions
+fullSizeDimens = {6016, 4000}
+
 -- top row
 Top-left = {2118,1352}
 Top Near-left = {2563,1352}

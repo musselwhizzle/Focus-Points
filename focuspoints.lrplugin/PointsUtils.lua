@@ -45,6 +45,7 @@ end
 function PointsUtils.readIntoTable(folder, filename)
   local focusPoints = {}
   local focusPointDimens = {}
+  local fullSizeDimens = {}
   local data = PointsUtils.readFromFile(folder, filename)
   if (data == nil) then return nil end
   for i in string.gmatch(data, "[^\\\n]+") do
@@ -84,11 +85,14 @@ function PointsUtils.readIntoTable(folder, filename)
 
         if (pointName == "focusPointDimens") then
           focusPointDimens = points
+        elseif (pointName == "fullSizeDimens") then
+          fullSizeDimens = points
         else
           focusPoints[pointName] = points
         end
+
       end
     end
   end
-  return focusPoints, focusPointDimens
+  return focusPoints, focusPointDimens, fullSizeDimens
 end

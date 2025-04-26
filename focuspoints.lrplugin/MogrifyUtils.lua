@@ -102,7 +102,7 @@ end
 local function exportToDisk(photo, xSize, ySize)
   local done = false
   local orgPath = photo:getRawMetadata("path")
-  local thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, errorMsg)
+  local _thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, _errorMsg)
     if data == nil then
       Log.logError('Mogrify', 'No thumbnail data')
       LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error: Lightroom preview not available.")
@@ -128,7 +128,10 @@ local function exportToDisk(photo, xSize, ySize)
   end)
   if not done then
   -- busy wait for (asynchronous) callback to complete
-    while not done do LrTasks.sleep (0.2) end
+    while not done do
+      Log.logInfo('Mogrify', "not done - sleeping")
+      LrTasks.sleep (0.2)
+    end
   end
 end
 
@@ -251,7 +254,7 @@ end
 function createMagickScript(params)
   local scriptName = getTempFileName()
 
-  local success, errorCode = pcall(function()
+  local success, _errorCode = pcall(function()
     local file = io.open(scriptName, "w")
     file:write('-read \"' .. fileName .. '\"', "\n")
     file:write(params, "\n")
@@ -271,7 +274,7 @@ end
 --]]
 function MogrifyUtils.cleanup()
   if LrFileUtils.exists(fileName) then
-    local resultOK, errorMsg = LrFileUtils.delete( fileName )
+    local _resultOK, errorMsg = LrFileUtils.delete( fileName )
     if errorMsg ~= nil then
       Log.logWarn('Mogrify', "Error deleting script file " .. scriptName .. ": " .. errorMsg)
     end

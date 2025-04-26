@@ -34,9 +34,6 @@ require "ExifUtils"
 require "Log"
 
 
-
-local LrErrors = import 'LrErrors'
-
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
@@ -141,7 +138,7 @@ function PointsRendererFactory.createRenderer(photo)
   elseif (cameraMake == "pentax") then
     DefaultPointRenderer.funcGetAfPoints   = PentaxDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
+    DefaultPointRenderer.funcGetCameraInfo = PentaxDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo  = PentaxDelegates.getFocusInfo
 
   else

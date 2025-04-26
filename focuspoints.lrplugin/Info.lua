@@ -19,7 +19,7 @@ return {
   LrSdkMinimumVersion = 5.0,
 
 	LrToolkitIdentifier = 'com.thewhizzbang.focuspoint',
-	LrPluginName = "Focus Point Viewer (Develop)",
+	LrPluginName = "Focus Point Viewer",
 
 	LrLibraryMenuItems = {
     {
@@ -51,7 +51,7 @@ return {
     },
   },
 
-	VERSION = { major=3, minor=1, revision=0, build=" Pentax PRE" },
+	VERSION = { major=3, minor=1, revision=0, build=" Pentax PRE 2" },
 
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 

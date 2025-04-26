@@ -157,7 +157,7 @@ end
   @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table viewFactory, p )
   -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
 --]]
-function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
+function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
   -- Set the defaults

@@ -38,7 +38,7 @@ local function showDialog()
 
 --  Debug.pauseIfAsked()
 
-  LrFunctionContext.callWithContext("showDialog", function(context)
+  LrFunctionContext.callWithContext("showDialog", function(_context)
 
     local catalog = LrApplication.activeCatalog()
     local targetPhoto = catalog:getTargetPhoto()
@@ -60,10 +60,10 @@ local function showDialog()
     Log.logInfo("Metadata", "Image: " .. targetPhoto:getRawMetadata("path"))
 
 
-    LrTasks.startAsyncTask(function(context)
+    LrTasks.startAsyncTask(function(_context)
       --https://forums.adobe.com/thread/359790
 
-      LrFunctionContext.callWithContext("function", function(dialogContext)
+      LrFunctionContext.callWithContext("function", function(_dialogContext)
         local column1, column2, column1Length, column2Length, numLines
 
           LrFunctionContext.callWithContext("function2", function(dialogContext2)

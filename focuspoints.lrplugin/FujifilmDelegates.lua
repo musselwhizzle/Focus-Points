@@ -86,9 +86,12 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     return nil
   end
 
+  local x, y
   local values = split(focusPoint, " ")
-  local x = LrStringUtils.trimWhitespace(values[1])
-  local y = LrStringUtils.trimWhitespace(values[2])
+  if values then
+    x = LrStringUtils.trimWhitespace(values[1])
+    y = LrStringUtils.trimWhitespace(values[2])
+  end
   if x == nil or y == nil then
     Log.logError("Fujifilm", "Error at extracting x/y positions from focus point tag")
     return nil
@@ -120,19 +123,21 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FacesPositions)
     if coordinatesStr ~= nil then
       local coordinatesTable = split(coordinatesStr, " ")
-      for i=1, detectedFaces, 1 do
-        local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
-        local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
-        local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
-        local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
-        Log.logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
-        table.insert(result.points, {
-          pointType = DefaultDelegates.POINTTYPE_FACE,
-          x = (x1 + x2) / 2,
-          y = (y1 + y2) / 2,
-          width = math.abs(x1 - x2),
-          height = math.abs(y1 - y2)
-        })
+      if coordinatesTable then
+        for i=1, detectedFaces, 1 do
+          local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
+          local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
+          local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
+          local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
+          Log.logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+          table.insert(result.points, {
+            pointType = DefaultDelegates.POINTTYPE_FACE,
+            x = (x1 + x2) / 2,
+            y = (y1 + y2) / 2,
+            width = math.abs(x1 - x2),
+            height = math.abs(y1 - y2)
+          })
+        end
       end
     end
   end
