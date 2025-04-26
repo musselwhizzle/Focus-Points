@@ -39,7 +39,7 @@ require "Log"
 
 PentaxDelegates = {}
 
-PentaxDelegates.K3iii = "pentax k3 mark iii"
+PentaxDelegates.K3iii = "pentax k-3 mark iii"
 
 PentaxDelegates.supportedModels = {
     "k-1 mark ii", "k-1", "k-3 mark iii", "k-3 ii", "k-3", "kp",
