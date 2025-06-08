@@ -75,8 +75,7 @@ local function showDialog()
               functionContext = dialogContext2,
             }
             dialogScope:setIndeterminate()
-
-            local metaData = ExifUtils.readMetaData(targetPhoto)
+            local metaData = ExifUtils.readMetaData(targetPhoto, FocusPointPrefs.getTagOptions())
             metaData = ExifUtils.filterInput(metaData)
             column1, column2, column1Length, column2Length, numLines = splitForColumns(metaData)
 
