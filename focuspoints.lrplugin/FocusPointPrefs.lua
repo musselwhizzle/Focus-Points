@@ -42,7 +42,6 @@ FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
-
 --[[
   @@public void FocusPointPrefs.InitializePrefs()
   ----
@@ -53,6 +52,9 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
   if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
+  if not prefs.tagLang            then	prefs.tagLang         = "" end
+  if not prefs.tagFormat          then	prefs.tagFormat       = "" end
+  if not prefs.tagGroups          then	prefs.tagGroups       = "" end
   if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
   -- get the latest plugin version for update checks
   FocusPointPrefs.getLatestVersion()
@@ -85,6 +87,13 @@ function FocusPointPrefs.getDisplayScaleFactor()
   return FocusPointPrefs.displayScaleFactor
 end
 
+
+--[[ #TODO Documentation!
+--]]
+function FocusPointPrefs.getTagOptions()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  return prefs.tagLang .. " " .. prefs.tagFormat .. " " .. prefs.tagGroups
+end
 
 --[[
   @@public void FocusPointPrefs.getLatestVersion()
@@ -245,6 +254,79 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
         },
         viewFactory:static_text {
           title = "  Size of focus box for 'focus pixel' points ",
+        },
+      },
+    },
+    {
+      title = "Metadata Tag Options",
+      viewFactory:row {
+        bind_to_object = prefs,
+        spacing = viewFactory:control_spacing(),
+        viewFactory:popup_menu {
+          title = "tagLang",
+          value = bind ("tagLang"),
+          width = dropDownWidth,
+          items = {
+            { title = "English", value = "" },
+            { title = "Czech", value = "-lang cs" },
+            { title = "German", value = "-lang de" },
+            { title = "Canadian English", value = "-lang en_ca" },
+            { title = "British English", value = "-lang en_gb" },
+            { title = "Spanish", value = "-lang es" },
+            { title = "Finnish", value = "-lang fi" },
+            { title = "French", value = "-lang fr" },
+            { title = "Italian", value = "-lang it" },
+            { title = "Japanese", value = "-lang ja" },
+            { title = "Korean", value = "-lang ko" },
+            { title = "Dutch", value = "-lang nl" },
+            { title = "Polish", value = "-lang pl" },
+            { title = "Russian", value = "-lang ru" },
+            { title = "Slovak", value = "-lang sk" },
+            { title = "Swedish", value = "-lang sv" },
+            { title = "Turkish", value = "-lang tr" },
+            { title = "Simplified Chinese", value = "-lang zh_cn" },
+            { title = "Traditional Chinese", value = "-lang zh_tw" },
+          }
+        },
+        viewFactory:static_text {
+          title = 'Tag Language',
+        },
+      },
+      viewFactory:row {
+        bind_to_object = prefs,
+        viewFactory:popup_menu {
+          title = "tagFormat",
+          value = bind ("tagFormat"),
+          width = dropDownWidth,
+          items = {
+            { title = "Long",  value = "" },
+            { title = "Short",  value = "-short" },
+          }
+        },
+        viewFactory:static_text {
+          title = " Tag Format",
+        },
+      },
+      viewFactory:row {
+        bind_to_object = prefs,
+        viewFactory:popup_menu {
+          title = "tagGroups",
+          value = bind ("tagGroups"),
+          width = dropDownWidth,
+          items = {
+            { title = "None",  value = "" },
+            { title = "0 (Information Type)",  value = "-G0" },
+            { title = "1 (Specific Location)",  value = "-G1" },
+            { title = "2 (Category)",  value = "-G2" },
+            { title = "3 (Document Number)",  value = "-G3" },
+            { title = "4 (Instance Number)",  value = "-G4" },
+            { title = "5 (Metadata Path)",  value = "-G5" },
+            { title = "6 (EXIF/TIFF Format)",  value = "-G6" },
+            { title = "7 (Tag ID)",  value = "-G7" },
+          }
+        },
+        viewFactory:static_text {
+          title = " Show tag groups",
         },
       },
     },

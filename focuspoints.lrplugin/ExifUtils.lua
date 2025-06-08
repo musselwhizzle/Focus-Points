@@ -46,26 +46,30 @@ function ExifUtils.filterInput(str)
 end
 
 
-function ExifUtils.getExifCmd(targetPhoto)
+function ExifUtils.getExifCmd(targetPhoto, options)
   local path = targetPhoto:getRawMetadata("path")
   local singleQuoteWrap = '\'"\'"\''
   local cmd
+  local opts = ' -a -u -sort '
+  if options ~= nil then
+    opts = opts .. options .. " "
+  end
   if WIN_ENV then
     -- windows needs " around the entire command and then " around each path
     -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
-    cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""'
+    cmd = '""' .. exiftoolWindows .. '"' .. opts .. '"'.. path .. '" > "' .. metaDataFile .. '""'
   else
     exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
     path = string.gsub(path, "'", singleQuoteWrap)
-    cmd = "'".. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'"
+    cmd = "'".. exiftool .. "'" .. opts .. "'" .. path .. "' > '" .. metaDataFile .. "'"
   end
 
   return cmd, metaDataFile
 end
 
 
-function ExifUtils.readMetaData(targetPhoto)
-  local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
+function ExifUtils.readMetaData(targetPhoto, options)
+  local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto, options)
   local rc = LrTasks.execute(cmd)
   Log.logDebug("ExifUtils", "ExifTool command: " .. cmd)
   if rc ~= 0 then
