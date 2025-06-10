@@ -168,11 +168,11 @@ function ExifUtils.getBinaryValue(photo, key)
     key = string.gsub(key, " ", "")
     if WIN_ENV then
       -- windows needs " around the entire command and then " around each path
-      cmd = '""' .. exiftoolWindows .. '" -b -' .. key .. ' "' .. path .. '" > "' .. output .. '""'
+      cmd = '""' .. exiftoolWindows .. '" -u -b -' .. key .. ' "' .. path .. '" > "' .. output .. '""'
     else
       exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
       path = string.gsub(path, "'", singleQuoteWrap)
-      cmd = "'" .. exiftool .. "' -b -" .. key .. " '" .. path .. "' > '" .. output .. "'"
+      cmd = "'" .. exiftool .. "' -u -b -" .. key .. " '" .. path .. "' > '" .. output .. "'"
     end
 
     -- Call ExifTool to output key's value in binary format

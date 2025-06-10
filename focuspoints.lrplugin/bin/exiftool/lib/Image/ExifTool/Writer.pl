@@ -76,6 +76,8 @@ my %jpegMap = (
     MetaIFD      => 'Meta',
     RMETA        => 'APP5',
     SEAL         => ['APP8','APP9'], # (note: add 'IFD0' if this is a possibility)
+    AROT         => 'APP10',
+    JUMBF        => 'APP11',
     Ducky        => 'APP12',
     Photoshop    => 'APP13',
     Adobe        => 'APP14',
@@ -138,12 +140,12 @@ my %rawType = (
 # 2) any dependencies must be added to %excludeGroups
 my @delGroups = qw(
     Adobe AFCP APP0 APP1 APP2 APP3 APP4 APP5 APP6 APP7 APP8 APP9 APP10 APP11 APP12
-    APP13 APP14 APP15 AudioKeys CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
+    APP13 APP14 APP15 AROT AudioKeys CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
     FotoStation GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC
-    ItemList iTunes JFIF Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft
-    MIE MPF Nextbase NikonApp NikonCapture PDF PDF-update PhotoMechanic
-    Photoshop PNG PNG-pHYs PrintIM QuickTime RMETA RSRC SEAL SubIFD Trailer
-    UserData VideoKeys Vivo XML XML-* XMP XMP-*
+    ItemList iTunes JFIF Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft MIE
+    MPF Nextbase NikonApp NikonCapture PDF PDF-update PhotoMechanic Photoshop PNG
+    PNG-pHYs PrintIM QuickTime RMETA RSRC SEAL SubIFD Trailer UserData VideoKeys
+    Vivo XML XML-* XMP XMP-*
 );
 # family 2 group names that we can delete
 my @delGroup2 = qw(
@@ -1604,6 +1606,8 @@ SET:    foreach $set (@setList) {
             $$opts{Group} = $dstGrp if $dstGrp;
             my @rtnVals = $self->SetNewValue($dstTag, $val, %$opts);
             $rtnInfo{$dstTag} = $val if $rtnVals[0]; # tag was set successfully
+            # return warning if any
+            $rtnInfo{NextFreeTagKey(\%rtnInfo, 'Warning')} = $rtnVals[1] if $rtnVals[1];
             next;
         }
         foreach $tag (@{$setMatches{$set}}) {
@@ -3406,7 +3410,7 @@ sub InsertTagValues($$;$$$$)
                 my $msg = $didExpr ? "Advanced formatting expression returned undef for '$g3${var}'" :
                                      "Tag '$g3${var}' not defined";
                 if (ref $opt) {
-                    $self->Warn($msg,2) or $val = '';
+                    $val = '' if $$self{OPTIONS}{IgnoreMinorErrors};
                 } elsif ($opt) {
                     no strict 'refs';
                     ($opt eq 'Silent' or &$opt($self, $msg, 2)) and return $$self{FMT_EXPR} = undef;
@@ -5736,6 +5740,8 @@ sub WriteJPEG($$)
                     $s =~ /^(Meta|META|Exif)\0\0/ and $dirName = 'Meta';
                 } elsif ($marker == 0xe5) {
                     $s =~ /^RMETA\0/        and $dirName = 'RMETA';
+                } elsif ($marker == 0xea) {
+                    $s =~ /^AROT\0\0/       and $dirName = 'AROT';
                 } elsif ($marker == 0xeb) {
                     $s =~ /^JP/             and $dirName = 'JUMBF';
                 } elsif ($marker == 0xec) {
@@ -6644,7 +6650,12 @@ sub WriteJPEG($$)
                     $segType = 'SEAL';
                     $$delGroup{SEAL} and $del = 1;
                 }
-            } elsif ($marker == 0xeb) {         # APP10 (JUMBF)
+            } elsif ($marker == 0xea) {         # APP10 (AROT)
+                if ($$segDataPt =~ /^AROT\0\0/) {
+                    $segType = 'AROT';
+                    $$delGroup{AROT} and $del = 1;
+                }
+            } elsif ($marker == 0xeb) {         # APP11 (JUMBF)
                 if ($$segDataPt =~ /^JP/) {
                     $segType = 'JUMBF';
                     $$delGroup{JUMBF} and $del = 1;

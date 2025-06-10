@@ -101,7 +101,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
   local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
-  -- We read the rotation written in the Exif just for logging has it happens that the Lightroom rotation already includes it which is pretty handy
+  -- We read the rotation written in the Exif just for logging as it happens that the Lightroom rotation already includes it which is pretty handy
   local exifRotation = DefaultPointRenderer.getShotOrientation(photo, DefaultDelegates.metaData)
 
   -- "Dirty fix" for Apple: iPhone OOC JPGs in portrait format are missing rotation information.
@@ -445,20 +445,25 @@ function DefaultPointRenderer.getShotOrientation(photo, metaData)
 end
 
 --[[
-  @@public table DefaultPointRenderer.createFocusPixelBox(x, y)
+  @@public table DefaultPointRenderer.createFocusFrame(x, y)
   ----
   According to current viewing option settings, determines shape and size of focus box to be drawn around focus pixel
 --]]
-function DefaultPointRenderer.createFocusPixelBox(x, y)
+function DefaultPointRenderer.createFocusFrame(x, y, w, h)
   local pointType, size
 
-  if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
-    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+  if not (w and h) then
+    -- focus frame dimensions have not been given -> handle as focus pixel point
+    if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+    else
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+    end
+    w = math.min(FocusPointDialog.PhotoWidth, FocusPointDialog.PhotoHeight) * prefs.focusBoxSize
+    h = w
   else
-    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+     pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
   end
-
-  size = math.min(FocusPointDialog.PhotoWidth, FocusPointDialog.PhotoHeight) * prefs.focusBoxSize
 
   return {
     pointTemplates = DefaultDelegates.pointTemplates,
@@ -467,8 +472,8 @@ function DefaultPointRenderer.createFocusPixelBox(x, y)
         pointType = pointType,
         x = x,
         y = y,
-        width  = size,
-        height = size
+        width  = w,
+        height = h,
       }
     }
   }

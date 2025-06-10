@@ -40,7 +40,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::APP12;
 
-$VERSION = '2.85';
+$VERSION = '2.86';
 
 sub PrintLensInfo($$$);
 
@@ -113,7 +113,7 @@ my %olympusLensTypes = (
     '0 34 00' => 'Olympus Zuiko Digital ED 9-18mm F4.0-5.6', #7
     '0 34 10' => 'Olympus M.Zuiko Digital ED 12-45mm F4.0 Pro', #IB
     '0 35 00' => 'Olympus Zuiko Digital 14-54mm F2.8-3.5 II', #PH
-    '0 35 10' => 'Olympus M.Zuiko 100-400mm F5.0-6.3', #IB
+    '0 35 10' => 'Olympus M.Zuiko 100-400mm F5.0-6.3', #IB (also OM System M.Zuiko Digital ED 100-400mm F5.0-6.3 IS II", forum2833)
     '0 36 10' => 'Olympus M.Zuiko Digital ED 8-25mm F4 Pro', #IB
     '0 37 10' => 'Olympus M.Zuiko Digital ED 40-150mm F4.0 Pro', #forum3833
     '0 39 10' => 'Olympus M.Zuiko Digital ED 90mm F3.5 Macro IS Pro', #forum3833
@@ -550,6 +550,7 @@ my %filters = (
     4 => 'Light Tone',
     5 => 'Pin Hole', # (SZ-10 magic filter 2,SZ-31MR,E-PL3)
     6 => 'Grainy Film',
+    8 => 'Underwater', #forum17348
     9 => 'Diorama',
     10 => 'Cross Process',
     12 => 'Fish Eye', # (SZ-10 magic filter 3)
@@ -581,6 +582,9 @@ my %filters = (
     39 => 'Partial Color', #forum6269
     40 => 'Partial Color II', #forum6269
     41 => 'Partial Color III', #forum6269
+    42 => 'Bleach Bypass', #forum17348
+    43 => 'Bleach Bypass II', #forum17348
+    44 => 'Instant Film', #forum17348
 );
 
 my %toneLevelType = (

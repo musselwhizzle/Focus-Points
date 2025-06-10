@@ -51,7 +51,7 @@ return {
     },
   },
 
-	VERSION = { major=3, minor=1, revision=0, build=" Pentax PRE 2" },
+	VERSION = { major=3, minor=1, revision=0, build=" PRE 3" },
 
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 

@@ -54,7 +54,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   local photoWidth
   local photoHeight
   if (w > h) then
-    photoWidth = math.min(w, contentWidth)
+    photoWidth = math.min(  (w), contentWidth)
     photoHeight = h/w * photoWidth
     if photoHeight > contentHeight then
         photoHeight = math.min(h, contentHeight)

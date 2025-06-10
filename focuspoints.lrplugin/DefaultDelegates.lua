@@ -80,7 +80,7 @@ DefaultDelegates.pointTemplates = {
     minCornerDist = 10,
     angleStep = 5
   },
-  af_infocus = {           -- legacy template, still used by PentaxDelegates
+  af_infocus = {           -- legacy template, previously used by PentaxDelegates
     center = { fileTemplate = "assets/imgs/center/%s/normal.png", anchorX = 23, anchorY = 23 },
     center_small = { fileTemplate = "assets/imgs/center/%s/small.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
@@ -90,8 +90,8 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
   af_selected = {          -- legacy template, still used by PentaxDelegates
-    corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/corner/black/small_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/white/normal_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/white/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5

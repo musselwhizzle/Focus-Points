@@ -39,6 +39,7 @@ SonyDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 SonyDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 SonyDelegates.metaKeyAfFocusLocation             = "Focus Location"
 SonyDelegates.metaKeyAfFocusPosition2            = "Focus Position 2"
+SonyDelegates.metaKeyAfFocusFrameSize            = "Focus Frame Size"
 SonyDelegates.metaKeyAfAreaModeSetting           = "AF Area Mode Setting"
 SonyDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 SonyDelegates.metaKeyAfTracking                  = "AF Tracking"
@@ -107,10 +108,17 @@ function SonyDelegates.getAfPoints(photo, metaData)
 
         SonyDelegates.focusPointsDetected = true
 
-        Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s]",
-          math.floor(x), math.floor(y)))
-
-        result = DefaultPointRenderer.createFocusPixelBox(x, y)
+        local focusFrameSize = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusFrameSize)
+        if focusFrameSize then
+          local w, h = focusFrameSize:match("^(%d+)x(%d+)$")
+          Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+            math.floor(x), math.floor(y)), w, h)
+          result = DefaultPointRenderer.createFocusFrame(x, y, w, h)
+        else
+          Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s]",
+            math.floor(x), math.floor(y)))
+          result = DefaultPointRenderer.createFocusFrame(x, y)
+        end
 
       else
         -- focus location string is "0 0 0 0" -> the focus point is a PDAF point #FIXME but which one exactly?

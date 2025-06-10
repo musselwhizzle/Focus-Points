@@ -48,6 +48,7 @@ PanasonicDelegates.metaKeyAfInfoSection = "Panasonic Exif Version"
 PanasonicDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 PanasonicDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 PanasonicDelegates.metaKeyAfPointPosition             = "AF Point Position"
+PanasonicDelegates.metaKeyAFAreaSize                  = "AF Area Size"
 PanasonicDelegates.metaKeyAfSubjectDetection          = "AF Subject Detection"
 PanasonicDelegates.metaKeyAfFacesDetected             = "Faces Detected"
 PanasonicDelegates.metaKeyAfNumFacePositions          = "Num Face Positions"
@@ -64,7 +65,7 @@ PanasonicDelegates.metaValueNA                        = "n/a"
 PanasonicDelegates.metaValueOn                        = "On"
 PanasonicDelegates.metaValueOff                       = "Off"
 PanasonicDelegates.metaKeyAfPointPositionPattern      = "0(%.%d+) 0(%.%d+)"
-
+PanasonicDelegates.metaKeyAfAreaSizePattern           = "([%d%.]+)%s+([%d%.]+)"
 
 --[[
   @@public table PanasonicDelegates.getAfPoints(table photo, table metaData)
@@ -78,7 +79,8 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
   if focusPoint then
     Log.logInfo("Panasonic",
-      string.format("Focus point tag '%s' found", PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
+      string.format("Focus point tag '%s' found: '%s'",
+        PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
   else
     -- no focus points found - handled on upper layers
     Log.logWarn("Panasonic",
@@ -95,14 +97,42 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
 
   -- determine x,y location of center of focus point in image pixels
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  local x = tonumber(orgPhotoWidth) * tonumber(focusX)
+  local x = tonumber(orgPhotoWidth)  * tonumber(focusX)
   local y = tonumber(orgPhotoHeight) * tonumber(focusY)
   Log.logInfo("Panasonic", string.format("Focus point detected at [x=%s, y=%s]", x, y))
 
   PanasonicDelegates.focusPointsDetected = true
-  local result = DefaultPointRenderer.createFocusPixelBox(x, y)
+  local result = {
+      pointTemplates = DefaultDelegates.pointTemplates,
+      points = {
+      }
+    }
 
-  -- Let see if we have detected faces
+  -- Let's see if AF area size is given
+  local afAreaSize = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAFAreaSize)
+  if afAreaSize then
+    local areaSizeX, areaSizeY = string.match(afAreaSize, PanasonicDelegates.metaKeyAfAreaSizePattern)
+    if not (areaSizeX and areaSizeY) then
+      Log.logWarn("Panasonic",
+        string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
+    else
+      areaSizeX = tonumber(areaSizeX) * tonumber(orgPhotoWidth)
+      areaSizeY = tonumber(areaSizeY) * tonumber(orgPhotoHeight)
+      Log.logInfo("Panasonic", "AF Area detected, w=" .. areaSizeX .. ", h=" .. areaSizeY .. "]")
+
+      table.insert(result.points, {
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT,
+        x = x,
+        y = y,
+        width  = areaSizeX,
+        height = areaSizeY,
+      })
+    end
+  else
+    local result = DefaultPointRenderer.createFocusFrame(x, y)
+  end
+
+  -- Let's see if we have detected faces
   local detectedFaces = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfNumFacePositions)
   if detectedFaces and detectedFaces > "0" then
     for i=1, detectedFaces, 1 do

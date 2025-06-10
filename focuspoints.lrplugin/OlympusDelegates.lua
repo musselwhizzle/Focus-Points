@@ -90,13 +90,121 @@ OlympusDelegates.metaKeyAfPointSelectedPattern   = "%((%d+)%%,(%d+)"
 --]]
 function OlympusDelegates.getAfPoints(photo, metaData)
 
-   OlympusDelegates.focusPointsDetected = false
+  OlympusDelegates.focusPointsDetected = false
+
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local result = {
+    pointTemplates = DefaultDelegates.pointTemplates,
+    points = {}
+  }
+
+  -- First see if we have subject detection frames - need to check the tag 'Faces Detected' (format: "a b c")
+  local areaSelected = ExifUtils.getBinaryValue(photo, "Olympus_CameraSettings_0x030a")
+  local areaDetected = ExifUtils.getBinaryValue(photo, "Olympus_CameraSettings_0x030b")
+
+  Log.logInfo("Olympus", "Olympus_CameraSettings_0x030a: " .. areaSelected)
+  Log.logInfo("Olympus", "Olympus_CameraSettings_0x030b: " .. areaDetected)
+
+  if (areaSelected ~= "") and (areaDetected ~= "") then
+
+        local function addFrame(xDimens, yDimens, xTL, yTL, width, height, scale, frameType, logText)
+      -- adds a detection frame with top left corner at (xTL,yTL) to the list of focus points
+
+        -- scale dimensions of detection frame area to image size
+        local xScale = tonumber(orgPhotoWidth)  / (tonumber(xDimens))
+        local yScale = tonumber(orgPhotoHeight) / (tonumber(yDimens))
+
+        local x,y, w, h, d
+        w = width  * xScale
+        h = height * yScale
+        x = xTL * xScale + w/2
+        y = yTL * yScale + h/2
+
+        if scale > 1 then d = 30 else d = 0 end
+
+        if w > 0 and h > 0 then
+          Log.logInfo("Olympus", string.format(
+           "%s at [x=%s, y=%s, w=%s, h=%s]", logText,
+           math.floor(x), math.floor(y), math.floor(w), math.floor(h)))
+          table.insert(result.points, {
+            pointType = frameType,
+            x = x,
+            y = y,
+            width  = w + d,
+            height = h + d,
+          })
+         end
+      end
+
+    areaSelected = split(areaSelected, " ")
+    areaDetected = split(areaDetected, " ")
+
+    local mode = areaDetected[11]
+
+    Log.logInfo("Olympus", string.format("Area Detect/Select mode value: %s (%02X %02X)",
+     mode, math.floor(mode / 256) % 256, mode % 256))
+
+    if not (mode == "257" or mode == "258" or mode == "260" or mode == "772") then
+      Log.logError("Olympus",
+       string.format("Unhandled focus selection mode '%s'", areaDetected[11]))
+
+    else
+      if mode == "257" or mode == "258" or mode == "260" then
+
+        -- draw yellow detection frames first so they can be painted over with red focus frames, if identical
+        if areaDetected[5] ~= "0" and areaDetected[6] ~= "0" then
+          addFrame(areaDetected[1], areaDetected[2],
+                   areaDetected[3], areaDetected[4], areaDetected[5], areaDetected[6], 1.2,
+                   DefaultDelegates.POINTTYPE_FACE, "Subject detected")
+        end
+        if areaDetected[9] ~= "0" and areaDetected[10] ~= "0" then
+          addFrame(areaDetected[1], areaDetected[2],
+                   areaDetected[7], areaDetected[8], areaDetected[9], areaDetected[10], 1.2,
+                   DefaultDelegates.POINTTYPE_FACE, "Subject detail detected")
+        end
+      end
+
+      -- draw frame around focus area
+      if areaSelected[5] ~= "0" and areaSelected[6] ~= "0" then
+        addFrame(areaSelected[1], areaSelected[2],
+                 areaSelected[3], areaSelected[4], areaSelected[5], areaSelected[6], 1,
+                 DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX, "Focus area")
+        OlympusDelegates.focusPointsDetected = true
+      end
+
+      -- draw frame around user selected AF area if it is given
+      if areaSelected[9] ~= "0" and areaSelected[10] ~= "0" then
+        local scale = 1
+        local areasIdentical = (areaSelected[3] == areaSelected[7] and areaSelected[4] == areaSelected[8] and
+                                areaSelected[5] == areaSelected[9] and areaSelected[6] == areaSelected[10])
+
+        if not areasIdentical or mode == "772" then
+          -- focus area and (user) selected area are identical in size -> slightly enlarge selected area
+          local scale = 1.2
+          if areaSelected[ 9] / areaSelected[1] > 1/scale or
+             areaSelected[10] / areaSelected[2] > 1/scale then
+             -- avoid enlarging an area so that it exceeds the frame dimensions
+            scale = 1
+          end
+          addFrame(areaSelected[1], areaSelected[2],
+                   areaSelected[7], areaSelected[8],areaSelected[9], areaSelected[10], scale,
+                 DefaultDelegates.POINTTYPE_AF_SELECTED, "Selected AF area")
+        end
+
+     end
+    end
+    if OlympusDelegates.focusPointsDetected then
+      return result
+    end
+  end
+
 
   -- Fetch focus point info
   local focusPoint = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyAfPointSelected)
   if focusPoint then
     Log.logInfo("Olympus",
-      string.format("Focus point tag '%s' found", OlympusDelegates.metaKeyAfPointSelected, focusPoint))
+      string.format("Focus point tag '%s' found: '%s'",
+        OlympusDelegates.metaKeyAfPointSelected, focusPoint))
   else
     -- no focus points found - handled on upper layers
     Log.logWarn("Olympus",
@@ -123,18 +231,15 @@ function OlympusDelegates.getAfPoints(photo, metaData)
     focusY = get_nth_Word(focusXY, 2, " ")
   end
 
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-
   -- Transform the percentage values into pixels
   local x = math.floor(tonumber(orgPhotoWidth)  * tonumber(focusX))
   local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY))
   Log.logInfo("Olympus", string.format("Focus point detected at [x=%s, y=%s]", x, y))
 
   OlympusDelegates.focusPointsDetected = true
-  local result = DefaultPointRenderer.createFocusPixelBox(x, y)
+  result = DefaultPointRenderer.createFocusFrame(x, y)
 
-
-  -- Let see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
+  -- Let's see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
   -- (a, b, c) are the numbers of detected faces in each of the 2 supported sets of face detect area
   local detectedFaces = split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFacesDetected), " ")
   local maxFaces      = split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyMaxFaces), " ")
@@ -254,6 +359,13 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
     local facesDetected = props[OlympusDelegates.metaKeyFacesDetected]
     if (facesDetected == OlympusDelegates.metaValueNA)  or (facesDetected == "0 0 0") then
       return FocusInfo.emptyRow()
+    end
+  end
+
+  if key == OlympusDelegates.metaKeySubjectTrackingMode then
+    if string.sub(props[key],1, 3) == "Off" then
+    -- simplify the "Off; Object Not Found" value
+      props[key] = "Off"
     end
   end
 

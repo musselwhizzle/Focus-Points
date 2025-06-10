@@ -115,7 +115,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
 
   -- the only real focus point is this - the below code just checks for visualization frames
   FujifilmDelegates.focusPointsDetected = true
-  local result = DefaultPointRenderer.createFocusPixelBox(x*xScale, y*yScale)
+  local result = DefaultPointRenderer.createFocusFrame(x*xScale, y*yScale)
 
   -- Let see if we have detected faces
   local detectedFaces = ExifUtils.findValue(metaData, FujifilmDelegates.FacesDetected)

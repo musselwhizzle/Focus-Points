@@ -10604,7 +10604,7 @@ my %isoSetting2010 = (
     0x800b => { Name => 'Sony_rtmd_0x800b', Format => 'int16u', %hidUnk }, # (ZoomRingPosition?, forum14315)
   # 0x8100 - 16 bytes starting with 0x060e2b340401
     0x8100 => { Name => 'Sony_rtmd_0x8100', Format => 'int8u',  %hidUnk },
-    0x8101 => { Name => 'Sony_rtmd_0x8101', Format => 'int8u',  %hidUnk }, # seen: 0,1
+    0x8101 => { Name => 'Sony_rtmd_0x8101', Format => 'int8u',  %hidUnk }, # seen: 0,1,2
     0x8104 => { Name => 'Sony_rtmd_0x8104', Format => 'int16u', %hidUnk }, # seen: 35616
     0x8105 => { Name => 'Sony_rtmd_0x8105', Format => 'int16u', %hidUnk }, # seen: 20092
     0x8106 => { Name => 'Sony_rtmd_0x8106', Format => 'int32u', %hidUnk }, # seen: "25 1","24000 1001" frame rate?
@@ -10625,7 +10625,7 @@ my %isoSetting2010 = (
         Format => 'int16u',
     },
     0x810d => { Name => 'Sony_rtmd_0x810d', Format => 'int8u',  %hidUnk }, # seen: 0,1
-    0x8115 => { Name => 'Sony_rtmd_0x8115', Format => 'int16u', %hidUnk }, # seen: 100
+    0x8115 => { Name => 'Sony_rtmd_0x8115', Format => 'int16u', %hidUnk }, # seen: 100 - ISO
   # 0x8300 - container for other tags in this format
     0x8500 => {
         Name => 'GPSVersionID',
@@ -10703,7 +10703,7 @@ my %isoSetting2010 = (
     },
     0xe000 => { Name => 'Sony_rtmd_0xe000', Format => 'int8u',  %hidUnk }, # (16 bytes)
     0xe300 => { Name => 'Sony_rtmd_0xe300', Format => 'int8u',  %hidUnk }, # seen: 0,1
-    0xe301 => { Name => 'Sony_rtmd_0xe301', Format => 'int32u', %hidUnk }, # seen: 100,1600,12800
+    0xe301 => { Name => 'Sony_rtmd_0xe301', Format => 'int32u', %hidUnk }, # seen: 100,1600,12800 - ISO
     0xe302 => { Name => 'Sony_rtmd_0xe302', Format => 'int8u',  %hidUnk }, # seen: 1
     0xe303 => { #forum12218
         Name => 'WhiteBalance',
@@ -10766,6 +10766,11 @@ my %isoSetting2010 = (
             0 => 'Sony:FocusPosition2',
             1 => 'FocalLengthIn35mmFormat',
         },
+        # (NOTE: This calculation may be wrong. "Focus Distance 2 is the result of an erroneous
+        #  user supplied formula to exiftool. It does use data embedded in the raw file,
+        #  but it is not the data. The actual embedded data seems to be proportional to
+        #  magnification not a focus distance. The camera needs to calculate magnification
+        #  for translation stabilization.", ref https://www.fredmiranda.com/forum/topic/1858744/0)
         ValueConv => q{
             return undef unless $val;
             return 'inf' if $val >= 255;

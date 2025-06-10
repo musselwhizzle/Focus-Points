@@ -111,7 +111,7 @@ my %insvLimit = (
         The tags below are extracted from timed metadata in QuickTime and other
         formats of video files when the ExtractEmbedded option is used.  Although
         most of these tags are combined into the single table below, ExifTool
-        currently reads 104 different types of timed GPS metadata from video files.
+        currently reads 107 different types of timed GPS metadata from video files.
     },
     GPSLatitude  => { PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")', RawConv => '$$self{FoundGPSLatitude} = 1; $val' },
     GPSLongitude => { PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")' },
@@ -317,7 +317,7 @@ my %insvLimit = (
             ByteOrder => 'Little-Endian',
         },
     }],
-    mett => { # Parrot drones
+    mett => { # Parrot drones and iPhone/Android using ARCore
         Name => 'mett',
         SubDirectory => { TagTable => 'Image::ExifTool::Parrot::mett' },
     },
@@ -2287,6 +2287,16 @@ ATCRec: for ($recPos = 0x30; $recPos + 52 < $dirLen; $recPos += 52) {
                 $lat = ($lat - 187.982162849635) / 3;
                 $lon = ($lon - 2199.19873715495) / 2;
                 $ddd = 1;
+            } elsif (Get32u($dataPt,0) == 0x400000 and abs($lat) <= 90 and abs($lon) <= 180) {
+                # Transcend Drive Body Camera 70
+                #  0000: 00 00 40 00 66 72 65 65 47 50 53 20 4c 00 00 00 [..@.freeGPS L...]
+                #  0010: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
+                #  0020: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
+                #  0030: 09 00 00 00 26 00 00 00 15 00 00 00 e9 07 00 00 [....&...........]
+                #  0040: 05 00 00 00 10 00 00 00 41 53 45 00 6c 59 ee 41 [........ASE.lY.A]
+                #  0050: 9f 1a f7 41 3c 6b 0f 41 9a 99 99 43 00 00 00 00 [...A<k.A...C....]
+                $ddd = 1;               # already in decimal degrees
+                $spd /= $knotsToKph;    # already in km/h
             } else {
                 $debug and $et->FoundTag(GPSType => 17);
             }
@@ -3200,8 +3210,9 @@ sub ProcessTTAD($$$)
 }
 
 #------------------------------------------------------------------------------
-# Extract information from Insta360 trailer (INSV and INSP files) (ref PH)
+# Extract information from Insta360 trailer (INSV, INSP and MP4 files) or 'inst' box (ref PH)
 # Inputs: 0) ExifTool ref, 1) Optional dirInfo ref for returning trailer info
+# (dirInfo has Offset from end of trailer to end of file or DirEnd absolute end of trailer)
 # Returns: true on success
 # Notes: There looks to be some useful information by telemetry-parser, but
 #        the code is cryptic:  https://github.com/AdrianEddy/telemetry-parser
@@ -3213,13 +3224,16 @@ sub ProcessInsta360($;$)
     my $offset = $dirInfo ? $$dirInfo{Offset} || 0 : 0;
     my ($buff, $dirTable, $dirTablePos);
 
+    if ($dirInfo and $$dirInfo{DirEnd}) {
+        $raf->Seek(0, 2);
+        $offset = $raf->Tell() - $$dirInfo{DirEnd};
+    }
     return 0 unless $raf->Seek(-78-$offset, 2) and $raf->Read($buff, 78) == 78 and
         substr($buff,-32) eq "8db42d694ccc418790edff439fe026bf";    # check magic number
 
     my $verbose = $et->Options('Verbose');
     my $tagTbl = GetTagTable('Image::ExifTool::QuickTime::Stream');
-    my $fileEnd = $raf->Tell();
-    my $trailEnd = $fileEnd - $offset;
+    my $trailEnd = $raf->Tell();
     my $trailerLen = unpack('x38V', $buff);
     $trailerLen > $trailEnd and $et->Warn('Bad Insta360 trailer size'), return 0;
     if ($dirInfo) {
@@ -3259,7 +3273,7 @@ sub ProcessInsta360($;$)
         ($epos -= $len) + $trailerLen < 0 and last;
         $raf->Seek($epos-$offset, 2) or last;
         if ($verbose) {
-            $et->VPrint(0, sprintf("Insta360 Record 0x%x (offset 0x%x, %d bytes):\n", $id, $fileEnd + $epos, $len));
+            $et->VPrint(0, sprintf("Insta360 Record 0x%x (offset 0x%x, %d bytes):\n", $id, $trailEnd + $epos, $len));
         }
         # there are 2 types of record 0x300:
         # 1. 56 byte records

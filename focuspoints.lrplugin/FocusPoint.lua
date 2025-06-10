@@ -78,7 +78,7 @@ local function showDialog()
         LrApplicationView.switchToModule("library")
         LrApplicationView.showView("loupe")
         switchedToLibrary = true
-        LrTasks.sleep(0)  -- timing-specific; might need to be increased on certain systems. tbe
+--        LrTasks.sleep(5)  -- timing-specific; might need to be increased on certain systems. tbe
       end
     end
 
