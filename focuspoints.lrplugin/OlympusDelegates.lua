@@ -55,7 +55,7 @@ OlympusDelegates = {}
 OlympusDelegates.focusPointsDetected = false
 
 -- Tag which indicates that makernotes / AF section is present
-OlympusDelegates.metaKeyAfInfoSection       = "Focus Info Version"
+OlympusDelegates.metaKeyAfInfoSection            = "Focus Info Version"
 
 -- AF relevant tags
 OlympusDelegates.metaKeyFocusMode                = "Focus Mode"
