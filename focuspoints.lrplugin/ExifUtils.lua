@@ -49,15 +49,16 @@ end
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
   local singleQuoteWrap = '\'"\'"\''
+  local options = ' -a -u -sort --XMP-crs:all --XMP-crss:all '
   local cmd
   if WIN_ENV then
     -- windows needs " around the entire command and then " around each path
     -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
-    cmd = '""' .. exiftoolWindows .. '" -a -u -sort ' .. '"'.. path .. '" > "' .. metaDataFile .. '""'
+    cmd = '""' .. exiftoolWindows .. '"' .. options .. '"'.. path .. '" > "' .. metaDataFile .. '""'
   else
     exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
     path = string.gsub(path, "'", singleQuoteWrap)
-    cmd = "'".. exiftool .. "' -a -u -sort '" .. path .. "' > '" .. metaDataFile .. "'"
+    cmd = "'".. exiftool .. "'" .. options .. "'" .. path .. "' > '" .. metaDataFile .. "'"
   end
 
   return cmd, metaDataFile
