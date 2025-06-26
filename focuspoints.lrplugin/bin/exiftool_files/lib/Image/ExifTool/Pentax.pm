@@ -58,7 +58,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 use Image::ExifTool::HP;
 
-$VERSION = '3.51';
+$VERSION = '3.52';
 
 sub CryptShutterCount($$);
 sub PrintFilter($$$);
@@ -1354,6 +1354,7 @@ my %binaryDataAttrs = (
             0xfffd => 'Automatic Tracking AF', #JD
             0xfffc => 'Face Detect AF', #JD
             0xfffb => 'AF Select', #PH (Q select from 25-areas)
+            0xfffa => 'Auto 2', #KarstenGieselmann
             0 => 'None', #PH (Q in manual focus mode)
             1 => 'Upper-left',
             2 => 'Top',
@@ -1366,14 +1367,17 @@ my %binaryDataAttrs = (
             9 => 'Lower-left',
             10 => 'Bottom',
             11 => 'Lower-right',
-        },
+        },{ #forum5892
         # (second number exists for K-5II(s) is usually 0, but is 1 for AF.C with
         # AFPointMode=='Select' and extended tracking focus points are enabled in the settings)
-        ],
+            0 => 'Single Point',
+            1 => 'Expanded Area',
+        }],
     }],
     0x000f => [{ #PH
         Name => 'AFPointsInFocus',
-        Condition => '$$self{Model} =~ /K-3\b/',
+#       Condition => '$$self{Model} =~ /K-3\b/',
+        Condition => '$$self{Model} =~ /K-(3|S1|S2)\b/',  #KG
         Writable => 'int32u',
         Notes => 'K-3 only',
         PrintHex => 1,
@@ -2168,7 +2172,7 @@ my %binaryDataAttrs = (
             11 => 'Flat', #31 (K-70)
             # the following values from GR III
             256 => 'Standard',
-            257 => 'Vivid', 
+            257 => 'Vivid',
             258 => 'Monotone',
             259 => 'Soft Monotone',
             260 => 'Hard Monotone',
@@ -5005,7 +5009,8 @@ my %binaryDataAttrs = (
     # 0x0a - values: 00,05,0d,15,86,8e,a6,ae
     0x0b => { #JD
         Name => 'AFPointsInFocus',
-        Condition => '$$self{Model} !~ /(K-(1|3|70)|KP)\b/',
+#KG     Condition => '$$self{Model} !~ /(K-(1|3|70)|KP)\b/',
+        Condition => '$$self{Model} !~ /(K-(1|3|70|S1|S2)|KP)\b/',  #KG
         Notes => q{
             models other than the K-1, K-3, K-70 and KP.  May report two points in focus
             even though a single AFPoint has been selected, in which case the selected
@@ -5096,7 +5101,7 @@ my %binaryDataAttrs = (
         Name => 'NumCAFPoints',
         RawConv => '$$self{NumCAFPoints} = ($val & 0x0f) * ($val >> 4); $val',
         ValueConv => '($val >> 4) * ($val & 0x0f)',
-    }, 
+    },
     1.1 => {
         Name => 'CAFGridSize',
         ValueConv => '($val >> 4) . " " . ($val & 0x0f)', # (width x height)
@@ -5792,21 +5797,21 @@ my %binaryDataAttrs = (
     },
     4 => {
         Name => 'AFPointsInFocus',
-        Condition => '$$self{Model} =~ /K-1\b/',
+        Condition => '$$self{Model} =~ /K(P|-1|-70)\b/',
         Format => 'int8u[int(($val{2}+3)/4)]',
         Writable => 0,
         PrintConv => 'Image::ExifTool::Pentax::DecodeAFPoints($val,$$self{NumAFPoints},2,0x02)',
     },
     4.1 => {
         Name => 'AFPointsSelected',
-        Condition => '$$self{Model} =~ /K-1\b/',
+        Condition => '$$self{Model} =~ /K(P|-1|-70)\b/',
         Format => 'int8u[int(($val{2}+3)/4)]',
         Writable => 0,
         PrintConv => 'Image::ExifTool::Pentax::DecodeAFPoints($val,$$self{NumAFPoints},2,0x03)',
     },
     4.2 => {
         Name => 'AFPointsSpecial',
-        Condition => '$$self{Model} =~ /K-1\b/',
+        Condition => '$$self{Model} =~ /K(P|-1|-70)\b/',
         Format => 'int8u[int(($val{2}+3)/4)]',
         Writable => 0,
         PrintConv => 'Image::ExifTool::Pentax::DecodeAFPoints($val,$$self{NumAFPoints},2,0x03,0x03)',
@@ -6437,6 +6442,7 @@ sub DecodeAFPoints($$$$;$)
 {
     my ($val, $num, $bits, $mask, $bitVal) = @_;
     my @bytes = split ' ', $val;
+    return '(none)' unless @bytes;
     my $i = 1;  # (starts at AF point number 1)
     my $shift = 8 - $bits;
     my $byte = shift @bytes;
