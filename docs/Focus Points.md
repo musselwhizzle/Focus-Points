@@ -23,13 +23,15 @@ Focus Points Plugin for Lightroom Classic
 
 * [Fuji](#34-fuji)
 
-* [Olympus / OM System](#35-olympus--om-system)
+* [Olympus](#35-olympus)
 
-* [Panasonic](#36-panasonic)
+* [OM System](#36-om-system)
+
+* [Panasonic](#37-panasonic)
  
-* [Pentax](#37-pentax)
+* [Pentax](#38-pentax)
 
-* [Apple](#38-apple)
+* [Apple](#39-apple)
 
 ### [Glossary](#4-glossary)
 
@@ -45,9 +47,9 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 - Display (EXIF) metadata of the selected image
 
 **Principle of operation:** <br>
-The plugin uses [exiftool](https://exiftool.org/) to retrieve EXIF metadata from the image file. Autofocus related information is extracted from metadata and is processed to visualize the focus points. In order for this to work, the plugin requires an image file that has camera maker specific metadata information (_makenotes_) included.
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve EXIF metadata from the image file. Autofocus related information is extracted from metadata and is processed to visualize the focus points. In order for this to work, the plugin requires an image file that has camera maker specific metadata information (_makenotes_) included.
 
-Note: exiftool comes as part of the plugin package and does not need to be installed separately. 
+Note: ExifTool comes as part of the plugin package and does not need to be installed separately. 
 
 The plugin will not be able to show focus points for image files that don't have makernotes included.<br> 
 For this it is important to understand that Lightroom does not read or keep makernotes when importing files.<br>
@@ -343,13 +345,23 @@ Remark: The display of "AF Tracking Sensitivity" and "AF Point Switching" in the
 
 ## 3.3 Sony
 
+For Sony, the focus point of an image is given by the (x,y) coordinates in "Focus Location" tag. Newer models do support a "Focus Frame Size" tag in addition, which also gives the size of the focus area. Custom settings for focus box size in the plugin's preferences only apply in cases where focus frame size is not present in metadata. In this case, medium and large sized focus boxes will show a center dot:  
+
+<img src= "../screens/Sony 1a.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+If Phase Detect points have been used during the focusing process, these will be displayed in grey color:
+
+<img src= "../screens/Sony 1b.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot:
+
+<img src= "../screens/Sony 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
 Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
 
-For Sony, the focus point of an image is given by the (x,y) coordinates of the 'focus pixel". So, for improved visualization you can choose focus box size and color in the plugin's preferences. 
+<img src= "../screens/Sony 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. Sony also doesn't have a focus distance tag, so there is no Depth of Field section either.
-
-<img src= "../screens/Sony 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ## 3.4 Fuji
@@ -367,11 +379,11 @@ Example shot for subject detection. 4 birds  detected (with different levels of 
 <img src="../screens/Fuji 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
-## 3.5 Olympus / OM System
+## 3.5 Olympus
 
-Olympus and their successor OM System have been using the same format of storing autofocus information in EXIF for all mirrorless cameras (starting with the E-M5 in 2012), so focus point display for all of their models is the same.
+Olympus have been using the same format of storing autofocus information in EXIF for all their mirrorless cameras (starting with the E-M5 in 2012). Focus point display is same across all Olympus E-M models as well as the last models of their DSLR E-series.
 
-Olympus / OM System belongs to the 'focus pixel' point group of camera makers. Focus box size and color can be adjusted in the plugin's preferences.
+The tag "AF Point Selected" contains the pixel coordinates of the focus point. Focus box size and color can be adjusted to taste in the plugin's preferences.
 
 <img src="../screens/Olympus 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
@@ -379,35 +391,108 @@ Using the focus box settings the display of the focus point can be tweaked to lo
 
 <img src="../screens/Olympus 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-Olympus/OM makernotes also contain data on face detection. 
+Olympus makernotes also contain data on face detection. 
 
-Olympus/OM cameras save two sets of recognized faces (maximum eight faces per set). The metadata tags reserve room for a third set, but as of today there is no camera that stores more than two sets. Accordingly, the FacesDetected tag for the sample image below reads “1 2 0”: 1 face in the first set, 2 faces in the second, the third set is empty.
+Olympus cameras save two sets of recognized faces (maximum eight faces per set). The metadata tags reserve room for a third set, but as of today there is no camera that stores more than two sets. Accordingly, the FacesDetected tag for the sample image below reads “1 2 0”: 1 face in the first set, 2 faces in the second, the third set is empty.
 
-The positions of the detected faces usually differ between the zwo sets. They can be slightly shifted, or a face that is present in one set is not in part of the other. Since it is neither possible to deduce which set has “better” information, nor combine the information of the two sets (at least not with reasonable effort), all faces in both of the two sets are visualize by yellow face detection frames:
+The specs of the detected faces usually differ between the two sets. The positions for one face can be slightly shifted, or a face that is present in one set may not be part of the other one. Since it is neither possible to deduce which set has “better” information, nor is it possible to combine the information of the two sets (at least not with reasonable effort), all faces in both of the two sets are visualize by yellow face detection frames:
 
 <img src="../screens/Olympus 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
+## 3.6 OM System
+
+With the release of plugin version V3.1 OM System have their own dedicated chapter in this user documentation. Which is basically because two previously unknown metadata tags could be identified and decoded: AFSelection / AFFocusArea and SubjectDetectionArea.
+
+With this information, it is possible to not only visualize the user selected AF area and point in focus but also display the frames used in subject detection. These frames are the same you can see in viewfinder or on camera display while shooting with subject detection enabled.
+
+### 3.6.1 OM System - AF Selection
+
+The user selected AF area is highlighted in white color. The focus area is displayed in the color that this specified in the plugin preferences. The size of the focus area cannot be chosen as the dimensions are given by the camera.
+
+"Medium" AF Area selected: 
+
+<img src="../screens/OM System 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+"Small" AF Area selected:
+
+<img src="../screens/OM System 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+"Custom" AF Area selected:
+
+<img src="../screens/OM System 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+"Single" AF Area selected:
+
+<img src="../screens/OM System 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
+### 3.6.2 OM System - Subject Detection
 
-## 3.6 Panasonic
+The plugin visualizes the subject detection frames as displayed in viewfinder / on camera display at the time of capture, according to the available subject detection modes:
 
-Similar to Olympus, Panasonic hasn't changed the logic of focus point data since ages. Since 2008, to be precisely. They are sharing the same logic and format across all of their cameras. This is why Panasonic cameras are widely support, across model lines from mirrorless over bridge down to compact cameras.
+<img src="../screens/OM System 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-Panasonic is another member of "focus pixel" group, so you can choose focus box size and color in the plugin's preferences.  
+The detection frames for subject and subject elements are represented in yellow color. The focus area is displayed in the color that this specified in the plugin preferences. The size of the focus area cannot be chosen as the dimensions are given by the camera. 
 
-Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that uses the same logic and notation for face detection frames (displayed in yellow).
+Examples - Birds:
+
+<img src="../screens/OM System 6.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Dogs & Cats:
+
+<img src="../screens/OM System 8.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 9.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Motorsports:
+
+<img src="../screens/OM System 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 11.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 13.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Airplanes:
+
+<img src="../screens/OM System 14.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 15.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 16.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 17.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Trains:
+
+<img src="../screens/OM System 18.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Human:
+
+<img src="../screens/OM System 19.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+
+## 3.7 Panasonic
+
+Similar to Olympus, Panasonic haven't changed the basic logic of focus point data since ages. Since 2008, to be precisely. They are sharing the same logic and format across all of their cameras. This is why Panasonic cameras are widely support, across model lines from mirrorless over bridge down to compact cameras.
+
+Also Panasonic is a member of "focus pixel" group, so you can choose focus box size and color in the plugin's preferences:
 
 <img src="../screens/Panasonic 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
+While the focus point given by "AF Point Position" metadata tag has no dimensions, recent Lumix models support an "AF Area Size" tag in addition. This tag gives the size of the area used to find focus in subject detection modes. Whenever AFAreaSize exists, AFPointPosition represents the center of this area:    
 
-## 3.7 Pentax
+<img src="../screens/Panasonic 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-To be updated with release of V2.6
+Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that uses the same logic and notation for face detection frames (displayed in yellow).
+
+<img src="../screens/Panasonic 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Panasonic doesn't support a "focus distance" specification in metadata, so there's not much apart from focus mode and AF area mode listed in the focus information section. 
 
 
-## 3.8 Apple
+## 3.8 Pentax
+
+To be updated with release of V3.1  
+
+
+## 3.9 Apple
 
 Apple maintains a very simple logic to store the focused subject areas in EXIF metadata. This hasn't changed since early models (at least iPhone 5).
 
