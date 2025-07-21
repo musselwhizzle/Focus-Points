@@ -47,7 +47,7 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 - Display (EXIF) metadata of the selected image
 
 **Principle of operation:** <br>
-The plugin uses [ExifTool](https://exiftool.org/) to retrieve EXIF metadata from the image file. Autofocus related information is extracted from metadata and is processed to visualize the focus points. In order for this to work, the plugin requires an image file that has camera maker specific metadata information (_makenotes_) included.
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve EXIF metadata from the image file. Autofocus related information is extracted from metadata and is processed to visualize the focus points. In order for this to work, the plugin requires an image file that has camera maker specific metadata information (_makernotes_) included.
 
 Note: ExifTool comes as part of the plugin package and does not need to be installed separately. 
 
@@ -60,11 +60,11 @@ Examples, for which focus points cannot be displayed:
 - original image transferred as TIFF/JPG to a 3rd party editor (Photo -> Edit In) and returned as TIF,<br> e.g. Topaz, NIK, Photomatix 
 - photos exported to harddisk
 
-For external applications started from Lightroom that take a RAW file as input (invoked via  Plugin Extras), the plugin may work on the resulting file imported into Lightroom, if the application leaves makernotes intact. 
+For external applications started from Lightroom that take a RAW file as input (invoked via  Plugin Extras), the plugin may work on the resulting file imported into Lightroom, if the application leaves makernotes of the original file intact. 
 
 Examples, for which focus point display may work on image files created based on original files. Finally, this depends on the specific camera make/model:
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
-- DNG files created by LrC Enhance, e.g. AI Denoise
+  - DNG files created by LrC Enhance, e.g. AI Denoise (prior to LrC 14.4)
 
 Other cases where the Focus Points plugin will not be able to display meaningful information:
 
@@ -408,7 +408,7 @@ With this information, it is possible to not only visualize the user selected AF
 
 ### 3.6.1 OM System - AF Selection
 
-The user selected AF area is highlighted in white color. The focus area is displayed in the color that this specified in the plugin preferences. The size of the focus area cannot be chosen as the dimensions are given by the camera.
+The user selected AF area is highlighted in white color. The focus area is displayed in the color that this specified in the plugin preferences. The size of the focus area cannot be chosen as the dimensions are given by the camera. 
 
 "Medium" AF Area selected: 
 
@@ -433,7 +433,7 @@ The plugin visualizes the subject detection frames as displayed in viewfinder / 
 
 <img src="../screens/OM System 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-The detection frames for subject and subject elements are represented in yellow color. The focus area is displayed in the color that this specified in the plugin preferences. The size of the focus area cannot be chosen as the dimensions are given by the camera. 
+The detection frames for subject and subject elements are represented in yellow color. The focus area is displayed in the color that this specified in the plugin preferences. The size of the focus area cannot be chosen as the dimensions are given by the camera. The focus area has a center point, as the center of this area coincides with the coordinates specified by the AFPointSelected tag.
 
 Examples - Birds:
 
@@ -507,4 +507,9 @@ Modern iPhones there are some interesting tags to extend the camera settings sec
 
 ## 4 Glossary
 
-to be created
+AF
+MF
+EXIF
+ExifTool
+Metadata
+Makernotes
