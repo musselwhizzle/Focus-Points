@@ -7,11 +7,11 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 - Visualize faces and subjects detected by the camera<sup>1,3</sup> 
 - Display (EXIF) metadata of the selected image
 
-<small>
-<sup>1</sup> Depending on the presence of metadata.        
-<sup>2</sup> Currently supported for Pentax and OM System.<br>      
-<sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
-</small>
+
+<sup>1</sup><small> Depending on the presence of metadata.</small> 
+<sup>2</sup><small> Currently supported for Pentax and OM System.</small>.      
+<sup>3</sup><small> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).</small>
+
 
 
 For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
