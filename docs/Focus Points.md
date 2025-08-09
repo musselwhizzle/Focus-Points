@@ -35,7 +35,7 @@ Focus Points Plugin for Lightroom Classic
 
 ### [Glossary](#4-glossary)
 
-### [Troubleshooting / FAQ](Troubleshooting_faq.md#troubleshooting--faq)
+### [Troubleshooting / FAQ](Troubleshooting_FAQ.md#troubleshooting--faq)
 
 ___
 
@@ -232,17 +232,17 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 The first line of text in the "Focus Information" section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), warning (orange) or error message (red):
 
 🔗 <span style="color: limegreen;">Focus points detected</span>  
-[<span style="color: blue;">🔗</span>](Troubleshooting_faq.md#No-focus-points-recorded)
+[<span style="color: blue;">🔗</span>](Troubleshooting_FAQ.md#No-focus-points-recorded)
 <span style="color: darkorange;">No focus points recorded</span>  
-[<span style="color: blue;">🔗</span>](#Manual-focus-no-AF-points-recorded)
+[<span style="color: blue;">🔗</span>](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded)
 <span style="color: darkorange;">Manual focus, no AF points recorded</span>  
-[<span style="color: blue;">🔗</span>](#Focus-info-missing-from-file)
+[<span style="color: blue;">🔗</span>](Troubleshooting_FAQ.md#Focus-info-missing-from-file)
 <span style="color: red;">Focus info missing from file</span>  
-[<span style="color: blue;">🔗</span>](#Camera-model-not-supported)
+[<span style="color: blue;">🔗</span>](Troubleshooting_FAQ.md#Camera-model-not-supported)
 <span style="color: red;">Camera model not supported</span>  
-[<span style="color: blue;">🔗</span>](#Camera-maker-not-supported)
+[<span style="color: blue;">🔗</span>](Troubleshooting_FAQ.md#Camera-maker-not-supported)
 <span style="color: red;">Camera maker not supported</span>  
-[<span style="color: blue;">🔗</span>](#Severe-error-encountered)
+[<span style="color: blue;">🔗</span>](Troubleshooting_FAQ.md#Severe-error-encountered)
 <span style="color: red;">Severe error encountered</span>
 
 Click on the link symbol near the message to learn what it means and how to deal with it in case of an error or warning.
