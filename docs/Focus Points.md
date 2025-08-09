@@ -35,7 +35,7 @@ Focus Points Plugin for Lightroom Classic
 
 ### [Glossary](#4-glossary)
 
-### [Troubleshooting](Troubleshooting_FAQ.md#troubleshooting--faq)
+### [Troubleshooting / FAQ](Troubleshooting_faq.md#troubleshooting--faq)
 
 ___
 
@@ -44,51 +44,68 @@ ___
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
 - Show which focus point was active when the picture was taken.
+- Display user-selected autofocus points/area<sup>1,2</sup>
+- Visualize faces and subjects detected by the camera<sup>1,3</sup> 
 - Display (EXIF) metadata of the selected image
 
-**Principle of operation:** <br>
-The plugin uses [ExifTool](https://exiftool.org/) to retrieve EXIF metadata from the image file. Autofocus related information is extracted from metadata and is processed to visualize the focus points. In order for this to work, the plugin requires an image file that has camera maker specific metadata information (_makernotes_) included.
+<small>
+<sup>1</sup> Depending on the presence of metadata.        
+<sup>2</sup> Currently supported for Pentax and OM System.<br>      
+<sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
+</small>
+<br>
+<br>
 
-Note: ExifTool comes as part of the plugin package and does not need to be installed separately. 
+<big>**Principle of operation**</big>
+<br>
 
-The plugin will not be able to show focus points for image files that don't have makernotes included.<br> 
-For this it is important to understand that Lightroom does not read or keep makernotes when importing files.<br>
-Whenever a separate image file is created from the original file, there is a risk that makernotes will not be present in this file and the plugin does not have the required inputs to work.
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to visualize the focus points. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_).
 
-Examples, for which focus points cannot be displayed:
+<u>Note:</u> ExifTool is part of the plugin package and does not need to be installed separately. 
+
+The plugin will not be able to show focus points for image files that don't contain makernotes.<br>
+
+For this it is important to understand that Lightroom does not read or keep makernotes information when importing files.<br>
+Whenever a separate image file is created from the original file in Lightroom, there is a risk that makernotes will not be present in this file and the plugin does not have the required inputs to work.
+
+**Examples of when focus points are not displayed:**
 - original image edited in Photoshop and returned as PSD or TIF
 - original image transferred as TIFF/JPG to a 3rd party editor (Photo -> Edit In) and returned as TIF,<br> e.g. Topaz, NIK, Photomatix 
 - photos exported to harddisk
 
-For external applications started from Lightroom that take a RAW file as input (invoked via  Plugin Extras), the plugin may work on the resulting file imported into Lightroom, if the application leaves makernotes of the original file intact. 
+For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact.
 
 Examples, for which focus point display may work on image files created based on original files. Finally, this depends on the specific camera make/model:
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
-  - DNG files created by LrC Enhance, e.g. AI Denoise (prior to LrC 14.4)
+- DNG files created by LrC Enhance, e.g. AI Denoise (prior to LrC 14.4)
 
-Other cases where the Focus Points plugin will not be able to display meaningful information:
+**Cases where the Focus Points plugin may not be able to display meaningful information:**
 
-* the picture has been taken by focusing on the main subject, then panning the camera to get the desired composition.
+* <u>Focus and Pan</u>: The shot was taken by focusing on the main subject and then panning the camera to get the desired composition. The focus point recorded by the camera does not "move" with the focused subject during recomposition, but maintains its original position.  
+ <br>
+* <u>Back button Focus</u>: This is similar to Focus and Pan because the underlying principle is the same. In addition, the camera may not even record a focus point (depending on the make/model). 
+
+
 <br>
 
 ## 2. Overview and Basic Operation
-This section explains how the plugin is used.
+This section explains how to use the plugin.
 
 ### 2.1 Installation
-1. Unless you have been given a special link (e.g. for a pre-release) download the **source code.zip** file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of that page to find the download link). A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>
-_MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+1. Unless you have a special link (e.g. for a pre-release), download the **source code.zip** file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of this page to find the download link). A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>
+_MAC users_: The zip file will be automatically unzipped according to your MacOS preferences.
 
 
-2. If needed, unzip this file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
+2. Extract the downloaded file if necessary. Within the extracted contents, locate the plugin folder **focuspoints.lrplugin**
 
 
-3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the „adobe lightroom classic.app", use the control-click and choose  „show package content“. 
+3. Move this folder to the location where you normally keep your Lightroom plug-ins.<br>Tip: If you don't know this location, the Plugin Manager will tell you (see next step).<br>
+_MAC users_: if you need to navigate into the content of the „adobe lightroom classic.app", use the control-click and choose  „show package content“. 
 
 
 4. Open Lightroom and go to File -> Plug-in Manager.<br>
 _Windows_: Click the "Add" button and select the plugin.<br>
-_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise Click on the „Add“ button and select the plugin.
+_MAC_: If you copied the plugin to the default Lightroom plugin location, the new plugin is already listed - activate it. Otherwise, click the "Add" button and select the plugin.
 
 
 Once installed, select one or more photos and invoke the plugin via
@@ -110,15 +127,19 @@ Selecting Focus Point Viewer in the list of installed plugins (Library module, F
  _Display scaling factor_   
 Windows only. Default setting: "Auto"
 
-The drawing routines used on Windows are not aware of a display scale factor that might have been applied to the Windows configuration (Settings -> Display -> Scale). In order to avoid that the plugin window can get bigger than the size of the screen the plugin needs to reverse such scaling/magnification when sizing the dialog window.
- The "Auto" setting will trigger the plugin to size its windows in sync with a system scale factor. Optionally, a pre-defined, fix scale value can selected, which will avoid a registry access via an external command (REG.EXE)on each call of the plugin. The meaning of the predefined values 100%, 125%, 150% etc is the same as in the Windows Settings dialog. I.e. in order to reverse a system-wide 150% magnification, the same value needs to be selected in the plugin settings.   
+The drawing routines used on Windows are not aware of any display scale factor that may have been applied to the Windows configuration (Settings -> Display -> Scale). In order to avoid that the plugin window gets bigger than the screen size, the plugin has to reverse this scaling when calculating the size of the dialog window.
+
+ The "Auto" setting causes the plugin to scale its windows in sync with a system scale factor. Optionally, a predefined fixed scale value can be selected, which avoids a registry access via an external command (REG.EXE) on each call of the plugin. The meaning of the predefined values 100%, 125%, 150%, etc. is the same as in the Windows Settings dialog. I.e. to undo a system-wide zoom of 150%, the same value '150%' must be selected from the drop-down list.
+
+
+   
 
 **Viewing Options**
 
 Default settings: "Red, Medium"
 
 _Size of focus box for 'focus pixel' points_<br> 
-Depending on the camera maker, focus points can have dimension (width and height), thus forming a focus box. Some makers represent focus points by a single 'focus pixel'. To ensure their visibility, such focus pixel points are represented by a focus box. You can choose whether the box shall be small or medium/large with a center dot.
+Depending on the camera maker and model, focus points may have a dimension (width and height) or they may be represented by a 'focus pixel'. For focus points that have a dimension, a box with the specified width and height is displayed. For 'focus pixel' points you can choose how to display them: small box or medium/large with a center dot.
 
 _Color of in-focus points_<br> You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
 
@@ -126,9 +147,13 @@ _Color of in-focus points_<br> You can choose between three different colors for
 
 Default setting: "Auto"
 
-In case the plugin doesn't work as expected, the progress can be logged to help pinpointing where things went wrong.
+The logging feature serves two purposes:
+1. Gather information to explain why focus points are not displayed
+2. Gather information to help the developer figure out what went wrong if the plugin does not work as expected.
 
-The logging mechanism offers a fin grain hierarchy of levels which information should be logged. Setting a certain logging level in the plugin preferences will result in writing all messages of that level including those on lower levels. Description, from lower to higher levels:
+For 1. "Auto" is the recommended setting, because it logs relevant information that can help to understand why, for example, the plugin is not able to correctly determine the focus point(s) for a given image. If the plugin encounters any errors or warnings during its operation, it will provide a link to view the log for additional information. See example in "User Messages" below.
+
+The logging mechanism provides a fine-grained hierarchy of levels at which information should be logged. Setting a certain logging level in the plugin preferences will cause all messages of that level to be written, including those at lower levels. description, from lower to higher levels:
 
    | Level   | Information logged                                                      |
    |---------|-------------------------------------------------------------------------|
@@ -136,27 +161,26 @@ The logging mechanism offers a fin grain hierarchy of levels which information s
    | Error   | Only error messages.                                                    |
    | Warning | + warnings                                                              |
    | Info    | + information on progress and intermediate results                      |
-   | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |              
    | Debug   | + important debug information. No noticeable slow down.                 |   
    | Full    | Full debug information, including entire EXIF data. Slow down.          |
+   | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |              
    
-"Auto" is the recommended setting, because it logs relevant information that can help to understand why e.g. the plugin is not able to properly determine the focus point(s) for a given image. In case the plugin encounters any errors or warnings during its operation, it will provide a link to display the log for additional information. See example under "User Messages" below. 
 
-Also, "Auto" logging will start on an empty log file for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.  
+<u>Hint</u>: "Auto" logging will start on an empty log file for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.  
 
 
 **Updates**
 
-During operation, the plugin checks whether an updated version is available for download.
-In case there is an update, this will be highlighted and the website can be opened by clicking the button to download. In order to install the update, perform the steps under [Installation](#21-installation) and reload the plugin.    
+During operation, the plugin checks if an updated version is available for download.
+If an update is available, it will be highlighted and you can click the download button to go to the website. To install the update, follow the steps in [Installation](#21-installation) and reload the plugin.
 
-If an update is available, this will also be displayed in the status area of the focus point viewer, if the "Display message" checkbox is checked:
+If an update is available, it will also be displayed in the status area of the Focus Point Viewer if the "Show message" checkbox is selected:
 
 <img src="../screens/UpdateAvailable.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 
 ### 2.3 Focus Point Viewer
-Once the plugin has been installed, it can be invoked with one or more photos selected:
+Once the plugin is installed, you can run it with one or more photos selected:
 
 Library module:<br> 
 "Library -> Plug-in Extras -> Focus Point" 
@@ -165,45 +189,38 @@ Develop module:<br>
 "File -> Plug-in Extras -> Focus Point"<br>
 <br>
 <br>
-#### User interface (single image operation): ####
+#### User interface ####
+
+The window is divided into two parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
 
 <img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
-
-The window is split in two parts. The photo view with visualized focus points on the left and side-by-side on the right the display of selected information that may be helpful for assessing the photo with respect to focus results.<br>
 
 The information section comprises three groups:
 - Image information
 - Camera settings
 - Focus information
 
-Image information and camera settings largely come from the LrC catalog, so this information is present for every photo. These sections may be extended by camera specific items like crop mode, drive mode etc., depending on the availabity of information in makernotes.  
+Image information and camera settings are largely taken from the Lightroom catalog, so this information is available for every photo. Depending on the availability of information in the makernotes, these two sections may be expanded to include various camera-specific information such as crop mode, drive mode, shot number, etc., which may be useful in the context of evaluating focus results.
 
-Focus information is only present for those photos where the corresponding image file has full metadata included. See [Scope and Limitations](#1-scope-and-limitations) for more detailed information.
+Focus information is only available for photos for which the corresponding image file contains complete metadata. See [Scope and Limitations](#1-scope-and-limitations) for more detailed information.
 
-The window can be closed by clicking "OK" or pressing \<Enter> or \<Esc> or \<Space>.
+Two buttons at the bottom of the window allow you to move forward and backward through a series of photos, if more than one was selected in Lightroom when the plugin was launched.
 
-<br>
+A link to the User Guide (this document) provides quick and easy access to the operating instructions.  
 
-<b>User interface (multi-image operation):</b>
+The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc> or \<Space>.
 
-When run on a selection of photos, the user interface of Focus Point Viewer offers two additional buttons at the bottom left. These buttons enable the user to move forwards and backwards within the series of selected photos.
-
-The window can be closed by clicking "Exit"  or pressing \<Enter> or \<Esc> or \<Space>.
-
-<img src="../screens/BasicOperation4.jpg" alt="User Interface (Multi-image)" style="width: 600px;"/>
-<br>
 <br>
 
 #### Depth of Field, Hyperfocal Distance ####
-Even though 'Focus distance', 'Depth of Field' and 'Hyperfocal Distance' are part of the "Focus Information" group, the plugin displays this subsection always in the same format, that's why it's covered here.
 
-Most camera makers reflect Subject or Focus Distance information in makernotes. Sony and Fuji do not, so this subsection is missing from Focus Information on Sony and Fuji images.   
+Most camera makers include subject or focus distance information in makernotes. Sony, Fuji and Pentax do not, so this section is not relevant to images taken with their cameras.    
 
-ExifTool uses the focus distance information to calculate Depth of Field (DoF) which can be helpful to assess whether the lens has been stopped down enough to capture a subject 'acceptably sharp', i.e. whether the desired portion of the subject is 'in focus'. ExifTool also calculates Hyperfocal distance, which can help to assess if for photos that should be sharp from front to back (e.g. landscapes) autofocus has been aimed at a proper distance.
+ExifTool uses the focus distance information to calculate the depth of field (DoF), which can be helpful in assessing whether the lens is stopped down enough to capture a subject "acceptably sharp", i.e. whether the desired portion of the subject is "in focus". ExifTool also calculates the hyperfocal distance, which can be helpful in determining if the autofocus is set at the correct distance for photos that should be sharp from front to back (e.g. landscapes).
 
-Note that the precision of Focus Distance values is limited. Cameras are not designed to measure distances. The values given in EXIF data are by-products of the focusing process, derived from control information to send the lens to a certain distance. Such focus step counts can be converted approximately into a distance. While this information is likely to be  inaccurate especially in extreme conditions (in macro range or towards infinity), it is usually good enough to be used in DoF considerations for 'normal' distances.
+Note that the accuracy of focus distance values is limited. Cameras are not designed to measure distances. The values given in the EXIF data are byproducts of the focusing process, derived from control information to move the lens to a certain distance. Such focus step counts can be approximated as a distance. The degree of inaccuracy, and therefore the usefulness of this data, depends on several aspects. Typically, focus distance values are less accurate at short focal lengths. Also, this information is likely to be inaccurate under extreme conditions (macro or infinity). Finally, the equipment also plays a role.
 
-Technical note: ExifTool creates pseudo tags DepthOfField and HyperfocalDistance which can be seen in ExifTool output. For calculation of DoF it uses the standard circle of confusion parameter* for the respective sensor. In this context, the term “sharpness” refers to the ability of the human eye to recognize and resolve details when an image is viewed at full size, i.e. not enlarged, also known as “pixel peeping”. 
+Technical note: ExifTool creates pseudo tags DepthOfField and HyperfocalDistance which can be seen in ExifTool output. For calculation of DoF it uses the standard circle of confusion parameter for the respective sensor. In this context, the term “sharpness” refers to the ability of the human eye to recognize and resolve details when an image is viewed at full size, i.e. not enlarged, also known as “pixel peeping”. 
 
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
 
@@ -212,15 +229,25 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 
 #### User Messages ####
 
-If focus information is present for the photo and focus points have been detected this is indicated by a message highlighted in green - see images above.
+The first line of text in the "Focus Information" section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), warning (orange) or error message (red):
 
-In case focus information is missing or no focus points have been detected (e.g. for manually focused photos) this will be indicated by a message in red letters:
+🔗 <span style="color: limegreen;">Focus points detected</span>  
+[<span style="color: blue;">🔗</span>](Troubleshooting_faq.md#No-focus-points-recorded)
+<span style="color: darkorange;">No focus points recorded</span>  
+[<span style="color: blue;">🔗</span>](#Manual-focus-no-AF-points-recorded)
+<span style="color: darkorange;">Manual focus, no AF points recorded</span>  
+[<span style="color: blue;">🔗</span>](#Focus-info-missing-from-file)
+<span style="color: red;">Focus info missing from file</span>  
+[<span style="color: blue;">🔗</span>](#Camera-model-not-supported)
+<span style="color: red;">Camera model not supported</span>  
+[<span style="color: blue;">🔗</span>](#Camera-maker-not-supported)
+<span style="color: red;">Camera maker not supported</span>  
+[<span style="color: blue;">🔗</span>](#Severe-error-encountered)
+<span style="color: red;">Severe error encountered</span>
 
-<img src="../screens/BasicOperation2.jpg" alt="User Interface (Single image)" style="width: 800px;"/>
+Click on the link symbol near the message to learn what it means and how to deal with it in case of an error or warning.
 
 Missuccess in detecting focus points is usually the result of missing or unexpected information while analyzing image metadata. Provided logging is enabled, the corresponding details can be logged and displayed to receive additional information what is wrong. When the plugin encounters warnings or errors while analyzing autofocus metadata, a "Plug-in Status" message will occur at the bottom with a button to open the logfile:
-
-<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 900px;"/>
 
 
 <br>

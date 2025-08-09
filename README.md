@@ -77,8 +77,8 @@ Supported Cameras
   
 
 * Fuji
-  * X-series (from X100 in 2011 up to X-H2S today)
-  * GFX-series
+  * Mirroless: X-series (from X100 in 2011 up to X-H2S today), GFX-series
+  * Compact: FinePix models after 2007  
   * Face and subject detection frames
 
 
@@ -86,23 +86,25 @@ Supported Cameras
   * DSLR: E-5, E-420, E-520, E-620
   * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
   * Face detection frames
+  * OM System: Subject detection frames
 
 
 * Panasonic
   * Mirrorless: entire LUMIX G and S series
-  * Compact: FZ, TZ/ZS, LX series - all models after 2008
+  * Compact: FZ, TZ/ZS, LX series - models after 2008
   * Face detection frames
   
-
-* Apple
-  * iPhone (starting from at least iPhone 5)
-  * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
-
 
 * Pentax 
   * Display of focus points and supported models are unchanged with respect to previous plugin versions
   * Display of basic image information and camera settings
   * Pending (upcoming release): Review/revision of focus point logic. Display of advanced camera settings and focus information 
+
+
+* Apple
+  * iPhone (starting from at least iPhone 5)
+  * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
+
 
 <br>
 

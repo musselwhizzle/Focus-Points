@@ -7,7 +7,7 @@
 * [Focus info missing from file](#Focus-info-missing-from-file)
 * [Camera model not supported](#Camera-model-not-supported)
 * [Camera maker not supported](#Camera-maker-not-supported)
-* [Errors encountered](#Errors-encountered)
+* [Severe error encountered](#Severe-error-encountered)
 
 ## General
 
@@ -78,13 +78,13 @@ While it is not difficult to add at least basic support for a camera brand, this
 <img src="../screens/Troubleshooting 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
-### "Errors encountered"
+### "Severe error encountered"
 
-This message is displayed when something unexpected happens during the process of reading focus information from metadata, processing it, and displaying the visualization elements.
+This message is displayed when something serious and unexpected happens during the process of reading focus information from the metadata, processing it, and displaying the visualization elements.
 
-This can be anything from installation problems, corrupt metadata, or simply that the programmer failed to properly handle a certain situation in that code. The log file may give some indication of what the problem is, but usually it is not something a user can fix.
+This can be anything from installation problems, unexpected metadata, or simply that the programmer did not handle a particular situation properly in the plugin code. The log file may give some indication of what the problem is, but usually it is not something a user can fix.
 
-If you run into this problem and cannot fix it yourself, you will be asked to go to the plugin page, sign up for a free account, and [create a new issue](https://github.com/musselwhizzle/Focus-Points/issues) that describes the problem.
+If you encounter this problem and cannot fix it yourself, please go to the plugin home page on Github, sign up for a free account if you don't already have one, and [create a new issue](https://github.com/musselwhizzle/Focus-Points/issues) that describes the problem. This way you can help make the plugin better and more reliable!
 
 
 Example error:
