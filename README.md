@@ -3,7 +3,15 @@ Focus Points
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
 - Show which focus point was active when the picture was taken.
-- Display the entire (EXIF) metadata of the selected image
+- Display user-selected autofocus points/area<sup>1,2</sup>
+- Visualize faces and subjects detected by the camera<sup>1,3</sup> 
+- Display (EXIF) metadata of the selected image
+
+<small>
+<sup>1</sup> Depending on the presence of metadata.        
+<sup>2</sup> Currently supported for Pentax and OM System.<br>      
+<sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
+</small>
 
 
 For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
