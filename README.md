@@ -8,9 +8,9 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 - Display (EXIF) metadata of the selected image
 
 
-<sup>1</sup><small> Depending on the presence of metadata.</small> 
-<sup>2</sup><small> Currently supported for Pentax and OM System.</small>.      
-<sup>3</sup><small> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).</small>
+<sup>1</sup> Depending on the presence of metadata. 
+<sup>2</sup> Currently supported for Pentax and OM System.      
+<sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
 
 
 
