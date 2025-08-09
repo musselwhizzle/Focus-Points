@@ -48,11 +48,9 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 - Visualize faces and subjects detected by the camera<sup>1,3</sup> 
 - Display (EXIF) metadata of the selected image
 
-<small>
-<sup>1</sup> Depending on the presence of metadata.        
-<sup>2</sup> Currently supported for Pentax and OM System.<br>      
+<sup>1</sup> Depending on the presence of metadata. 
+<sup>2</sup> Currently supported for Pentax and OM System.      
 <sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
-</small>
 <br>
 <br>
 
@@ -231,21 +229,17 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 
 The first line of text in the "Focus Information" section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), warning (orange) or error message (red):
 
-🔗 <span style="color: limegreen;">Focus points detected</span>  
-[🔗](Troubleshooting_FAQ.md#No-focus-points-recorded)
-<span style="color: darkorange;">No focus points recorded</span>  
-[🔗](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded)
-<span style="color: darkorange;">Manual focus, no AF points recorded</span>  
-[🔗](Troubleshooting_FAQ.md#Focus-info-missing-from-file)
-<span style="color: red;">Focus info missing from file</span>  
-[🔗](Troubleshooting_FAQ.md#Camera-model-not-supported)
-<span style="color: red;">Camera model not supported</span>  
-[🔗](Troubleshooting_FAQ.md#Camera-maker-not-supported)
-<span style="color: red;">Camera maker not supported</span>  
-[🔗](Troubleshooting_FAQ.md#Severe-error-encountered)
-<span style="color: red;">Severe error encountered</span>
+|  Type   | Message |
+|:-------:|----------------
+| Success | Focus points detected
+| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded)
+| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded)
+|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file)
+|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported)
+|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported)
+|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered)
 
-Click on the link symbol near the message to learn what it means and how to deal with it in case of an error or warning.
+Click on the message to learn what it means and how to deal with it in case of an error or warning.
 
 Missuccess in detecting focus points is usually the result of missing or unexpected information while analyzing image metadata. Provided logging is enabled, the corresponding details can be logged and displayed to receive additional information what is wrong. When the plugin encounters warnings or errors while analyzing autofocus metadata, a "Plug-in Status" message will occur at the bottom with a button to open the logfile:
 
