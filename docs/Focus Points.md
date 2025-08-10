@@ -59,11 +59,9 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 <big>**Principle of operation**</big>
 <br>
 
-The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera.
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera to each JPG or RAW file.<br>The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
 
 <u>Note:</u> ExifTool is part of the plugin package and does not need to be installed separately. 
-
-The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
 
 Because the plugin works inside Lightroom, it is important to understand that Lightroom **does not read** makernotes information when importing files. When the plugin is run on a selected photo, it calls ExifTool to process the underlying image file on disk. When Lightroom exports a photo as JPG or TIFF to pass to an external application for editing, it creates a new image file without the makernotes metadata. The re-imported result from that application will not have this information, which is essential for the plugin to work.
 
