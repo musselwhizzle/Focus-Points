@@ -3,6 +3,8 @@ Focus Points Plugin for Lightroom Classic
 
 ## Content ##
 
+### [Troubleshooting / FAQ](Troubleshooting_FAQ.md#troubleshooting--faq)
+
 ### [Scope and Limitations](#1-scope-and-limitations)
 
 ### [Overview and Basic Operation](#2-overview-and-basic-operation)
@@ -36,8 +38,6 @@ Focus Points Plugin for Lightroom Classic
 * [Apple](#310-apple)
 
 ### [Glossary](#4-glossary)
-
-### [Troubleshooting / FAQ](Troubleshooting_FAQ.md#troubleshooting--faq)
 
 ___
 
