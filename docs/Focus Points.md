@@ -31,7 +31,9 @@ Focus Points Plugin for Lightroom Classic
  
 * [Pentax](#38-pentax)
 
-* [Apple](#39-apple)
+* [Ricoh](#39-ricoh)
+ 
+* [Apple](#310-apple)
 
 ### [Glossary](#4-glossary)
 
@@ -164,7 +166,7 @@ The logging mechanism provides a fine-grained hierarchy of levels at which infor
    | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |              
    
 
-<u>Hint</u>: "Auto" logging will start on an empty log file for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.  
+<u>Hint</u>: "Auto" logging will start on an empty logfile for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.  
 
 
 **Updates**
@@ -220,32 +222,45 @@ Note that the accuracy of focus distance values is limited. Cameras are not desi
 
 Technical note: ExifTool creates pseudo tags DepthOfField and HyperfocalDistance which can be seen in ExifTool output. For calculation of DoF it uses the standard circle of confusion parameter for the respective sensor. In this context, the term “sharpness” refers to the ability of the human eye to recognize and resolve details when an image is viewed at full size, i.e. not enlarged, also known as “pixel peeping”. 
 
-Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
-
 <img src="../screens/BasicOperation5.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
+Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
+
+<br>
 
 #### User Messages ####
 
-The first line of text in the "Focus Information" section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), warning (orange) or error message (red):
+The first line of text in the "Focus Information" section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
 |  Type   | Message |
-|:-------:|----------------
-| Success | Focus points detected
-| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded)
-| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded)
-|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file)
-|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported)
-|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported)
-|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered)
+|:-------:|---------------- |
+| Success | Focus points detected |
+| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded) |
+| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded) |
+|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file) |
+|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported) |
+|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported) |
+|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered) |
 
 Click on the message to learn what it means and how to deal with it in case of an error or warning.
 
-Missuccess in detecting focus points is usually the result of missing or unexpected information while analyzing image metadata. Provided logging is enabled, the corresponding details can be logged and displayed to receive additional information what is wrong. When the plugin encounters warnings or errors while analyzing autofocus metadata, a "Plug-in Status" message will occur at the bottom with a button to open the logfile:
+You can also access this information from the plugin window by clicking the link icon 🔗 next to the message: 
+
+<img src="../screens/BasicOperation6.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 
-<br>
-<br>
+#### Plugin Status ####
+
+If errors or warnings were encountered while processing the autofocus metadata, a status message is displayed at the bottom of the text pane. To the right of this message, you can click the "Check log" button to open the logfile for more details. The logfile contains detailed information about the metadata processing, such as relevant tags found (or not found).<br>
+See also section "Logging" under [Configuration and Settings](#22-configuration-and-settings).
+
+For the image above, where focus info is said to be "missing from file", the logfile looks like this:
+
+<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+
+There are two warnings and one error:
+The tag 'Camera Settings Version' has not been found which means that this file does not contain a makernotes section with AF information (which is required for the plugin to work). The image file was not created in-camera but by an application. In this case, it is a JPG file exported from (and created! by) Lightroom.  
+
 
 ### 2.4 Metadata Viewer
 The plugin also features a Metadata Viewer with live search: 
@@ -253,7 +268,7 @@ The plugin also features a Metadata Viewer with live search:
 * Library -> Plug-in Extras -> Show Metadata, or  
 * File -> Plug-in Extras -> Show Metadata
 
-This comes in handy for viewing any information that is not visible in the info sections of the focus point window. The data is fetched by ExifTool directly from the image file on disk so it gives a full picture of the metadata written by the camera. Metadata can be filtered by key or value search terms. The filter accepts pattern matching with the commonly known “magic characters”:    
+This is useful for viewing information that is not visible in the info sections of the focus point window. The data is retrieved by ExifTool directly from the image file on disk, so it gives a complete picture of the metadata written by the camera. Metadata can be filtered by key or value search terms. The filter accepts pattern matching with the well-known "magic characters":
 
  | Char  | <div align="left">Meaning</div>                | 
  |:-----:|------------------------------------------------|
@@ -264,7 +279,7 @@ This comes in handy for viewing any information that is not visible in the info 
  |   $   | end of string                                  |              
 
 Note:  
-The plugin is written in Lua programming language and uses Lua string.find() for filtering. This function supports "Lua patterns", so you could use even more [sophisticated pattern matching](https://www.lua.org/pil/20.2.html). However, for filtering a simple EXIF data output, basic pattern matching should be more than sufficient. 
+The plugin is written in the Lua programming language and uses Lua string.find() for filtering. This function supports "Lua patterns", so you can use even more [sophisticated pattern matching](https://www.lua.org/pil/20.2.html). However, for filtering a simple EXIF data output, basic pattern matching should be more than sufficient.
 
 For further processing as text, the full metadata (retrieved via 'exiftool -a -u -sort <file>') can also be opened in a text editor.  
 
@@ -273,10 +288,27 @@ For further processing as text, the full metadata (retrieved via 'exiftool -a -u
 
 
 ## 3. Display of Focus Points
-The subchapters in this section describe in more detail which focus point features are supported by the plugin for individual camera makers and specific lines or models. This can be different colors for different statuses (e.g. focus point selected, in focus, inactive), or face/subject detection frames. The level to which such features can be supported ultimately depends on the availability of corresponding data in EXIF maker notes.
+The subchapters in this section describe in more detail which features are supported by the plugin for individual camera makers and specific lines or models. In this context, "feature" means visualization of:
 
-Even if certain data is stored by a camera maker it doesn't mean at the same time that it's "available". 
-_Makernotes_ is a proprietary metadata section that contains manufacturer-specific information that is not standardized across different brands. Camera makers can use this information to diagnose camera issues, for instance.
+* User-selected focus points/areas
+* Focus point(s) used by the camera to produce a sharp image
+* Detected faces
+* Detected subjects (animals, airplanes, cars, trains, etc.)
+* Inactive AF points (to visualize the complete AF layout of DSLRs)
+
+The plugin uses different colors to visualize these elements:
+
+|           Element           |       Color        |
+|:---------------------------:|:------------------:|
+|   Inactive AF point/area    |        Gray        |
+| User-selected AF point/area |       White        |
+| AF point(s) used by camera  | Green, Red or Blue |
+|  Detected face or subject   |       Yellow       |
+
+
+The extent to which these features can be supported for a given camera model ultimately depends on a) the availability of the corresponding data in the EXIF makernotes and b) the fact whether this information is known to ExifTool.
+
+Even if certain data is recorded by a camera manufacturer, this does not mean that it is "available". _Makernotes_ is a proprietary metadata section that contains manufacturer-specific information that is not standardized across different brands. Camera makers can use this information to diagnose camera issues, for instance.
 
 The Focus Points plugin fully relies on what [ExifTool](https://exiftool.org/) is able to decode and display. Which in turn doesn't fall from the sky, but it's a collaborative effort by camera owners worlwide that are willing to contribute and [go where no man has gone before](https://exiftool.org/#boldly) and decode the unknown.      
 
@@ -510,10 +542,108 @@ Panasonic doesn't support a "focus distance" specification in metadata, so there
 
 ## 3.8 Pentax
 
-To be updated with release of V3.1  
+With the release of V3.1, Pentax is not only on par with other camera manufacturers and models in terms of supported features, it is even ahead of the "Big Three", Canon, Nikon and Sony.
+
+While working on Pentax support, a lot of effort was put into finding and decoding relevant metadata tags for newer models (like the K-3 III) and fixing tags that were already supported by ExifTool but not properly decoded for models like the K-Sx, K-70 and KP.
+
+Pentax metadata supports visualization of:
+* User-selected focus points/areas
+* Focus point(s) used by the camera
+* Detected faces
+* Inactive AF points (to visualize the complete AF layout)
+
+The exact level of support depends on the camera model, as not all models support all features (e.g. face detection is not available on K-5 and even older models)
+
+Here are some examples:
+
+<img src="../screens/Pentax 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 III image taken with viewfinder, selected focusing area "Auto Area" (all 101 AF points) and "Subject Recognition" on.
+
+<br>
+
+<img src="../screens/Pentax 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 III image taken with viewfinder, "Zone Select" focus area (21 AF points) selected, AF-C and "Continuous" drive mode. Action settings and AF-C control settings (AF hold, focus sensitivity, point tracking) for the shot are listed in "Focus Information".
+
+<br>
+
+<img src="../screens/Pentax 6.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 III image taken with viewfinder using "Expanded Area M" (5 selected AF points plus 60 peripheral AF points). The selected AF points are displayed in white, and the peripheral points are displayed in gray.
+
+<br>
+
+<img src="../screens/Pentax 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 III image taken with Live View using "Auto Area"
+
+<br>
+
+<img src="../screens/Pentax 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 III image taken with Live View using "Face Detection". The K-3 III records two sets of face detection information. Since there is no way to decide which set has "better" information, both sets are displayed.
+
+<br>
+
+<img src="../screens/Pentax 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 III image taken with Live View using "Face Detection". The K-3 III can detect up to 10 faces. Double images occur because two independent sets of face detection information are recorded. In this image, some faces are part of only one set. If more than 4 faces are detected in an image, the plugin will not display the eye information to avoid optical clutter.
+
+<br>
+
+<img src="../screens/Pentax 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+KP image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white, and the remaining (inactive) AF points are displayed in gray. 
+
+<br>
+
+<img src="../screens/Pentax 8.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-3 image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white  .
+
+<br>
+
+<img src="../screens/Pentax 9.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+K-01 image taken with viewfinder using "Multiple AF Points".  
+
+<br>
+
+<img src="../screens/Pentax 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.
 
 
-## 3.9 Apple
+## 3.9 Ricoh
+
+Starting with the GR III, Ricoh's GR models use the same metadata structures as the latest Pentax models (K-3 III), so support for these cameras is a by-product of adding support for the K-3 III.
+
+Pentax metadata supports visualization of:
+* Focus point(s) used by the camera
+* Detected faces
+
+Examples:
+
+<img src="../screens/Ricoh 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Single focus point selected and used to focus the image.
+
+<br>
+
+<img src="../screens/Ricoh 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+  
+Multiple focus points from "Auto Area" selection used to focus the image.
+
+<br>
+
+<img src="../screens/Ricoh 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Detection of multiple faces and eyes.
+
+
+## 3.10 Apple
+
 
 Apple maintains a very simple logic to store the focused subject areas in EXIF metadata. This hasn't changed since early models (at least iPhone 5).
 
@@ -528,9 +658,4 @@ Modern iPhones there are some interesting tags to extend the camera settings sec
 
 ## 4 Glossary
 
-AF
-MF
-EXIF
-ExifTool
-Metadata
-Makernotes
+to be added
