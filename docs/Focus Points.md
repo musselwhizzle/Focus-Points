@@ -72,7 +72,8 @@ Because the plugin works inside Lightroom, it is important to understand that Li
 
 For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact. This is because in this case Lightroom does not physically pass on the file to the external application but only the name of the image file.
 
-Examples, for which focus point display may work on image files created based on original files. Finally, this depends on the specific camera make/model:
+**Examples, for which focus point display may work on image files created based on original files**  
+Finally, this depends on the specific camera make/model:
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
 - DNG files created by LrC Enhance, e.g. AI Denoise (prior to LrC 14.4)
 
