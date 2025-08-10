@@ -66,11 +66,11 @@ The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the 
 Because the plugin works inside Lightroom, it is important to understand that Lightroom **does not read** makernotes information when importing files. When the plugin is run on a selected photo, it calls ExifTool to process the underlying image file on disk. When Lightroom exports a photo as JPG or TIFF to pass to an external application for editing, it creates a new image file without the makernotes metadata. The re-imported result from that application will not have this information, which is essential for the plugin to work.
 
 **Examples of when focus points are not displayed:**
-- original image edited in Photoshop and returned as PSD or TIF
-- original image transferred as TIFF/JPG to a 3rd party editor (Photo -> Edit In) and returned as TIF,<br> e.g. Topaz, NIK, Photomatix 
-- photos exported to disk
+- Original image edited in Photoshop and returned as PSD or TIF
+- Original image transferred as TIFF/JPG to a 3rd party editor (Photo -> Edit In) and returned as TIF,<br> e.g. Topaz, NIK, Photomatix 
+- Photos exported to disk
 
-For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact. This is because Lightroom does not physically pass on the file to the external application but only the name of the image file.
+For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact. This is because in this case Lightroom does not physically pass on the file to the external application but only the name of the image file.
 
 Examples, for which focus point display may work on image files created based on original files. Finally, this depends on the specific camera make/model:
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
@@ -78,10 +78,8 @@ Examples, for which focus point display may work on image files created based on
 
 **Cases where the Focus Points plugin may not be able to display meaningful information:**
 
-* <u>Focus and Pan</u>: The shot was taken by focusing on the main subject and then panning the camera to get the desired composition. The focus point recorded by the camera does not "move" with the focused subject during recomposition, but maintains its original position.  
- <br>
+* <u>Focus and Pan</u>: The shot was taken by focusing on the main subject and then panning the camera to get the desired composition. The focus point recorded by the camera does not "move" with the focused subject during recomposition, but maintains its original position.
 * <u>Back button Focus</u>: This is similar to Focus and Pan because the underlying principle is the same. In addition, the camera may not even record a focus point (depending on the make/model). 
-
 
 <br>
 
