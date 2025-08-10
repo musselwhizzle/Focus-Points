@@ -52,28 +52,27 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 
 <sup>1</sup> Depending on the presence of metadata. 
 <sup>2</sup> Currently supported for Pentax and OM System.      
-<sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
+<sup>3</sup> Currently supported for Fuji and OM System (subjects, faces) and Sony, Olympus, Pentax (faces).
 <br>
 <br>
 
 <big>**Principle of operation**</big>
 <br>
 
-The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to visualize the focus points. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_).
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera.
 
 <u>Note:</u> ExifTool is part of the plugin package and does not need to be installed separately. 
 
-The plugin will not be able to show focus points for image files that don't contain makernotes.<br>
+The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
 
-For this it is important to understand that Lightroom does not read or keep makernotes information when importing files.<br>
-Whenever a separate image file is created from the original file in Lightroom, there is a risk that makernotes will not be present in this file and the plugin does not have the required inputs to work.
+Because the plugin works inside Lightroom, it is important to understand that Lightroom **does not read** makernotes information when importing files. When the plugin is run on a selected photo, it calls ExifTool to process the underlying image file on disk. When Lightroom exports a photo as JPG or TIFF to pass to an external application for editing, it creates a new image file without the makernotes metadata. The re-imported result from that application will not have this information, which is essential for the plugin to work.
 
 **Examples of when focus points are not displayed:**
 - original image edited in Photoshop and returned as PSD or TIF
 - original image transferred as TIFF/JPG to a 3rd party editor (Photo -> Edit In) and returned as TIF,<br> e.g. Topaz, NIK, Photomatix 
-- photos exported to harddisk
+- photos exported to disk
 
-For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact.
+For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact. This is because Lightroom does not physically pass on the file to the external application but only the name of the image file.
 
 Examples, for which focus point display may work on image files created based on original files. Finally, this depends on the specific camera make/model:
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
