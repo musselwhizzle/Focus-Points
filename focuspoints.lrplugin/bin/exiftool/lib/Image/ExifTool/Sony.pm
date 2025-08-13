@@ -34,7 +34,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::Minolta;
 
-$VERSION = '3.73';
+$VERSION = '3.74';
 
 sub ProcessSRF($$$);
 sub ProcessSR2($$$);
@@ -176,6 +176,7 @@ sub PrintInvLensSpec($;$$);
     32888 => 'Sony FE 85mm F1.4 GM II', #JR
     32889 => 'Sony FE 28-70mm F2 GM',
     32890 => 'Sony FE 400-800mm F6.3-8 G OSS', #JR
+    32891 => 'Sony FE 50-150mm F2 GM', #github335
 
   # (comment this out so LensID will report the LensModel, which is more useful)
   # 32952 => 'Metabones Canon EF Speed Booster Ultra', #JR (corresponds to 184, but 'Advanced' mode, LensMount reported as E-mount)
@@ -201,7 +202,9 @@ sub PrintInvLensSpec($;$$);
     33091 => 'Sony FE 400-800mm F6.3-8 G OSS + 1.4X Teleconverter', #JR
     33092 => 'Sony FE 400-800mm F6.3-8 G OSS + 2X Teleconverter', #JR
 
-    49201 => 'Zeiss Touit 12mm F2.8', #JR (lens firmware Ver.02)
+    49201 => 'Zeiss Touit 12mm F2.8 or other Touit lens', #JR (lens firmware Ver.02) / github342 (firmware Ver.02.001)
+    49201.1 => 'Zeiss Touit 32mm F1.8', #github342 (firmware Ver.02.001)
+    49201.2 => 'Zeiss Touit 50mm F2.8', #github342 (firmware Ver.02.001) (NC)
     49202 => 'Zeiss Touit 32mm F1.8', #JR (lens firmware Ver.02)
     49203 => 'Zeiss Touit 50mm F2.8 Macro', #JR (lens firmware Ver.02)
     49216 => 'Zeiss Batis 25mm F2', #JR

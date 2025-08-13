@@ -28,6 +28,7 @@ MogrifyUtils = { }    -- class
 
 local fileName
 local mogrifyPath
+local resizeParams
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
@@ -40,13 +41,14 @@ MogrifyUtils.colorMap = {
   white   = "white",
   grey    = "grey",
   black   = "black",
+  orange  = "orange",
 }
 
 --[[
 -- Call mogrify with 'params'
 -- Raises a LrError in case of an execution error
 --]]
-local function mogrifyExecute(params, script)
+local function mogrifyExecute(photo, params, script)
   if mogrifyPath == nil then
     mogrifyPath = LrPathUtils.child( _PLUGIN.path, "bin" )
     mogrifyPath = LrPathUtils.child( mogrifyPath, "ImageMagick" )
@@ -56,7 +58,7 @@ local function mogrifyExecute(params, script)
   local scriptName
   local cmdline = '\"' .. mogrifyPath .. '\" '
   if script then
-    scriptName = createMagickScript(params)
+    scriptName = createMagickScript(photo, params)
     cmdline = cmdline .. '-script ' .. '\"' .. scriptName .. '\"'
   else
     cmdline = cmdline .. 'mogrify ' .. params
@@ -105,7 +107,7 @@ local function exportToDisk(photo, xSize, ySize)
   local _thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, _errorMsg)
     if data == nil then
       Log.logError('Mogrify', 'No thumbnail data')
-      LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error: Lightroom preview not available.")
+      LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error: Lightroom preview not available")
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
@@ -135,17 +137,17 @@ local function exportToDisk(photo, xSize, ySize)
   end
 end
 
-
 --[[
 -- Resize the disk image to the given ize
 -- xSize: width in pixel
 -- ySize: height in pixel
+-- Note: This was a separate call to Mogrify earlier.
+-- Now it's executed along with the draw commands to save one extra call and a little bit of runtime
 --]]
-local function mogrifyResize(xSize, ySize)
-  local params = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' \"' .. fileName  .. '\"'
-  Log.logInfo("Mogrify", "Resizing image to window size: " .. params )
-  mogrifyExecute(params, false)
+local function mogrifyResize(_photo, xSize, ySize)
+  resizeParams = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' '
 end
+
 
 --[[
 -- Get color and strokewith from the icon name
@@ -228,8 +230,8 @@ end
 -- ySize: height in pixel of the create temporary photo
 --]]
 function MogrifyUtils.createDiskImage(photo, xSize, ySize)
-  exportToDisk(photo, xSize, ySize)
-  mogrifyResize(xSize, ySize)
+  exportToDisk (photo, xSize, ySize)
+  mogrifyResize(photo, xSize, ySize)
   return fileName
 end
 
@@ -237,11 +239,12 @@ end
 --[[
 -- Draw the focus poins bases on focuspointsTable (see 'DefaultPointRenderer.prepareRendering' for adescription of the table)
 --]]
-function MogrifyUtils.drawFocusPoints(focuspointsTable)
+function MogrifyUtils.drawFocusPoints(photo, focuspointsTable)
   local params = buildDrawParams(focuspointsTable)
   if params ~= nil then
-    Log.logInfo("Mogrify", "Drawing focus points and visualization frames")
-    mogrifyExecute(params, true)
+    params = resizeParams .. params
+    Log.logInfo("Mogrify", "Resizing image, drawing focus points and visualization frames")
+    mogrifyExecute(photo, params, true)
   else
     Log.logInfo("Mogrify", "Nothing to draw - no focus points or visualization frames found")
   end
@@ -251,7 +254,7 @@ end
 --[[
 -- Creates a temporay script file for Magick. Returns the name of the temp file
 --]]
-function createMagickScript(params)
+function createMagickScript(photo, params)
   local scriptName = getTempFileName()
 
   local success, _errorCode = pcall(function()

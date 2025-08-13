@@ -74,7 +74,6 @@ function showMetadataDialog(photo, column1, column2, column1Length, column2Lengt
       -- for proper window dimensions on MAC and WIN need to set different properties
       width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
       width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
-      immediate = true,
     }
 
   	-- This function will be called upon user input / whenever "tagFilter" is changed.
@@ -115,7 +114,6 @@ function showMetadataDialog(photo, column1, column2, column1Length, column2Lengt
       -- for proper window dimensions on MAC and WIN need to set different properties
       width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
       width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
-      immediate = true,
     }
 
   	-- This function will be called upon user input / whenever "valueFilter" is changed.

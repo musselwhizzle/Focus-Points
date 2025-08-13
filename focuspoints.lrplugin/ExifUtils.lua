@@ -29,8 +29,9 @@ exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 
-exiftoolWindows = LrPathUtils.child( _PLUGIN.path, "bin" )
-exiftoolWindows = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
+exiftoolWindows    = LrPathUtils.child( _PLUGIN.path, "bin" )
+exiftoolWindows    = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
+exiftoolConfigFile = LrPathUtils.child( _PLUGIN.path, "ExifTool.config" )
 
 metaDataFile = getTempFileName()
 
@@ -49,16 +50,23 @@ end
 function ExifUtils.getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
   local singleQuoteWrap = '\'"\'"\''
-  local options = ' -a -u -sort --XMP-crs:all --XMP-crss:all '
-  local cmd
+  local options = '-a -u -sort --XMP-crs:all --XMP-crss:all'
+  local cmd, cmd2
   if WIN_ENV then
     -- windows needs " around the entire command and then " around each path
     -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
-    cmd = '""' .. exiftoolWindows .. '"' .. options .. '"'.. path .. '" > "' .. metaDataFile .. '""'
+--  cmd = '""' .. exiftoolWindows .. '"' .. config ..  '"' .. exiftoolConfigFile .. '"' .. options .. '"'.. path .. '" > "' .. metaDataFile .. '""'
+    cmd = string.format(
+      '""%s" -config "%s" %s "%s" > "%s""',
+      exiftoolWindows, exiftoolConfigFile, options, path, metaDataFile)
   else
-    exiftool = string.gsub(exiftool, "'", singleQuoteWrap)
-    path = string.gsub(path, "'", singleQuoteWrap)
-    cmd = "'".. exiftool .. "'" .. options .. "'" .. path .. "' > '" .. metaDataFile .. "'"
+    exiftool           = string.gsub(exiftool,           "'", singleQuoteWrap)
+    exiftoolConfigFile = string.gsub(exiftoolConfigFile, "'", singleQuoteWrap)
+    path               = string.gsub(path,               "'", singleQuoteWrap)
+--  cmd = "'".. exiftool .. "'" .. options .. "'" .. path .. "' > '" .. metaDataFile .. "'"
+    cmd = string.format(
+      "'%s' -config '%s' %s '%s' > '%s'",
+      exiftool, exiftoolConfigFile, options, path, metaDataFile)
   end
 
   return cmd, metaDataFile
@@ -72,8 +80,7 @@ function ExifUtils.readMetaData(targetPhoto)
   if rc ~= 0 then
     local errorText = "Unable to read photo metadata (ExifTool rc=" .. rc .. ")"
     Log.logError("ExifUtils", errorText)
-    errorMessage(errorText)
-    LrErrors.throwUserError("Fatal Error. Plugin execution stopped")
+    LrErrors.throwUserError(errorText .. "\nFatal Error. Plugin execution stopped")
     -- LrErrors.throwUserError(getPhotoFileName(targetPhoto) .. "\nFATAL error reading metadata (ExifTool rc=" .. rc .. ")")
   else
     local fileInfo = LrFileUtils.readFile(metaDataFile)
@@ -106,26 +113,26 @@ end
 
 
 --[[
--- Returns the value of "exifTag" within the metaDataTable table
+-- Returns the value of "key" within the metaDataTable table
 -- Ignores nil and "(none)" and "n/a" as valid values
 -- metaDataTable - the medaData key/value table
--- exifTag - the tag to be searched for
+-- key - the tag name to be searched for
 -- return value of the tag
 --]]
-function ExifUtils.findValue(metaDataTable, exifTag)
-  if exifTag then
-    for t, v in pairs(metaDataTable) do
+function ExifUtils.findValue(metaDataTable, key)
+  if key then
+    for k, v in pairs(metaDataTable) do
       -- search for exact match
-      if (t == exifTag) then
+      if (k == key) then
         -- even though we don't return them as a result, we'll log (none) and n/a entries
-        Log.logDebug("ExifUtils", "Searching for " .. exifTag .. " -> " .. v)
+        Log.logDebug("ExifUtils", "Searching for " .. key .. " -> " .. v)
         if v and (string.lower(v) ~= "(none)") and (string.lower(v) ~= "n/a") then
           -- this is the only way out with a result!
           return v
         end
       end
     end
-    Log.logDebug("ExifUtils", "Searching for " .. exifTag .. " returned nothing")
+    Log.logDebug("ExifUtils", "Searching for " .. key .. " returned nothing")
   end
   return nil
 end
@@ -254,7 +261,7 @@ function ExifUtils.decodeXmpMWGRegions(result, metaData)
       end
     else
       Log.logError("XMP-mwg-Regions",
-        string.format("Inconistent region scheme definitions encountered."))
+        string.format("Inconsistent region scheme definitions encountered"))
     end
   end
   return focusDetected

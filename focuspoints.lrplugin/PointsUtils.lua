@@ -38,6 +38,7 @@ function PointsUtils.readFromFile(folder, filename)
     return data
   else
     Log.logError("PointsUtils", "Mapping file not found: " .. file)
+    FocusInfo.severeErrorEncountered = true
     return nil
   end
 end

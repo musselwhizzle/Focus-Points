@@ -27,11 +27,8 @@ require "Log"
 
 AppleDelegates = {}
 
--- To trigger display whether focus points have been detected or not
-AppleDelegates.focusPointsDetected = false
-
 -- Tag which indicates that makernotes / AF section is present
-AppleDelegates.metaKeyMakerNotVersion      = "Maker Note Version"
+AppleDelegates.metaKeyMakerNoteVersion     = "Maker Note Version"
 
 -- AF-relevant tags
 AppleDelegates.metaKeySubjectArea          = "Subject Area"
@@ -64,9 +61,9 @@ function AppleDelegates.getAfPoints(photo, metaData)
     }
   }
 
-  AppleDelegates.focusPointsDetected = ExifUtils.decodeXmpMWGRegions(result, metaData)
+  FocusInfo.focusPointsDetected = ExifUtils.decodeXmpMWGRegions(result, metaData)
 
-  if not AppleDelegates.focusPointsDetected then
+  if not FocusInfo.focusPointsDetected then
     -- Only we we don't have a focus area yet - avoid double focus frames!
 
     -- For Apple iPhone, these three tags need to be present to calculate proper focus point:
@@ -76,9 +73,10 @@ function AppleDelegates.getAfPoints(photo, metaData)
 
     if not (exifImageWidth and exifImageHeight) then
       Log.logError("Apple",
-        string.format("Required tags  '%s' / '%s' not found.",
+        string.format("Required tags '%s' / '%s' not found.",
           AppleDelegates.metaKeyExifImageWidth, AppleDelegates.metaKeyExifImageHeight))
-      Log.logWarn("Apple", FocusInfo.msgImageNotOoc)
+      Log.logWarn("Apple", FocusInfo.msgImageFileNotOoc)
+      FocusInfo.makerNotesFound = false
       return nil
     end
 
@@ -119,7 +117,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
             string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
             math.floor(x), math.floor(y), math.floor(w), math.floor(h)))
 
-          AppleDelegates.focusPointsDetected = true
+          FocusInfo.focusPointsDetected = true
 
         else
           Log.logWarn("Apple",
@@ -138,7 +136,6 @@ function AppleDelegates.getAfPoints(photo, metaData)
   end
   return result
 end
-
 
 
 --[[--------------------------------------------------------------------------------------------------------------------
@@ -194,11 +191,64 @@ end
 
 
 --[[
+  @@public boolean AppleDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
+--]]
+function AppleDelegates.modelSupported(_model)
+  -- #TODO no test samples could not be found for iPhone 4 and older models
+  -- so, for the time being assume it's always "true"
+  return true
+end
+
+
+--[[
+  @@public boolean AppleDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function AppleDelegates.makerNotesFound(photo, metaData)
+
+  local tag, result
+  local model = photo:getFormattedMetadata("cameraModel")
+  local generation = tonumber(string.match(model, "^iPhone%s+(%d+)"))
+
+  if generation >= 6 then
+    -- 'Maker Note' tag exists only in iPhone 6 and later models
+    tag = AppleDelegates.metaKeyMakerNoteVersion
+  else
+    -- at least iPhone 5 has 'Subject Area' tag in EXIF:EXIFIfd section
+    tag = AppleDelegates.metaKeySubjectArea
+  end
+
+  result = ExifUtils.findValue(metaData, tag)
+  if not result then
+    Log.logWarn("Apple",
+      string.format("Tag '%s' not found", tag))
+  end
+
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean AppleDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+function AppleDelegates.manualFocusUsed(_photo, _metaData)
+  -- #TODO Apple supports tag 'ImageCaptureType' that can be '11 = Manual Focus'
+  -- #TODO what does that mean for the plugin imaplementation ??
+  return false
+end
+
+
+--[[
   @@public table function AppleDelegates.getImageInfo(table photo, table props, table metaData)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function AppleDelegates.getImageInfo(photo, props, metaData)
+function AppleDelegates.getImageInfo(_photo, _props, _metaData)
   local imageInfo
   return imageInfo
 end
@@ -209,7 +259,7 @@ end
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
   -- if any, otherwise return an empty column
 --]]
-function AppleDelegates.getCameraInfo(photo, props, metaData)
+function AppleDelegates.getCameraInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
@@ -229,19 +279,18 @@ end
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function AppleDelegates.getFocusInfo(photo, props, metaData)
+function AppleDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(AppleDelegates.focusPointsDetected),
-      AppleDelegates.addInfo("Focus Distance Range", AppleDelegates.metaKeyFocusDistanceRange, props, metaData),
---      AppleDelegates.addInfo("AF Measured Depth"   , AppleDelegates.metaKeyAfMeasuredDepth     , props, metaData),
-      AppleDelegates.addInfo("AF Stable"           , AppleDelegates.metaKeyAfStable            , props, metaData),
---    AppleDelegates.addInfo("AF Confidence"       , AppleDelegates.metaKeyAfConfidence        , props, metaData),
---    AppleDelegates.addInfo("AF Performance"      , AppleDelegates.metaKeyAfPerformance       , props, metaData),
+--    AppleDelegates.addInfo("Focus Distance Range", AppleDelegates.metaKeyFocusDistanceRange, props, metaData),
+--    AppleDelegates.addInfo("AF Measured Depth"  , AppleDelegates.metaKeyAfMeasuredDepth    , props, metaData),
+      AppleDelegates.addInfo("AF Stable"     , AppleDelegates.metaKeyAfStable      , props, metaData),
+--    AppleDelegates.addInfo("AF Confidence"      , AppleDelegates.metaKeyAfConfidence       , props, metaData),
+--    AppleDelegates.addInfo("AF Performance"     , AppleDelegates.metaKeyAfPerformance      , props, metaData),
   }
   return focusInfo
 end

@@ -38,9 +38,6 @@ require "Log"
 
 PanasonicDelegates = {}
 
--- To trigger display whether focus points have been detected or not
-PanasonicDelegates.focusPointsDetected = false
-
 -- Tag which indicates that makernotes / AF section is present
 PanasonicDelegates.metaKeyAfInfoSection = "Panasonic Exif Version"
 
@@ -73,9 +70,7 @@ PanasonicDelegates.metaKeyAfAreaSizePattern           = "([%d%.]+)%s+([%d%.]+)"
   Get the autofocus points from metadata
 --]]
 function PanasonicDelegates.getAfPoints(photo, metaData)
-  
-  PanasonicDelegates.focusPointsDetected = false
-  
+
   local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
   if focusPoint then
     Log.logInfo("Panasonic",
@@ -101,7 +96,7 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   local y = tonumber(orgPhotoHeight) * tonumber(focusY)
   Log.logInfo("Panasonic", string.format("Focus point detected at [x=%s, y=%s]", x, y))
 
-  PanasonicDelegates.focusPointsDetected = true
+  FocusInfo.focusPointsDetected = true
   local result = {
       pointTemplates = DefaultDelegates.pointTemplates,
       points = {
@@ -116,8 +111,8 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
       Log.logWarn("Panasonic",
         string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
     else
-      areaSizeX = tonumber(areaSizeX) * tonumber(orgPhotoWidth)
-      areaSizeY = tonumber(areaSizeY) * tonumber(orgPhotoHeight)
+      areaSizeX = tostring (tonumber(areaSizeX) * tonumber(orgPhotoWidth))
+      areaSizeY = tostring (tonumber(areaSizeY) * tonumber(orgPhotoHeight))
       Log.logInfo("Panasonic", "AF Area detected, w=" .. areaSizeX .. ", h=" .. areaSizeY .. "]")
 
       table.insert(result.points, {
@@ -129,7 +124,7 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
       })
     end
   else
-    local result = DefaultPointRenderer.createFocusFrame(x, y)
+    result = DefaultPointRenderer.createFocusFrame(x, y)
   end
 
   -- Let's see if we have detected faces
@@ -208,7 +203,8 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
       f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
+      f:column{f:static_text{title = wrapText(props[key],{',', ';'},30), font="<system>"}}
+--    f:column{f:static_text{title = props[key], font="<system>"}}
     }
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (key == PanasonicDelegates.metaKeyBurstMode) and (props[key] == PanasonicDelegates.metaValueOn) then
@@ -216,14 +212,17 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
         fill = 1, spacing = 2, result,
         PanasonicDelegates.addInfo("Sequence Number", PanasonicDelegates.metaKeySequenceNumber, props, metaData)
       }
-    elseif (key == PanasonicDelegates.metaKeyAfSubjectDetection) then
-      local faceDetection = string.find(string.lower(props[key]), "face")
-      if faceDetection then
-        return f:column{
-          fill = 1, spacing = 2, result,
-          PanasonicDelegates.addInfo("Faces Detected", PanasonicDelegates.metaKeyAfFacesDetected, props, metaData)
-        }
-      end
+    elseif (key == PanasonicDelegates.metaKeyAfFacesDetected and props[key] == "0") then
+      -- if no faces have been detected, we will skip this entry
+      return FocusInfo.emptyRow()
+--[[
+    elseif (key == PanasonicDelegates.metaKeyAfSubjectDetection) and
+           string.find(string.lower(props[key]), "face") then
+       return f:column{
+         fill = 1, spacing = 2, result,
+         PanasonicDelegates.addInfo("Faces Detected", PanasonicDelegates.metaKeyAfFacesDetected, props, metaData)
+       }
+--]]
     else
       -- add row as composed
       return result
@@ -236,11 +235,49 @@ end
 
 
 --[[
-  @@public table function PanasonicDelegates.getImageInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
+  @@public boolean PanasonicDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
 --]]
-function PanasonicDelegates.getImageInfo(photo, props, metaData)
+function PanasonicDelegates.modelSupported(_model)
+  -- #TODO For this to work precisely, would need to identify compact cameras before 2008
+  return true
+end
+
+
+--[[
+  @@public boolean PanasonicDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function PanasonicDelegates.makerNotesFound(_photo, metaData)
+  local result = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfInfoSection)
+  if not result then
+    Log.logWarn("Panasonic",
+      string.format("Tag '%s' not found", PanasonicDelegates.metaKeyAfInfoSection))
+  end
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean PanasonicDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+function PanasonicDelegates.manualFocusUsed(_photo, metaData)
+  local focusMode = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyFocusMode)
+  return (focusMode == "Manual")
+end
+
+
+--[[
+  @@public table function PanasonicDelegates.getImageInfo(table photo, table props, table metaData)
+  ----
+  Called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  if any, otherwise return an empty column
+--]]
+function PanasonicDelegates.getImageInfo(_photo, _props, _metaData)
   local imageInfo
   return imageInfo
 end
@@ -251,7 +288,7 @@ end
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
   -- if any, otherwise return an empty column
 --]]
-function PanasonicDelegates.getCameraInfo(photo, props, metaData)
+function PanasonicDelegates.getCameraInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
@@ -270,24 +307,17 @@ end
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function PanasonicDelegates.getFocusInfo(photo, props, metaData)
+function PanasonicDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, PanasonicDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(PanasonicDelegates.focusPointsDetected),
       PanasonicDelegates.addInfo("Focus Mode",        PanasonicDelegates.metaKeyAfFocusMode       , props, metaData),
       PanasonicDelegates.addInfo("AF Area Mode",      PanasonicDelegates.metaKeyAfAreaMode        , props, metaData),
       PanasonicDelegates.addInfo("Subject Detection", PanasonicDelegates.metaKeyAfSubjectDetection, props, metaData),
+      PanasonicDelegates.addInfo("Faces Detected",    PanasonicDelegates.metaKeyAfFacesDetected   , props, metaData)
       }
   return focusInfo
 end

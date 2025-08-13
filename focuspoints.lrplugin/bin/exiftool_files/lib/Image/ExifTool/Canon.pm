@@ -88,7 +88,7 @@ sub ProcessCTMD($$$);
 sub ProcessExifInfo($$$);
 sub SwapWords($);
 
-$VERSION = '4.92';
+$VERSION = '4.94';
 
 # Note: Removed 'USM' from 'L' lenses since it is redundant - PH
 # (or is it?  Ref 32 shows 5 non-USM L-type lenses)
@@ -2621,12 +2621,20 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
     # 47 - related to aspect ratio: 100=4:3,70=1:1/16:9,90=3:2,60=4:5 (PH G12)
     #      (roughly image area in percent - 4:3=100%,1:1/16:9=75%,3:2=89%,4:5=60%)
     # 48 - 3 for CR2/CR3, 4 or 7 for JPG, -1 for edited JPG (see forum16127)
+    50 => { #github340
+        Name => 'FocusBracketing',
+        PrintConv => { 0 => 'Disable', 1 => 'Enable' },
+    },
     51 => { #forum16036 (EOS R models)
         Name => 'Clarity',
         PrintConv => {
             OTHER => sub { shift },
             0x7fff => 'n/a',
         },
+    },
+    52 => { #github336
+        Name  => 'HDR-PQ',
+        PrintConv => { %offOn, -1 => 'n/a' },
     },
 );
 
@@ -8931,7 +8939,7 @@ my %ciMaxFocal = (
     },
     3 => {
         Name => 'HighlightTonePriority',
-        PrintConv => \%offOn,
+        PrintConv => { %offOn, 2 => 'Enhanced' }, #github339 (Enhanced)
     },
     4 => {
         Name => 'LongExposureNoiseReduction',

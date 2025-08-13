@@ -27,7 +27,6 @@ FocusPointDialog.PhotoWidth  = 0
 FocusPointDialog.PhotoHeight = 0
 
 FocusPointDialog.currentPhoto = nil
-FocusPointDialog.errorsEncountered = nil
 
 
 function FocusPointDialog.calculatePhotoDimens(photo)
@@ -74,7 +73,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
 end
 
 
-function FocusPointDialog.createDialog(photo, photoView, infoView)
+function FocusPointDialog.createDialog(_photo, photoView, infoView)
   local myView
   local f = LrView.osFactory()
 

@@ -28,7 +28,7 @@ require "Log"
 
 FocusPointPrefs = {}
 
-FocusPointPrefs.displayScaleFactor = 0
+FocusPointPrefs.displayScaleFactor = 0.0
 
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
@@ -42,6 +42,8 @@ FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
+FocusPointPrefs.urlUserManual      = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Focus%20Points.md"
+FocusPointPrefs.urlTroubleShooting = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Troubleshooting_FAQ.md"
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()
@@ -258,13 +260,13 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
           value = bind ('loggingLevel'),
           width = dropDownWidth,
           items = {
-            { title = "Full",  value = "FULL" },
+            { title = "Auto",  value = "AUTO"  },
+            { title = "Full",  value = "FULL"  },
             { title = "Debug", value = "DEBUG" },
-            { title = "Auto",  value = "AUTO" },
-            { title = "Info",  value = "INFO" },
-            { title = "Warn",  value = "WARN" },
+            { title = "Info",  value = "INFO"  },
+            { title = "Warn",  value = "WARN"  },
             { title = "Error", value = "ERROR" },
-            { title = "None",  value = "NONE" },
+            { title = "None",  value = "NONE"  },
           }
         },
         viewFactory:static_text {

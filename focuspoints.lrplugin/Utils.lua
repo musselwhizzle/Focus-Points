@@ -133,33 +133,49 @@ function get_nth_Word(str, n, delimiter)
     return nil -- Return nil if n is out of range
 end
 
---[[
- Wrap text across multiple rows to fit maximum column length
- @text       the text to wrap across multiple lines
- @max_length maximum line length
---]]
---
-function wrapText(text, delim, max_length)
-  local result = ""
-  local current_line = ""
-  for word in text:gmatch("[^" .. delim .. "]+") do
-    word = word:gsub("^%s*(.-)%s*$", "%1")  -- Trim whitespace
-    if #current_line + #word + 1 > max_length then
-      result = result .. current_line .. "\n"
-      current_line = word
-    else
-      if current_line == "" then
-        current_line = word
+
+--- Wrap a string to a specified line length using multiple delimiters.
+-- @param input The input string to wrap.
+-- @param maxLen Maximum line length.
+-- @param delimiters A table of delimiters (e.g., { " ", "-", "/" }).
+-- @return A string wrapped with line breaks (`\n`).
+function wrapText(input, delimiters, maxLen)
+  -- Escape delimiters for pattern use
+  local delimSet = {}
+  for _, d in ipairs(delimiters) do
+      delimSet[d] = true
+  end
+  local escaped = {}
+  for d in pairs(delimSet) do
+      table.insert(escaped, "%" .. d)
+  end
+  local pattern = "([^" .. table.concat(escaped) .. "]+)([" .. table.concat(escaped) .. "]?)"
+
+  local lines = {}
+  local currentLine = ""
+
+  for word, delim in input:gmatch(pattern) do
+      local part = word .. delim
+      if #currentLine + #part > maxLen then
+          if #currentLine > 0 then
+              -- Trim trailing spaces from the current line before pushing
+              -- Wrap gsub call in parentheses so it only returns one result value and not more)
+              table.insert(lines, (currentLine:gsub("%s+$", "")))
+          end
+          -- Trim leading whitespace in the new line part
+          currentLine = part:gsub("^%s+", "")
       else
-        current_line = current_line .. ", " .. word
+          currentLine = currentLine .. part
       end
-    end
   end
-  if current_line ~= "" then
-    result = result .. current_line
+
+  if #currentLine > 0 then
+      table.insert(lines, (currentLine:gsub("%s+$", "")))
   end
-  return result
+
+  return table.concat(lines, "\n")
 end
+
 
 --[[
 -- Parses a string in the form of "(width)x(height)"" and returns width and height
@@ -232,6 +248,36 @@ end
 
 
 --[[
+  @@public string getPluginVersion()
+  ----
+  Retrieves the plugin version number as string
+--]]
+function getPluginVersion()
+
+  local Info = require 'Info.lua'
+
+  -- Retrieve plugin version record
+  local pluginVersion = Info.VERSION
+  local versionString
+  if pluginVersion then
+    versionString = pluginVersion.major
+    if pluginVersion.minor then
+      versionString = versionString .. "." .. pluginVersion.minor
+      if pluginVersion.revision then
+        versionString = versionString .. "." .. pluginVersion.revision
+      end
+    end
+    if pluginVersion.build and pluginVersion.build ~= "" then
+      versionString = versionString .. pluginVersion.build
+    end
+  else
+    versionString = "undefined"
+  end
+  return versionString
+end
+
+
+--[[
   @@public int getWinScalingFactor()
   ----
   Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
@@ -245,7 +291,7 @@ function getWinScalingFactor()
   -- Query registry value by calling REG.EXE
   local rc = LrTasks.execute(cmd)
   Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
-  Log.logDebug("Utils", "REG command: " .. cmd .. ", RC=" .. rc)
+  Log.logDebug("Utils", "REG command: " .. cmd .. ", rc=" .. rc)
 
   -- Read redirected stdout from temp file and find the line that starts with "AppliedDPI"
   local regOutput = LrFileUtils.readFile(output)
@@ -348,15 +394,3 @@ function updateExists() -- Method using 'curl'
   return result
 end
 --]]
-
-
---[[
-  @@public void errorMessage(string msg)
-  ----
-  Displays an error message
-  Returns
---]]
-function errorMessage(msg)
-  FocusPointDialog.errorsEncountered = msg
-  return LrDialogs.confirm(msg, getPhotoFileName(), "Continue", "Stop")
-end

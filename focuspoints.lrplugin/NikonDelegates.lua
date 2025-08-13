@@ -35,9 +35,6 @@ NikonDelegates.supportedModels = {
     "z 5", "z 6", "z 6_2", "z6_3", "z 7", "z 7_2", "z 8", "z 9", "z 30", "z 50", "z50_2", "z f", "z fc",
 }
 
--- To trigger display whether focus points have been detected or not
-NikonDelegates.focusPointsDetected = false
-
 -- Tag which indicates that makernotes / AF section is present
 NikonDelegates.metaKeyAfInfoSection           = "AF Info 2 Version"
 
@@ -88,9 +85,8 @@ NikonDelegates.metaValueNA                    = "N/A"
   Top level function to get the autofocus points from metadata
   Check for presence of Contrast AF data first. If not found go back to EXIF and fetch PDAF data
 --]]
-function NikonDelegates.getAfPoints(photo, metaData)
-  -- look for CAF information first
-  NikonDelegates.focusPointsDetected = false
+function NikonDelegates.getAfPoints(_photo, metaData)
+
   local result = NikonDelegates.getCAfPoints(metaData)
   if not result then
      -- if CAF is not present, check PDAF information
@@ -132,7 +128,7 @@ function NikonDelegates.getCAfPoints(metaData)
   Log.logInfo("Nikon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
     afAreaXPosition, afAreaYPosition, afAreaWidth, afAreaHeight))
 
-  NikonDelegates.focusPointsDetected = true
+  FocusInfo.focusPointsDetected = true
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {
@@ -192,7 +188,7 @@ function NikonDelegates.getPDAfPoints(metaData)
   else
     -- for whatever reason, the logic for D5, D500, D7500, D850 differs from all other models
     -- depending on the AFAreaMode, choose the relevant AFPoint tag that NX Studio uses to display focus points
-    if arrayKeyOf({"single", "group", "dynamic" }, afAreaMode) then
+    if afAreaMode and arrayKeyOf({"single", "group", "dynamic" }, afAreaMode) then
       focusPointsTable = split(afPointsSelected, ",")
       logKeyStatus(NikonDelegates.metaKeyAfPointsSelected, afPointsSelected)
     elseif arrayKeyOf({"3D-tracking", "auto" }, afAreaMode) then
@@ -204,12 +200,8 @@ function NikonDelegates.getPDAfPoints(metaData)
         logKeyStatus(NikonDelegates.metaKeyAfPointsSelected, afPointsSelected)
       end
     else
-      -- Sanity check
-      local userResponse = errorMessage("Unexpected AF Area Mode: " .. afAreaMode)
-      if userResponse == "cancel" then
-        LrErrors.throwUserError("Plugin execution stopped")
-        return
-      end
+      Log.logError("Nikon", "Unexpected AF Area Mode: " .. afAreaMode)
+      return nil
     end
   end
 
@@ -229,16 +221,9 @@ function NikonDelegates.getPDAfPoints(metaData)
         -- appendix number to mapping file name
         fpSchema = "-" .. string.sub(focusPointSchema, 1, 2)
       else
-        local errorMsg = "No or unexpected D780 focus point schema: \n" .. focusPointSchema
-        Log.logError("Nikon", errorMsg)
-        local userResponse = errorMessage(errorMsg)
-        if userResponse == "cancel" then
-          LrErrors.throwUserError("Plugin execution stopped")
-        else
-          -- can't map D780 PDAF mode, return with empty table
-          Log.logError("Nikon", "Fatal error, unable to continue.")
-          return nil
-        end
+        Log.logError("Nikon", "Unexpected D780 focus point schema: \n" .. focusPointSchema)
+        FocusInfo.severeErrorEncountered = true
+        return nil
       end
     else
       -- mapping file name is camera model name w/o any appendix
@@ -249,16 +234,9 @@ function NikonDelegates.getPDAfPoints(metaData)
     DefaultDelegates.focusPointDimen = PointsUtils.readIntoTable(DefaultDelegates.cameraMake,
     DefaultDelegates.cameraModel .. fpSchema .. ".txt")
     if not DefaultDelegates.focusPointsMap then
-      local errorMsg = "No (or incorrect) mapping file"
-      Log.logError("Nikon", errorMsg)
-      local userResponse = errorMessage(errorMsg)
-      if userResponse == "cancel" then
-          LrErrors.throwUserError("Plugin execution stopped")
-      else
-        -- can't map PDAF points, return with empty table
-        Log.logError("Nikon", "Fatal error, unable to continue.")
-        return nil
-      end
+      Log.logError("Nikon", "No (or incorrect) AF point mapping file")
+      FocusInfo.severeErrorEncountered = true
+      return nil
     end
   else
     -- can't find PDAF focus point information -> return
@@ -294,7 +272,7 @@ function NikonDelegates.getPDAfPoints(metaData)
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
     end
     if NikonDelegates.addFocusPointsToResult(result, pointType, primaryPoint) then
-      NikonDelegates.focusPointsDetected = true
+      FocusInfo.focusPointsDetected = true
     else
       return nil
     end
@@ -303,7 +281,7 @@ function NikonDelegates.getPDAfPoints(metaData)
   -- Add the active focus points
   if focusPointsTable then
     if NikonDelegates.addFocusPointsToResult(result, DefaultDelegates.POINTTYPE_AF_FOCUS_BOX, focusPointsTable) then
-      NikonDelegates.focusPointsDetected = true
+      FocusInfo.focusPointsDetected = true
     else
       return nil
     end
@@ -331,43 +309,37 @@ function NikonDelegates.addFocusPointsToResult(result, focusPointType, focusPoin
     for _,value in pairs(focusPointTable) do
       local focusPointName = NikonDelegates.normalizeFocusPointName(value)
       if not DefaultDelegates.focusPointsMap[focusPointName] then
-        local errorMsg = "The AF-Point " .. focusPointName .. " could not be found in the mapping file."
+        local errorMsg = "AF-Point " .. focusPointName .. " could not be found in the mapping file."
         Log.logError("Nikon", errorMsg)
-        local userResponse = errorMessage(errorMsg)
-        if userResponse == "cancel" then
-          LrErrors.throwUserError("Plugin execution stopped")
-        else
-          -- can't map PDAF points, return with empty table
-          Log.logError("Nikon", "Fatal error, unable to continue.")
-          focusPointTable = nil
-          return false
-        end
-      end
-
-      local x = DefaultDelegates.focusPointsMap[focusPointName][1]
-      local y = DefaultDelegates.focusPointsMap[focusPointName][2]
-      local w, h
-
-      -- use AF point specific dimensions for focus box if given
-      if (#DefaultDelegates.focusPointsMap[focusPointName] > 2) then
-        w = DefaultDelegates.focusPointsMap[focusPointName][3]
-        h = DefaultDelegates.focusPointsMap[focusPointName][4]
+        -- continue with next value
+        FocusInfo.severeErrorEncountered = true
       else
-        w = DefaultDelegates.focusPointDimen[1]
-        h = DefaultDelegates.focusPointDimen[2]
-      end
+        local x = DefaultDelegates.focusPointsMap[focusPointName][1]
+        local y = DefaultDelegates.focusPointsMap[focusPointName][2]
+        local w, h
 
-      if focusPointType == DefaultDelegates.POINTTYPE_AF_FOCUS_BOX then
-        Log.logInfo("Nikon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]", x, y, w, h))
-      end
+        -- use AF point specific dimensions for focus box if given
+        if (#DefaultDelegates.focusPointsMap[focusPointName] > 2) then
+          w = DefaultDelegates.focusPointsMap[focusPointName][3]
+          h = DefaultDelegates.focusPointsMap[focusPointName][4]
+        else
+          w = DefaultDelegates.focusPointDimen[1]
+          h = DefaultDelegates.focusPointDimen[2]
+        end
 
-      table.insert(result.points, {
-        pointType = focusPointType,
-        x = x,
-        y = y,
-        width = w,
-        height = h
-      })
+        if focusPointType == DefaultDelegates.POINTTYPE_AF_FOCUS_BOX then
+          Log.logInfo("Nikon",string.format(
+            "Focus point detected at [x=%s, y=%s, w=%s, h=%s]", x, y, w, h))
+        end
+
+        table.insert(result.points, {
+          pointType = focusPointType,
+          x = x,
+          y = y,
+          width = w,
+          height = h
+        })
+      end
     end
   end
   return true
@@ -441,7 +413,7 @@ function NikonDelegates.applyCAFCrop(focusPoints, metaData)
       return
     else
       -- get crop dimensions
-      local cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = NikonDelegates.getCropType(cropHiSpeed)
+      local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = NikonDelegates.getCropType(cropHiSpeed)
       -- apply crop transformation on all entries in focusPointsMap
      for _, point in pairs(focusPoints.points) do
         point.x = point.x / nativeWidth  * croppedWidth
@@ -475,7 +447,7 @@ function NikonDelegates.applyPDAfCrop(focusPoints, metaData)
       return
     else
       -- get crop dimensions
-      local cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = NikonDelegates.getCropType(cropHiSpeed)
+      local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = NikonDelegates.getCropType(cropHiSpeed)
       -- apply crop transformation on all entries in focusPointsMap
      for _, point in pairs(focusPoints.points) do
         point.x = point.x - (nativeWidth  - croppedWidth ) / 2
@@ -539,13 +511,13 @@ function NikonDelegates.addInfo(title, key, props, metaData)
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == "AF-C") then
       -- first, figure out which of the two tags is relevant for this camera
-      local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
+      local _afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfCPriority)
       return f:column{
         fill = 1, spacing = 2, result,
         NikonDelegates.addInfo("AF-C Priority", afPriorityKey, props, metaData) }
     elseif (props[key] == "AF-S") then
       -- first, figure out which of the two tags is relevant for this camera
-      local afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
+      local _afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
       return f:column{
         fill = 1, spacing = 2, result,
         NikonDelegates.addInfo("AF-S Priority", afPriorityKey, props, metaData) }
@@ -561,11 +533,53 @@ end
 
 
 --[[
+  @@public boolean NikonDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
+--]]
+function NikonDelegates.modelSupported(currentModel)
+  local m = string.match(string.lower(currentModel), "nikon (.+)")
+  for _, model in ipairs(NikonDelegates.supportedModels) do
+    if m == model then
+      return true
+    end
+  end
+  return false
+end
+
+
+--[[
+  @@public boolean NikonDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function NikonDelegates.makerNotesFound(_photo, metaData)
+  local result = ExifUtils.findValue(metaData, NikonDelegates.metaKeyAfInfoSection)
+  if not result then
+    Log.logWarn("Nikon",
+      string.format("Tag '%s' not found", NikonDelegates.metaKeyAfInfoSection))
+  end
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean NikonDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+function NikonDelegates.manualFocusUsed(_photo, metaData)
+  local focusMode = ExifUtils.findValue(metaData, NikonDelegates.metaKeyFocusMode)
+  return (focusMode == "Manual")
+end
+
+
+--[[
   @@public table function NikonDelegates.getImageInfo(table photo, table props, table metaData)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function NikonDelegates.getImageInfo(photo, props, metaData)
+function NikonDelegates.getImageInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local imageInfo
   imageInfo = f:column {
@@ -581,7 +595,7 @@ end
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
   -- if any, otherwise return an empty column
 --]]
-function NikonDelegates.getCameraInfo(photo, props, metaData)
+function NikonDelegates.getCameraInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
@@ -595,64 +609,33 @@ end
 
 
 --[[
-  @@public boolean NikonDelegates.modelSupported(model)
-  ----
-  Checks whether the camera model is supported or not
---]]
-function NikonDelegates.modelSupported(currentModel)
-  local m = string.match(string.lower(currentModel), "nikon (.+)")
-  for _, model in ipairs(NikonDelegates.supportedModels) do
-    if m == model then
-      return true
-    end
-  end
-  Log.logError("Nikon", "Camera model " .. currentModel .. " is not supported")
-  return false
-end
-
-
---[[
   @@public table NikonDelegates.getFocusInfo(table photo, table info, table metaData)
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function NikonDelegates.getFocusInfo(photo, props, metaData)
+function NikonDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-
-  -- Check if the current camera model is supported
-  if not NikonDelegates.modelSupported(DefaultDelegates.cameraModel) then
-    -- if not, finish this section with an error message
-    return FocusInfo.errorMessage("Camera model not supported")
-  end
-
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, NikonDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(NikonDelegates.focusPointsDetected),
-      NikonDelegates.addInfo("Focus Mode",                 NikonDelegates.metaKeyFocusMode,               props, metaData),
-      NikonDelegates.addInfo("Focus Result",               NikonDelegates.metaKeyFocusResult,             props, metaData),
-      NikonDelegates.addInfo("AF Area Mode",               NikonDelegates.metaKeyAfAreaMode,              props, metaData),
-      NikonDelegates.addInfo("Phase Detect",               NikonDelegates.metaKeyPhaseDetect,             props, metaData),
-      NikonDelegates.addInfo("Contrast Detect",            NikonDelegates.metaKeyContrastDetect,          props, metaData),
-      NikonDelegates.addInfo("Subject Detection",          NikonDelegates.metaKeySubjectDetection,        props, metaData),
-      NikonDelegates.addInfo("Subject Motion",             NikonDelegates.metaKeySubjectMotion,           props, metaData),
-      NikonDelegates.addInfo("3D-Tracking Watch Area",     NikonDelegates.metaKey3DTrackingWatchArea,     props, metaData),
-      NikonDelegates.addInfo("AF Activation",              NikonDelegates.metaKeyAfActivation,            props, metaData),
-      NikonDelegates.addInfo("Number of Focus Points",     NikonDelegates.metaKeyNumberOfFocusPoints,     props, metaData),
+      NikonDelegates.addInfo("Focus Mode",             NikonDelegates.metaKeyFocusMode,           props, metaData),
+      NikonDelegates.addInfo("Focus Result",           NikonDelegates.metaKeyFocusResult,         props, metaData),
+      NikonDelegates.addInfo("AF Area Mode",           NikonDelegates.metaKeyAfAreaMode,          props, metaData),
+      NikonDelegates.addInfo("Phase Detect",           NikonDelegates.metaKeyPhaseDetect,         props, metaData),
+      NikonDelegates.addInfo("Contrast Detect",        NikonDelegates.metaKeyContrastDetect,      props, metaData),
+      NikonDelegates.addInfo("Subject Detection",      NikonDelegates.metaKeySubjectDetection,    props, metaData),
+      NikonDelegates.addInfo("Subject Motion",         NikonDelegates.metaKeySubjectMotion,       props, metaData),
+      NikonDelegates.addInfo("3D-Tracking Watch Area", NikonDelegates.metaKey3DTrackingWatchArea, props, metaData),
+      NikonDelegates.addInfo("AF Activation",          NikonDelegates.metaKeyAfActivation,        props, metaData),
+      NikonDelegates.addInfo("Number of Focus Points", NikonDelegates.metaKeyNumberOfFocusPoints, props, metaData),
       FocusInfo.addSpace(),
       FocusInfo.addSeparator(),
       FocusInfo.addSpace(),
-      NikonDelegates.addInfo("Focus Distance",             NikonDelegates.metaKeyFocusDistance,           props, metaData),
-      NikonDelegates.addInfo("Depth of Field",             NikonDelegates.metaKeyDepthOfField,            props, metaData),
-      NikonDelegates.addInfo("Hyperfocal Distance",        NikonDelegates.metaKeyHyperfocalDistance,      props, metaData),
+      NikonDelegates.addInfo("Focus Distance",         NikonDelegates.metaKeyFocusDistance,       props, metaData),
+      NikonDelegates.addInfo("Depth of Field",         NikonDelegates.metaKeyDepthOfField,        props, metaData),
+      NikonDelegates.addInfo("Hyperfocal Distance",    NikonDelegates.metaKeyHyperfocalDistance,  props, metaData),
       }
   return focusInfo
 end

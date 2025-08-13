@@ -25,9 +25,9 @@ local LrApplication = import 'LrApplication'
 local LrPrefs = import 'LrPrefs'
 
 require "MogrifyUtils"
+require "Log"
 require "ExifUtils"
 a = require "affine"
-require "Log"
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
@@ -52,7 +52,7 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
 
   if WIN_ENV then
     local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
-    MogrifyUtils.drawFocusPoints(fpTable)
+    MogrifyUtils.drawFocusPoints(photo,fpTable)
     photoView = viewFactory:view {
       viewFactory:picture {
         width  = photoDisplayWidth,
@@ -154,9 +154,46 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
    Execute dedicated code (makerDelegates) to read AF information from EXIF makernotes and create table of focus points
    Table format: { focusPointType, x, y, width, height }
   --]]
-  local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, DefaultDelegates.metaData)
-  if not pointsTable then
-    Log.logWarn("DefaultPointRenderer", "GetAfPoints() didn't find anything to be visualized.")
+
+  FocusInfo.focusPointsDetected    = false
+  FocusInfo.severeErrorEncountered = false
+
+  FocusInfo.cameraMakerSupported = DefaultPointRenderer.funcGetAfPoints ~= nil
+  if not FocusInfo.cameraMakerSupported then
+    Log.logError("DefaultPointRenderer", "Camera maker is not supported")
+    return nil
+  end
+
+  FocusInfo.cameraModelSupported = DefaultPointRenderer.funcModelSupported(DefaultDelegates.cameraModel)
+  if not FocusInfo.cameraModelSupported then
+    Log.logError("DefaultPointRenderer", "Camera model is not supported")
+    return nil
+  end
+
+  FocusInfo.makerNotesFound = DefaultPointRenderer.funcMakerNotesFound(photo, DefaultDelegates.metaData)
+  if not FocusInfo.makerNotesFound then
+    Log.logError("DefaultPointRenderer",
+     "Makernotes section with AF information not found")
+    Log.logWarn("DefaultPointRenderer", FocusInfo.msgImageFileNotOoc)
+    return nil
+  end
+
+  FocusInfo.manualFocusUsed = DefaultPointRenderer.funcManualFocusUsed(photo, DefaultDelegates.metaData)
+  if FocusInfo.manualFocusUsed then
+    Log.logWarn("DefaultPointRenderer", "Manual focus mode used, no autofocus points recorded")
+    return nil
+  end
+
+  local pointsTable
+  if DefaultPointRenderer.funcGetAfPoints then
+    pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, DefaultDelegates.metaData)
+    if not pointsTable then
+      Log.logWarn("DefaultPointRenderer", "GetAfPoints: Nothing found to be visualized")
+      return nil
+    end
+  else
+    Log.logError("DefaultPointRenderer", "Internal error: no delegate assigned")
+    FocusInfo.severeErrorEncountered = true
     return nil
   end
 
@@ -172,8 +209,11 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
     for _, point in pairs(pointsTable.points) do
       local template = pointsTable.pointTemplates[point.pointType]
       if not template then
-        Log.logError("DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found.")
-        errorMessage("Internal error:\nUnexpected point type " .. point.pointType)
+        Log.logError(
+          "DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found")
+        Log.logError(
+         "DefaultPointRenderer", "Internal error:\nUnexpected point type " .. point.pointType)
+        FocusInfo.severeErrorEncountered = true
         return nil
       end
 
@@ -450,7 +490,7 @@ end
   According to current viewing option settings, determines shape and size of focus box to be drawn around focus pixel
 --]]
 function DefaultPointRenderer.createFocusFrame(x, y, w, h)
-  local pointType, size
+  local pointType
 
   if not (w and h) then
     -- focus frame dimensions have not been given -> handle as focus pixel point
@@ -477,17 +517,4 @@ function DefaultPointRenderer.createFocusFrame(x, y, w, h)
       }
     }
   }
-end
-
-
-function DefaultPointRenderer.getAfPointsUnknown(photo, metaData)
-  return nil
-end
-
-function DefaultPointRenderer.getCameraInfoUnknown(photo, metaData)
-  return FocusInfo.errorMessage("Camera information not present")
-end
-
-function DefaultPointRenderer.getFocusInfoUnknown(photo, metaData)
-  return FocusInfo.errorMessage("Unknown")
 end
