@@ -116,13 +116,13 @@ Once installed, select one or more photos and invoke the plugin via
 
 <br>
 
-
 ### 2.2 Configuration and Settings
 
 Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's preferences page:    
 
 <img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
+<br>
 
 **Screen Scaling**
 
@@ -132,8 +132,6 @@ Windows only. Default setting: "Auto"
 The drawing routines used on Windows are not aware of any display scale factor that may have been applied to the Windows configuration (Settings -> Display -> Scale). In order to avoid that the plugin window gets bigger than the screen size, the plugin has to reverse this scaling when calculating the size of the dialog window.
 
  The "Auto" setting causes the plugin to scale its windows in sync with a system scale factor. Optionally, a predefined fixed scale value can be selected, which avoids a registry access via an external command (REG.EXE) on each call of the plugin. The meaning of the predefined values 100%, 125%, 150%, etc. is the same as in the Windows Settings dialog. I.e. to undo a system-wide zoom of 150%, the same value '150%' must be selected from the drop-down list.
-
-
    
 
 **Viewing Options**
@@ -657,6 +655,7 @@ Modern iPhones there are some interesting tags to extend the camera settings sec
 
 <img src="../screens/Apple 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
+<br>
 
 ## A Appendix
 
