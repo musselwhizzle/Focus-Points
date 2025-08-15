@@ -189,8 +189,6 @@ Library module:<br>
 Develop module:<br>
 "File -> Plug-in Extras -> Focus Point"
 
-<br>
-
 #### User interface ####
 
 The window is divided into two parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
