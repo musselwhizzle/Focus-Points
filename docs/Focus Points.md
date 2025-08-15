@@ -39,10 +39,7 @@ Focus Points Plugin for Lightroom Classic
 
 ### [Appendix](#A-appendix)
 
-* [Automation: Use a keyboard shortcut to launch the plugin](#automation-use-a-keyboard-shortcut-to-launch-the-plugin)
-
-
-* [Performance](#performance)
+* [How to use a keyboard shortcut to launch the plugin](#how-to-use-a-keyboard-shortcut-to-launch-the-plugin)
 
 ### [Glossary](#G-glossary)
 
@@ -664,7 +661,7 @@ Modern iPhones there are some interesting tags to extend the camera settings sec
 ## A Appendix
 
 
-## Automation: Use a keyboard shortcut to launch the plugin 
+## How to use a keyboard shortcut to launch the plugin 
 
 Although the plugin supports multi-image operation by selecting multiple images in Lightroom before launching the plugin, it can be tedious to navigate Lightroom's menu structure each time you want to use the plugin. How much more convenient would it be to launch the plugin with the press of a button?
 
@@ -710,10 +707,6 @@ Please note:
 to be added
 
 
-
-## Performance
-
-to be added
 
 ## G Glossary
 
