@@ -677,7 +677,7 @@ The plugin comes with a compiled, ready-to-run Autohotkey script that assigns
 * Numpad-* as a shortcut for "Show Focus Point" 
 * Numpad-/ as a shortcut for "Show Metadata"
 
-This file **FocusPointsHotkeys.exe** can be found in the *ahk* folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows "Startup" folder, so that the shortcuts are automatically available each time you start Windows. A green "H" icon <img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/> in the system tray indicates that the script is active.
+This file **FocusPointsHotkeys.exe** can be found in the *ahk* folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows "Startup" folder, so that the shortcuts are automatically available each time you start Windows. A green "H" icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
 
 -----
 
@@ -688,7 +688,7 @@ If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](.
 1. Open the script file [FocusPointsHotkeys.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) in a text editor. The script contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must). 
 1. To define different shortcut keys, you have to replace "NumpadMult" and "NumpadDiv" by whatever suits you.<br> See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you want to assign the two plugin functions to Win-F and Win-M you have to replace "NumpadMult" by "#f" and "NumpadDiv" by "#m". If you prefer a Ctrl-Shift combination instead of Win the hotkey names are ^+f and ^+m.<br>Save your changes to the file. 
 
-1. Double-click FocusPointsHotkeys.ahk to run the script. In case you didn't introduce any errors, a green "H" icon <img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/> in the system tray indicates that the script is active. 
+1. Double-click FocusPointsHotkeys.ahk to run the script. In case you didn't introduce any errors, a green "H" icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active. 
 
 1. To make the shortcuts available permanently, place FocusPointsHotkeys.ahk in your Windows Startup folder.
 
