@@ -208,7 +208,8 @@ Two buttons at the bottom of the window allow you to move forward and backward t
 
 A link to the User Guide (this document) provides quick and easy access to the operating instructions.  
 
-The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc> or \<Space>.<br>
+The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc> or \<Space>.
+<br>
 
 #### Depth of Field, Hyperfocal Distance ####
 
