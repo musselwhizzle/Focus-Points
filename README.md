@@ -193,7 +193,7 @@ rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephys
 
 <a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 
-License
+Licenses
 --------
 
     Copyright 2016 Whizzbang Inc.
@@ -211,4 +211,4 @@ License
     limitations under the License.
 
 This plugin contains code from AutoHotkey (GPLv2).
-See LICENSE.txt for details.
+See [LICENSE.txt](https://github.com/capricorn8/Focus-Points/blob/develop/focuspoints.lrplugin/ahk/License.txt) for details.
