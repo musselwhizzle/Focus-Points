@@ -224,7 +224,6 @@ Technical note: ExifTool creates pseudo tags DepthOfField and HyperfocalDistance
 <img src="../screens/BasicOperation5.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
-
 <br>
 
 #### User Messages ####
@@ -285,6 +284,7 @@ For further processing as text, the full metadata (retrieved via 'exiftool -a -u
 
 <img src="../screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
 
+<br>
 
 ## 3. Display of Focus Points
 The subchapters in this section describe in more detail which features are supported by the plugin for individual camera makers and specific lines or models. In this context, "feature" means visualization of:
