@@ -663,35 +663,32 @@ Modern iPhones there are some interesting tags to extend the camera settings sec
 ## A Appendix
 
 
-## Automation
+## Automation - Use a keyboard shortcut to launch the plugin 
 
 Although the plugin supports multi-image operation by selecting multiple images in Lightroom before launching the plugin, it can be tedious to navigate Lightroom's menu structure each time you want to use the plugin. How much more convenient would it be to launch the plugin with the press of a button?
 
-Unfortunately, there is no super-easy solution to this problem *within* Lightroom. Very useful plugins like [Any Shortcut](https://johnrellis.com/lightroom/anyshortcut.htm) or [Keyboard Tamer](https://www.photographers-toolbox.com/products/keyboardtamer.php) are limited to assigning custom shortcuts to commands that are part of the predefined part of Lightroom's menus. They do not support assigning shortcuts to commands (menu items) that are part of the menus that Lightroom dynamically creates and maintains based on user-defined additions to Lightroom (e.g. Plug-in Extras, Edit in, Export with Preset). The Focus-Points plugin is such a user-defined addition.
+Unfortunately, there is no super-easy solution to this problem *within* Lightroom. Plugins like [Any Shortcut](https://johnrellis.com/lightroom/anyshortcut.htm) or [Keyboard Tamer](https://www.photographers-toolbox.com/products/keyboardtamer.php) are limited to assigning custom shortcuts to commands that are part of the predefined, static portion of Lightroom's menus. They do not support assigning shortcuts to commands (menu items) that are part of the menus that Lightroom dynamically creates and maintains based on user-defined additions to Lightroom (e.g. Plug-in Extras, Edit in, Export with Preset). The Focus-Points plugin is one such user-defined extension.
 
 However, at the system level, there are ways to automate the startup of the plugin. 
 
 ### Windows
 
-Under Windows, you can use the free utility [AutoHotkey](https://www.autohotkey.com/) together with a small script, to assign the call of "File -> Plug-in Extras -> Show Focus Point" to a key.
+Under Windows, you can use the free utility [AutoHotkey](https://www.autohotkey.com/) together with a small script, to assign the call of "File -> Plug-in Extras -> Show Focus Point" to a key. Same for Show Metadata.
 
-The plugin comes with a compiled, ready-to-run Autohotkey script [FocusPointsHotkeys.ahk](https://github.com/capricorn8/Focus-Points/blob/develop/focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) that assigns
+The plugin comes with a compiled, ready-to-run Autohotkey script that assigns
 * Numpad-* as a shortcut for "Show Focus Point" 
 * Numpad-/ as a shortcut for "Show Metadata"
 
-The script works with both the English and German Lightroom interfaces. 
-
-This file **FocusPointsHotkeys.exe** can be found in *focuspoints.lrplugin/ahk*.
-To activate the shortcuts, run this file and also drag it to your Windows "Startup" folder, so that the shortcuts are automatically available each time you start Windows. A green "H" icon in the system tray indicates that the script is active:<img src="../screens/Autohotkey_icon.jpg" style="width: 36px;"/>
+This file **FocusPointsHotkeys.exe** can be found in the *ahk* folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows "Startup" folder, so that the shortcuts are automatically available each time you start Windows. A green "H" icon in the system tray indicates that the script is active:<img src="../screens/Autohotkey_icon.jpg" style="width: 36px;"/>
 
 -----
 
-If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](https://github.com/capricorn8/Focus-Points/blob/develop/focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) as a starting point:  
+If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) as a starting point:  
 
 1. Download AutoHotKeys V2 from https://www.autohotkey.com/ and install it on your system.
 
-1. [FocusPointsHotkeys.ahk](https://github.com/capricorn8/Focus-Points/blob/develop/focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must). 
-1. To define different shortcut keys, you have to replace "NumpadMult" and "NumpadDiv" by whatever suits you. See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you rather want to assign the functions to Win-F and Win-M you have to replace "NumpadMult" by #f and "NumpadDiv" by #m. If you prefer a Ctrl-Shift combination instead of Win the hotkey names are ^+f and ^+m.<br>Save your changes to the file.
+1. Open the script file [FocusPointsHotkeys.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) in a text editor. The script contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must). 
+1. To define different shortcut keys, you have to replace "NumpadMult" and "NumpadDiv" by whatever suits you.<br> See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you want to assign the two plugin functions to Win-F and Win-M you have to replace "NumpadMult" by "#f" and "NumpadDiv" by "#m". If you prefer a Ctrl-Shift combination instead of Win the hotkey names are ^+f and ^+m.<br>Save your changes to the file. 
 
 1. Double-click FocusPointsHotkeys.ahk to run the script. In case you didn't introduce any errors, a green "H" icon in the system tray indicates that the script is active:<img src="../screens/Autohotkey_icon.jpg" style="width: 36px;"/> 
 
