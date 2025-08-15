@@ -695,12 +695,11 @@ If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](.
 -----
 
 Please note:
-* Redefining keyboard shortcuts will override the existing meaning of the corresponding keys within Lightroom. The effect of the shortcuts is limited to Lightroom Library and Develop models (#HotIf command).
+* Redefining keyboard shortcuts overrides the existing meaning of the corresponding keys in Lightroom. The effect of the shortcuts is limited to the Lightroom Library and Develop modules (#HotIf command).
 
-* The #HotIf command uses a substring of the regular Lightroom main window title to determine if Lightroom is in the foreground and which module (Library or Develop) is active. When you open Lightroom, it's possible that the window title is different from the regular format and doesn't contain "Library" or "Develop". This can be fixed by changing the module.  
+* The #HotIf command uses a substring of the regular Lightroom main window title to determine if Lightroom is in the foreground and which module (Library or Develop) is active. When you open Lightroom, it's possible that the window title is different from the regular format and does not contain "Library" or "Develop". This can be fixed by changing the module.  
 
-* The MenuSelect command used in the script uses the names of the menu items to identify the command. In cases where these names change from one version of Lightroom to the next (either intentionally or by mistake), the script needs to be adapted to work. For example, the German name for "Plug-in Extras" used to be "Zusatzmoduloptionen". In LrC 14.5 (German UI) it suddenly appears as "Plug-in Extras" (probably a translation error).
-
+* The MenuSelect command used in the script uses the names of the menu items to identify the command. In cases where these names change from one version of Lightroom to the next (either intentionally or accidentally), the script will need to be adjusted to work. For example, the German name for "Plug-in Extras" used to be "Zusatzmoduloptionen". In LrC 14.5 (German UI) it suddenly appears as "Plug-in Extras" (probably a translation error).
 
 
 ### macOS
