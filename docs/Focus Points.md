@@ -37,7 +37,13 @@ Focus Points Plugin for Lightroom Classic
  
 * [Apple](#310-apple)
 
-### [Glossary](#4-glossary)
+### [Appendix](#appendix)
+
+* [Automation](#a1-automation)
+
+* [Performance](#a2-performance)
+
+### [Glossary](#glossary)
 
 ___
 
@@ -654,6 +660,51 @@ Modern iPhones there are some interesting tags to extend the camera settings sec
 <img src="../screens/Apple 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
-## 4 Glossary
+## Appendix
+
+
+### A1 Automation
+
+Although the plugin supports multi-image operation by selecting multiple images in Lightroom before launching the plugin, it can be tedious to navigate Lightroom's menu structure each time you want to use the plugin. How much more convenient would it be to launch the plugin with the press of a button?
+
+Unfortunately, there is no super-easy solution to this problem *within* Lightroom. Very useful plugins like [Any Shortcut](https://johnrellis.com/lightroom/anyshortcut.htm) or [Keyboard Tamer](https://www.photographers-toolbox.com/products/keyboardtamer.php) are limited to assigning custom shortcuts to commands that are part of the predefined part of Lightroom's menus. They do not support assigning shortcuts to commands (menu items) that are part of the menus that Lightroom dynamically creates and maintains based on user-defined additions to Lightroom (e.g. Plug-in Extras, Edit in, Export with Preset). The Focus-Points plugin is such a user-defined addition.
+
+However, at the system level, there are ways to automate the startup of the plugin. 
+
+#### Windows
+
+Under Windows, you can use the free utility [AutoHotkey](https://www.autohotkey.com/) together with a small script, to assign the call of "File -> Plug-in Extras -> Show Focus Point" to a key.
+
+1. Download AutoHotKeys V2 from https://www.autohotkey.com/ and install it on your system.
+
+1. You can use the [FocusPointsHotkeys.ahk](to be added) script file that is part of the plugin installation as a starting point. This file uses Numpad-* as shortcut for "Show Focus Point" and Numpad-/ for "Show Metadata". If you are happy with these shortcuts you can skip step 3 and go to step 4.
+
+1. The file contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must). If you like to define different shortcut keys, you have to replace "NumpadMult" and "NumpadDiv" by whatever suits you. See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you rather want to assign the functions to Win-F and Win-M you have to replace "NumpadMult" by #f and "NumpadDiv" by #m. If you prefer a Ctrl-Shift combination instead of Win the hotkey names are ^+f and ^+m.<br>Save your changes to the file.
+
+1. Double-click FocusPointsHotkeys.ahk to run the script
+
+1. To make the shortcuts available permanently, place FocusPointsHotkeys.ahk in your Windows Startup folder.
+
+1. If all this sounds too complicated, you can use the compiled version of the script, FocusPointsHotkeys.exe instead of the ahk script. 
+
+Please note:
+* Redefining keyboard shortcuts will override any existing shortcuts for these keys.
+
+* The MenuSelect command used in the script uses the names of the menu items to identify the command. In cases where these names change from one version of Lightroom to the next (either intentionally or by mistake), the script needs to be adapted to work. For example, the German name for "Plug-in Extras" used to be "Zusatzmoduloptionen". In LrC 14.5 (German UI) it suddenly appears as "Plug-in Extras" (probably a translation error).
+
+* The #HotIf command uses a substring of the regular Lightroom main window title to determine if Lightroom is in the foreground and which module (Library or Develop) is active. When you open Lightroom, it's possible that the window title is different from the regular format and doesn't contain "Library" or "Develop". This can be fixed by changing the module.  
+
+
+#### macOS
+
+to be added
+
+
+
+### A2 Performance
+
+to be added
+
+## Glossary
 
 to be added

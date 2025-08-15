@@ -210,3 +210,5 @@ License
     See the License for the specific language governing permissions and
     limitations under the License.
 
+This plugin contains code from AutoHotkey (GPLv2).
+See LICENSE.txt for details.
