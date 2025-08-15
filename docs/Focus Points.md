@@ -178,6 +178,7 @@ If an update is available, it will also be displayed in the status area of the F
 
 <img src="../screens/UpdateAvailable.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
+<br>
 
 ### 2.3 Focus Point Viewer
 Once the plugin is installed, you can run it with one or more photos selected:
@@ -186,9 +187,10 @@ Library module:<br>
 "Library -> Plug-in Extras -> Focus Point" 
 
 Develop module:<br>
-"File -> Plug-in Extras -> Focus Point"<br>
+"File -> Plug-in Extras -> Focus Point"
+
 <br>
-<br>
+
 #### User interface ####
 
 The window is divided into two parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
