@@ -202,7 +202,7 @@ The visualization is done by drawing a rectangular frame around the element, alt
 
 |                                         WIN                                          | MAC |   Color   | Meaning                                                      |
 |:------------------------------------------------------------------------------------:|:---:|:---------:|--------------------------------------------------------------|
-|   <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>   |     |    red    | Active AF-Point (area)                                      |
+|   <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>   |     |    red<sup>1</sup>    | Active AF-Point (area)                                      |
 |     <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (pixel)                                      |  
 | <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     |   white   | Selected AF-Point                                            
 | <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     | gray | Inactive AF-Point                                            
