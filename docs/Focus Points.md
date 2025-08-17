@@ -199,6 +199,8 @@ The user interface  is divided into two main parts. On the left is the photo vie
 The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
 The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation<sup>1</sup>: 
 
+<img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>
+
 |                                         WIN                                          | MAC |   Color   | Meaning                                                      |
 |:-------:|:---:|:---------:|--------------------------------------------------------------|
 |     <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (area)                                      |
