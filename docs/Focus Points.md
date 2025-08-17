@@ -189,13 +189,32 @@ Library module:<br>
 Develop module:<br>
 "File -> Plug-in Extras -> Focus Point"
 
-#### User interface ####
 
-The window is divided into two parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
+
+The user interface  is divided into two main parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
 
 <img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
-The information section comprises three groups:
+
+The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
+The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation<sup>1</sup>: 
+
+|                                         WIN                                          | MAC |   Color   | Meaning                                                      |
+|:-------:|:---:|:---------:|--------------------------------------------------------------|
+|     <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (area)                                      |
+|     <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (pixel)                                      |  
+| <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     |   white   | Selected AF-Point                                            
+| <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     | gray | Inactive AF-Point                                            
+|    <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |  yellow   | Face or subject detected by the camera at this position 
+|    <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |   black   | Part of the image that is used by the camera in 'crop mode'.         
+
+<sup>1</sup>Tech Note: Windows and MacOS use different rendering implementations, so the display of focus points and other elements looks different on each operating system. On MacOS, focus points and face/object detection and cropping frames are indicated only by the corners, while on Windows, all frames have solid lines. This is due to the fact that the Lightroom SDK methods for overlaying information (frame corners and center points) on an image work on MacOS but not on Windows. On Windows, this is done by ImageMagick (mogrify), which draws rectangles with solid lines.
+
+Availability of the same method(s) on both platforms (ideally chosen by the user) would be desirable, but this is challenging and requires significant effort.
+
+### Information section ###
+
+The text pane right to the photo view comprises three groups:
 - Image information
 - Camera settings
 - Focus information
@@ -204,14 +223,14 @@ Image information and camera settings are largely taken from the Lightroom catal
 
 Focus information is only available for photos for which the corresponding image file contains complete metadata. See [Scope and Limitations](#1-scope-and-limitations) for more detailed information.
 
-Two buttons at the bottom of the window allow you to move forward and backward through a series of photos, if more than one was selected in Lightroom when the plugin was launched.
+Two buttons at the bottom of the window allow you to move forward and backward through a series of photos, if more than one was selected in Lightroom when the plugin was launched. In case the plugin was launched on a single photo, the buttons are inactive.
 
 A link to the User Guide (this document) provides quick and easy access to the operating instructions.  
 
 The window can be closed by clicking "Exit" or pressing \<Enter> or \<Esc> or \<Space>.
 <br>
 
-#### Depth of Field, Hyperfocal Distance ####
+### Depth of Field, Hyperfocal Distance ###
 
 Most camera makers include subject or focus distance information in makernotes. Sony, Fuji and Pentax do not, so this section is not relevant to images taken with their cameras.    
 
@@ -226,7 +245,7 @@ Technical note: ExifTool creates pseudo tags DepthOfField and HyperfocalDistance
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
 <br>
 
-#### User Messages ####
+### User Messages ###
 
 The first line of text in the "Focus Information" section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
@@ -247,7 +266,7 @@ You can also access this information from the plugin window by clicking the link
 <img src="../screens/BasicOperation6.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 
-#### Plugin Status ####
+### Plugin Status ###
 
 If errors or warnings were encountered while processing the autofocus metadata, a status message is displayed at the bottom of the text pane. To the right of this message, you can click the "Check log" button to open the logfile for more details. The logfile contains detailed information about the metadata processing, such as relevant tags found (or not found).<br>
 See also section "Logging" under [Configuration and Settings](#22-configuration-and-settings).
