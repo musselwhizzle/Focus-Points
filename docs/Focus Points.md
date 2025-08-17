@@ -199,16 +199,15 @@ The user interface  is divided into two main parts. On the left is the photo vie
 The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
 The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation<sup>1</sup>: 
 
-<img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>
 
 |                                         WIN                                          | MAC |   Color   | Meaning                                                      |
-|:-------:|:---:|:---------:|--------------------------------------------------------------|
-|     <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (area)                                      |
-|     <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (pixel)                                      |  
-| <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     |   white   | Selected AF-Point                                            
-| <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     | gray | Inactive AF-Point                                            
-|    <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |  yellow   | Face or subject detected by the camera at this position 
-|    <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |   black   | Part of the image that is used by the camera in 'crop mode'.         
+|:------------------------------------------------------------------------------------:|:---:|:---------:|--------------------------------------------------------------|
+|   <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>   |     |    red    | Active AF-Point (area)                                      |
+|     <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (pixel)                                      |  
+| <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     |   white   | Selected AF-Point                                            
+| <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     | gray | Inactive AF-Point                                            
+|    <img src="../screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |  yellow   | Face or subject detected by the camera at this position 
+|    <img src="../screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |   black   | Part of the image that is used by the camera in 'crop mode'.         
 
 <sup>1</sup>Tech Note: Windows and MacOS use different rendering implementations, so the display of focus points and other elements looks different on each operating system. On MacOS, focus points and face/object detection and cropping frames are indicated only by the corners, while on Windows, all frames have solid lines. This is due to the fact that the Lightroom SDK methods for overlaying information (frame corners and center points) on an image work on MacOS but not on Windows. On Windows, this is done by ImageMagick (mogrify), which draws rectangles with solid lines.
 
