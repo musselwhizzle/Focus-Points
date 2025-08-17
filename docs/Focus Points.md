@@ -95,7 +95,7 @@ This section explains how to use the plugin.
 
 ### 2.1 Installation
 1. Unless you have a special link (e.g. for a pre-release), download the **source code.zip** file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of this page to find the download link). A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>
-_MAC users_: The zip file will be automatically unzipped according to your MacOS preferences.
+_MAC users_: The zip file will be automatically unzipped according to your macOS preferences.
 
 
 2. Extract the downloaded file if necessary. Within the extracted contents, locate the plugin folder **focuspoints.lrplugin**
@@ -197,19 +197,23 @@ The user interface  is divided into two main parts. On the left is the photo vie
 
 
 The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
-The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation<sup>1</sup>: 
+The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation*: 
 
 
-|                                         WIN                                          | MAC |   Color   | Meaning                                                      |
-|:------------------------------------------------------------------------------------:|:---:|:---------:|--------------------------------------------------------------|
-|   <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>   |     |    red<sup>1</sup>    | Active AF-Point (area)                                      |
-|     <img src="../screens/af_selected.png" alt="AF selected" style="width: 20px;"/>      |     |    red    | Active AF-Point (pixel)                                      |  
-| <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     |   white   | Selected AF-Point                                            
-| <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |     | gray | Inactive AF-Point                                            
-|    <img src="../screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |  yellow   | Face or subject detected by the camera at this position 
-|    <img src="../screens/face.png" alt="AF selected in focus" style="width: 20px;"/>     |     |   black   | Part of the image that is used by the camera in 'crop mode'.         
+|                                           MAC                                           | WIN |       Color       | Meaning                                                                |
+|:---------------------------------------------------------------------------------------:|:------:|:-----------------:|------------------------------------------------------------------------|
+|      <img src="../screens/af_infocus.png" alt="AF selected" style="width: 20px;"/>      |        |  red<sup>1</sup>  | Active AF-Point. Focus area, dimensions reported by the camera      |
+|    <img src="../screens/af_infocusdot.png" alt="AF selected" style="width: 20px;"/>     |        | red<sup>1,2</sup> | Active AF-Point. Focus location<sup>3</sup>
+| <img src="../screens/af_selected.png" alt="AF selected in focus" style="width: 29px;"/> |        |       white       | User-selected AF-Point                                                 
+| <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |        |       gray        | Inactive AF-Point. Part of DSLR AF layout but not used                
+|   <img src="../screens/af_face.png" alt="AF selected in focus" style="width: 20px;"/>   |        |      yellow       | Face or subject detected by the camera at this position                
+| <img src="../screens/af_crop.png" alt="AF selected in focus" style="width: 20px;"/> |        |       black       | Part of the image that is used by the camera in 'crop mode'.           
 
-<sup>1</sup>Tech Note: Windows and MacOS use different rendering implementations, so the display of focus points and other elements looks different on each operating system. On MacOS, focus points and face/object detection and cropping frames are indicated only by the corners, while on Windows, all frames have solid lines. This is due to the fact that the Lightroom SDK methods for overlaying information (frame corners and center points) on an image work on MacOS but not on Windows. On Windows, this is done by ImageMagick (mogrify), which draws rectangles with solid lines.
+<sup>1</sup> AF-Point Color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
+<sup>3</sup> The red square with a dot inside can have different meanings. Either the square frame around the dot comes from the settings to improve the visibility of the dot. However, the frame can also reflect the dimensions of a focus area that camera reports along with the focus position (which is a pixel). If the distinction is important, select "Small" for the size of the focus box for "focus pixel" points. This will draw a simple small box with no dot inside. This way, the shape with a dot will only be visible for focus pixel points that also have a reported dimension.
+
+\* Tech Note: Windows and macOS use different rendering implementations, so the display of focus points and other elements looks different on each operating system. On macOS, focus points and face/object detection and cropping frames are indicated only by the corners, while on Windows, all frames have solid lines. This is due to the fact that the Lightroom SDK methods for overlaying information (frame corners and center points) on an image work on macOS but not on Windows. On Windows, this is done by ImageMagick (mogrify), which draws rectangles with solid lines.
 
 Availability of the same method(s) on both platforms (ideally chosen by the user) would be desirable, but this is challenging and requires significant effort.
 
