@@ -189,7 +189,7 @@ Library module:<br>
 Develop module:<br>
 "File -> Plug-in Extras -> Focus Point"
 
-
+### User Interface ###
 
 The user interface  is divided into two main parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
 
@@ -200,14 +200,14 @@ The plugin uses different colors to visualize AF points, detected faces and obje
 The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation*: 
 
 
-|                                           MAC                                           | WIN |       Color       | Meaning                                                                |
-|:---------------------------------------------------------------------------------------:|:------:|:-----------------:|------------------------------------------------------------------------|
-|      <img src="../screens/af_infocus.png" alt="AF selected" style="width: 20px;"/>      |        |  red<sup>1</sup>  | Active AF-Point. Focus area, dimensions reported by the camera      |
-|    <img src="../screens/af_infocusdot.png" alt="AF selected" style="width: 20px;"/>     |        | red<sup>1,2</sup> | Active AF-Point. Focus location<sup>3</sup>
-| <img src="../screens/af_selected.png" alt="AF selected in focus" style="width: 29px;"/> |        |       white       | User-selected AF-Point                                                 
-| <img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> |        |       gray        | Inactive AF-Point. Part of DSLR AF layout but not used                
-|   <img src="../screens/af_face.png" alt="AF selected in focus" style="width: 20px;"/>   |        |      yellow       | Face or subject detected by the camera at this position                
-| <img src="../screens/af_crop.png" alt="AF selected in focus" style="width: 20px;"/> |        |       black       | Part of the image that is used by the camera in 'crop mode'.           
+|                                           MAC                                           |                                             WIN                                             |       Color       | Meaning                                                                |
+|:---------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------:|:-----------------:|------------------------------------------------------------------------|
+|<img src="../screens/af_infocus.png" alt="AF selected" style="width: 20px;"/>      |      <img src="../screens/af_infocus_win.png" alt="AF selected" style="width: 20px;"/>      |  red<sup>1</sup>  | Active AF-Point. Focus area, dimensions reported by the camera      |
+|<img src="../screens/af_infocusdot.png" alt="AF selected" style="width: 20px;"/>     |    <img src="../screens/af_infocusdot_win.png" alt="AF selected" style="width: 20px;"/>     | red<sup>1,2</sup> | Active AF-Point. Focus location<sup>3</sup>
+|<img src="../screens/af_selected.png" alt="AF selected in focus" style="width: 29px;"/> | <img src="../screens/af_selected_win.png" alt="AF selected in focus" style="width: 29px;"/> |       white       | User-selected AF-Point                                                 
+|<img src="../screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> | <img src="../screens/af_inactive_win.png" alt="AF selected in focus" style="width: 20px;"/> |       gray        | Inactive AF-Point. Part of DSLR AF layout but not used                
+|<img src="../screens/af_face.png" alt="AF selected in focus" style="width: 20px;"/>   |   <img src="../screens/af_face_win.png" alt="AF selected in focus" style="width: 20px;"/>   |      yellow       | Face or subject detected by the camera at this position                
+|<img src="../screens/af_crop.png" alt="AF selected in focus" style="width: 20px;"/> |   <img src="../screens/af_crop_win.png" alt="AF selected in focus" style="width: 20px;"/>   |          black    | Part of the image that is used by the camera in 'crop mode'           |
 
 <sup>1</sup> AF-Point Color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
@@ -319,15 +319,7 @@ The subchapters in this section describe in more detail which features are suppo
 * Detected subjects (animals, airplanes, cars, trains, etc.)
 * Inactive AF points (to visualize the complete AF layout of DSLRs)
 
-The plugin uses different colors to visualize these elements:
-
-|           Element           |       Color        |
-|:---------------------------:|:------------------:|
-|   Inactive AF point/area    |        Gray        |
-| User-selected AF point/area |       White        |
-| AF point(s) used by camera  | Green, Red or Blue |
-|  Detected face or subject   |       Yellow       |
-
+The plugin uses different colors to visualize these elements (see [User Interface](#user-interface)).
 
 The extent to which these features can be supported for a given camera model ultimately depends on a) the availability of the corresponding data in the EXIF makernotes and b) the fact whether this information is known to ExifTool.
 

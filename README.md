@@ -20,38 +20,34 @@ For details on scope and limitations as well as comprehensive operating instruct
 
 <img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
 
-Current Release
+Upcoming Release
 --------
-## V3.0.3, April 6, 2025
+## V3.1, September xx, 2025
 
 ### New features and changes:
 
-* **Improved user interface**
-  * Multi-image processing: select multiple images in Lightroom before starting the plugin [#210](https://github.com/musselwhizzle/Focus-Points/issues/210)
-  * Side-by-side presentation of focus point display and camera settings / focus information to support assessment of focus results [#214](https://github.com/musselwhizzle/Focus-Points/issues/214)
-    * Focus information implemented for Canon, Nikon, Sony, Fuji, Panasonic, Olympus, Apple
-    * Pentax pending
-  * User can choose focus box color and for 'focus pixel' points also box size [#215](https://github.com/musselwhizzle/Focus-Points/issues/215)
-  * Improved logging to assist the user in understanding why for certain images no focus points can be displayed [#217](https://github.com/musselwhizzle/Focus-Points/issues/217)
-  * Automatic sizing of plugin dialog windows according to Windows Display Scale setting [#216](https://github.com/musselwhizzle/Focus-Points/issues/216)
-  * Automatic check for updates [#224](https://github.com/musselwhizzle/Focus-Points/issues/224)
-  * Metadata Viewer: filtering of both tags and values columns supported  [#221](https://github.com/musselwhizzle/Focus-Points/issues/221) 
+* **Camera support**
+  * Pentax:
+    Redesign of Pentax support [#269](https://github.com/musselwhizzle/Focus-Points/issues/269)<br>Support visualization of selected and in-focus CAF points for Pentax cameras [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)<br>Support focus point display for Pentax K-3 III (and Monochrome) [#262](https://github.com/musselwhizzle/Focus-Points/issues/262)<br> Support detection of multiple faces for Pentax K-3 III and later models [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
+  * OM System: Support visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) Support visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
+  * Olympus: Support entire Olympus E-series [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
+  * Ricoh: Support Ricoh GR III / IIIx models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
 
-* **Camera specific improvements to focus point detection and display**
-  * Nikon: added full support of Mirrorless and all DSLRs with 39 or more autofocus points  [#203](https://github.com/musselwhizzle/Focus-Points/issues/203), [#208](https://github.com/musselwhizzle/Focus-Points/issues/208),  [#209](https://github.com/musselwhizzle/Focus-Points/issues/209), [#211](https://github.com/musselwhizzle/Focus-Points/issues/211), [#212](https://github.com/musselwhizzle/Focus-Points/issues/212).
-  * Sony: unified implementation for Sony Alpha and RX10M4 [#213](https://github.com/musselwhizzle/Focus-Points/issues/213). Fixed coordinates of phase detection focus points [#176](https://github.com/musselwhizzle/Focus-Points/issues/176). Fixed incorrect position of focus point display of in-camera cropped images (1:1, 4:3, 16:9) [#228](https://github.com/musselwhizzle/Focus-Points/issues/228)
-  * Face detection frames added for Sony [#222](https://github.com/musselwhizzle/Focus-Points/issues/222), Panasonic [#223](https://github.com/musselwhizzle/Focus-Points/issues/223), Olympus [#219](https://github.com/musselwhizzle/Focus-Points/issues/219), Apple [#218](https://github.com/musselwhizzle/Focus-Points/issues/218). 
-  * Face and subjection detection frames added for Fuji [#165](https://github.com/musselwhizzle/Focus-Points/issues/165).
-  * Pentax: Fixed a problem that prevented the plugin from recognizing K-3, K-1 and K-1 Mark II [#206](https://github.com/musselwhizzle/Focus-Points/issues/206).
+
+* **User interface**
+  * Usability improvements [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
+    * Consistent layout of controls between single and multi-image modes
+    * Improved messages and information in case no focus points have been found or errors/warnings occured
+    * Link to user manual
+  
    
-* **Bugfixes (on top of 3.0.0)**
-  * ExifTool unable to read metadata on MAC [#235](https://github.com/musselwhizzle/Focus-Points/issues/235)
-  * Evaluation of System display scale factor (call to REG.EXE) should not be done on MAC [#240](https://github.com/musselwhizzle/Focus-Points/issues/240)
-  * Update check results in internal error when remote version.txt file cannot be accessed [#245](https://github.com/musselwhizzle/Focus-Points/issues/245)
+* **Bugfixes**
+  * Metadata table not properly displayed when develop settings are written to image file [#257](https://github.com/musselwhizzle/Focus-Points/issues/257)
+
 
 * **Other**
-  * Includes ExifTool 13.25 (Mar. 11, 2025)
-   * Comprehensive user documentation
+  * Support using keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
+  * Includes ExifTool 13.34 (Aug. 18, 2025)
 
 **Supported cameras:**  
 See below.
@@ -91,7 +87,7 @@ Supported Cameras
 
 
 * Olympus / OM System
-  * DSLR: E-5, E-420, E-520, E-620
+  * DSLR: entire E-series
   * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
   * Face detection frames
   * OM System: Subject detection frames
@@ -137,18 +133,28 @@ Once installed, select one or more photos and invoke the plugin via
 * Library -> Plug-in Extras -> Show Focus Point, or  
 * File -> Plug-in Extras -> Show Focus Point
 
-<br>
+
 
 Supported AF-Points
 --------
-Currently, the following types of AF-points and visualization frames will be displayed :
 
-* <img src="screens/af_selected.png" alt="AF selected" style="width: 20px;"/> Active AF-Point
-* <img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> Inactive AF-Point
-* <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> A face or subject was detected by the camera at this position
-* <img src="screens/face.png" alt="AF selected in focus" style="width: 20px;"/> Part of the image used by the camera in 'crop mode'.
+The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
+The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation (for an explanation see [User Interface](docs/Focus%20Points.md#user-interface))
 
-As different implementations of focus point rendering are required for Windows and macOS, the display of focus points looks different on both operating systems. On macOS, focus points and frames for face/subject detection and crops are indicated by the corners only while on Windows all frames have solid lines. Availability of the same method(s) on both platforms (ideally selected by the user) would be desirable, but it's a technical challenge to make the MAC method available on WIN and vice versa.
+
+|                                           MAC                                           |                                             WIN                                             |       Color       | Meaning                                                                |
+|:---------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------:|:-----------------:|------------------------------------------------------------------------|
+|<img src="screens/af_infocus.png" alt="AF selected" style="width: 20px;"/>      |      <img src="screens/af_infocus_win.png" alt="AF selected" style="width: 20px;"/>      |  red<sup>1</sup>  | Active AF-Point. Focus area, dimensions reported by the camera      |
+|<img src="screens/af_infocusdot.png" alt="AF selected" style="width: 20px;"/>     |    <img src="screens/af_infocusdot_win.png" alt="AF selected" style="width: 20px;"/>     | red<sup>1,2</sup> | Active AF-Point. Focus location<sup>3</sup>
+|<img src="screens/af_selected.png" alt="AF selected in focus" style="width: 29px;"/> | <img src="screens/af_selected_win.png" alt="AF selected in focus" style="width: 29px;"/> |       white       | User-selected AF-Point                                                 
+|<img src="screens/af_inactive.png" alt="AF selected in focus" style="width: 20px;"/> | <img src="screens/af_inactive_win.png" alt="AF selected in focus" style="width: 20px;"/> |       gray        | Inactive AF-Point. Part of DSLR AF layout but not used                
+|<img src="screens/af_face.png" alt="AF selected in focus" style="width: 20px;"/>   |   <img src="screens/af_face_win.png" alt="AF selected in focus" style="width: 20px;"/>   |      yellow       | Face or subject detected by the camera at this position                
+|<img src="screens/af_crop.png" alt="AF selected in focus" style="width: 20px;"/> |   <img src="screens/af_crop_win.png" alt="AF selected in focus" style="width: 20px;"/>   |          black    | Part of the image that is used by the camera in 'crop mode'           |
+
+<sup>1</sup> AF-Point Color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).
+<sup>3</sup> The red square with a dot inside can have different meanings. Either the square frame around the dot comes from the settings to improve the visibility of the dot. However, the frame can also reflect the dimensions of a focus area that camera reports along with the focus position (which is a pixel). If the distinction is important, select "Small" for the size of the focus box for "focus pixel" points. This will draw a simple small box with no dot inside. This way, the shape with a dot will only be visible for focus pixel points that also have a reported dimension.
+
 
 On macOS, the focus point display of title photo looks like this:
 
