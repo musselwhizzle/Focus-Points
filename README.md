@@ -28,10 +28,20 @@ Upcoming Release
 
 * **Camera support**
   * Pentax:
-    Redesign of Pentax support [#269](https://github.com/musselwhizzle/Focus-Points/issues/269)<br>Support visualization of selected and in-focus CAF points for Pentax cameras [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)<br>Support focus point display for Pentax K-3 III (and Monochrome) [#262](https://github.com/musselwhizzle/Focus-Points/issues/262)<br> Support detection of multiple faces for Pentax K-3 III and later models [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
-  * OM System: Support visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) Support visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
-  * Olympus: Support entire Olympus E-series [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
-  * Ricoh: Support Ricoh GR III / IIIx models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
+    * Redesign of Pentax support [#269](https://github.com/musselwhizzle/Focus-Points/issues/269)
+    * Visualization of selected and in-focus CAF points (LiveView) [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)
+    * Focus point display for Pentax K-3 III (and Monochrome) [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
+    * Detection of multiple faces for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
+    * Display status of AF settings in "Focus Information":<br>
+      Focus Mode, Focusing Area, 1st Frame Action in AF-C, Action in AF-C Continuous<br>
+      in addition for K-3 III: Subject Recognition, AF Hold, AF Point Tracking, Focus Sensitivity,
+  * OM System: 
+    * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
+    * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
+  * Olympus: 
+    * Support entire Olympus E-series [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
+  * Ricoh: 
+    * Support Ricoh GR III / IIIx models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
 
 
 * **User interface**
@@ -48,6 +58,7 @@ Upcoming Release
 * **Other**
   * Support using keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
   * Includes ExifTool 13.34 (Aug. 18, 2025)
+
 
 **Supported cameras:**  
 See below.
@@ -109,7 +120,6 @@ Supported Cameras
   * iPhone (starting from at least iPhone 5)
   * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
 
-
 <br>
 
 Installation
@@ -133,13 +143,13 @@ Once installed, select one or more photos and invoke the plugin via
 * Library -> Plug-in Extras -> Show Focus Point, or  
 * File -> Plug-in Extras -> Show Focus Point
 
-
+<br>
 
 Supported AF-Points
 --------
 
 The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
-The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation (for an explanation see [User Interface](docs/Focus%20Points.md#user-interface))
+The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation (for a more detailed explanation see [User Interface](docs/Focus%20Points.md#user-interface))
 
 
 |                                           MAC                                           |                                             WIN                                             |       Color       | Meaning                                                                |
