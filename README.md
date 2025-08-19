@@ -131,7 +131,7 @@ Installation
 1. Download **source code.zip** from [latest release](https://github.com/capricorn8/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
 
-2. If needed, unzip this file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
 
 
 3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
@@ -175,7 +175,7 @@ On macOS, the focus point display of title photo looks like this:
 <img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
 
 
-Please note that not all cameras save the needed information to support these features in the Exifs of the photo. E.g. Canon and Nikon do not store any information on detect faces or subjects, hence there are no detection frames for these cameras.  
+Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, Canon and Nikon cameras do not store face or subject detection information, so there are no detection frames for these cameras. See chapter 3 of the [User Manual](docs/Focus%20Points.md) for detailed information on which types of visualization are supported for which cameras.
 
 <br>
 
