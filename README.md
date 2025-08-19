@@ -2,7 +2,7 @@ Focus Points
 =======
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
-- Show which focus point was active when the picture was taken.
+- Show which focus point was active when the picture was taken
 - Display user-selected autofocus points/area<sup>1,2</sup>
 - Visualize faces and subjects detected by the camera<sup>1,3</sup> 
 - Display (EXIF) metadata of the selected image
@@ -12,9 +12,7 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 <sup>2</sup> Currently supported for Pentax and OM System.      
 <sup>3</sup> Currently supported for Fuji, Olympus/OM (subjects, faces) and Sony, Pentax (faces).
 
-
-
-For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
+To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the operating instructions at [User Documentation](docs/Focus%20Points.md). It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 
 <br>
 
@@ -30,9 +28,9 @@ Upcoming Release
   * Pentax:
     * Redesign of Pentax support [#269](https://github.com/musselwhizzle/Focus-Points/issues/269)
     * Visualization of selected and in-focus CAF points (LiveView) [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)
-    * Focus point display for Pentax K-3 III (and Monochrome) [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
+    * Focus point display for Pentax K-3 III (Monochrome) [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
     * Detection of multiple faces for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
-    * Display status of Pentax AF-related settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
+    * Display status of Pentax AF-related camera settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
   * OM System: 
     * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
     * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
@@ -46,7 +44,7 @@ Upcoming Release
   * Usability improvements [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
     * Consistent layout of controls between single and multi-image modes
     * Improved messages and information in case no focus points have been found or errors/warnings occured
-    * Link to user manual
+    * UI access to user manual
   
    
 * **Bugfixes**
@@ -55,6 +53,7 @@ Upcoming Release
 
 * **Other**
   * Support using keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
+  * User documentation reworked
   * Includes ExifTool 13.34 (Aug. 18, 2025)
 
 
@@ -63,7 +62,7 @@ See below.
 
 For history of versions and changes see [changelog.](docs/changelog.md)
 
-**[Download release](https://github.com/musselwhizzle/Focus-Points/releases/latest)**
+### **[Download release](https://github.com/capricorn8/Focus-Points/releases/latest)**
 
 <br>
 
@@ -126,7 +125,7 @@ Supported Cameras
 Installation
 --------
 **Installation steps**
-1. Download **source code.zip** from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+1. Download **source code.zip** from [latest release](https://github.com/capricorn8/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
 
 2. If needed, unzip this file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
