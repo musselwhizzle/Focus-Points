@@ -175,7 +175,9 @@ On macOS, the focus point display of title photo looks like this:
 <img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
 
 
-Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, Canon and Nikon cameras do not store face or subject detection information, so there are no detection frames for these cameras. See chapter 3 of the [User Manual](docs/Focus%20Points.md) for detailed information on which types of visualization are supported for which cameras.
+Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, Canon and Nikon cameras do not store face or subject detection information, so there are no detection frames for these cameras. 
+
+See chapter 3 of the [User Manual](docs/Focus%20Points.md) for detailed information on which types of visualization are supported for which cameras.
 
 <br>
 
