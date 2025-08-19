@@ -18,7 +18,7 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 <img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
 
-<br>
+
 <br>
 
 Upcoming Release
@@ -165,6 +165,7 @@ The visualization is done by drawing a rectangular frame around the element, alt
 |<img src="screens/af_crop.png" alt="AF selected in focus" style="width: 20px;"/> |   <img src="screens/af_crop_win.png" alt="AF selected in focus" style="width: 20px;"/>   |          black    | Part of the image that is used by the camera in 'crop mode'           |
 
 <sup>1</sup> AF-Point Color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).
 <sup>3</sup> The red square with a dot inside can have different meanings. Either the square frame around the dot comes from the settings to improve the visibility of the dot. However, the frame can also reflect the dimensions of a focus area that camera reports along with the focus position (which is a pixel). If the distinction is important, select "Small" for the size of the focus box for "focus pixel" points. This will draw a simple small box with no dot inside. This way, the shape with a dot will only be visible for focus pixel points that also have a reported dimension.
 
@@ -230,4 +231,4 @@ Licenses
     limitations under the License.
 
 This plugin contains code from AutoHotkey (GPLv2).
-See [LICENSE.txt](https://github.com/capricorn8/Focus-Points/blob/develop/focuspoints.lrplugin/ahk/License.txt) for details.
+See [LICENSE.txt](focuspoints.lrplugin/ahk/License.txt) for details.
