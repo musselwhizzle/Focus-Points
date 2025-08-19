@@ -32,9 +32,7 @@ Upcoming Release
     * Visualization of selected and in-focus CAF points (LiveView) [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)
     * Focus point display for Pentax K-3 III (and Monochrome) [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
     * Detection of multiple faces for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
-    * Display status of AF settings in "Focus Information":<br>
-      Focus Mode, Focusing Area, 1st Frame Action in AF-C, Action in AF-C Continuous<br>
-      in addition for K-3 III: Subject Recognition, AF Hold, AF Point Tracking, Focus Sensitivity,
+    * Display status of Pentax AF-related settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
   * OM System: 
     * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
     * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
@@ -88,32 +86,35 @@ Supported Cameras
   * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
   * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
   * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
-  * Face detection frames
+  * Face detection
   
 
 * Fuji
   * Mirroless: X-series (from X100 in 2011 up to X-H2S today), GFX-series
   * Compact: FinePix models after 2007  
-  * Face and subject detection frames
+  * Face and subject detection
 
 
 * Olympus / OM System
   * DSLR: entire E-series
   * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
-  * Face detection frames
-  * OM System: Subject detection frames
+  * Olympus: Face detection
+  * OM System: Face and subject detection
 
 
 * Panasonic
   * Mirrorless: entire LUMIX G and S series
   * Compact: FZ, TZ/ZS, LX series - models after 2008
-  * Face detection frames
+  * Face detection
   
 
 * Pentax 
-  * Display of focus points and supported models are unchanged with respect to previous plugin versions
-  * Display of basic image information and camera settings
-  * Pending (upcoming release): Review/revision of focus point logic. Display of advanced camera settings and focus information 
+  * DSLR: all models with 11 or more autofocus points (from *istD in 2003 to K-3 III Mono in 2023)
+  * Face detection
+  
+
+* Ricoh
+  * GR III, GR IIIx
 
 
 * Apple
@@ -182,7 +183,7 @@ The plugin also features a metadata viewer with live search:
 * Library -> Plug-in Extras -> Show Metadata, or  
 * File -> Plug-in Extras -> Show Metadata
 
-The Metadata Viewer comes in handy for viewing any information that is not visible in the info sections of the focus point windows. The information is fetched directly from the image file on disk so it gives a full picture of metadata written by the camera. Metadata can be filtered by keys or value. The filter accepts pattern matching using commonly known 'magic characters':  
+The Metadata Viewer is useful for viewing information that is not visible in the Info panes of the focus windows. The information is retrieved directly from the image file on disk, giving a complete picture of the metadata written by the camera. Metadata can be filtered by key or value. The filter accepts pattern matching with common 'magic characters':
 
  | Char  | <div align="left">Meaning</div>                | 
  |:-----:|------------------------------------------------|
@@ -203,7 +204,7 @@ Please see the [Contributing.md](Contributing.md) file before being any new work
 
 Special Thanks
 --------
-There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who has worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
+There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who have worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
 
 rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma, capricorn8 (Karsten Gieselmann)
 
