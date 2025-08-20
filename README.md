@@ -154,18 +154,18 @@ Supported AF Points
 The plugin uses different colors to visualize AF points, detected faces and objects, and other elements.
 The visualization is done by drawing a rectangular frame around the element, although the way this is done differs between Windows and macOS due to the implementation (for a more detailed explanation see [User Interface](docs/Focus%20Points.md#user-interface))
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                        |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------|
-|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera |
-| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>                  |
-|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                         |   
-|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF layout but not used         |                
-|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera at this position        |              
-|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'    |
+|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                            |
+|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|--------------------------------------------------------------------|
+|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera     |
+| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>                        |
+|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                             |   
+|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF layout but not used<sup>3</sup> |   
+|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera at this position            |  
+|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'        |
 
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
-<sup>3</sup> The active AF point square with a dot inside can have different meanings depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
+<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
 
 
 On macOS, the focus point display of title photo looks like this:
