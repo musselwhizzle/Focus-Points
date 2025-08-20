@@ -120,7 +120,7 @@ Once installed, select one or more photos and invoke the plugin via
 
 Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's preferences page:    
 
-<img src="../../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/Plugin Options.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 <br>
 
@@ -176,7 +176,7 @@ If an update is available, it will be highlighted and you can click the download
 
 If an update is available, it will also be displayed in the status area of the Focus Point Viewer if the "Show message" checkbox is selected:
 
-<img src="../../screens/UpdateAvailable.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/UpdateAvailable.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 <br>
 
@@ -193,7 +193,7 @@ Develop module:<br>
 
 The user interface  is divided into two main parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
 
-<img src="../../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/BasicOperation1.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 
 The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols*. 
@@ -244,7 +244,7 @@ Note that the accuracy of focus distance values is limited. Cameras are not desi
 
 Technical note: ExifTool creates pseudo tags `DepthOfField` and `HyperfocalDistance` which can be seen in ExifTool output. For calculation of DoF it uses the standard circle of confusion parameter for the respective sensor. In this context, the term “sharpness” refers to the ability of the human eye to recognize and resolve details when an image is viewed at full size, i.e. not enlarged, also known as “pixel peeping”. 
 
-<img src="../../screens/BasicOperation5.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/BasicOperation5.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
 <br>
@@ -267,7 +267,7 @@ Click on the message to learn what it means and how to deal with it in case of a
 
 You can also access this information from the plugin window by clicking the link icon 🔗 next to the message: 
 
-<img src="../../screens/BasicOperation6.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/BasicOperation6.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 
 ### Plugin Status ###
@@ -277,7 +277,7 @@ See also section "Logging" under [Configuration and Settings](#22-configuration-
 
 For the image above, where focus info is said to be "missing from file", the logfile looks like this:
 
-<img src="../../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
+<img src="../screens/BasicOperation3.jpg" alt="User Interface (Single image)" style="width: 600px;"/>
 
 There are two warnings and one error:
 The tag `CameraSettingsVersion` has not been found which means that this file does not contain a makernotes section with AF information (which is required for the plugin to work). The image file was not created in-camera but by an application. In this case, it is a JPG file exported from (and created! by) Lightroom.  
@@ -305,7 +305,7 @@ The plugin is written in the Lua programming language and uses Lua string.find()
 For further processing as text, the full metadata (retrieved via 'exiftool -a -u -sort <file>') can also be opened in a text editor.  
 
 
-<img src="../../screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../../screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../../screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
+<img src="../screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="../screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
 
 <br>
 
@@ -353,15 +353,15 @@ The position and size of the PDAF focus points are determined by the camera mode
 
 Example - Single Area shot:
 
-<img src="../../screens/Nikon 1.jpg" alt="Nikon 1.jpg" style="width: 800px;"/>
+<img src="../screens/Nikon 1.jpg" alt="Nikon 1.jpg" style="width: 800px;"/>
 
 Example - Group Area shot:
 
-<img src="../../screens/Nikon 3.jpg" alt="Nikon 3.jpg" style="width: 800px;"/>
+<img src="../screens/Nikon 3.jpg" alt="Nikon 3.jpg" style="width: 800px;"/>
 
 With Contrast AF, the size of the focus "point" is a larger box that varies depending on the shooting conditions:
 
-<img src="../../screens/Nikon 2.jpg" alt="Nikon 2.jpg" style="width: 800px;"/>
+<img src="../screens/Nikon 2.jpg" alt="Nikon 2.jpg" style="width: 800px;"/>
 
 
 ### 3.1.2 Nikon Mirrorless
@@ -372,12 +372,12 @@ Early Z models had an 81-point (9x9) PDAF, which grew to 493 points (27x15) on t
 
 Example for Contrast AF (with subject detection "People"):
 
-<img src="../../screens/Nikon 4.jpg" alt="Nikon 4.jpg" style="width: 800px;"/>
+<img src="../screens/Nikon 4.jpg" alt="Nikon 4.jpg" style="width: 800px;"/>
 
 
 Example for Phase Detect AF (PDAF):
 
-<img src="../../screens/Nikon 5.jpg" alt="Nikon 5.jpg" style="width: 800px;"/>
+<img src="../screens/Nikon 5.jpg" alt="Nikon 5.jpg" style="width: 800px;"/>
 
 ## 3.2 Canon
 
@@ -403,11 +403,11 @@ Like Nikon, Canon DSLRs support both PDAF and CAF. The position and size of the 
 
 PDAF-focused shot with multiple focus points used:
 
-<img src="../../screens/Canon 1.jpg" alt="Canon 1.jpg" style="width: 800px;"/>
+<img src="../screens/Canon 1.jpg" alt="Canon 1.jpg" style="width: 800px;"/>
 
 CAF-focused shot using the 'green' color setting for better visibility:
 
-<img src="../../screens/Canon 2.jpg" alt="Canon 2.jpg" style="width: 800px;"/>
+<img src="../screens/Canon 2.jpg" alt="Canon 2.jpg" style="width: 800px;"/>
 
 
 ### 3.1.2 Canon Mirrorless
@@ -416,11 +416,11 @@ As with Nikon, Canon mirrorless models feature a hybrid autofocus system. Howeve
 
 Shot with 'Animal' subject detection:
 
-<img src= "../../screens/Canon 3.jpg" alt="Canon 3.jpg" style="width: 800px;"/>
+<img src= "../screens/Canon 3.jpg" alt="Canon 3.jpg" style="width: 800px;"/>
 
 When capturing flat subjects, focus point display for Canon R-series can be funny sometimes: 
 
-<img src= "../../screens/Canon 4.jpg" alt="Canon 4.jpg" style="width: 800px;"/>
+<img src= "../screens/Canon 4.jpg" alt="Canon 4.jpg" style="width: 800px;"/>
 
 Note: The display of "AF Tracking Sensitivity" and "AF Point Switching" in the above screenshot indicates that the respective values have not been properly decoded by ExifTool. If you suspect such a decoding problem and really want to see the real values, you can help to fix it by creating a topic in the ExifTool forum, describing the problem and being prepared to provide sample images. ExifTool is very well maintained and there is a good chance that problems reported will be fixed quickly (unless the topic is difficult).
 
@@ -441,19 +441,19 @@ Supported features:
 
 For Sony, the focus point of an image is given by the (x,y) coordinates in the `FocusLocation` tag. Newer models support an additional `FocusFrameSize` tag, which also specifies the size of the focus area. Custom settings for the focus frame size in the plugin's preferences only apply in cases where the focus frame size is not available in the metadata. In this case, medium and large focus boxes will show a center dot:
 
-<img src= "../../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 800px;"/>
+<img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 800px;"/>
 
 If Phase Detect points have been used during the focusing process, these will be displayed in grey color:
 
-<img src= "../../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 800px;"/>
+<img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 800px;"/>
 
 When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot:
 
-<img src= "../../screens/Sony 2.jpg" alt="Sony 2.jpg" style="width: 800px;"/>
+<img src= "../screens/Sony 2.jpg" alt="Sony 2.jpg" style="width: 800px;"/>
 
 Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
 
-<img src= "../../screens/Sony 3.jpg" alt="Sony 3.jpg" style="width: 800px;"/>
+<img src= "../screens/Sony 3.jpg" alt="Sony 3.jpg" style="width: 800px;"/>
 
 As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. Sony also doesn't have a focus distance tag, so there is no Depth of Field section either.
 
@@ -477,11 +477,11 @@ Fuji focus points are 'focus pixel' points with no dimension. For better visuali
 
 Example shot for face detection (2 persons with their heads, faces, and eyes detected, indicated by yellow frames).
 
-<img src="../../screens/Fuji 1.jpg" alt="Fuji 1.jpg" style="width: 800px;"/>
+<img src="../screens/Fuji 1.jpg" alt="Fuji 1.jpg" style="width: 800px;"/>
 
 Example shot for subject detection. 4 birds  detected (with different levels of details): 
 
-<img src="../../screens/Fuji 2.jpg" alt="Fuji 2.jpg" style="width: 800px;"/>
+<img src="../screens/Fuji 2.jpg" alt="Fuji 2.jpg" style="width: 800px;"/>
 
 
 ## 3.5 Olympus
@@ -502,11 +502,11 @@ Olympus have been using the same format of storing autofocus information in EXIF
 
 The `AFPointSelected` tag contains the pixel coordinates of the focus point. The size and color of the focus box can be adjusted in the plugin's preferences.
 
-<img src="../../screens/Olympus 1.jpg" alt="Olympus 1.jpg" style="width: 800px;"/>
+<img src="../screens/Olympus 1.jpg" alt="Olympus 1.jpg" style="width: 800px;"/>
 
 Using the AF-Point settings, the display of the focus point can be adjusted to look like Olympus / OM shooters are used to from the OM Workspace application:
 
-<img src="../../screens/Olympus 2.jpg" alt="Olympus 2.jpg" style="width: 800px;"/>
+<img src="../screens/Olympus 2.jpg" alt="Olympus 2.jpg" style="width: 800px;"/>
 
 The Olympus makernotes also contains information on face detection.
 
@@ -514,11 +514,11 @@ Olympus cameras store two sets of recognized faces (maximum eight faces per set)
 
 The specifications of the recognized faces usually differ between the two sets. The positions for a face may be slightly shifted, or a face present in one set may not be present in the other. Since it is neither possible to deduce which set has "better" information, nor to combine the information of the two sets (at least not with reasonable effort), all faces in both sets are visualized by yellow face detection frames:
 
-<img src="../../screens/Olympus 3.jpg" alt="Olympus 3.jpg" style="width: 800px;"/>
+<img src="../screens/Olympus 3.jpg" alt="Olympus 3.jpg" style="width: 800px;"/>
 
 Since V3.1, the plugin also supports the entire E-series. While the benefit of supporting focus point display for the old DSLR models is questionable<sup>3</sup> due to their very limited number of AF points (e.g. the E-1 has only 3 points), the effort was small since they follow a very similar logic as the mirrorless models. Instead of using `AFPointSelected` the focus area stored in `AFAreas` can be used to visualize the focus point/area.
 
-<img src="../../screens/Olympus 4.jpg" alt="Olympus 4.jpg" style="width: 800px;"/>
+<img src="../screens/Olympus 4.jpg" alt="Olympus 4.jpg" style="width: 800px;"/>
 
 <sup>3</sup> Using autofocus with a camera that has few focus points usually results in a two-step process: 1. focus on the desired point, then 2. hold the shutter button halfway down and pan the camera to achieve the desired composition. While this can produce great results, it's impossible to reconstruct the actual focus point.
 
@@ -546,60 +546,60 @@ The AF area selected by the user is highlighted in white. The focus area is disp
 
 "Medium" AF Area selected: 
 
-<img src="../../screens/OM System 1.jpg" alt="OM System 1.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 1.jpg" alt="OM System 1.jpg" style="width: 800px;"/>
 
 "Small" AF Area selected:
 
-<img src="../../screens/OM System 2.jpg" alt="OM System 2.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 2.jpg" alt="OM System 2.jpg" style="width: 800px;"/>
 
 "Custom" AF Area selected:
 
-<img src="../../screens/OM System 3.jpg" alt="OM System 3.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 3.jpg" alt="OM System 3.jpg" style="width: 800px;"/>
 
 "Single" AF Area selected:
 
-<img src="../../screens/OM System 4.jpg" alt="OM System 4.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 4.jpg" alt="OM System 4.jpg" style="width: 800px;"/>
 
 
 ### 3.6.2 OM System - Subject Detection
 
 The plugin visualizes the subject detection frames as they appear in the viewfinder/on-camera display at the time of capture, according to the available subject detection modes:
 
-<img src="../../screens/OM System 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 The subject and subject detail detection frames are displayed in yellow. The focus area is displayed in the color specified in the plugin preferences. The size of the focus area cannot be selected, as the dimensions are set by the camera. The focus area has a center because the center of this area coincides with the coordinates specified by the `AFPointSelected` tag.
 
 Examples - Birds:
 
-<img src="../../screens/OM System 6.jpg" alt="OM System 6.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 7.jpg" alt="OM System 7.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 6.jpg" alt="OM System 6.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 7.jpg" alt="OM System 7.jpg" style="width: 800px;"/>
 
 Dogs & Cats:
 
-<img src="../../screens/OM System 8.jpg" alt="OM System 8.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 9.jpg" alt="OM System 9.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 8.jpg" alt="OM System 8.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 9.jpg" alt="OM System 9.jpg" style="width: 800px;"/>
 
 Motorsports:
 
-<img src="../../screens/OM System 10.jpg" alt="OM System 10.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 11.jpg" alt="OM System 11.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 12.jpg" alt="OM System 12.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 13.jpg" alt="OM System 13.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 10.jpg" alt="OM System 10.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 11.jpg" alt="OM System 11.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 12.jpg" alt="OM System 12.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 13.jpg" alt="OM System 13.jpg" style="width: 800px;"/>
 
 Airplanes:
 
-<img src="../../screens/OM System 14.jpg" alt="OM System 14.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 15.jpg" alt="OM System 15.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 16.jpg" alt="OM System 16.jpg" style="width: 800px;"/>
-<img src="../../screens/OM System 17.jpg" alt="OM System 17.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 14.jpg" alt="OM System 14.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 15.jpg" alt="OM System 15.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 16.jpg" alt="OM System 16.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 17.jpg" alt="OM System 17.jpg" style="width: 800px;"/>
 
 Trains:
 
-<img src="../../screens/OM System 18.jpg" alt="OM System 18.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 18.jpg" alt="OM System 18.jpg" style="width: 800px;"/>
 
 Human:
 
-<img src="../../screens/OM System 19.jpg" alt="OM System 19.jpg" style="width: 800px;"/>
+<img src="../screens/OM System 19.jpg" alt="OM System 19.jpg" style="width: 800px;"/>
 
 
 ## 3.7 Panasonic
@@ -617,15 +617,15 @@ Supported features:
 
 Similar to Olympus, Panasonic hasn't changed the basic logic of focus point data in ages. Since 2008 to be exact. They use the same logic and format in all their cameras. As a result, Panasonic cameras are widely supported across all model lines, from mirrorless to bridge to compact.
 
-<img src="../../screens/Panasonic 1.jpg" alt="Panasonic 1.jpg" style="width: 800px;"/>
+<img src="../screens/Panasonic 1.jpg" alt="Panasonic 1.jpg" style="width: 800px;"/>
 
 While the focus point given by `AFPointPosition` metadata tag has no dimensions, recent Lumix models support an `AFAreaSize` tag in addition. This tag gives the size of the area used to find focus in subject detection modes. Whenever `AFAreaSize` exists, `AFPointPosition` represents the center of this area.    
 
-<img src="../../screens/Panasonic 2.jpg" alt="Panasonic 2.jpg" style="width: 800px;"/>
+<img src="../screens/Panasonic 2.jpg" alt="Panasonic 2.jpg" style="width: 800px;"/>
 
 Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that used the same logic and notation for face detection frames.
 
-<img src="../../screens/Panasonic 3.jpg" alt="Panasonic 3.jpg" style="width: 800px;"/>
+<img src="../screens/Panasonic 3.jpg" alt="Panasonic 3.jpg" style="width: 800px;"/>
 
 Panasonic doesn't support a "focus distance" specification in the metadata, so there's not much to go on other than the focus mode and AF area mode listed in the focus information section.
 
@@ -657,61 +657,61 @@ The exact level of support depends on the camera model, as not all models suppor
 
 Here are some examples:
 
-<img src="../../screens/Pentax 1.jpg" alt="Pentax 1.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 1.jpg" alt="Pentax 1.jpg" style="width: 800px;"/>
 
 K-3 III image taken with viewfinder, selected focusing area "Auto Area" (all 101 AF points) and "Subject Recognition" on.
 
 <br>
 
-<img src="../../screens/Pentax 4.jpg" alt="Pentax 4.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 4.jpg" alt="Pentax 4.jpg" style="width: 800px;"/>
 
 K-3 III image taken with viewfinder, "Zone Select" focus area (21 AF points) selected, AF-C and "Continuous" drive mode. Action settings and AF-C control settings (AF hold, focus sensitivity, point tracking) for the shot are listed in "Focus Information".
 
 <br>
 
-<img src="../../screens/Pentax 6.jpg" alt="Pentax 6.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 6.jpg" alt="Pentax 6.jpg" style="width: 800px;"/>
 
 K-3 III image taken with viewfinder using "Expanded Area M" (5 selected AF points plus 60 peripheral AF points). The selected AF points are displayed in white, and the peripheral points are displayed in gray.
 
 <br>
 
-<img src="../../screens/Pentax 5.jpg" alt="Pentax 5.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 5.jpg" alt="Pentax 5.jpg" style="width: 800px;"/>
 
 K-3 III image taken with Live View using "Auto Area"
 
 <br>
 
-<img src="../../screens/Pentax 2.jpg" alt="Pentax 2.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 2.jpg" alt="Pentax 2.jpg" style="width: 800px;"/>
 
 K-3 III image taken with Live View using "Face Detection". The K-3 III records two sets of face detection information. Since there is no way to decide which set has "better" information, both sets are displayed.
 
 <br>
 
-<img src="../../screens/Pentax 3.jpg" alt="Pentax 3.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 3.jpg" alt="Pentax 3.jpg" style="width: 800px;"/>
 
 K-3 III image taken with Live View using "Face Detection". The K-3 III can detect up to 10 faces. Double images occur because two independent sets of face detection information are recorded. In this image, some faces are part of only one set. If more than 4 faces are detected in an image, the plugin will not display the eye information to avoid optical clutter.
 
 <br>
 
-<img src="../../screens/Pentax 7.jpg" alt="Pentax 7.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 7.jpg" alt="Pentax 7.jpg" style="width: 800px;"/>
 
 KP image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white, and the remaining (inactive) AF points are displayed in gray. 
 
 <br>
 
-<img src="../../screens/Pentax 8.jpg" alt="Pentax 8.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 8.jpg" alt="Pentax 8.jpg" style="width: 800px;"/>
 
 K-3 image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white  .
 
 <br>
 
-<img src="../../screens/Pentax 9.jpg" alt="Pentax 9.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 9.jpg" alt="Pentax 9.jpg" style="width: 800px;"/>
 
 K-01 image taken with viewfinder using "Multiple AF Points".  
 
 <br>
 
-<img src="../../screens/Pentax 10.jpg" alt="Pentax 10.jpg" style="width: 800px;"/>
+<img src="../screens/Pentax 10.jpg" alt="Pentax 10.jpg" style="width: 800px;"/>
 
 Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.
 
@@ -731,19 +731,19 @@ Starting with the GR III, Ricoh's GR models use the same metadata structures as 
 
 Examples:
 
-<img src="../../screens/Ricoh 1.jpg" alt="Ricoh 1.jpg" style="width: 800px;"/>
+<img src="../screens/Ricoh 1.jpg" alt="Ricoh 1.jpg" style="width: 800px;"/>
 
 Single focus point selected and used to focus the image.
 
 <br>
 
-<img src="../../screens/Ricoh 2.jpg" alt="Ricoh 2.jpg" style="width: 800px;"/>
+<img src="../screens/Ricoh 2.jpg" alt="Ricoh 2.jpg" style="width: 800px;"/>
   
 Multiple focus points from "Auto Area" selection used to focus the image.
 
 <br>
 
-<img src="../../screens/Ricoh 3.jpg" alt="Ricoh 3.jpg" style="width: 800px;"/>
+<img src="../screens/Ricoh 3.jpg" alt="Ricoh 3.jpg" style="width: 800px;"/>
 
 Detection of multiple faces and eyes.
 
@@ -766,15 +766,15 @@ Apple maintains a very simple logic to store the focused subject areas in EXIF m
 
 The makernotes section is rather short; older models do not even have an "Apple" section. Apart from the focus area, there is no relevant information to be displayed:
 
-<img src="../../screens/Apple 2.jpg" alt="Apple 2.jpg" style="width: 800px;"/>
+<img src="../screens/Apple 2.jpg" alt="Apple 2.jpg" style="width: 800px;"/>
 
 For modern Apple devices there are some interesting tags to extend the camera settings section. However, the number of AF-relevant tags is limited. ExifTool can decode tags like `AFPerformance`, `AFMeasuredDepth` or `AFConfidence`, but their meaning is not documented and therefore the associated values are meaningless.
 
-<img src="../../screens/Apple 1.jpg" alt="Apple 1.jpg" style="width: 800px;"/>
+<img src="../screens/Apple 1.jpg" alt="Apple 1.jpg" style="width: 800px;"/>
 
 Face detection for an image exported from Apple Photos:
 
-<img src="../../screens/Apple 3.jpg" alt="Apple 3.jpg" style="width: 800px;"/>
+<img src="../screens/Apple 3.jpg" alt="Apple 3.jpg" style="width: 800px;"/>
 
 <br>
 
@@ -797,7 +797,7 @@ The plugin comes with a compiled, ready-to-run Autohotkey script that assigns
 * Numpad-* as a shortcut for "Show Focus Point" 
 * Numpad-/ as a shortcut for "Show Metadata"
 
-This file **FocusPointsHotkeys.exe** can be found in the *ahk* folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows "Startup" folder, so that the shortcuts are automatically available each time you start Windows. A green "H" icon<img src="../../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
+This file **FocusPointsHotkeys.exe** can be found in the *ahk* folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows "Startup" folder, so that the shortcuts are automatically available each time you start Windows. A green "H" icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
 
 -----
 
@@ -808,7 +808,7 @@ If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](.
 1. Open the script file [FocusPointsHotkeys.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) in a text editor. The script contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must). 
 1. To define different shortcut keys, you have to replace "NumpadMult" and "NumpadDiv" by whatever suits you.<br> See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you want to assign the two plugin functions to Win-F and Win-M you have to replace "NumpadMult" by "#f" and "NumpadDiv" by "#m". If you prefer a Ctrl-Shift combination instead of Win the hotkey names are ^+f and ^+m.<br>Save your changes to the file. 
 
-1. Double-click FocusPointsHotkeys.ahk to run the script. In case you didn't introduce any errors, a green "H" icon<img src="../../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active. 
+1. Double-click FocusPointsHotkeys.ahk to run the script. In case you didn't introduce any errors, a green "H" icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active. 
 
 1. To make the shortcuts available permanently, place FocusPointsHotkeys.ahk in your Windows Startup folder.
 
