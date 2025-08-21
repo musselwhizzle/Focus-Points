@@ -502,11 +502,11 @@ Olympus have been using the same format of storing autofocus information in EXIF
 
 The `AFPointSelected` tag contains the pixel coordinates of the focus point. The size and color of the focus box can be adjusted in the plugin's preferences.
 
-<img src="../screens/Olympus 1.jpg" alt="Olympus 1" style="width: 600px;"/>
+<img src="../screens/Olympus 1.jpg" alt="Olympus 1" style="width: 750px;"/>
 
 Using the AF-Point settings, the display of the focus point can be adjusted to look like Olympus / OM shooters are used to from the OM Workspace application:
 
-<img src="../screens/Olympus 2.jpg" alt="Olympus 2" style="width: 600px;"/>
+<img src="../screens/Olympus 2.jpg" alt="Olympus 2" style="width: 750px;"/>
 
 The Olympus makernotes also contains information on face detection.
 
@@ -514,7 +514,7 @@ Olympus cameras store two sets of recognized faces (maximum eight faces per set)
 
 The specifications of the recognized faces usually differ between the two sets. The positions for a face may be slightly shifted, or a face present in one set may not be present in the other. Since it is neither possible to deduce which set has "better" information, nor to combine the information of the two sets (at least not with reasonable effort), all faces in both sets are visualized by yellow face detection frames:
 
-<img src="../screens/Olympus 3.jpg" alt="Olympus 3" style="width: 800px;"/>
+<img src="../screens/Olympus 3.jpg" alt="Olympus 3" style="width: 1000px;"/>
 
 Since V3.1, the plugin also supports the entire E-series. While the benefit of supporting focus point display for the old DSLR models is questionable<sup>3</sup> due to their very limited number of AF points (e.g. the E-1 has only 3 points), the effort was small since they follow a very similar logic as the mirrorless models. Instead of using `AFPointSelected` the focus area stored in `AFAreas` can be used to visualize the focus point/area.
 
