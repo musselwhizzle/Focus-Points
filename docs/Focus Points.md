@@ -118,7 +118,7 @@ Once installed, select one or more photos and invoke the plugin via
 
 ### 2.2 Configuration and Settings
 
-Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's preferences page:
+Selecting Focus Point Viewer in the list of installed plugins (Library module, File -> Plug-in Manager) displays the plugin's settings page:
 
 <img src="../screens/Plugin Options.jpg" alt="Plugin Options" style="width: 600px;"/>
 
@@ -176,7 +176,7 @@ If an update is available, it will be highlighted and you can click the download
 
 If an update is available, it will also be displayed in the status area of the Focus Point Viewer if the "Show message" checkbox is selected:
 
-<img src="../screens/UpdateAvailable.jpg" alt="Update Available" style="width: 600px;"/>
+<img src="../screens/UpdateAvailable.jpg" alt="Update Available" style="width: 800px;"/>
 
 <br>
 
@@ -244,7 +244,7 @@ Note that the accuracy of focus distance values is limited. Cameras are not desi
 
 Technical note: ExifTool creates pseudo tags `DepthOfField` and `HyperfocalDistance` which can be seen in ExifTool output. For calculation of DoF it uses the standard circle of confusion parameter for the respective sensor. In this context, the term “sharpness” refers to the ability of the human eye to recognize and resolve details when an image is viewed at full size, i.e. not enlarged, also known as “pixel peeping”.
 
-<img src="../screens/BasicOperation5.jpg" alt="Basic Operation 5" style="width: 600px;"/>
+<img src="../screens/BasicOperation5.jpg" alt="Basic Operation 5" style="width: 800px;"/>
 
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
 <br>
@@ -443,7 +443,7 @@ For Sony, the focus point of an image is given by the (x,y) coordinates in the `
 
 <img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 800px;"/>
 
-If Phase Detect points have been used during the focusing process, these will be displayed in grey color:
+If focal plane phase detect AF points have been used during the focusing process, these will be displayed in grey color:
 
 <img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 800px;"/>
 
@@ -502,11 +502,11 @@ Olympus have been using the same format of storing autofocus information in EXIF
 
 The `AFPointSelected` tag contains the pixel coordinates of the focus point. The size and color of the focus box can be adjusted in the plugin's preferences.
 
-<img src="../screens/Olympus 1.jpg" alt="Olympus 1" style="width: 800px;"/>
+<img src="../screens/Olympus 1.jpg" alt="Olympus 1" style="width: 600px;"/>
 
 Using the AF-Point settings, the display of the focus point can be adjusted to look like Olympus / OM shooters are used to from the OM Workspace application:
 
-<img src="../screens/Olympus 2.jpg" alt="Olympus 2" style="width: 800px;"/>
+<img src="../screens/Olympus 2.jpg" alt="Olympus 2" style="width: 600px;"/>
 
 The Olympus makernotes also contains information on face detection.
 
@@ -544,60 +544,76 @@ With this information, it is possible to visualize not only the AF area selected
 
 The AF area selected by the user is highlighted in white. The focus area is displayed in the color specified in the plugin preferences. The size of the focus area cannot be selected, as the dimensions are set by the camera.
 
-"Medium" AF Area selected:
+Here are some examples for visualization of in-focus vs selected AF points (subject detection mode OFF): 
 
-<img src="../screens/OM System 1.jpg" alt="OM System 1" style="width: 800px;"/>
+<img src="../screens/OM System 4.jpg" alt="OM System 4" style="width: 600px;"/><br>
+"Single" AF Area selected<br><br>
 
-"Small" AF Area selected:
+<img src="../screens/OM System 2.jpg" alt="OM System 2" style="width: 800px;"/><br>
+"Small" AF Area selected<br><br>
 
-<img src="../screens/OM System 2.jpg" alt="OM System 2" style="width: 800px;"/>
+<img src="../screens/OM System 1.jpg" alt="OM System 1" style="width: 600px;"/><br>
+"Medium" AF Area selected<br><br>
 
-"Custom" AF Area selected:
-
-<img src="../screens/OM System 3.jpg" alt="OM System 3" style="width: 800px;"/>
-
-"Single" AF Area selected:
-
-<img src="../screens/OM System 4.jpg" alt="OM System 4" style="width: 800px;"/>
-
+<img src="../screens/OM System 3.jpg" alt="OM System 3" style="width: 800px;"/><br>
+"Custom" AF Area selected<br><br>
 
 ### 3.6.2 OM System - Subject Detection
 
 The plugin visualizes the subject detection frames as they appear in the viewfinder/on-camera display at the time of capture, according to the available subject detection modes:
 
-<img src="../screens/OM System 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/OM System 5.jpg" alt="User Interface (Multi-image)" style="width: 650px;"/>
 
 The subject and subject detail detection frames are displayed in yellow. The focus area is displayed in the color specified in the plugin preferences. The size of the focus area cannot be selected, as the dimensions are set by the camera. The focus area has a center because the center of this area coincides with the coordinates specified by the `AFPointSelected` tag.
 
-Examples - Birds:
+**Birds:**
 
-<img src="../screens/OM System 6.jpg" alt="OM System 6" style="width: 800px;"/>
-<img src="../screens/OM System 7.jpg" alt="OM System 7" style="width: 800px;"/>
+<img src="../screens/OM System 6.jpg" alt="OM System 6" style="width: 800px;"/><br>
+Body and head detected, focus is on the head.<br><br>
 
-Dogs & Cats:
+<img src="../screens/OM System 7.jpg" alt="OM System 7" style="width: 800px;"/><br>
+Body and head eye detected, focus is on the eye.<br><br>
 
-<img src="../screens/OM System 8.jpg" alt="OM System 8" style="width: 800px;"/>
+<img src="../screens/OM System 20.jpg" alt="OM System 20" style="width: 600px;"/><br>
+Body and eye detected, focus is on the eye.<br><br>
+
+**Dogs & Cats:**
+
+<img src="../screens/OM System 8.jpg" alt="OM System 8" style="width: 800px;"/><br>
+Body and head detected, focus is on the head<br><br>
+
 <img src="../screens/OM System 9.jpg" alt="OM System 9" style="width: 800px;"/>
+Same subject and scene, better detection - head and eye detected, focus is on the eye<br><br>
 
-Motorsports:
 
-<img src="../screens/OM System 10.jpg" alt="OM System 10" style="width: 800px;"/>
-<img src="../screens/OM System 11.jpg" alt="OM System 11" style="width: 800px;"/>
-<img src="../screens/OM System 12.jpg" alt="OM System 12" style="width: 800px;"/>
-<img src="../screens/OM System 13.jpg" alt="OM System 13" style="width: 800px;"/>
+**Motorsports:**
 
-Airplanes:
+<img src="../screens/OM System 10.jpg" alt="OM System 10" style="width: 800px;"/><br>
+Racing car found, chassis and driver detected. Focus is on the driver.<br><br>
+
+<img src="../screens/OM System 11.jpg" alt="OM System 11" style="width: 800px;"/><br>
+Motorcycle found, vehicle and driver detected. Focus is on the driver.<br><br>
+
+<img src="../screens/OM System 12.jpg" alt="OM System 12" style="width: 800px;"/><br>
+Car found, chassis and front detected. Focus is on the front.<br><br>
+
+<img src="../screens/OM System 13.jpg" alt="OM System 13" style="width: 800px;"/><br>
+The cart is detected as racing car, chassis and driver detected. Focus is on the driver.<br><br>
+
+
+**Airplanes**
 
 <img src="../screens/OM System 14.jpg" alt="OM System 14" style="width: 800px;"/>
 <img src="../screens/OM System 15.jpg" alt="OM System 15" style="width: 800px;"/>
 <img src="../screens/OM System 16.jpg" alt="OM System 16" style="width: 800px;"/>
 <img src="../screens/OM System 17.jpg" alt="OM System 17" style="width: 800px;"/>
 
-Trains:
+**Trains**
 
-<img src="../screens/OM System 18.jpg" alt="OM System 18" style="width: 800px;"/>
+<img src="../screens/OM System 18.jpg" alt="OM System 18" style="width: 800px;"/><br>
+Train and driver compartment detected, focus is on the driver compartment.<br><br>
 
-Human:
+**Human**
 
 <img src="../screens/OM System 19.jpg" alt="OM System 19" style="width: 800px;"/>
 
@@ -625,7 +641,7 @@ While the focus point given by `AFPointPosition` metadata tag has no dimensions,
 
 Panasonic also supports face detection identification in EXIF metadata. This information is available for recent mirrorless models, for compact cameras I have seen an ZS20 (2012 model!) image that used the same logic and notation for face detection frames.
 
-<img src="../screens/Panasonic 3.jpg" alt="Panasonic 3" style="width: 800px;"/>
+<img src="../screens/Panasonic 3.jpg" alt="Panasonic 3" style="width: 600px;"/>
 
 Panasonic doesn't support a "focus distance" specification in the metadata, so there's not much to go on other than the focus mode and AF area mode listed in the focus information section.
 
@@ -657,63 +673,35 @@ The exact level of support depends on the camera model, as not all models suppor
 
 Here are some examples:
 
-<img src="../screens/Pentax 1.jpg" alt="Pentax 1" style="width: 800px;"/>
+<img src="../screens/Pentax 1.jpg" alt="Pentax 1" style="width: 800px;"/><br>
+K-3 III image taken with viewfinder, selected focusing area "Auto Area" (all 101 AF points) and "Subject Recognition" on.<br><br>
 
-K-3 III image taken with viewfinder, selected focusing area "Auto Area" (all 101 AF points) and "Subject Recognition" on.
+<img src="../screens/Pentax 4.jpg" alt="Pentax 4" style="width: 800px;"/><br>
+K-3 III image taken with viewfinder, "Zone Select" focus area (21 AF points) selected, AF-C and "Continuous" drive mode. Action settings and AF-C control settings (AF hold, focus sensitivity, point tracking) for the shot are listed in "Focus Information".<br><br>
 
-<br>
+<img src="../screens/Pentax 6.jpg" alt="Pentax 6" style="width: 800px;"/><br>
+K-3 III image taken with viewfinder using "Expanded Area M" (5 selected AF points plus 60 peripheral AF points). The selected AF points are displayed in white, and the peripheral points are displayed in gray.<br><br>
 
-<img src="../screens/Pentax 4.jpg" alt="Pentax 4" style="width: 800px;"/>
+<img src="../screens/Pentax 5.jpg" alt="Pentax 5" style="width: 800px;"/><br>
+K-3 III image taken with Live View using "Auto Area"<br><br>
 
-K-3 III image taken with viewfinder, "Zone Select" focus area (21 AF points) selected, AF-C and "Continuous" drive mode. Action settings and AF-C control settings (AF hold, focus sensitivity, point tracking) for the shot are listed in "Focus Information".
+<img src="../screens/Pentax 2.jpg" alt="Pentax 2" style="width: 800px;"/><br>
+K-3 III image taken with Live View using "Face Detection". The K-3 III records two sets of face detection information. Since there is no way to decide which set has "better" information, both sets are displayed.<br><br>
 
-<br>
+<img src="../screens/Pentax 3.jpg" alt="Pentax 3" style="width: 800px;"/><br>
+K-3 III image taken with Live View using "Face Detection". The K-3 III can detect up to 10 faces. Double images occur because two independent sets of face detection information are recorded. In this image, some faces are part of only one set. If more than 4 faces are detected in an image, the plugin will not display the eye information to avoid optical clutter.<br><br>
 
-<img src="../screens/Pentax 6.jpg" alt="Pentax 6" style="width: 800px;"/>
+<img src="../screens/Pentax 7.jpg" alt="Pentax 7" style="width: 800px;"/><br>
+KP image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white, and the remaining (inactive) AF points are displayed in gray.<br><br>
 
-K-3 III image taken with viewfinder using "Expanded Area M" (5 selected AF points plus 60 peripheral AF points). The selected AF points are displayed in white, and the peripheral points are displayed in gray.
+<img src="../screens/Pentax 8.jpg" alt="Pentax 8" style="width: 800px;"/><br>
+K-3 image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white.<br><br>
 
-<br>
+<img src="../screens/Pentax 9.jpg" alt="Pentax 9" style="width: 800px;"/><br>
+K-01 image taken with viewfinder using "Multiple AF Points".<br><br>
 
-<img src="../screens/Pentax 5.jpg" alt="Pentax 5" style="width: 800px;"/>
-
-K-3 III image taken with Live View using "Auto Area"
-
-<br>
-
-<img src="../screens/Pentax 2.jpg" alt="Pentax 2" style="width: 800px;"/>
-
-K-3 III image taken with Live View using "Face Detection". The K-3 III records two sets of face detection information. Since there is no way to decide which set has "better" information, both sets are displayed.
-
-<br>
-
-<img src="../screens/Pentax 3.jpg" alt="Pentax 3" style="width: 800px;"/>
-
-K-3 III image taken with Live View using "Face Detection". The K-3 III can detect up to 10 faces. Double images occur because two independent sets of face detection information are recorded. In this image, some faces are part of only one set. If more than 4 faces are detected in an image, the plugin will not display the eye information to avoid optical clutter.
-
-<br>
-
-<img src="../screens/Pentax 7.jpg" alt="Pentax 7" style="width: 800px;"/>
-
-KP image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white, and the remaining (inactive) AF points are displayed in gray.
-
-<br>
-
-<img src="../screens/Pentax 8.jpg" alt="Pentax 8" style="width: 800px;"/>
-
-K-3 image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white  .
-
-<br>
-
-<img src="../screens/Pentax 9.jpg" alt="Pentax 9" style="width: 800px;"/>
-
-K-01 image taken with viewfinder using "Multiple AF Points".
-
-<br>
-
-<img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 800px;"/>
-
-Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.
+<img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 800px;"/><br>
+Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.<br><br>
 
 
 ## 3.9 Ricoh
@@ -731,20 +719,13 @@ Starting with the GR III, Ricoh's GR models use the same metadata structures as 
 
 Examples:
 
-<img src="../screens/Ricoh 1.jpg" alt="Ricoh 1" style="width: 800px;"/>
+<img src="../screens/Ricoh 1.jpg" alt="Ricoh 1" style="width: 800px;"/><br>
+Single focus point selected and used to focus the image.<br><br>
 
-Single focus point selected and used to focus the image.
+<img src="../screens/Ricoh 2.jpg" alt="Ricoh 2" style="width: 800px;"/><br>
+Multiple focus points from "Auto Area" selection used to focus the image.<br><br>
 
-<br>
-
-<img src="../screens/Ricoh 2.jpg" alt="Ricoh 2" style="width: 800px;"/>
-
-Multiple focus points from "Auto Area" selection used to focus the image.
-
-<br>
-
-<img src="../screens/Ricoh 3.jpg" alt="Ricoh 3" style="width: 800px;"/>
-
+<img src="../screens/Ricoh 3.jpg" alt="Ricoh 3" style="width: 600px;"/><br>
 Detection of multiple faces and eyes.
 
 
