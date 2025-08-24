@@ -34,13 +34,17 @@ Upcoming Release
     * Focus point display for Pentax K-3 III [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
     * Face detection for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
     * Display status of Pentax AF-related camera settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
+  * Olympus/OM
+    * Indicate use of digital zoom [#253](https://github.com/musselwhizzle/Focus-Points/issues/253)
   * OM System: 
     * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
     * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
   * Olympus: 
-    * Support entire Olympus E-series [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
+    * Support entire Olympus E-System [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
   * Ricoh: 
     * Support Ricoh GR III / IIIx models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
+  * Sony:
+    * 
 
 
 * **User interface**
@@ -129,23 +133,23 @@ Supported Cameras
 Installation
 --------
 **Installation steps**
-1. Download **source code.zip** from [latest release](https://github.com/capricorn8/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+1. Download `source code.zip` from [latest release](https://github.com/capricorn8/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
 
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder **focuspoints.lrplugin**
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`
 
 
-3. Move this folder to where you'd normally kept your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the „adobe lightroom classic.app", use the control-click and choose  „show package content“. 
+3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`. 
 
 
-4. Open Lightroom and go to File -> Plug-in Manager.<br>
-_Windows_: Click the "Add" button and select the plugin.<br>
-_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise Click on the „Add“ button and select the plugin.
+4. Open Lightroom and go to `File → Plug-in Manager`.<br>
+_Windows_: Click the `Add` button and select the plugin.<br>
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.
 
 Once installed, select one or more photos and invoke the plugin via
-* Library -> Plug-in Extras -> Show Focus Point, or  
-* File -> Plug-in Extras -> Show Focus Point
+* `Library → Plug-in Extras → Show Focus Point`, or  
+* `File → Plug-in Extras → Show Focus Point`
 
 <br>
 
@@ -183,8 +187,8 @@ Metadata viewer
 --------
 The plugin also features a metadata viewer with live search: 
   
-* Library -> Plug-in Extras -> Show Metadata, or  
-* File -> Plug-in Extras -> Show Metadata
+* `Library → Plug-in Extras → Show Metadata`, or  
+* `File → Plug-in Extras → Show Metadata`
 
 The Metadata Viewer is useful for viewing information that is neither visible in Lightroom's Metadata panel nor in the Information pane of the focus windows. The information is retrieved directly from the image file on disk, giving a complete picture of the metadata written by the camera. Metadata can be filtered by key or value. The filter accepts pattern matching with common 'magic characters':
 
