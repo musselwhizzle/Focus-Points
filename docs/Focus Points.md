@@ -39,7 +39,7 @@ Focus Points Plugin for Lightroom Classic
 
 ### [Appendix](#A-appendix)
 
-* [How to use a keyboard shortcut to launch the plugin](#how-to-use-a-keyboard-shortcut-to-launch-the-plugin)
+* [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin)
 
 ### [Glossary](#G-glossary)
 
@@ -783,7 +783,7 @@ Face detection for an image exported from Apple Photos:
 ## A Appendix
 
 
-## How to use a keyboard shortcut to launch the plugin
+## How to use a keyboard shortcut to run the plugin
 
 Although the plugin supports multi-image operation by selecting multiple images in Lightroom before launching the plugin, it can be tedious to navigate Lightroom's menu structure each time you want to use the plugin. How much more convenient would it be to launch the plugin with the press of a button?
 
