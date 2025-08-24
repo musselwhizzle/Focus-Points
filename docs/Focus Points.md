@@ -793,7 +793,7 @@ However, at the system level, there are ways to automate the startup of the plug
 
 ### Windows
 
-Under Windows, you can use the free utility [AutoHotkey](https://www.autohotkey.com/) together with a small script, to assign the call of `File → Plug-in Extras → Show Focus Point` to a key. Same for _Show Metadata_.
+Under Windows, you can use the free utility [AutoHotkey](https://www.autohotkey.com/) together with a small script, to assign the call of _File → Plug-in Extras → Show Focus Point_ to a key. Same for _Show Metadata_.
 
 The plugin comes with a compiled, ready-to-run Autohotkey script that assigns:<br>
 \- `NumPad *` as a shortcut for `Show Focus Point`<br>
@@ -832,7 +832,7 @@ Please note:
 
 On macOS you can use the system-wide feature in 
 
-*System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts* 
+_System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts_ 
 
 to assign your own shortcut to almost any menu item in any app. Here’s how you can do it for a Lightroom plugin to be added:
 
@@ -844,9 +844,9 @@ Note: `NumPad *` and `NumPad /` may not work because macOS sometimes treats NumP
 
 **Steps:**
 
-1. Go to System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts.
-1. Click +.
-   - Application: Adobe Lightroom Classic
+1. Go to _Settings → Keyboard → Keyboard Shortcuts → App Shortcuts_.
+1. Click `+`.
+   - Application: `Adobe Lightroom Classic`
    - Menu Title: `Show Focus Point`
    - Keyboard Shortcut: Press `F12` (or your desired shortcut)<br>
 1. Repeat 2. for `Show Metadata` and `F11`.
