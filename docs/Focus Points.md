@@ -11,7 +11,8 @@ Focus Points Plugin for Lightroom Classic
 
 *  [Installation](#21-installation)
 *  [Configuration and Settings](#22-configuration-and-settings)
-*  [Focus Point Viewer](#23-focus-point-viewer)
+*  [Focus Point Viewer](#23-focus-point-viewer)<br>
+   - [User Interface](#user-interface), Information Section, User Messages, Plugin Status, [Keyboard Shortcuts](#keyboard-shortcuts) 
 *  [Metadata Viewer](#24-metadata-viewer)
 
 
@@ -97,13 +98,10 @@ This section explains how to use the plugin.
 1. Unless you have a special link (e.g. for a pre-release), download the **source code.zip** file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of this page to find the download link). A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>
 _MAC users_: The zip file will be automatically unzipped according to your macOS preferences.
 
-
 2. Extract the downloaded file if necessary. Within the extracted contents, locate the plugin folder **focuspoints.lrplugin**
 
-
 3. Move this folder to the location where you normally keep your Lightroom plug-ins.<br>Tip: If you don't know this location, the Plugin Manager will tell you (see next step).<br>
-_MAC users_: if you need to navigate into the content of the „adobe lightroom classic.app", use the control-click and choose  „show package content“.
-
+_MAC users_: if you need to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose `show package content`.
 
 4. Open Lightroom and go to _File → Plug-in Manager_.<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
@@ -172,7 +170,7 @@ The logging mechanism provides a fine-grained hierarchy of levels at which infor
 **Updates**
 
 During operation, the plugin checks if an updated version is available for download.
-If an update is available, it will be highlighted and you can click the download button to go to the website. To install the update, follow the steps in [Installation](#21-installation) and reload the plugin.
+If an update is available, it will be highlighted, and you can click the download button to go to the website. To install the update, follow the steps in [Installation](#21-installation) and reload the plugin.
 
 If an update is available, it will also be displayed in the status area of the Focus Point Viewer if the `Show message` checkbox is selected:
 
@@ -202,18 +200,18 @@ The user interface  is divided into two main parts. On the left is the photo vie
 
 The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols*.
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera  |
-|   <img src="../screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="../screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                 |
-|   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup> |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                    |
-|       <img src="../screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="../screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                            |
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                               |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
+|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                        |
+| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera |
+|   <img src="../screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="../screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                |
+|   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup>      |
+|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |
+|       <img src="../screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="../screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
-<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual]() for a detailed explanation.
 
 
 \* Tech Note: Windows and macOS use different rendering implementations, so the display of focus points and other elements looks different on each operating system. On macOS, focus points and face/object detection and cropping frames are indicated only by the corners, while on Windows, all frames have solid lines. This is due to the fact that the Lightroom SDK methods for overlaying information (frame corners and center points) on an image work on macOS but not on Windows. On Windows, this is done by ImageMagick (mogrify), which draws rectangles with solid lines.
@@ -236,9 +234,9 @@ Two buttons at the bottom of the window allow you to move forward and backward t
 A link to the User Guide (this document) provides quick and easy access to the operating instructions.
 
 The window can be closed by clicking `Exit` or pressing \<Enter> or \<Esc> or \<Space>.
-<br>
+<br><br>
 
-### Depth of Field, Hyperfocal Distance ###
+#### Depth of Field, Hyperfocal Distance ####
 
 Most camera makers include subject or focus distance information in makernotes. Sony, Fuji and Pentax do not, so this section is not relevant to images taken with their cameras.
 
@@ -257,15 +255,15 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 
 The first line of text in the `Focus Information` section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
-|  Type   | Message |
-|:-------:|---------------- |
-| Success | Focus points detected |
-| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded) |
+|  Type   | Message                                                                                          |
+|:-------:|--------------------------------------------------------------------------------------------------|
+| Success | Focus points detected                                                                            |
+| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded)                      |
 | Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded) |
-|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file) |
-|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported) |
-|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported) |
-|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered) |
+|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file)              |
+|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported)                  |
+|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported)                  |
+|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered)                      |
 
 Click on the message to learn what it means and how to deal with it in case of an error or warning.
 
@@ -285,6 +283,33 @@ For the image above, where focus info is said to be "missing from file", the log
 
 There are two warnings and one error:
 The tag `CameraSettingsVersion` has not been found which means that this file does not contain a makernotes section with AF information (which is required for the plugin to work). The image file was not created in-camera but by an application. In this case, it is a JPG file exported from (and created! by) Lightroom.
+
+
+### Keyboard Shortcuts ###
+
+To simplify the operation of the plugin, a number of keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse:
+
+| Action                           | Keyboard shortcuts    |
+|----------------------------------|-----------------------|
+| Previous image                   | `-`, `P`              |
+| Next image                       | `+`, `N`, `space bar` |
+| Open User Manual                 | `U`, `M`              |
+| Open Troubleshooting Information | `?`, `H`              |
+| Open Log File                    | `L`                   |
+| Exit                             | `X`                   |
+
+<br>
+Technical note:
+
+Since the Lightroom SDK does not support native keyboard event handling in modal dialogs, a "trick" is used to implement keyboard shortcuts. This trick has some **limitations**, so it is described here for better understanding.
+
+The only SDK view control that allows capturing keyboard input is `edit_field`. The plugin uses an invisible `edit_field` control to capture keyboard input. The plugin checks if the typed character matches a keyboard shortcut and triggers the appropriate action if it does.<br>
+
+The function that captures keyboard input is only called when the text in `edit_field` changes.<br>
+**Arrow keys, Esc, Return, etc. do not change text input, so the choice of hotkeys is limited to text (i.e. printable ASCII characters).**
+
+For this trick to work, `edit_field` must always have the focus. This is the case as long as the **user does not move the focus to another button using the Tab or Shift-Tab key**.
+<br><br>
 
 
 ### 2.4 Metadata Viewer
@@ -334,13 +359,13 @@ The Focus Points plugin fully relies on what [ExifTool](https://exiftool.org/) i
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Primary AF-Point  |
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                              |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------|
+|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera       |
+| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Primary AF-Point                                                     |
 |   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 
 The logic for interpreting Nikon-specific autofocus data has been adapted to match the focus point display of NX Studio and Capture NX-D. While this is not rocket science for the Nikon Z, it has been a challenge for Nikon DSLRs. Nikon stores different types of focus point information in different places, making it difficult to find the relevant information and name it consistently. I would like to take this opportunity to thank [Warren Hatch](https://www.warrenhatchimages.com/) for his great support in deciphering and correctly interpreting the Nikon AF information!
 
@@ -398,12 +423,12 @@ Example for Phase Detect AF (PDAF):
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-|   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image |
+|                                     MAC                                     |                                       WIN                                       |      Color      | Meaning                                                              |
+|:---------------------------------------------------------------------------:|:-------------------------------------------------------------------------------:|:---------------:|----------------------------------------------------------------------|
+|  <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>  |  <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>  | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera       |
+| <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/> | <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/> |      gray       | Inactive AF point. Part of DSLR AF points but not used for the image |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 
 Canon focus point information in EXIF metadata always refers to an area within the frame. Focus point areas are specified by their coordinates (x,y, height, width). Therefore, for Canon focus points, you can select the color of the box, but not the size.
 
@@ -444,15 +469,15 @@ Note: The display of `AF Tracking Sensitivity` and `AF Point Switching` in the a
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera  |
-|   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Focal plane phase detect AF-point used during focusing |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face detected by the camera in this area                                    |
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                   |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
+|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera            |
+| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
+|   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Focal plane phase detect AF-point used during focusing                    |
+|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face detected by the camera in this area                                  |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
 
 For Sony, the focus point of an image is given by the (x,y) coordinates in the `FocusLocation` tag. Newer models support an additional `FocusFrameSize` tag, which also specifies the size of the focus area. Custom settings for the focus frame size in the plugin's preferences only apply in cases where the focus frame size is not available in the metadata. In this case, medium and large focus boxes will show a center dot:
 
@@ -477,14 +502,14 @@ As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's no
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                   |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                   |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
 | <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face, subject or detail detected by the camera in this area        |
+|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face, subject or detail detected by the camera in this area               |
 |       <img src="../screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="../screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'               |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
 
 Fuji metadata contains information on both face and subject recognition. Whether the detected subject is a person, an animal, a bicycle, a car, an airplane, or a train, and whether the detected eye is a real eye or a cockpit, all the information for visualizing a detected subject and its parts is stored in the same place and format.
 
@@ -510,14 +535,14 @@ Finepix X100 shot with face detection. The plugin supports also compact FinePix 
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                   |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                   |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
 |    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera            |
 | <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or eye detected by the camera in this area                    |
+|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or eye detected by the camera in this area                           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
 
 Since 2008, Olympus has been using the same format for storing autofocus information in EXIF for all of its mirrorless cameras (starting with the E-M5 in 2012) as well as the last E-System models (E-5, E-420, E-520, E-620). Therefore, the focus point display is the same for all these models. The `AFPointSelected` tag contains the pixel coordinates of the focus point. The size and color of the focus box can be adjusted in the plugin's preferences.
 
@@ -551,15 +576,15 @@ Since V3.1 the plugin supports the whole E-System. While the benefit of supporti
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                   |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                   |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
 |    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera            |
 | <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
 |   <img src="../screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="../screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                    |
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face, subject or detail detected by the camera in this area               |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
 
 With the release of plugin version V3.1, OM System has its own chapter in this user documentation. This is mainly because previously unknown metadata tags have been identified and decoded: `AFSelection`, `AFFocusArea` and `SubjectDetectionArea`.
 
@@ -647,14 +672,14 @@ Train and driver compartment detected, focus is on the driver compartment.<br><b
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera  |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                    |
+|                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                   |
+|:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------|
+|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera            |
+| <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
+|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                       |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
 
 Similar to Olympus, Panasonic hasn't changed the basic logic of focus point data in ages. Since 2008 to be exact. They use the same logic and format in all their cameras. As a result, Panasonic cameras are widely supported across all model lines, from mirrorless to bridge to compact.
 
@@ -675,14 +700,14 @@ Panasonic doesn't support a "focus distance" specification in the metadata, so t
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                              |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera       |
-|   <img src="../screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="../screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                               |
-|   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or eye detected by the camera in this area               |
+|                                     MAC                                     |                                       WIN                                       |      Color      | Meaning                                                              |
+|:---------------------------------------------------------------------------:|:-------------------------------------------------------------------------------:|:---------------:|----------------------------------------------------------------------|
+|  <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>  |  <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>  | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera       |
+| <img src="../screens/af_selected.png" alt="selected" style="width: 29px;"/> | <img src="../screens/af_selected_win.png" alt="selected" style="width: 29px;"/> |      white      | User-selected AF point                                               |
+| <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/> | <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/> |      gray       | Inactive AF point. Part of DSLR AF points but not used for the image |
+|     <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>     |     <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>     |     yellow      | Face or eye detected by the camera in this area                      |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 
 With the release of V3.1, Pentax is not only on par with other camera manufacturers and models in terms of supported features, it is even ahead of the "Big Three", Canon, Nikon and Sony.
 
@@ -733,12 +758,12 @@ Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. How
 
 Supported features:
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                        |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or eye detected by the camera in this area              |
+|                                    MAC                                    |                                      WIN                                      |      Color      | Meaning                                                        |
+|:-------------------------------------------------------------------------:|:-----------------------------------------------------------------------------:|:---------------:|----------------------------------------------------------------|
+| <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/> | <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/> | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera |
+|    <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>    |    <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>    |     yellow      | Face or eye detected by the camera in this area                |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 
 Starting with the GR III, Ricoh's GR models use the same metadata structures as the latest Pentax models (K-3 III), so support for these cameras is a by-product of adding support for the K-3 III.
 
@@ -758,13 +783,12 @@ Detection of multiple faces and eyes.
 
 Supported features:
 
+|                                    MAC                                    |                                      WIN                                      |      Color      | Meaning                                                        |
+|:-------------------------------------------------------------------------:|:-----------------------------------------------------------------------------:|:---------------:|----------------------------------------------------------------|
+| <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/> | <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/> | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera |
+|    <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>    |    <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>    |     yellow      | Face detected by the camera<sup>2</sup> in this area           |
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                        |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------|
-|    <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera |
-|       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face detected by the camera<sup>2</sup> in this area           |
-
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 <sup>2</sup> Face detection is not done while the shot is being taken, but by Apple's Photos app.
 
 
@@ -811,12 +835,13 @@ If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](.
 
 1. Download AutoHotKeys V2 from https://www.autohotkey.com/ and install it on your system.
 
-1. Open the script file [FocusPointsHotkeys.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) in a text editor. The script contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must).
-1. To define different shortcut keys, you have to replace `NumpadMult` and `NumpadDiv` by whatever suits you.<br> See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you want to assign the two plugin functions to `Win-F` and `Win-M` you have to replace `NumpadMult` by `#f` and `NumpadDiv` by `#m`. If you prefer a `Ctrl-Shift` combination instead of `Win` the hotkey names are `^+f` and `^+m`.<br>Save your changes to the file.
+2. Open the script file [FocusPointsHotkeys.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkeys.ahk) in a text editor. The script contains shortcut definitions for both English and German UI language. If you don't need both of them, you can delete the irrelevant one (not a must).
 
-1. Double-click `FocusPointsHotkeys.ahk` to run the script. In case you didn't introduce any errors, a green `H` icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
+3. To define different shortcut keys, you have to replace `NumpadMult` and `NumpadDiv` by whatever suits you.<br> See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you want to assign the two plugin functions to `Win-F` and `Win-M` you have to replace `NumpadMult` by `#f` and `NumpadDiv` by `#m`. If you prefer a `Ctrl-Shift` combination instead of `Win` the hotkey names are `^+f` and `^+m`.<br>Save your changes to the file.
 
-1. To make the shortcuts available permanently, place `FocusPointsHotkeys.ahk` in your Windows `Startup` folder.<br>
+4. Double-click `FocusPointsHotkeys.ahk` to run the script. In case you didn't introduce any errors, a green `H` icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
+
+5. To make the shortcuts available permanently, place `FocusPointsHotkeys.ahk` in your Windows `Startup` folder.<br>
 
 
 Please note:
@@ -834,7 +859,7 @@ Please note:
 
 ### macOS
 
-On macOS you can use the system-wide feature in 
+On macOS, you can use the system-wide feature in 
 
 _System Settings → Keyboard → Keyboard Shortcuts → App Shortcuts_ 
 
@@ -849,12 +874,12 @@ Note: `NumPad *` and `NumPad /` may not work because macOS sometimes treats NumP
 **Steps:**
 
 1. Go to _Settings → Keyboard → Keyboard Shortcuts → App Shortcuts_.
-1. Click `+`.
+2. Click `+`.
    - Application: `Adobe Lightroom Classic`
    - Menu Title: `Show Focus Point`
    - Keyboard Shortcut: Press `F12` (or your desired shortcut)<br>
-1. Repeat 2. for `Show Metadata` and `F11`.
-1. Restart Lightroom Classic if the shortcuts don’t show immediately.
+3. Repeat 2. for `Show Metadata` and `F11`.
+4. Restart Lightroom Classic if the shortcuts don’t show immediately.
 
 Note:<br> 
 Of course, you can use any other keys you like. Just note, that if you assign the same shortcut to two different items, macOS picks one unpredictably.
