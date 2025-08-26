@@ -35,7 +35,7 @@ Upcoming Release
     * Face detection for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
     * Display status of Pentax AF-related camera settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
   * Olympus/OM
-    * Indicate use of digital zoom [#253](https://github.com/musselwhizzle/Focus-Points/issues/253)
+    * Indicate use of digital zoom factor [#253](https://github.com/musselwhizzle/Focus-Points/issues/253)
   * OM System: 
     * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
     * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
@@ -44,22 +44,22 @@ Upcoming Release
   * Ricoh: 
     * Support Ricoh GR III / IIIx models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
   * Sony:
-    * 
+    * Visualization of focus points considering `FocusFrameSize` tag on newer α bodies [part of #176](https://github.com/musselwhizzle/Focus-Points/issues/176)   
 
 
 * **User interface**
-  * Usability improvements [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
-    * Consistent layout of controls in single and multi-image modes
-    * Improved messages and information in case no focus points have been found or errors/warnings occured
-    * UI access to user manual
-  
-   
+  * Usability improvements:
+    * Consistent layout of controls in single and multi-image operation modes [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
+    * Improved user interaction when no focus points can be found [#272](https://github.com/musselwhizzle/Focus-Points/issues/272)
+    * Keyboard shortcuts for plugin operation  [#271](https://github.com/musselwhizzle/Focus-Points/issues/271)
+     
+     
 * **Bugfixes**
   * Metadata table not properly displayed when develop settings are written to image file [#257](https://github.com/musselwhizzle/Focus-Points/issues/257)
 
 
 * **Other**
-  * Support using keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
+  * Keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
   * User documentation reworked
   * Includes ExifTool 13.34 (Aug. 18, 2025)
 
