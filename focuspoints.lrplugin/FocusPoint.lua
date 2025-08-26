@@ -243,7 +243,7 @@ local function showDialog()
                 title = buttonNextImage,
               enabled = #selectedPhotos > 1,
               tooltip = "Load next image from selection\nKeyboard shortcut: space bar, '+' or 'n'",
-              action = Debug.showErrors(function(button)
+              action = function(button)
                   -- Prevent multiple executions - known LrC SDK quirk!
                   if props.clicked then return end
                   props.clicked = true
@@ -252,7 +252,7 @@ local function showDialog()
                   current = (current % #selectedPhotos) + 1
                   LrDialogs.stopModalWithResult(button, "next")
                 end
-              end)
+              end
               },
             f:spacer{fill_horizontal = 1},
             f:static_text {
