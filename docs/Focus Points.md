@@ -211,8 +211,8 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |
 |       <img src="../screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="../screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).<br>
 <sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters for a detailed explanation.
 
 
@@ -236,7 +236,7 @@ Two buttons at the bottom of the window allow you to move forward and backward t
 A link to the User Guide (this document) provides quick and easy access to the operating instructions.
 
 The window can be closed by clicking `Exit` or pressing \<Enter> or \<Esc> or \<Space>.
-<br><br>
+<br>
 
 #### Depth of Field, Hyperfocal Distance
 
@@ -253,7 +253,7 @@ Technical note: ExifTool creates pseudo tags `DepthOfField` and `HyperfocalDista
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
 <br>
 
-### User Messages###
+### User Messages
 
 The first line of text in the `Focus Information` section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
@@ -274,10 +274,10 @@ You can also access this information from the plugin window by clicking the link
 <img src="../screens/BasicOperation6.jpg" alt="Basic Operation 6" style="width: 750px;"/>
 
 
-### Plugin Status###
+### Plugin Status
 
 If errors or warnings were encountered while processing the autofocus metadata, a status message is displayed at the bottom of the text pane. To the right of this message, you can click the `Check log` button to open the logfile for more details. The logfile contains detailed information about the metadata processing, such as relevant tags found (or not found).<br>
-See also section "Logging" under [Configuration and Settings](#22-configuration-and-settings).
+See also section "Logging" under [Viewing Options](#viewing-options).
 
 For the image above, where focus info is said to be "missing from file", the logfile looks like this:
 
@@ -367,7 +367,7 @@ Supported features:
 | <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Primary AF-Point                                                     |
 |   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 
 The logic for interpreting Nikon-specific autofocus data has been adapted to match the focus point display of NX Studio and Capture NX-D. While this is not rocket science for the Nikon Z, it has been a challenge for Nikon DSLRs. Nikon stores different types of focus point information in different places, making it difficult to find the relevant information and name it consistently. I would like to take this opportunity to thank [Warren Hatch](https://www.warrenhatchimages.com/) for his great support in deciphering and correctly interpreting the Nikon AF information!
 
@@ -401,11 +401,6 @@ D500, Live View shot. In Contrast AF modes, the focus "point" is an area that va
 D780, Live View shot, with several of the sensor base 81 AF areas engaged. The primary AF area is indicated by a center dot.<br><br>
 
 
-
-
-
-
-
 ### 3.1.2 Nikon Mirrorless
 
 Nikon's mirrorless cameras feature a hybrid autofocus system that uses both PDAF and CAF to achieve fast and accurate focusing. While earlier models like the Z6 produced a fair amount of images with PDAF results, these images become rare in modern cameras like the Z9, as CAF technology becomes more powerful.
@@ -430,7 +425,7 @@ Supported features:
 |  <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/>  |  <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>  | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera       |
 | <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/> | <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/> |      gray       | Inactive AF point. Part of DSLR AF points but not used for the image |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 
 Canon focus point information in EXIF metadata always refers to an area within the frame. Focus point areas are specified by their coordinates (x,y, height, width). Therefore, for Canon focus points, you can select the color of the box, but not the size.
 
@@ -478,8 +473,8 @@ Supported features:
 |   <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Focal plane phase detect AF-point used during focusing                    |
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face detected by the camera in this area                                  |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).
 
 For Sony, the focus point of an image is given by the (x,y) coordinates in the `FocusLocation` tag. Newer models support an additional `FocusFrameSize` tag, which also specifies the size of the focus area. Custom settings for the focus frame size in the plugin's preferences only apply in cases where the focus frame size is not available in the metadata. In this case, medium and large focus boxes will show a center dot:
 
@@ -510,8 +505,8 @@ Supported features:
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face, subject or detail detected by the camera in this area               |
 |       <img src="../screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="../screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'               |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).
 
 Fuji metadata contains information on both face and subject recognition. Whether the detected subject is a person, an animal, a bicycle, a car, an airplane, or a train, and whether the detected eye is a real eye or a cockpit, all the information for visualizing a detected subject and its parts is stored in the same place and format.
 
@@ -543,8 +538,8 @@ Supported features:
 | <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or eye detected by the camera in this area                           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).
 
 Since 2008, Olympus has been using the same format for storing autofocus information in EXIF for all of its mirrorless cameras (starting with the E-M5 in 2012) as well as the last E-System models (E-5, E-420, E-520, E-620). Therefore, the focus point display is the same for all these models. The `AFPointSelected` tag contains the pixel coordinates of the focus point. The size and color of the focus box can be adjusted in the plugin's preferences.
 
@@ -585,8 +580,8 @@ Supported features:
 |   <img src="../screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="../screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                    |
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face, subject or detail detected by the camera in this area               |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).<br>
 
 With the release of plugin version V3.1, OM System has its own chapter in this user documentation. This is mainly because previously unknown metadata tags have been identified and decoded: `AFSelection`, `AFFocusArea` and `SubjectDetectionArea`.
 
@@ -680,8 +675,8 @@ Supported features:
 | <img src="../screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="../screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location, pixel coordinates reported by the camera |
 |       <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                       |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).<br>
 
 Similar to Olympus, Panasonic hasn't changed the basic logic of focus point data in ages. Since 2008 to be exact. They use the same logic and format in all their cameras. As a result, Panasonic cameras are widely supported across all model lines, from mirrorless to bridge to compact.
 
@@ -709,7 +704,7 @@ Supported features:
 | <img src="../screens/af_inactive.png" alt="inactive" style="width: 20px;"/> | <img src="../screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/> |      gray       | Inactive AF point. Part of DSLR AF points but not used for the image |
 |     <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>     |     <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>     |     yellow      | Face or eye detected by the camera in this area                      |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 
 With the release of V3.1, Pentax is not only on par with other camera manufacturers and models in terms of supported features, it is even ahead of the "Big Three", Canon, Nikon and Sony.
 
@@ -765,7 +760,7 @@ Supported features:
 | <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/> | <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/> | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera |
 |    <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>    |    <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>    |     yellow      | Face or eye detected by the camera in this area                |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 
 Starting with the GR III, Ricoh's GR models use the same metadata structures as the latest Pentax models (K-3 III), so support for these cameras is a by-product of adding support for the K-3 III.
 
@@ -790,7 +785,7 @@ Supported features:
 | <img src="../screens/af_infocus.png" alt="infocus" style="width: 20px;"/> | <img src="../screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/> | red<sup>1</sup> | Active AF point. Focus area, dimensions reported by the camera |
 |    <img src="../screens/af_face.png" alt="face" style="width: 20px;"/>    |    <img src="../screens/af_face_win.png" alt="face" style="width: 20px;"/>    |     yellow      | Face detected by the camera<sup>2</sup> in this area           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 <sup>2</sup> Face detection is not done while the shot is being taken, but by Apple's Photos app.
 
 
