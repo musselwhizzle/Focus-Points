@@ -219,7 +219,9 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
 
       -- Placing icons
       local x, y = resultingTransformation(point.x, point.y)
-      Log.logInfo("DefaultPointRenderer", "Placing point of type '" .. point.pointType .. "' at position [" .. point.x .. ", " .. point.y .. "] -> ([" .. math.floor(x) .. ", " .. math.floor(y) .. "] on display)")
+      Log.logInfo("DefaultPointRenderer",
+        string.format("Placing point of type %s at position [%s,%s] -> ([%s,%s] on display)",
+          point.pointType, math.floor(point.x), math.floor(point.y), math.floor(x), math.floor(y)))
 
       local useSmallIcons = false
       local pointWidth = point.width

@@ -135,7 +135,7 @@ else
     DefaultPointRenderer.funcMakerNotesFound = OlympusDelegates.makerNotesFound
     DefaultPointRenderer.funcManualFocusUsed = OlympusDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = OlympusDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetImageInfo    = OlympusDelegates.getImageInfo
     DefaultPointRenderer.funcGetCameraInfo   = OlympusDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo    = OlympusDelegates.getFocusInfo
 

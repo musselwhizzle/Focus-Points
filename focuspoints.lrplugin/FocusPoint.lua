@@ -49,6 +49,8 @@ local function showDialog()
     local done
     local prefs = LrPrefs.prefsForPlugin( nil )
     local props = LrBinding.makePropertyTable(context, { clicked = false })
+    local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
+    local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
@@ -60,14 +62,7 @@ local function showDialog()
     FocusPointPrefs.setDisplayScaleFactor()
     Log.logInfo("System", "Display scaling level " ..
            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
-    end
 
-    -- Find the index 'current' of the target photo in set of selectedPhotos
-    for i, photo in ipairs(selectedPhotos) do
-       if photo == targetPhoto then
-         current = i
-         break
-       end
     end
 
     -- only on WIN (issue #199):
@@ -94,6 +89,13 @@ local function showDialog()
       Log.resetErrorsWarnings()
       Log.logInfo("FocusPoint", string.rep("=", 72))
 
+      -- Find the index 'current' of the target photo in set of selectedPhotos
+      for i, photo in ipairs(selectedPhotos) do
+         if photo == targetPhoto then
+           current = i
+           break
+         end
+      end
       -- Save link to current photo, eg. as supplementary information in user messages
       FocusPointDialog.currentPhoto = targetPhoto
 
@@ -163,19 +165,46 @@ local function showDialog()
 
 --        Log.logInfo("Profiling", Debug.profileResults ())
 
-        -- controls to operate on a series of selected photos
           local f = LrView.osFactory()
-          local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
-          local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
 
+        local lastKey = nil
+        props.text = ""
           props.clicked = false
+        local kbdHandler = f:edit_field {
+          value = LrView.bind('text'),
+          width  = 1,     -- tiny width
+          height = 1,     -- tiny height
+          border_enabled = false, -- optionally suppress borders
+          immediate = true,
+          validate = function(view, value)
+            local key = string.sub(value, -1) -- look at the last input
+            if not key or key == lastKey
+              then return true
+            else
+              key = string.lower(key)
+            end
+            lastKey = key
+            if key == "x" or key == "q"  or (MAC_ENV and key == ".") then   -- Exit
+              LrDialogs.stopModalWithResult(view, "ok")
+            elseif key == " " or key == "+" or key == "n" then              -- Next image
+              current = (current % #selectedPhotos) + 1
+              LrDialogs.stopModalWithResult(view, "next")
+            elseif key == "-" or key == "p" then                            -- Previous image
+              current =  (current - 2) % #selectedPhotos + 1
+              LrDialogs.stopModalWithResult(view, "previous")
+            end
+            return true
+          end,
+        }
           userResponse = LrDialogs.presentModalDialog {
           title = "Focus-Points (Version " .. getPluginVersion() .. ")",
-            contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView),
+          contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdHandler),
             accessoryView = f:row {
               spacing = 0,     -- removes uniform spacing; we control it manually
               f:push_button {
                 title = buttonPrevImage,
+              enabled = #selectedPhotos > 1,
+              tooltip = "Load previous image from selection.\nKeyboard shortcut: '-' or 'p'",
               action = (function(button)
                   -- Prevent multiple executions - known LrC SDK quirk!
                   if props.clicked then return end
@@ -194,7 +223,9 @@ local function showDialog()
               f:spacer { width = 20 },    -- space before the next button
               f:push_button {
                 title = buttonNextImage,
-                action = function(button)
+              enabled = #selectedPhotos > 1,
+              tooltip = "Load next image from selection\nKeyboard shortcut: space bar, '+' or 'n'",
+              action = Debug.showErrors(function(button)
                   -- Prevent multiple executions - known LrC SDK quirk!
                   if props.clicked then return end
                   props.clicked = true
@@ -203,7 +234,7 @@ local function showDialog()
                   current = (current % #selectedPhotos) + 1
                   LrDialogs.stopModalWithResult(button, "next")
                 end
-              end
+              end)
               },
             f:spacer{fill_horizontal = 1},
             f:static_text {

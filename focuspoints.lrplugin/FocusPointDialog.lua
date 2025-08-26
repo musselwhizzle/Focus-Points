@@ -73,7 +73,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
 end
 
 
-function FocusPointDialog.createDialog(_photo, photoView, infoView)
+function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdHandler)
   local myView
   local f = LrView.osFactory()
 
@@ -88,7 +88,7 @@ function FocusPointDialog.createDialog(_photo, photoView, infoView)
       infoView,
     }
     local row = f:row {
-      column1, column2
+      kbdHandler, column1, column2
     }
     myView = f:view {
       row,

@@ -19,7 +19,6 @@
   the camera is Nikon
 --]]
 
-local LrErrors = import 'LrErrors'
 local LrView = import 'LrView'
 
 require "Utils"
@@ -63,6 +62,7 @@ NikonDelegates.metaKey3DTrackingFaceDetection = "Three-D Tracking Face Detection
 NikonDelegates.metaKey3DTrackingWatchArea     = "Three-D Tracking Watch Area"
 NikonDelegates.metaKeyAfActivation            = "AF Activation"
 NikonDelegates.metaKeyAfCropHiSpeed           = "Crop Hi Speed"
+NikonDelegates.metaKeyAfDetectionMethod       = "AF Detection Method"
 NikonDelegates.metaKeyContrastDetect          = "Contrast Detect AF"
 NikonDelegates.metaKeyPhaseDetect             = "Phase Detect AF"
 NikonDelegates.metaKeyFocusDistance           = "Focus Distance"
@@ -585,7 +585,7 @@ function NikonDelegates.getImageInfo(_photo, props, metaData)
   imageInfo = f:column {
     fill = 1,
     spacing = 2,
-    NikonDelegates.addInfo("Crop mode", NikonDelegates.metaKeyAfCropHiSpeed, props, metaData),
+    NikonDelegates.addInfo("Crop Mode", NikonDelegates.metaKeyAfCropHiSpeed, props, metaData),
   }
   return imageInfo
 end
@@ -602,7 +602,7 @@ function NikonDelegates.getCameraInfo(_photo, props, metaData)
   cameraInfo = f:column {
     fill = 1,
     spacing = 2,
-    NikonDelegates.addInfo("Shooting mode", NikonDelegates.metaKeyShootingMode, props, metaData),
+    NikonDelegates.addInfo("Shooting Mode", NikonDelegates.metaKeyShootingMode, props, metaData),
   }
   return cameraInfo
 end
@@ -623,8 +623,9 @@ function NikonDelegates.getFocusInfo(_photo, props, metaData)
       NikonDelegates.addInfo("Focus Mode",             NikonDelegates.metaKeyFocusMode,           props, metaData),
       NikonDelegates.addInfo("Focus Result",           NikonDelegates.metaKeyFocusResult,         props, metaData),
       NikonDelegates.addInfo("AF Area Mode",           NikonDelegates.metaKeyAfAreaMode,          props, metaData),
-      NikonDelegates.addInfo("Phase Detect",           NikonDelegates.metaKeyPhaseDetect,         props, metaData),
-      NikonDelegates.addInfo("Contrast Detect",        NikonDelegates.metaKeyContrastDetect,      props, metaData),
+      NikonDelegates.addInfo("AF Detection Method",    NikonDelegates.metaKeyAfDetectionMethod,   props, metaData),
+--    NikonDelegates.addInfo("Phase Detect",           NikonDelegates.metaKeyPhaseDetect,         props, metaData),
+--    NikonDelegates.addInfo("Contrast Detect",        NikonDelegates.metaKeyContrastDetect,      props, metaData),
       NikonDelegates.addInfo("Subject Detection",      NikonDelegates.metaKeySubjectDetection,    props, metaData),
       NikonDelegates.addInfo("Subject Motion",         NikonDelegates.metaKeySubjectMotion,       props, metaData),
       NikonDelegates.addInfo("3D-Tracking Watch Area", NikonDelegates.metaKey3DTrackingWatchArea, props, metaData),

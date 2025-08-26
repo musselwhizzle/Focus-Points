@@ -67,7 +67,9 @@ local function mogrifyExecute(photo, params, script)
   local rc = LrTasks.execute( '\"' .. cmdline .. '\"' )
   if rc ~= 0 then
     Log.logError("Mogrify", 'Error calling: ' .. cmdline .. ", return code " .. rc)
-    LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error calling 'mogrify.exe' Please check plugin configuration!")
+    LrErrors.throwUserError(string.format(
+     "%s\n\nFATAL error calling 'mogrify.exe' (rc=%s)\nPlease check logfile",
+      getPhotoFileName(photo), rc))
   end
   if script then
     if prefs.loggingLevel ~= "DEBUG" then
@@ -106,8 +108,10 @@ local function exportToDisk(photo, xSize, ySize)
   local orgPath = photo:getRawMetadata("path")
   local _thumb = photo:requestJpegThumbnail(xSize, ySize, function(data, _errorMsg)
     if data == nil then
-      Log.logError('Mogrify', 'No thumbnail data')
-      LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error: Lightroom preview not available")
+      local errorText = "FATAL error: Lightroom preview for image not available"
+      Log.logError('Mogrify', errorText)
+      LrErrors.throwUserError(
+        string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
@@ -115,13 +119,17 @@ local function exportToDisk(photo, xSize, ySize)
       fileName = LrPathUtils.child( tempPath, leafWOExt .. "-fpoints.jpg" )
       local success, errorCode = pcall(function()
         local localFile = io.open(fileName, "w+b")
-        localFile:write(data)
-        localFile:close()
+        if localFile then
+          localFile:write(data)
+          localFile:close()
+        end
       end)
       if not success then
-        local msg = 'FATAL error ' .. errorCode .. 'creating image file for Mogrify at ' .. fileName
-        Log.logError('Mogrify', msg)
-        LrErrors.throwUserError(getPhotoFileName(photo) .. msg)
+        local errorText = string.format("FATAL error creating image file for Mogrify at %s (rc=%s)",
+                                        fileName, errorCode)
+        Log.logError('Mogrify', errorText)
+        LrErrors.throwUserError(
+          string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
       else
         Log.logInfo('Mogrify', "Image exported to " .. fileName )
       end
@@ -259,14 +267,18 @@ function createMagickScript(photo, params)
 
   local success, _errorCode = pcall(function()
     local file = io.open(scriptName, "w")
-    file:write('-read \"' .. fileName .. '\"', "\n")
-    file:write(params, "\n")
-    file:write('-write \"' .. fileName .. '\"', "\n")
-    file:close()
+    if file then
+      file:write('-read \"' .. fileName .. '\"', "\n")
+      file:write(params, "\n")
+      file:write('-write \"' .. fileName .. '\"', "\n")
+      file:close()
+    end
   end)
   if not success then
-    Log.logError('Mogrify', 'FATAL error creating script file ' .. scriptName)
-    LrErrors.throwUserError(getPhotoFileName(photo) .. "FATAL error creating script file " .. scriptName)
+    local errorText = 'FATAL error creating script file ' .. scriptName
+    Log.logError('Mogrify', errorText)
+    LrErrors.throwUserError(
+      string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
   end
   return scriptName
 end
@@ -279,7 +291,7 @@ function MogrifyUtils.cleanup()
   if LrFileUtils.exists(fileName) then
     local _resultOK, errorMsg = LrFileUtils.delete( fileName )
     if errorMsg ~= nil then
-      Log.logWarn('Mogrify', "Error deleting script file " .. scriptName .. ": " .. errorMsg)
+      Log.logWarn('Mogrify', "Error deleting mogrify temp file " .. fileName .. ": " .. errorMsg)
     end
   end
 end

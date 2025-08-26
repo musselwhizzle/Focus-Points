@@ -29,29 +29,26 @@ DefaultDelegates.metaData             = nil
 DefaultDelegates.cameraMake           = nil
 DefaultDelegates.cameraModel          = nil
 
-DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL      = "af_focus_pixel"        -- Small box around focus point pixel
-DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX  = "af_focus_pixel_box"    -- Medium/large box with center dot
-DefaultDelegates.POINTTYPE_AF_FOCUS_BOX        = "af_focus_box"          -- Box according to EXIF subject area
-DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT    = "af_focus_box_dot"      -- same, but with center dot
-DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS = "af_selected_infocus"   -- AF-point is selected and in focus
-DefaultDelegates.POINTTYPE_AF_SPECIAL_INFOCUS  = "af_special_infocus"
-DefaultDelegates.POINTTYPE_AF_SPECIAL          = "af_special"
-DefaultDelegates.POINTTYPE_AF_INFOCUS          = "af_infocus"            -- AF-point is in focus
-DefaultDelegates.POINTTYPE_AF_SELECTED         = "af_selected"           -- AF-point is selected but not in focus
-DefaultDelegates.POINTTYPE_AF_INACTIVE         = "af_inactive"           -- AF-point is inactive
-DefaultDelegates.POINTTYPE_FACE                = "face"                  -- Face has been detected
+DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL       = "af_focus_pixel"        -- Small box around focus point pixel
+DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX   = "af_focus_pixel_box"    -- Medium/large box with center dot
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX         = "af_focus_box"          -- Box according to EXIF subject area
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT     = "af_focus_box_dot"      -- same, but with center dot
+DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_PRIMARY = "af_focus_box_primary"  -- same, but with black center dot
+DefaultDelegates.POINTTYPE_AF_SELECTED          = "af_selected"           -- AF-point is selected but not in focus
+DefaultDelegates.POINTTYPE_AF_INACTIVE          = "af_inactive"           -- AF-point is inactive
+DefaultDelegates.POINTTYPE_FACE                 = "face"                  -- Face has been detected
 DefaultDelegates.POINTTYPE_CROP                 = "crop"                 -- Crop has been detected
 DefaultDelegates.POINTTYPE_TEST                 = "test"                 -- for testing purposes
 DefaultDelegates.pointTemplates = {
 -- #TODO the point templates need a cleanup once the different maker needs are clear!
-  af_focus_pixel = {       -- used for Fuji, Olympus, Panasonic
+  af_focus_pixel = {
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/%s/small_fat_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
-  af_focus_pixel_box = {   -- used for Fuji, Olympus, Panasonic
+  af_focus_pixel_box = {
     center = { fileTemplate = "assets/imgs/center/%s/normal.png", anchorX = 23, anchorY = 23 },
     center_small = { fileTemplate = "assets/imgs/center/%s/small.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
@@ -60,14 +57,14 @@ DefaultDelegates.pointTemplates = {
     minCornerDist = 10,
     angleStep = 5
   },
-  af_focus_box = {         -- used for Canon and Sony (probably also for Nikon and perhaps Pentax)
+  af_focus_box = {
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/%s/small_fat_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
-  af_focus_box_dot = {     -- currently only used for Sony. Is this shape really required?
+  af_focus_box_dot = {
     center = { fileTemplate = "assets/imgs/center/%s/normal.png", anchorX = 23, anchorY = 23 },
     center_small = { fileTemplate = "assets/imgs/center/%s/small.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
@@ -76,32 +73,16 @@ DefaultDelegates.pointTemplates = {
     minCornerDist = 10,
     angleStep = 5
   },
-  af_selected_infocus = {  -- currently unused (previousy used for Pentax)
-    center = { fileTemplate = "assets/imgs/center/%s/normal.png", anchorX = 23, anchorY = 23 },
-    center_small = { fileTemplate = "assets/imgs/center/%s/small.png", anchorX = 23, anchorY = 23 },
+  af_focus_box_primary = {
+    center = { fileTemplate = "assets/imgs/center/white/normal.png", anchorX = 23, anchorY = 23 },
+    center_small = { fileTemplate = "assets/imgs/center/white/small.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/%s/small_fat_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5
   },
-  af_special_infocus = {  -- for investigation purposes
-    center = { fileTemplate = "assets/imgs/center/%s/normal.png", anchorX = 23, anchorY = 23 },
-    center_small = { fileTemplate = "assets/imgs/center/%s/small.png", anchorX = 23, anchorY = 23 },
-    corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/corner/black/small_%s.png", anchorX = 23, anchorY = 23 },
-    bigToSmallTriggerDist = 100,
-    minCornerDist = 10,
-    angleStep = 5
-  },
-  af_special = {  -- for investigation purposes
-    corner = { fileTemplate = "assets/imgs/corner/black/normal_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/corner/black/small_%s.png", anchorX = 23, anchorY = 23 },
-    bigToSmallTriggerDist = 100,
-    minCornerDist = 10,
-    angleStep = 5
-  },
-  af_selected = {          -- legacy template, still used by PentaxDelegates
+  af_selected = {
     corner = { fileTemplate = "assets/imgs/corner/white/normal_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/white/small_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
@@ -123,8 +104,8 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
   crop = {
-    corner = { fileTemplate = "assets/imgs/corner/white/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
-    corner_small = { fileTemplate = "assets/imgs/corner/white/small_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner = { fileTemplate = "assets/imgs/corner/black/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
+    corner_small = { fileTemplate = "assets/imgs/corner/black/small_fat_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
     minCornerDist = 10,
     angleStep = 5

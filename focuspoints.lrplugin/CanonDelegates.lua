@@ -190,11 +190,6 @@ function CanonDelegates.getAfPoints(photo, metaData)
     end
     local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
     local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
---[[ #TODO we won't support such detailed classifcation in future
-    if isInFocus and isSelected then
-      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
-    end
--- ]]
     if isInFocus then
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
       FocusInfo.focusPointsDetected = true

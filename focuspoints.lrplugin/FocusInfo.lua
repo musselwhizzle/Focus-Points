@@ -45,6 +45,7 @@ FocusInfo.metaKeyCameraMake         = "cameraMake"
 FocusInfo.metaKeyCameraModel        = "cameraModel"
 FocusInfo.metaKeyLens               = "lens"
 FocusInfo.metaKeyFocalLength        = "focalLength"
+FocusInfo.metaKeyFocalLength35mm    = "focalLength35mm"
 FocusInfo.metaKeyExposure           = "exposure"
 FocusInfo.metaKeyIsoSpeedRating     = "isoSpeedRating"
 FocusInfo.metaKeyExposureBias       = "exposureBias"
@@ -407,32 +408,33 @@ function FocusInfo.createInfoView(photo, props)
   local infoView = f:column{ fill_vertical = 1,
 
       f:column { fill = 1, spacing = 2,
-          f:group_box { title = "Image information:  ", fill = 1, font = "<system/bold>",
+          f:group_box { title = "Image Information", fill = 1, font = "<system/bold>",
               f:column {fill = 1, spacing = 2,
-                  FocusInfo.addInfo("Filename"     , FocusInfo.metaKeyFileName, photo, props),
-                  FocusInfo.addInfo("Captured on"  , FocusInfo.metaKeyDateTimeOriginal, photo, props),
-                  FocusInfo.addInfo("Original size", FocusInfo.metaKeyDimensions, photo, props),
-                  FocusInfo.addInfo("Current size" , FocusInfo.metaKeyCroppedDimensions, photo, props),
+                  FocusInfo.addInfo("Filename"         , FocusInfo.metaKeyFileName, photo, props),
+                  FocusInfo.addInfo("Capture Date/Time", FocusInfo.metaKeyDateTimeOriginal, photo, props),
+                  FocusInfo.addInfo("Original Size"    , FocusInfo.metaKeyDimensions, photo, props),
+                  FocusInfo.addInfo("Current Size"     , FocusInfo.metaKeyCroppedDimensions, photo, props),
                   imageInfo
               },
           },
           f:spacer { height = 20 },
-          f:group_box { title = "Camera settings:  ", fill = 1, font = "<system/bold>",
+          f:group_box { title = "Camera Settings", fill = 1, font = "<system/bold>",
               f:column {fill = 1, fill_vertical = 0, spacing = 2,
-                  FocusInfo.addInfo("Make"            , FocusInfo.metaKeyCameraMake, photo, props),
-                  FocusInfo.addInfo("Model"           , FocusInfo.metaKeyCameraModel, photo, props),
-                  FocusInfo.addInfo("Lens"            , FocusInfo.metaKeyLens, photo, props),
-                  FocusInfo.addInfo("FocalLength"     , FocusInfo.metaKeyFocalLength, photo, props),
-                  FocusInfo.addInfo("Exposure"        , FocusInfo.metaKeyExposure, photo, props),
-                  FocusInfo.addInfo("ISO"             , FocusInfo.metaKeyIsoSpeedRating, photo, props),
-                  FocusInfo.addInfo("Exposure Bias"   , FocusInfo.metaKeyExposureBias, photo, props),
-                  FocusInfo.addInfo("Exposure Program", FocusInfo.metaKeyExposureProgram, photo, props),
-                  FocusInfo.addInfo("Metering Mode"   , FocusInfo.metaKeyMeteringMode, photo, props),
+                  FocusInfo.addInfo("Make"             , FocusInfo.metaKeyCameraMake, photo, props),
+                  FocusInfo.addInfo("Model"            , FocusInfo.metaKeyCameraModel, photo, props),
+                  FocusInfo.addInfo("Lens"             , FocusInfo.metaKeyLens, photo, props),
+                  FocusInfo.addInfo("Focal Length"     , FocusInfo.metaKeyFocalLength, photo, props),
+--                FocusInfo.addInfo("Focal Length 35mm", FocusInfo.metaKeyFocalLength35mm, photo, props),
+                  FocusInfo.addInfo("Exposure"         , FocusInfo.metaKeyExposure, photo, props),
+                  FocusInfo.addInfo("ISO"              , FocusInfo.metaKeyIsoSpeedRating, photo, props),
+                  FocusInfo.addInfo("Exposure Bias"    , FocusInfo.metaKeyExposureBias, photo, props),
+                  FocusInfo.addInfo("Exposure Program" , FocusInfo.metaKeyExposureProgram, photo, props),
+                  FocusInfo.addInfo("Metering Mode"    , FocusInfo.metaKeyMeteringMode, photo, props),
                   cameraInfo
              },
           },
           f:spacer { height = 20 },
-          f:group_box { title = "Focus information:  ", fill = 1, font = "<system/bold>",
+          f:group_box { title = "Focus Information", fill = 1, font = "<system/bold>",
               focusInfo
           },
       },

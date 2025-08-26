@@ -37,16 +37,20 @@ require "Log"
 
 PentaxDelegates = {}
 
+-- List of supported models is sorted by date / Pentax version
+-- to potentially support handling of changes in tag usage across models / Pentax versions
 PentaxDelegates.supportedModels = {
-    -- Pentax models
-    "k-1 mark ii", "k-1", "k-3 mark iii", "k-3 mark iii monochrome", "k-3 ii", "k-3", "kp",
-    "k-5 ii s", "k-5 ii", "k-5",
-    "k-7", "k-30", "k-50", "k-70", "k-500",
-    "k-r", "k-s1", "k-s2", "k-x", "k-01",
-    "k10d", "k20d", "k100d super", "k100d", "k110d", "k200d",
-    "*ist d", "*ist ds", "*ist ds2",
-    -- Ricoh models
-    "gr iii", "gr iiix"
+    "*ist d", "*ist ds", "*ist ds2", "k10d", "k100d", "k110d", "k100d super",   -- Pentax version unknown
+    "k20d", "k200d",                                                            -- Pentax version 4
+    "k-x", "k-7",                                                               -- Pentax version 5
+    "k-r", "k-5",                                                               -- Pentax version 7
+    "k-01",                                                                     -- Pentax version 9
+    "k-5 ii", "k-5 ii s", "k-30", "k-50", "k-500",                              -- Pentax version 10
+    "k-3", "k-s1", "k-s2", "k-3 ii",                                            -- Pentax version 11
+    "k-70", "k-1", "kp", "k-1 mark ii",                                         -- Pentax version 12
+    "gr iii",                                                                   -- Pentax version 13
+    "k-3 mark iii", "gr iiix",                                                  -- Pentax version 14
+    "k-3 mark iii monochrome",                                                  -- Pentax version 15
 }
 
 -- Tag which indicates that makernotes / AF section is present
@@ -70,12 +74,12 @@ PentaxDelegates.metaKeyFacesDetected        = "Faces Detected"
 PentaxDelegates.metaKeyFaceInfoK3III        = "Face Info K3 III"
 PentaxDelegates.metaKeyAfInfo               = "AF Info"
 PentaxDelegates.metaKeySubjectRecognition   = "Subject Recognition"
-PentaxDelegates.metaKeyAFCControl           = "AFC Control"
-PentaxDelegates.metaKeyAFHold               = "AF Hold"
-PentaxDelegates.metaKeyFocusSensitivity     = "Focus Sensitivity"
-PentaxDelegates.metaKeyAFPointTracking      = "AF Point Tracking"
+PentaxDelegates.metaKeyAFHold               = "AFC Hold"
+PentaxDelegates.metaKeyFocusSensitivity     = "AFC Sensitivity"
+PentaxDelegates.metaKeyAFPointTracking      = "AFC Point Tracking"
 PentaxDelegates.metaKeyFirstFrameActionAFC  = "First Frame Action In AFC"
 PentaxDelegates.metaKeyActionAFCContinuous  = "Action In AFC Cont"
+
 
 -- Image and Camera Settings relevant tags
 PentaxDelegates.metaKeyExposureProgram      = "Exposure Program"
@@ -277,11 +281,13 @@ function getK3iiiAfPoints(photo, metaData)
           faceHeight    = faceHeight    * imageSize[2] / faceFrameHeigth
 
           local pointType = DefaultDelegates.POINTTYPE_FACE
+
           --[[ for analysis purposes use a different color for set 2
           if i > numFacesSet1 then
             pointType = DefaultDelegates.POINTTYPE_TEST
           end
           -- ]]
+
           if faceWidth * faceHeight ~= 0 then
             table.insert(result.points, {
               pointType = pointType,
@@ -691,7 +697,7 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
 
     elseif (key == PentaxDelegates.metaKeyDriveMode) then
       -- just take the basic mode and skip all the trailing details after ";"
-      props[key] = splitTrim(value,  ";")[1]
+      props[key] = PentaxDelegates.getDriveMode(value)
 
     else
       props[key] = value
@@ -716,25 +722,31 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
     f:spacer{fill_horizontal = 1},
     f:column{f:static_text{title = props[key], font="<system>"}}
   }
+
   -- tags that are only relevant in Continuous (AF-C) mode
   if (key == PentaxDelegates.metaKeyAFHold          )
   or (key == PentaxDelegates.metaKeyFocusSensitivity)
   or (key == PentaxDelegates.metaKeyAFPointTracking ) then
+
     if not props[PentaxDelegates.metaKeyFocusMode]:match("^AF%-C") then
       return FocusInfo.emptyRow()
     end
+
   -- tags that are only relevant in AFC and Continuous mode
   elseif (key == PentaxDelegates.metaKeyFirstFrameActionAFC)
       or (key == PentaxDelegates.metaKeyActionAFCContinuous) then
+
     if not (props[PentaxDelegates.metaKeyFocusMode]:match("^AF%-C") and
             props[PentaxDelegates.metaKeyDriveMode]:match("^Continuous")) then
       return FocusInfo.emptyRow()
     end
+
   -- tags that are only relevant in PDAF modes
   elseif (key == PentaxDelegates.metaKeySubjectRecognition) then
     if not props[PentaxDelegates.metaKeyFocusMode]:match("^AF%-") then
       return FocusInfo.emptyRow()
     end
+
   elseif (key == PentaxDelegates.metaKeyDriveMode) then
     if props[PentaxDelegates.metaKeyDriveMode]:match("^Continuous") then
       return f:column{
@@ -745,7 +757,6 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
   end
   -- add row as composed
   return result
-
 end
 
 
@@ -778,6 +789,38 @@ function PentaxDelegates.focusingArea(AFPointSelected)
     result = "Undefined"
   end
   return result
+end
+
+--[[
+  @@public string PentaxDelegates.getDriveMode(string driveModeValue)
+  ----
+  Extract the desired portions from DriveMode tag and format properly
+--]]
+function PentaxDelegates.getDriveMode(driveModeValue)
+  local result
+  local v0 = get_nth_Word(driveModeValue, 1, ";")
+  local v1 = get_nth_Word(driveModeValue, 2, ";")
+  local v2 = get_nth_Word(driveModeValue, 3, ";")
+  local v3 = get_nth_Word(driveModeValue, 4, ";")
+
+  local _brand, model = string.match(string.lower(DefaultDelegates.cameraModel), "^(%a+)%s+(.*)")
+
+  if v0 == "Continuous" then
+    if arrayKeyOf({"k-3", "k-3 ii", "k-1", "kp", "k-1 mark ii", "k-3 mark iii", "k-3 mark iii monochrome"}, model) then
+      result = "Continuous (High)"
+    elseif not arrayKeyOf({"*ist d", "*ist ds", "*ist ds2", "k10d", "k100d", "k110d", "k100d super", "k20d"},model) then
+      result = "Continuous (Hi)"
+    end
+  elseif v0 == "Continuous Low" then
+    result = "Continuous (Low)"
+  else
+    result = v0
+  end
+  if v1 ~= "No Timer"        then result = result .. "; " .. v1 end
+  if v2 ~= "Shutter Button"  then result = result .. "; " .. v2 end
+  if v3 ~= "Single Exposure" then result = result .. "; " .. v3 end
+
+  return wrapText(result, {";"}, 30)
 end
 
 
@@ -857,13 +900,13 @@ function PentaxDelegates.getFocusInfo(_photo, props, metaData)
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      PentaxDelegates.addInfo("Focus Mode",   PentaxDelegates.metaKeyFocusMode,               props, metaData),
-      PentaxDelegates.addInfo("Focusing Area",PentaxDelegates.metaKeyAfPointSelected,         props, metaData),
+      PentaxDelegates.addInfo("Focus Mode",           PentaxDelegates.metaKeyFocusMode          , props, metaData),
+      PentaxDelegates.addInfo("Focusing Area",        PentaxDelegates.metaKeyAfPointSelected    , props, metaData),
       PentaxDelegates.addInfo("1st Frame Action",     PentaxDelegates.metaKeyFirstFrameActionAFC, props, metaData),
       PentaxDelegates.addInfo("Action Continuous",    PentaxDelegates.metaKeyActionAFCContinuous, props, metaData),
       PentaxDelegates.addInfo("AF Hold",              PentaxDelegates.metaKeyAFHold             , props, metaData),
+      PentaxDelegates.addInfo("AF Point Tracking",    PentaxDelegates.metaKeyAFPointTracking    , props, metaData),
       PentaxDelegates.addInfo("Focus Sensitivity",    PentaxDelegates.metaKeyFocusSensitivity   , props, metaData),
-      PentaxDelegates.addInfo("Point Tracking",       PentaxDelegates.metaKeyAFPointTracking    , props, metaData),
       PentaxDelegates.addInfo("Subject Recognition",  PentaxDelegates.metaKeySubjectRecognition , props, metaData),
       }
 

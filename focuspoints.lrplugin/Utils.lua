@@ -15,7 +15,6 @@
 --]]
 
 
-local LrDialogs = import 'LrDialogs'
 local LrPathUtils = import 'LrPathUtils'
 local LrFileUtils = import 'LrFileUtils'
 local LrStringUtils = import "LrStringUtils"

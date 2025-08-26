@@ -71,37 +71,43 @@ PanasonicDelegates.metaKeyAfAreaSizePattern           = "([%d%.]+)%s+([%d%.]+)"
 --]]
 function PanasonicDelegates.getAfPoints(photo, metaData)
 
+  local result = {
+      pointTemplates = DefaultDelegates.pointTemplates,
+      points = {
+      }
+    }
+
+  -- Get photo dimensions for proper scaling
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+
   local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
   if focusPoint then
     Log.logInfo("Panasonic",
-      string.format("Focus point tag '%s' found: '%s'",
+      string.format("Tag '%s' found: '%s'",
         PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
   else
     -- no focus points found - handled on upper layers
     Log.logWarn("Panasonic",
-      string.format("Focus point tag '%s' not found", PanasonicDelegates.metaKeyAfPointPosition))
+      string.format("Tag '%s' not found", PanasonicDelegates.metaKeyAfPointPosition))
     return nil
   end
 
-  local focusX, focusY = string.match(focusPoint, PanasonicDelegates.metaKeyAfPointPositionPattern)
+  -- extract (x,y) point values (rational numbers in range 0..1)
+  local focusX = get_nth_Word(focusPoint, 1, " ")
+  local focusY = get_nth_Word(focusPoint, 2, " ")
   if not (focusX and focusY) then
     Log.logError("Panasonic",
       string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
     return nil
   end
 
-  -- determine x,y location of center of focus point in image pixels
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  local x = tonumber(orgPhotoWidth)  * tonumber(focusX)
-  local y = tonumber(orgPhotoHeight) * tonumber(focusY)
+  -- transform the values into (integer) pixels
+  local x = math.floor(tonumber(orgPhotoWidth)  * tonumber(focusX))
+  local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY))
+
   Log.logInfo("Panasonic", string.format("Focus point detected at [x=%s, y=%s]", x, y))
 
   FocusInfo.focusPointsDetected = true
-  local result = {
-      pointTemplates = DefaultDelegates.pointTemplates,
-      points = {
-      }
-    }
 
   -- Let's see if AF area size is given
   local afAreaSize = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAFAreaSize)
@@ -111,12 +117,12 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
       Log.logWarn("Panasonic",
         string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
     else
-      areaSizeX = tostring (tonumber(areaSizeX) * tonumber(orgPhotoWidth))
-      areaSizeY = tostring (tonumber(areaSizeY) * tonumber(orgPhotoHeight))
-      Log.logInfo("Panasonic", "AF Area detected, w=" .. areaSizeX .. ", h=" .. areaSizeY .. "]")
+      areaSizeX = tostring (math.floor(tonumber(areaSizeX) * tonumber(orgPhotoWidth)))
+      areaSizeY = tostring (math.floor(tonumber(areaSizeY) * tonumber(orgPhotoHeight)))
+      Log.logInfo("Panasonic", "AF Area detected, w=[" .. areaSizeX .. ", h=" .. areaSizeY .. "]")
 
       table.insert(result.points, {
-        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT,
+        pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
         x = x,
         y = y,
         width  = areaSizeX,
@@ -146,7 +152,8 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
           local y = coordinatesTable[2] * yScale
           local w = coordinatesTable[3] * xScale
           local h = coordinatesTable[4] * yScale
-          Log.logInfo("Panasonic", "Face detected at [" .. x .. ", " .. y .. "]")
+          Log.logInfo("Panasonic",
+            "Face detected at [" .. math.floor(x) .. "," .. math.floor(y) .. "]")
           table.insert(result.points, {
             pointType = DefaultDelegates.POINTTYPE_FACE,
             x = x,

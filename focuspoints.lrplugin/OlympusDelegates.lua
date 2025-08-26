@@ -65,6 +65,7 @@ OlympusDelegates.metaKeyAfEyePriority            = "Eye Priority"
 OlympusDelegates.metaKeyDriveMode                = "Drive Mode"
 OlympusDelegates.metaKeyStackedImage             = "Stacked Image Custom"
 OlympusDelegates.metaKeyImageStabilization       = "Image Stabilization"
+OlympusDelegates.metaKeyDigitalZoomRatio         = "Digital Zoom Ratio"
 
 -- relevant metadata values
 OlympusDelegates.metaValueNA                     = "N/A"
@@ -76,6 +77,8 @@ OlympusDelegates.areaDetectStatus                = ""
 -- to handle maker specific differences
 OlympusDelegates.makerOlympus                    = "olympus"
 OlympusDelegates.makerOMDS                       = "om digital solutions"
+
+
 function findValue(metaData, key)
   local value = ExifUtils.findValue(metaData, key)
   if value then
@@ -84,7 +87,7 @@ function findValue(metaData, key)
     return value
   else
     -- no focus points found - handled on upper layers
-    Log.logWarn("Olympus",
+    Log.logInfo("Olympus",
       string.format("Tag '%s' not found", key))
     return nil
   end
@@ -168,15 +171,12 @@ function getOMDSAfPoints(photo, metaData)
      end
   end
 
-
-
-
   -- Process SubjectDetectInfo
   local hasSubjectDetectArea   = false
-
   local hasSubjectDetectDetail = false
   local subjectDetectFrameSize = findValue(metaData, OlympusDelegates.metaKeySubjectDetectFrameSize)
   if subjectDetectFrameSize and (subjectDetectFrameSize[1] ~= "0 0") then
+
     local subjectDetectArea   = findValue(metaData, OlympusDelegates.metaKeySubjectDetectArea)
     local subjectDetectDetail = findValue(metaData, OlympusDelegates.metaKeySubjectDetectDetail)
 
@@ -204,83 +204,92 @@ function getOMDSAfPoints(photo, metaData)
   end
 
   -- Process AFTargetInfo
-
   local afFrameSize    = findValue(metaData, OlympusDelegates.metaKeyAFFrameSize)
   local afFocusArea    = findValue(metaData, OlympusDelegates.metaKeyAFFocusArea)
   local afSelectedArea = findValue(metaData, OlympusDelegates.metaKeyAFSelectedArea)
   if afSelectedArea == "8 0 624 479" then afSelectedArea = "8 8 624 464" end   -- looks better!!
+
   if afFrameSize and (afFrameSize ~= "0 0") then
 
-  local areasIdentical = (afFocusArea == afSelectedArea)
-  afFrameSize    = split(afFrameSize   , " ")
-  afFocusArea    = split(afFocusArea   , " ")
-  afSelectedArea = split(afSelectedArea, " ")
+    local areasIdentical = (afFocusArea == afSelectedArea)
+
+    afFrameSize    = split(afFrameSize   , " ")
+    afFocusArea    = split(afFocusArea   , " ")
+    afSelectedArea = split(afSelectedArea, " ")
 
     if afSelectedArea[3] ~= "0" and afSelectedArea[4] ~= "0" then
       -- #TODO review comment
       -- (status == "Subject Detected, No Detail" or status == "No Detection") then
-    -- we will only look at this information for those cases where SubjectDetectInfo has max. one element
-    -- -> as per experience from extensive testing there's not more than two meaningful detect elements
-    --    the third is usually same or very similar to one of the two detect frames
+      -- we will only look at this information for those cases where SubjectDetectInfo has max. one element
+      -- -> as per experience from extensive testing there's not more than two meaningful detect elements
+      --    the third is usually same or very similar to one of the two detect frames
 
-    local scale = 1.2
-    if areasIdentical then
-      -- if focus area and selected area are identical in size, slightly enlarge selected area
-      if afSelectedArea[3] / afFrameSize[1] > 1/scale or
-         afSelectedArea[4] / afFrameSize[2] > 1/scale then
-         -- avoid enlarging an area so that it potentially exceeds frame dimensions
-        scale = 1
+      local scale = 1.2
+      if areasIdentical then
+        -- if focus area and selected area are identical in size, slightly enlarge selected area
+        if afSelectedArea[3] / afFrameSize[1] > 1/scale or
+           afSelectedArea[4] / afFrameSize[2] > 1/scale then
+           -- avoid enlarging an area so that it potentially exceeds frame dimensions
+          scale = 1
+        end
       end
-    end
 
       -- if neither Subject nor Face Detection in ON, afSelectArea corresponds to the user selected AF area
       if not (isSubjectDetection() or isFaceDetection()) then
         -- draw white selection frame around user selected AF area
         if afSelectedArea[3] ~= "0" and afSelectedArea[4] ~= "0" then
-      addFrame(afFrameSize[1], afFrameSize[2],
-               afSelectedArea[1], afSelectedArea[2],afSelectedArea[3], afSelectedArea[4], scale,
+          addFrame(afFrameSize[1], afFrameSize[2],
+                   afSelectedArea[1], afSelectedArea[2],afSelectedArea[3], afSelectedArea[4], scale,
                    DefaultDelegates.POINTTYPE_AF_SELECTED, "Selected AF area")
         end
       elseif not hasSubjectDetectArea then
         -- use AFSelectArea as supplementary subject detect information
         if afSelectedArea[3] ~= "0" and afSelectedArea[4] ~= "0" then
-      addFrame(afFrameSize[1], afFrameSize[2],
-               afSelectedArea[1], afSelectedArea[2],afSelectedArea[3], afSelectedArea[4], scale,
+          addFrame(afFrameSize[1], afFrameSize[2],
+                   afSelectedArea[1], afSelectedArea[2],afSelectedArea[3], afSelectedArea[4], scale,
              DefaultDelegates.POINTTYPE_FACE, "Subject detected")
         end
       else
+      end
+    end
+
+    -- draw frame around focus area (whose center is identical to AFPointSelected)
+    if afFocusArea[3] ~= "0" and afFocusArea[4] ~= "0" then
+      addFrame(afFrameSize[1], afFrameSize[2],
+               afFocusArea[1], afFocusArea[2], afFocusArea[3], afFocusArea[4], 1,
+               DefaultDelegates.POINTTYPE_AF_FOCUS_BOX, "Focus area")
+      FocusInfo.focusPointsDetected = true
     end
   end
 
-  -- draw frame around focus area (whose center is identical to AFPointSelected)
-  if afFocusArea[3] ~= "0" and afFocusArea[4] ~= "0" then
-    addFrame(afFrameSize[1], afFrameSize[2],
-             afFocusArea[1], afFocusArea[2], afFocusArea[3], afFocusArea[4], 1,
-             DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_DOT, "Focus area")
-    FocusInfo.focusPointsDetected = true
-    end
-  end
   -- if FocusArea is empty, fall back to the old Olympus method - AfPointSelected
   if not FocusInfo.focusPointsDetected then
+
     local focusPoint = findValue(metaData, OlympusDelegates.metaKeyAfPointSelected)
     if focusPoint and (focusPoint ~= "") and (focusPoint ~= "0 0") and (focusPoint ~= "undef undef undef undef") then
+
       -- extract (x,y) point values (rational numbers in range 0..1)
       local focusX = get_nth_Word(focusPoint, 1, " ")
       local focusY = get_nth_Word(focusPoint, 2, " ")
+
       -- transform the values into pixels
       local x = math.floor(tonumber(orgPhotoWidth)  * tonumber(focusX))
       local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY))
+
       Log.logInfo("Olympus", string.format("Focus point detected at [x=%s, y=%s]", x, y))
       FocusInfo.focusPointsDetected = true
+
       -- return the focus point, visualized according to the plugin settings
       local point = DefaultPointRenderer.createFocusFrame(x, y)
       table.insert(pointsTable.points, point.points[1])
-  else
-    Log.logWarn("Olympus",
+
+    else
+      Log.logWarn("Olympus",
        string.format("Neither '%s' nor '%s' contain valid information about focus points",
          OlympusDelegates.metaKeyAFFocusArea, OlympusDelegates.metaKeyAfPointSelected))
     end
   end
+
   --[[ We could add more faces but the number of yellow boxes look way too confusing!
   -- Add face detection frame to the table, if any
   if pointsTable then
@@ -303,30 +312,50 @@ end
 function getOlympusAfPoints(photo, metaData)
 
   local focusPoint, focusAreas
-
   local pointsTable = {
     pointTemplates = DefaultDelegates.pointTemplates,
     points = {}
   }
-
-
-
 
   -- Get photo dimensions for proper scaling
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
 
   -- Look for focus point information: available on MFT and E-system models starting with E-420
   focusPoint = findValue(metaData, OlympusDelegates.metaKeyAfPointSelected)
-  if focusPoint and (focusPoint ~= "") and (focusPoint ~= "0 0") and (focusPoint ~= "undef undef undef undef") then
-    -- extract (x,y) point values (rational numbers in range 0..1)
-    local focusX = get_nth_Word(focusPoint, 1, " ")
-    local focusY = get_nth_Word(focusPoint, 2, " ")
 
-    -- transform the values into pixels
+  if focusPoint and (focusPoint ~= "") and (focusPoint ~= "0 0") and (focusPoint ~= "undef undef undef undef") then
+
+    local focusX, focusY
+    if string.find(focusPoint, "%%") then
+      -- for some reason, exiftool.config has not been considered -> parse standard format for this tag
+      Log.logWarn("Olympus", string.format(
+        "Exiftool.config not found. Use standard format for '%s'", OlympusDelegates.metaKeyAfPointSelected))
+      focusX, focusY = string.match(focusPoint, OlympusDelegates.metaKeyAfPointSelectedPattern)
+      if not (focusX and focusY) then
+        Log.logError("Olympus", "Error at extracting x/y positions from focus point tag")
+        return nil
+      else
+        focusX = tonumber(focusX) / 100
+        focusY = tonumber(focusY) / 100
+      end
+    else
+      -- extract (x,y) point values (rational numbers in range 0..1)
+      focusX = get_nth_Word(focusPoint, 1, " ")
+      focusY = get_nth_Word(focusPoint, 2, " ")
+    end
+
+    if not (focusX and focusY) then
+      Log.logError("Olympus",
+        string.format('Could not extract (x,y) coordinates from "%s" tag', Olympus.metaKeyAfPointPosition))
+      return nil
+    end
+
+    -- transform the values into (integer) pixels
     local x = math.floor(tonumber(orgPhotoWidth)  * tonumber(focusX))
     local y = math.floor(tonumber(orgPhotoHeight) * tonumber(focusY))
 
     Log.logInfo("Olympus", string.format("Focus point detected at [x=%s, y=%s]", x, y))
+
     FocusInfo.focusPointsDetected = true
 
     -- return the focus point, visualized according to the plugin settings
@@ -339,60 +368,62 @@ function getOlympusAfPoints(photo, metaData)
 
       if string.lower(focusAreas) ~= "none" then
 
-    local function split_exact(str, delimiter)
-      local result = {}
-      local from = 1
-      local delim_from, delim_to = string.find(str, delimiter, from)
-      while delim_from do
-        local part = string.sub(str, from, delim_from - 1)
-        table.insert(result, part)
-        from = delim_to + 1
-        delim_from, delim_to = string.find(str, delimiter, from)
-      end
-      table.insert(result, string.sub(str, from))
-      return result
-    end
+        local function split_exact(str, delimiter)
+          local result = {}
+          local from = 1
+          local delim_from, delim_to = string.find(str, delimiter, from)
+          while delim_from do
+            local part = string.sub(str, from, delim_from - 1)
+            table.insert(result, part)
+            from = delim_to + 1
+            delim_from, delim_to = string.find(str, delimiter, from)
+          end
+          table.insert(result, string.sub(str, from))
+          return result
+        end
 
-    local afAreas = split_exact(focusAreas, ", ")
+        local afAreas = split_exact(focusAreas, ", ")
 
-    -- loop over all elements in table
-    for i = 1, #afAreas, 1 do
+        -- loop over all elements in table
+        for i = 1, #afAreas, 1 do
 
-      -- extract coordinates of top-left and bottom-right corner points (coordinates range from 0 to 255)
-      local xTL, yTL, xBR, yBR = string.match(afAreas[i], OlympusDelegates.metaKeyAfAreaPattern)
-      if not (xTL and yTL and xBR and yBR) then
-        Log.logError("Olympus", "Error at extracting (x,y) position of focus area: ".. afAreas[i])
-      else
-        -- transform the byte values 0..255 into pixel coordinates
+          -- extract coordinates of top-left and bottom-right corner points (coordinates range from 0 to 255)
+          local xTL, yTL, xBR, yBR = string.match(afAreas[i], OlympusDelegates.metaKeyAfAreaPattern)
+          if not (xTL and yTL and xBR and yBR) then
+            Log.logError("Olympus", "Error at extracting (x,y) position of focus area: ".. afAreas[i])
+          else
+            -- transform the byte values 0..255 into pixel coordinates
             xTL = tostring(math.floor(tonumber(orgPhotoWidth)   * tonumber(xTL)/256))
             yTL = tostring(math.floor(tonumber(orgPhotoHeight)  * tonumber(yTL)/256))
             xBR = tostring(math.floor(tonumber(orgPhotoWidth)   * tonumber(xBR)/256))
             yBR = tostring(math.floor(tonumber(orgPhotoHeight)  * tonumber(yBR)/256))
 
-        if (xTL < xBR) and (yTL < yBR) then
+            if (xTL < xBR) and (yTL < yBR) then
 
-          FocusInfo.focusPointsDetected = true
-          Log.logInfo("Olympus", string.format(
-           "Focus area detected at [x1=%s, y1=%s, x2=%s, y2=%s]", xTL, yTL,xBR, yBR))
+              FocusInfo.focusPointsDetected = true
+              Log.logInfo("Olympus", string.format(
+               "Focus area detected at [x1=%s, y1=%s, x2=%s, y2=%s]", xTL, yTL,xBR, yBR))
 
-          table.insert(pointsTable.points, {
-            pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
-            x = xTL + (xBR - xTL)/2,
-            y = yTL + (yBR - yTL)/2,
-            width  = xBR - xTL,
-            height = yBR - yTL,
-          })
-        else
-          Log.logError("Olympus", string.format(
-           "Invalid focus area detected at [x1=%s, y1=%s, x2=%s, y2=%s]", xTL, yTL,xBR, yBR))
+              table.insert(pointsTable.points, {
+                pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX,
+                x = xTL + (xBR - xTL)/2,
+                y = yTL + (yBR - yTL)/2,
+                width  = xBR - xTL,
+                height = yBR - yTL,
+              })
+            else
+              Log.logError("Olympus", string.format(
+               "Invalid focus area detected at [x1=%s, y1=%s, x2=%s, y2=%s]", xTL, yTL,xBR, yBR))
+            end
+          end
         end
-      end
-    end
+
       else
         Log.logWarn("Olympus",
           string.format("Tag '%s' has no information on focus areas",
             OlympusDelegates.metaKeyAfAreas, focusAreas))
       end
+
     else
       -- at least one tag must have information to continue
       Log.logWarn("Olympus",
@@ -445,6 +476,14 @@ function OlympusDelegates.addFaces(photo, metaData, pointsTable)
     end
 
     faceDetectArea = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFaceDetectArea)
+    if string.find(faceDetectArea, "Binary data") then
+      -- for some reason, exiftool.config has not been considered -> extra call to exiftool to read binary data
+      Log.logWarn("Olympus", string.format(
+        "Exiftool.config not found. Need extra call to ExifTool to retrieve binary data for '%s'",
+        OlympusDelegates.metaKeyFaceDetectArea))
+      faceDetectArea = ExifUtils.getBinaryValue(photo, OlympusDelegates.metaKeyFaceDetectArea)
+    end
+
     if faceDetectArea then
       faceDetectArea = split (faceDetectArea, " ")
 
@@ -535,6 +574,13 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
         end
       end
 
+    elseif (key == OlympusDelegates.metaKeyDigitalZoomRatio) then
+      if (value ~= "0") and (value ~= "1")  then
+        props[key] = value .. "x"
+      else
+        props[key] = OlympusDelegates.metaValueNA
+      end
+
     else
       -- everything else is the default case!
       props[key] = value
@@ -585,24 +631,29 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
   }
 
   -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
-  if string.sub(props[key], 1, 4) == "S-AF" then
-    return f:column{fill = 1, spacing = 2, result,
---    OlympusDelegates.addInfo("Eye Priority",     OlympusDelegates.metaKeyAfPointDetails, props, metaData),
-      OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData),
-      OlympusDelegates.addInfo("AF Search",        OlympusDelegates.metaKeyAfSearch,       props, metaData),
-    }
-  elseif string.sub(props[key], 1, 4) == "C-AF" then
-    return f:column{fill = 1, spacing = 2, result,
---    OlympusDelegates.addInfo("Eye Priority",     OlympusDelegates.metaKeyAfPointDetails, props, metaData),
-      OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData),
-      OlympusDelegates.addInfo("CAF Sensitivity",  OlympusDelegates.metaKeyCafSensitivity, props, metaData),
-      OlympusDelegates.addInfo("AF Search",        OlympusDelegates.metaKeyAfSearch,       props, metaData),
-    }
+  if key == OlympusDelegates.metaKeyFocusMode then
+    local focusMode = props[key]:match("^(.-[- ]AF)")
+    if focusMode == "S-AF" or focusMode == "Single AF" then
+      return f:column{fill = 1, spacing = 2, result,
+  --    OlympusDelegates.addInfo("Eye Priority",     OlympusDelegates.metaKeyAfPointDetails, props, metaData),
+        OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData),
+        OlympusDelegates.addInfo("AF Search",        OlympusDelegates.metaKeyAfSearch,       props, metaData),
+      }
+    elseif focusMode == "C-AF" or focusMode == "Continuous AF" then
+      return f:column{fill = 1, spacing = 2, result,
+  --    OlympusDelegates.addInfo("Eye Priority",     OlympusDelegates.metaKeyAfPointDetails, props, metaData),
+        OlympusDelegates.addInfo("Release Priority", OlympusDelegates.metaKeyAfPointDetails, props, metaData),
+        OlympusDelegates.addInfo("CAF Sensitivity",  OlympusDelegates.metaKeyCafSensitivity, props, metaData),
+        OlympusDelegates.addInfo("AF Search",        OlympusDelegates.metaKeyAfSearch,       props, metaData),
+      }
+    end
+
   else
     -- add row as composed
     return result
   end
 end
+
 
 --[[
   #TODO
@@ -692,7 +743,7 @@ end
 function OlympusDelegates.manualFocusUsed(_photo, metaData)
   local focusMode = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFocusMode)
   Log.logInfo("Olympus",
-    string.format("Focus mode tag '%s' found: %s",
+    string.format("Tag '%s' found: %s",
       OlympusDelegates.metaKeyFocusMode, focusMode))
   if focusMode and (focusMode == "MF; MF" or focusMode == "MF") then
     return true
@@ -700,6 +751,22 @@ function OlympusDelegates.manualFocusUsed(_photo, metaData)
   return false
 end
 
+
+--[[
+  @@public table function OlympusDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  -- if any, otherwise return an empty column
+--]]
+function OlympusDelegates.getImageInfo(_photo, props, metaData)
+  local f = LrView.osFactory()
+  local imageInfo
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    OlympusDelegates.addInfo("Digital Zoom", OlympusDelegates.metaKeyDigitalZoomRatio, props, metaData),
+  }
+  return imageInfo
+end
 
 --[[
   @@public table function OlympusDelegates.getCameraInfo(table photo, table props, table metaData)
