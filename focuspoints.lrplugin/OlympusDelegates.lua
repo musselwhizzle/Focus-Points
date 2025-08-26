@@ -287,6 +287,10 @@ function getOMDSAfPoints(photo, metaData)
       Log.logWarn("Olympus",
        string.format("Neither '%s' nor '%s' contain valid information about focus points",
          OlympusDelegates.metaKeyAFFocusArea, OlympusDelegates.metaKeyAfPointSelected))
+      local afSearch = findValue(metaData, OlympusDelegates.metaKeyAfSearch)
+      if afSearch and afSearch ~= "Ready" then
+        Log.logWarn("Olympus", "Autofocus operations not successful, no confirmation received (green light or beep)")
+      end
     end
   end
 
@@ -432,6 +436,13 @@ function getOlympusAfPoints(photo, metaData)
     end
   end
 
+  -- If not focus points have been found, check status of AF operations
+  if not FocusInfo.focusPointsDetected then
+    local afSearch = findValue(metaData, OlympusDelegates.metaKeyAfSearch)
+    if afSearch and afSearch ~= "Ready" then
+      Log.logWarn("Olympus", "Autofocus operations not successful, no confirmation received (green light or beep)")
+    end
+  end
   -- Add face detection frames, if any
   if pointsTable then
     OlympusDelegates.addFaces(photo, metaData, pointsTable)

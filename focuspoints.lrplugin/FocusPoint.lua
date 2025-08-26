@@ -163,7 +163,7 @@ local function showDialog()
         -- Open main window
         Log.logInfo("FocusPoint", "Present dialog and information")
 
---        Log.logInfo("Profiling", Debug.profileResults ())
+
 
           local f = LrView.osFactory()
 
@@ -177,21 +177,39 @@ local function showDialog()
           border_enabled = false, -- optionally suppress borders
           immediate = true,
           validate = function(view, value)
-            local key = string.sub(value, -1) -- look at the last input
-            if not key or key == lastKey
-              then return true
-            else
-              key = string.lower(key)
-            end
+            local key = string.sub(value, -1) -- look at the last char entered
+            if key and key ~= "" and key ~= lastKey then
             lastKey = key
-            if key == "x" or key == "q"  or (MAC_ENV and key == ".") then   -- Exit
+              -- check if last input is a shortcut and if so, trigger assigned action
+              if string.find(FocusPointPrefs.kbdShortcutsExit, key, 1, true) or (MAC_ENV and key == ".") then
               LrDialogs.stopModalWithResult(view, "ok")
-            elseif key == " " or key == "+" or key == "n" then              -- Next image
+
+              -- next image
+              elseif string.find(FocusPointPrefs.kbdShortcutsNext, key, 1, true) then
               current = (current % #selectedPhotos) + 1
               LrDialogs.stopModalWithResult(view, "next")
-            elseif key == "-" or key == "p" then                            -- Previous image
+
+              -- previous image
+              elseif string.find(FocusPointPrefs.kbdShortcutsPrev, key, 1, true) then
               current =  (current - 2) % #selectedPhotos + 1
               LrDialogs.stopModalWithResult(view, "previous")
+              -- open user manual
+              elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, key, 1, true) then
+                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
+              -- troubleshooting
+              elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, key, 1, true) then
+                local statusCode = FocusInfo.getStatusCode()
+                if statusCode > 1 then
+                  LrTasks.startAsyncTask(function()
+                    LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
+                  end)
+                end
+              -- check log
+              elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, key, 1, true) then
+                if prefs.loggingLevel ~= "NONE" then
+                  openFileInApp(Log.getFileName())
+                end
+              end
             end
             return true
           end,
@@ -225,7 +243,7 @@ local function showDialog()
                 title = buttonNextImage,
               enabled = #selectedPhotos > 1,
               tooltip = "Load next image from selection\nKeyboard shortcut: space bar, '+' or 'n'",
-              action = function(button)
+              action = Debug.showErrors(function(button)
                   -- Prevent multiple executions - known LrC SDK quirk!
                   if props.clicked then return end
                   props.clicked = true
@@ -234,7 +252,7 @@ local function showDialog()
                   current = (current % #selectedPhotos) + 1
                   LrDialogs.stopModalWithResult(button, "next")
                 end
-              end
+              end)
               },
             f:spacer{fill_horizontal = 1},
             f:static_text {
@@ -243,9 +261,7 @@ local function showDialog()
               tooltip = "Click to open user documentation",
               immediate = true,
               mouse_down = function(_view)
-                import 'LrTasks'.startAsyncTask(function()
-                    LrHttp.openUrlInBrowser("https://github.com/capricorn8/Focus-Points/blob/master/docs/Focus%20Points.md")
-                end)
+                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(urlUserManual) end)
               end,
             },
           f:spacer { width = 20 },    -- space before 'Exit' button

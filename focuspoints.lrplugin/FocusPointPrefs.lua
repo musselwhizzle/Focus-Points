@@ -39,11 +39,20 @@ FocusPointPrefs.focusBoxSizeMedium = 2
 FocusPointPrefs.focusBoxSizeLarge  = 3
 FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 
+-- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
+-- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Focus%20Points.md"
 FocusPointPrefs.urlTroubleShooting = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Troubleshooting_FAQ.md"
+-- Keyboard shortcut definitions
+FocusPointPrefs.kbdShortcutsPrev            = "-pP"
+FocusPointPrefs.kbdShortcutsNext            = "+ nN"
+FocusPointPrefs.kbdShortcutsCheckLog        = "lL"
+FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
+FocusPointPrefs.kbdShortcutsUserManual      = "uUmM"
+FocusPointPrefs.kbdShortcutsExit            = "xX"
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()

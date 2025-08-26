@@ -424,7 +424,6 @@ function FocusInfo.createInfoView(photo, props)
                   FocusInfo.addInfo("Model"            , FocusInfo.metaKeyCameraModel, photo, props),
                   FocusInfo.addInfo("Lens"             , FocusInfo.metaKeyLens, photo, props),
                   FocusInfo.addInfo("Focal Length"     , FocusInfo.metaKeyFocalLength, photo, props),
---                FocusInfo.addInfo("Focal Length 35mm", FocusInfo.metaKeyFocalLength35mm, photo, props),
                   FocusInfo.addInfo("Exposure"         , FocusInfo.metaKeyExposure, photo, props),
                   FocusInfo.addInfo("ISO"              , FocusInfo.metaKeyIsoSpeedRating, photo, props),
                   FocusInfo.addInfo("Exposure Bias"    , FocusInfo.metaKeyExposureBias, photo, props),
