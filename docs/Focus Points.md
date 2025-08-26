@@ -12,7 +12,7 @@ Focus Points Plugin for Lightroom Classic
 *  [Installation](#21-installation)
 *  [Configuration and Settings](#22-configuration-and-settings)
 *  [Focus Point Viewer](#23-focus-point-viewer)<br>
-   - [User Interface](#user-interface), Information Section, User Messages, Plugin Status, [Keyboard Shortcuts](#keyboard-shortcuts) 
+   - [User Interface](#user-interface), [Information Section](#information-section), [User Messages](#user-interface), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
 *  [Metadata Viewer](#24-metadata-viewer)
 
 
@@ -191,7 +191,7 @@ _File → Plug-in Extras → Focus Point_
   
 
 
-### User Interface ###
+### User Interface
 
 The user interface  is divided into two main parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
 
@@ -211,14 +211,14 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](#22-configuration-and-settings).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](#22-configuration-and-settings).<br>
-<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual]() for a detailed explanation.
+<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters for a detailed explanation.
 
 
 \* Tech Note: Windows and macOS use different rendering implementations, so the display of focus points and other elements looks different on each operating system. On macOS, focus points and face/object detection and cropping frames are indicated only by the corners, while on Windows, all frames have solid lines. This is due to the fact that the Lightroom SDK methods for overlaying information (frame corners and center points) on an image work on macOS but not on Windows. On Windows, this is done by ImageMagick (mogrify), which draws rectangles with solid lines.
 
 Availability of the same method(s) on both platforms (ideally chosen by the user) would be desirable, but this is challenging and requires significant effort.
 
-### Information section ###
+### Information section
 
 The text pane right to the photo view comprises three groups:
 - Image information
@@ -236,7 +236,7 @@ A link to the User Guide (this document) provides quick and easy access to the o
 The window can be closed by clicking `Exit` or pressing \<Enter> or \<Esc> or \<Space>.
 <br><br>
 
-#### Depth of Field, Hyperfocal Distance ####
+#### Depth of Field, Hyperfocal Distance
 
 Most camera makers include subject or focus distance information in makernotes. Sony, Fuji and Pentax do not, so this section is not relevant to images taken with their cameras.
 
@@ -251,7 +251,7 @@ Technical note: ExifTool creates pseudo tags `DepthOfField` and `HyperfocalDista
 Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8 the eyes will be outside the sharp zone if the shot is focused on the front whiskers.
 <br>
 
-### User Messages ###
+### User Messages###
 
 The first line of text in the `Focus Information` section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
@@ -272,7 +272,7 @@ You can also access this information from the plugin window by clicking the link
 <img src="../screens/BasicOperation6.jpg" alt="Basic Operation 6" style="width: 750px;"/>
 
 
-### Plugin Status ###
+### Plugin Status###
 
 If errors or warnings were encountered while processing the autofocus metadata, a status message is displayed at the bottom of the text pane. To the right of this message, you can click the `Check log` button to open the logfile for more details. The logfile contains detailed information about the metadata processing, such as relevant tags found (or not found).<br>
 See also section "Logging" under [Configuration and Settings](#22-configuration-and-settings).
@@ -285,7 +285,7 @@ There are two warnings and one error:
 The tag `CameraSettingsVersion` has not been found which means that this file does not contain a makernotes section with AF information (which is required for the plugin to work). The image file was not created in-camera but by an application. In this case, it is a JPG file exported from (and created! by) Lightroom.
 
 
-### Keyboard Shortcuts ###
+### Keyboard Shortcuts
 
 To simplify the operation of the plugin, a number of keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse:
 
