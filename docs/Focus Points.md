@@ -11,6 +11,8 @@ Focus Points Plugin for Lightroom Classic
 
 *  [Installation](#21-installation)
 *  [Configuration and Settings](#22-configuration-and-settings)
+   - [Screen Scaling](#screen-scaling), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check) 
+
 *  [Focus Point Viewer](#23-focus-point-viewer)<br>
    - [User Interface](#user-interface), [Information Section](#information-section), [User Messages](#user-interface), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
 *  [Metadata Viewer](#24-metadata-viewer)
@@ -122,7 +124,7 @@ Selecting Focus Point Viewer in the list of installed plugins (_Library → File
 
 <br>
 
-**Screen Scaling**
+#### Screen Scaling
 
  _Display scaling factor_
 Windows only. Default setting: `Auto`
@@ -132,7 +134,7 @@ The drawing routines used on Windows are not aware of any display scale factor t
  The `Auto` setting causes the plugin to scale its windows in sync with a system scale factor. Optionally, a predefined fixed scale value can be selected, which avoids a registry access via an external command (REG.EXE) on each call of the plugin. The meaning of the predefined values 100%, 125%, 150%, etc. is the same as in the Windows Settings dialog. I.e. to undo a system-wide zoom of 150%, the same value '150%' must be selected from the drop-down list.
 
 
-**Viewing Options**
+#### Viewing Options
 
 Default settings: `Red, Medium`
 
@@ -141,7 +143,7 @@ Depending on the camera maker and model, focus points may have a dimension (widt
 
 _Color of in-focus points_<br> You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
 
-**Logging**
+#### Logging
 
 Default setting: `Auto`
 
@@ -167,7 +169,7 @@ The logging mechanism provides a fine-grained hierarchy of levels at which infor
 <u>Hint</u>: `Auto` logging will start on an empty logfile for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.
 
 
-**Updates**
+#### Update Check
 
 During operation, the plugin checks if an updated version is available for download.
 If an update is available, it will be highlighted, and you can click the download button to go to the website. To install the update, follow the steps in [Installation](#21-installation) and reload the plugin.
