@@ -181,13 +181,17 @@ If an update is available, it will also be displayed in the status area of the F
 <br>
 
 ### 2.3 Focus Point Viewer
-Once the plugin is installed, you can run it with one or more photos selected:
+Once the plugin is installed, you can run it with one or more photos selected<sup>1</sup>:
 
 Library module:<br>
 _Library → Plug-in Extras → Focus Point_
 
 Develop module:<br>
 _File → Plug-in Extras → Focus Point_
+
+<sup>1</sup> If you want to run the plugin on a series of photos, you need to select those photos in Lightroom _before_ running the plugin. Technically, it is no big deal to support browsing through the photos visible in the active source (collection, folder, etc.) using the "Next" and "Previous" buttons, starting from a single photo. However, the LR SDK does not provide a way to retrieve these images in the order in which they are currently sorted and displayed in Lightroom. Because this can lead to a confusing user experience, it is not supported.
+  
+
 
 ### User Interface ###
 
