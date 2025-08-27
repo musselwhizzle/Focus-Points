@@ -52,7 +52,9 @@ Upcoming Release
     * Consistent layout of controls in single and multi-image operation modes [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
     * Improved user interaction when no focus points can be found [#272](https://github.com/musselwhizzle/Focus-Points/issues/272)
     * Keyboard shortcuts for plugin operation  [#271](https://github.com/musselwhizzle/Focus-Points/issues/271)
-     
+  * Metadata display:
+    * Display effective focal length for images captured in crop mode [#252](https://github.com/musselwhizzle/Focus-Points/issues/252)
+ 
      
 * **Bugfixes**
   * Metadata table not properly displayed when develop settings are written to image file [#257](https://github.com/musselwhizzle/Focus-Points/issues/257)
