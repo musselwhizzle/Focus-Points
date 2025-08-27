@@ -167,7 +167,7 @@ local function showDialog()
 
           local f = LrView.osFactory()
 
-        local lastKey = nil
+        local lastKey
         props.text = ""
           props.clicked = false
         local kbdHandler = f:edit_field {

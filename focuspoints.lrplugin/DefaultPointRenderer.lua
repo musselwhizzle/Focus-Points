@@ -155,8 +155,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
    Table format: { focusPointType, x, y, width, height }
   --]]
 
-  FocusInfo.focusPointsDetected    = false
-  FocusInfo.severeErrorEncountered = false
+  FocusInfo.initialize()
 
   FocusInfo.cameraMakerSupported = DefaultPointRenderer.funcGetAfPoints ~= nil
   if not FocusInfo.cameraMakerSupported then

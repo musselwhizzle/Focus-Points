@@ -61,7 +61,6 @@ NikonDelegates.metaKeySubjectMotion           = "Subject Motion"
 NikonDelegates.metaKey3DTrackingFaceDetection = "Three-D Tracking Face Detection"
 NikonDelegates.metaKey3DTrackingWatchArea     = "Three-D Tracking Watch Area"
 NikonDelegates.metaKeyAfActivation            = "AF Activation"
-NikonDelegates.metaKeyAfCropHiSpeed           = "Crop Hi Speed"
 NikonDelegates.metaKeyAfDetectionMethod       = "AF Detection Method"
 NikonDelegates.metaKeyContrastDetect          = "Contrast Detect AF"
 NikonDelegates.metaKeyPhaseDetect             = "Phase Detect AF"
@@ -412,6 +411,7 @@ function NikonDelegates.applyCAFCrop(focusPoints, metaData)
       -- photo taken in native format - nothing to do
       return
     else
+      FocusInfo.cropMode = true
       -- get crop dimensions
       local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = NikonDelegates.getCropType(cropHiSpeed)
       -- apply crop transformation on all entries in focusPointsMap
@@ -446,6 +446,7 @@ function NikonDelegates.applyPDAfCrop(focusPoints, metaData)
       -- photo taken in native format - nothing to do
       return
     else
+      FocusInfo.cropMode = true
       -- get crop dimensions
       local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = NikonDelegates.getCropType(cropHiSpeed)
       -- apply crop transformation on all entries in focusPointsMap
@@ -487,7 +488,7 @@ function NikonDelegates.addInfo(title, key, props, metaData)
     local value = ExifUtils.findValue(metaData, key)
     if not value then
       props[key] = NikonDelegates.metaValueNA
-    elseif (key == NikonDelegates.metaKeyAfCropHiSpeed) then
+    elseif (key == NikonDelegates.metaKeyCropHiSpeed) then
       props[key] = NikonDelegates.getCropType(value)
     else
       props[key] = value
@@ -585,7 +586,7 @@ function NikonDelegates.getImageInfo(_photo, props, metaData)
   imageInfo = f:column {
     fill = 1,
     spacing = 2,
-    NikonDelegates.addInfo("Crop Mode", NikonDelegates.metaKeyAfCropHiSpeed, props, metaData),
+    NikonDelegates.addInfo("Crop Mode", NikonDelegates.metaKeyCropHiSpeed, props, metaData),
   }
   return imageInfo
 end
@@ -624,8 +625,6 @@ function NikonDelegates.getFocusInfo(_photo, props, metaData)
       NikonDelegates.addInfo("Focus Result",           NikonDelegates.metaKeyFocusResult,         props, metaData),
       NikonDelegates.addInfo("AF Area Mode",           NikonDelegates.metaKeyAfAreaMode,          props, metaData),
       NikonDelegates.addInfo("AF Detection Method",    NikonDelegates.metaKeyAfDetectionMethod,   props, metaData),
---    NikonDelegates.addInfo("Phase Detect",           NikonDelegates.metaKeyPhaseDetect,         props, metaData),
---    NikonDelegates.addInfo("Contrast Detect",        NikonDelegates.metaKeyContrastDetect,      props, metaData),
       NikonDelegates.addInfo("Subject Detection",      NikonDelegates.metaKeySubjectDetection,    props, metaData),
       NikonDelegates.addInfo("Subject Motion",         NikonDelegates.metaKeySubjectMotion,       props, metaData),
       NikonDelegates.addInfo("3D-Tracking Watch Area", NikonDelegates.metaKey3DTrackingWatchArea, props, metaData),

@@ -37,6 +37,7 @@ FocusInfo.manualFocusUsed           = false
 FocusInfo.focusPointsDetected       = false
 FocusInfo.severeErrorEncountered    = false
 
+FocusInfo.cropMode                  = false
 FocusInfo.metaKeyFileName           = "fileName"
 FocusInfo.metaKeyDimensions         = "dimensions"
 FocusInfo.metaKeyCroppedDimensions  = "croppedDimensions"
@@ -99,6 +100,16 @@ FocusInfo.status = {
 local prefs = LrPrefs.prefsForPlugin( nil )
 
 local linkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
+--[[
+  @@public FocusInfo.initialize()
+   ----
+   Reset variables that control certain aspects of the info section generation
+--]]
+function FocusInfo.initialize()
+  FocusInfo.cropMode               = false
+  FocusInfo.focusPointsDetected    = false
+  FocusInfo.severeErrorEncountered = false
+end
 
 --[[
   @@public table, table, table FocusInfo.getMakerInfo(table photo, table props)
@@ -370,6 +381,10 @@ function FocusInfo.addInfo(title, key, photo, props)
     return FocusInfo.emptyRow()
   end
 
+  if (key == FocusInfo.metaKeyFocalLength35mm) and not FocusInfo.cropMode then
+    -- we will only display this entry for FF bodies used in DX or APS-C mode
+    return FocusInfo.emptyRow()
+  end
   -- return the row to be added
   return f:row {
       f:column { f:static_text { title = title .. ":", font = "<system>" } },
@@ -424,6 +439,7 @@ function FocusInfo.createInfoView(photo, props)
                   FocusInfo.addInfo("Model"            , FocusInfo.metaKeyCameraModel, photo, props),
                   FocusInfo.addInfo("Lens"             , FocusInfo.metaKeyLens, photo, props),
                   FocusInfo.addInfo("Focal Length"     , FocusInfo.metaKeyFocalLength, photo, props),
+                  FocusInfo.addInfo("FL Equivalent Crop Mode", FocusInfo.metaKeyFocalLength35mm, photo, props),
                   FocusInfo.addInfo("Exposure"         , FocusInfo.metaKeyExposure, photo, props),
                   FocusInfo.addInfo("ISO"              , FocusInfo.metaKeyIsoSpeedRating, photo, props),
                   FocusInfo.addInfo("Exposure Bias"    , FocusInfo.metaKeyExposureBias, photo, props),
