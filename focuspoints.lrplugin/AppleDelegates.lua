@@ -27,8 +27,8 @@ require "Log"
 
 AppleDelegates = {}
 
--- Tag which indicates that makernotes / AF section is present
-AppleDelegates.metaKeyMakerNoteVersion     = "Maker Note Version"
+-- Tag indicating that makernotes / AF section exists
+AppleDelegates.metaKeyAfInfoSection        = "Maker Note Version"
 
 -- AF-relevant tags
 AppleDelegates.metaKeySubjectArea          = "Subject Area"
@@ -42,7 +42,7 @@ AppleDelegates.metaKeyImageHeight          = "Image Height"
 AppleDelegates.metaKeyExifImageWidth       = "Exif Image Width"
 AppleDelegates.metaKeyExifImageHeight      = "Exif Image Height"
 
--- Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
 AppleDelegates.metaKeyCameraType           = "Camera Type"
 AppleDelegates.metaKeyImageCaptureType     = "Image Capture Type"
 AppleDelegates.metaKeyOISMode              = "OIS Mode"
@@ -160,7 +160,7 @@ function AppleDelegates.addInfo(title, key, props, metaData)
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
     if (value == nil) then
-      props[key] = AppleDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
     else
       -- everything else is the default case!
       props[key] = value
@@ -174,7 +174,7 @@ function AppleDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= AppleDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
@@ -215,7 +215,7 @@ function AppleDelegates.makerNotesFound(photo, metaData)
 
   if generation >= 6 then
     -- 'Maker Note' tag exists only in iPhone 6 and later models
-    tag = AppleDelegates.metaKeyMakerNoteVersion
+    tag = AppleDelegates.metaKeyAfInfoSection
   else
     -- at least iPhone 5 has 'Subject Area' tag in EXIF:EXIFIfd section
     tag = AppleDelegates.metaKeySubjectArea

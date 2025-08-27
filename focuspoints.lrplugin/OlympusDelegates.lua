@@ -29,10 +29,10 @@ require "Log"
 
 OlympusDelegates = {}
 
--- Tag indicating that makernotes are present
-OlympusDelegates.metaKeyMakerNotes               = "Camera Settings Version"
+-- Tag indicating that makernotes / AF section exists
+OlympusDelegates.metaKeyAfInfoSection            = "Camera Settings Version"
 
--- AF relevant tags
+-- AF-relevant tags
 OlympusDelegates.metaKeyFocusMode                = "Focus Mode"
 OlympusDelegates.metaKeyCafSensitivity           = "CAF Sensitivity"
 OlympusDelegates.metaKeyAfSearch                 = "AF Search"
@@ -61,20 +61,16 @@ OlympusDelegates.metaKeyFaceDetectFrameSize      = "Face Detect Frame Size"
 OlympusDelegates.metaKeyMaxFaces                 = "Max Faces"
 OlympusDelegates.metaKeyAfEyePriority            = "Eye Priority"
 
--- Image and Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
 OlympusDelegates.metaKeyDriveMode                = "Drive Mode"
 OlympusDelegates.metaKeyStackedImage             = "Stacked Image Custom"
 OlympusDelegates.metaKeyImageStabilization       = "Image Stabilization"
 OlympusDelegates.metaKeyDigitalZoomRatio         = "Digital Zoom Ratio"
 
--- relevant metadata values
-OlympusDelegates.metaValueNA                     = "N/A"
+-- Relevant metadata values
 OlympusDelegates.metaKeyAfPointSelectedPattern   = "%((%d+)%%,(%d+)"
 OlympusDelegates.metaKeyAfAreaPattern            = "%((%d+),(%d+)%)%-%((%d+),(%d+)%)"
-
 OlympusDelegates.areaDetectStatus                = ""
-
--- to handle maker specific differences
 OlympusDelegates.makerOlympus                    = "olympus"
 OlympusDelegates.makerOMDS                       = "om digital solutions"
 
@@ -443,6 +439,7 @@ function getOlympusAfPoints(photo, metaData)
       Log.logWarn("Olympus", "Autofocus operations not successful, no confirmation received (green light or beep)")
     end
   end
+
   -- Add face detection frames, if any
   if pointsTable then
     OlympusDelegates.addFaces(photo, metaData, pointsTable)
@@ -564,7 +561,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
   local value = ExifUtils.findValue(metaData, key)
 
     if not value then
-      props[key] = OlympusDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
 
     elseif (key == OlympusDelegates.metaKeyFocusMode) then
       -- special case: Focus Mode. Add MF if selected in settings
@@ -581,7 +578,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
       if value then
         props[key] = get_nth_Word(value, 4, ";")
         if not OlympusDelegates.facesDetected then
-          props[key] = OlympusDelegates.metaValueNA
+          props[key] = ExifUtils.metaValueNA
         end
       end
 
@@ -589,7 +586,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
       if (value ~= "0") and (value ~= "1")  then
         props[key] = value .. "x"
       else
-        props[key] = OlympusDelegates.metaValueNA
+        props[key] = ExifUtils.metaValueNA
       end
 
     else
@@ -737,10 +734,10 @@ end
   Returns whether the current photo has metadata with makernotes AF information included
 --]]
 function OlympusDelegates.makerNotesFound(_photo, metaData)
-  local result = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyMakerNotes)
+  local result = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyAfInfoSection)
   if not result then
     Log.logWarn("Olympus",
-      string.format("Tag '%s' not found", OlympusDelegates.metaKeyMakerNotes))
+      string.format("Tag '%s' not found", OlympusDelegates.metaKeyAfInfoSection))
   end
   return result ~= nil
 end

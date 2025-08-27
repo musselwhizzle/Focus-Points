@@ -46,6 +46,7 @@ FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwh
 -- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Focus%20Points.md"
 FocusPointPrefs.urlTroubleShooting = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Troubleshooting_FAQ.md"
+
 -- Keyboard shortcut definitions
 FocusPointPrefs.kbdShortcutsPrev            = "-pP"
 FocusPointPrefs.kbdShortcutsNext            = "+ nN"

@@ -38,6 +38,7 @@ FocusInfo.focusPointsDetected       = false
 FocusInfo.severeErrorEncountered    = false
 
 FocusInfo.cropMode                  = false
+
 FocusInfo.metaKeyFileName           = "fileName"
 FocusInfo.metaKeyDimensions         = "dimensions"
 FocusInfo.metaKeyCroppedDimensions  = "croppedDimensions"
@@ -52,7 +53,6 @@ FocusInfo.metaKeyIsoSpeedRating     = "isoSpeedRating"
 FocusInfo.metaKeyExposureBias       = "exposureBias"
 FocusInfo.metaKeyExposureProgram    = "exposureProgram"
 FocusInfo.metaKeyMeteringMode       = "meteringMode"
-FocusInfo.metaValueNA               = "N/A"
 
 FocusInfo.msgImageFileNotOoc        = "Image file was not created in-camera but modified by an application"
 
@@ -100,6 +100,7 @@ FocusInfo.status = {
 local prefs = LrPrefs.prefsForPlugin( nil )
 
 local linkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
+
 --[[
   @@public FocusInfo.initialize()
    ----
@@ -110,6 +111,7 @@ function FocusInfo.initialize()
   FocusInfo.focusPointsDetected    = false
   FocusInfo.severeErrorEncountered = false
 end
+
 
 --[[
   @@public table, table, table FocusInfo.getMakerInfo(table photo, table props)
@@ -368,7 +370,7 @@ function FocusInfo.addInfo(title, key, photo, props)
     if (result ~= nil) then
       props[key] = result
     else
-      props[key] = FocusInfo.metaValueNA
+      props[key] = ExifUtils.metaValueNA
     end
   end
 
@@ -376,7 +378,7 @@ function FocusInfo.addInfo(title, key, photo, props)
   populateInfo(key, props)
 
   -- Check if there is (meaningful) content to add
-  if not props[key] or props[key] == OlympusDelegates.metaValueNA then
+  if not props[key] or props[key] == ExifUtils.metaValueNA then
     -- we won't display any "N/A" entries - return empty row
     return FocusInfo.emptyRow()
   end
@@ -385,6 +387,7 @@ function FocusInfo.addInfo(title, key, photo, props)
     -- we will only display this entry for FF bodies used in DX or APS-C mode
     return FocusInfo.emptyRow()
   end
+
   -- return the row to be added
   return f:row {
       f:column { f:static_text { title = title .. ":", font = "<system>" } },

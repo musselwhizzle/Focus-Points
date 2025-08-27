@@ -108,7 +108,7 @@ else
     DefaultPointRenderer.funcMakerNotesFound = CanonDelegates.makerNotesFound
     DefaultPointRenderer.funcManualFocusUsed = CanonDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = CanonDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetImageInfo    = CanonDelegates.getImageInfo
     DefaultPointRenderer.funcGetCameraInfo   = CanonDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo    = CanonDelegates.getFocusInfo
 
@@ -162,7 +162,7 @@ else
     DefaultPointRenderer.funcMakerNotesFound = SonyDelegates.makerNotesFound
     DefaultPointRenderer.funcManualFocusUsed = SonyDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = SonyDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetImageInfo    = SonyDelegates.getImageInfo
     DefaultPointRenderer.funcGetCameraInfo   = SonyDelegates.getCameraInfo
     DefaultPointRenderer.funcGetFocusInfo    = SonyDelegates.getFocusInfo
 

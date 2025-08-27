@@ -27,10 +27,10 @@ require "Log"
 
 SonyDelegates = {}
 
--- Tag that indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
 SonyDelegates.metaKeyAfInfoSection = "Sony Model ID"
 
--- AF relevant tags
+-- AF-relevant tags
 SonyDelegates.metaKeyExifImageWidth              = "Exif Image Width"
 SonyDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 SonyDelegates.metaKeyAfFocusMode                 = "Focus Mode"
@@ -49,12 +49,10 @@ SonyDelegates.metaKeyAfSonyImageWidth            = "Sony Image Width"
 SonyDelegates.metaKeyAfSonyImageHeight           = "Sony Image Height"
 SonyDelegates.metaKeyAfPointsUsed                = "AF Points Used"
 
--- Image and Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
+SonyDelegates.metaKeyAPSCSizeCapture             = "APS-C Size Capture"
 SonyDelegates.metaKeySceneMode                   = "Scene Mode"
 SonyDelegates.metaKeyImageStabilization          = "Image Stabilization"
-
--- relevant metadata values
-SonyDelegates.metaValueNA                         = "N/A"
 
 
 --[[
@@ -267,8 +265,12 @@ function SonyDelegates.addInfo(title, key, props, metaData)
       -- type(key) == "table"
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
+
     if (value == nil) then
-      props[key] = SonyDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
+    elseif (key == SonyDelegates.metaKeyAPSCSizeCapture) and (value == "On") then
+      FocusInfo.cropMode = true
+      props[key] = "APS-C"
     else
       -- everything else is the default case!
       props[key] = value
@@ -282,7 +284,7 @@ function SonyDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= SonyDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
@@ -370,8 +372,14 @@ end
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function SonyDelegates.getImageInfo(_photo, _props, _metaData)
+function SonyDelegates.getImageInfo(_photo, props, metaData)
+  local f = LrView.osFactory()
   local imageInfo
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    SonyDelegates.addInfo("Crop Mode", SonyDelegates.metaKeyAPSCSizeCapture, props, metaData),
+  }
   return imageInfo
 end
 

@@ -25,6 +25,9 @@ require "Log"
 
 
 ExifUtils = {}
+
+ExifUtils.metaValueNA = "N/A"
+
 exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")

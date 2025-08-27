@@ -30,10 +30,12 @@ require "Log"
 
 FujifilmDelegates = {}
 
--- Tag that indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
+-- Note: The very first Fujifilm makernotes entry is "Version", but using a text-based approach
+--       to read ExifTool output this term is too generic. "Fuji Flash Mode" is a better choice.
 FujifilmDelegates.metaKeyAfInfoSection               = "Fuji Flash Mode"
 
--- AF relevant tags
+-- AF-relevant tags
 FujifilmDelegates.metaKeyExifImageWidth              = "Exif Image Width"
 FujifilmDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 FujifilmDelegates.metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
@@ -52,15 +54,12 @@ FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivit
 FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
 
--- Image and Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
 FujifilmDelegates.metaKeyCropMode                    = "Crop Mode"
 FujifilmDelegates.metaKeyDriveMode                   = "Drive Mode"
 FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
 FujifilmDelegates.metaKeySequenceNumber              = "Sequence Number"
 FujifilmDelegates.metaKeyImageStabilization          = "Image Stabilization"
-
--- relevant metadata values
-FujifilmDelegates.metaValueNA                        = "N/A"
 
 
 --[[
@@ -222,7 +221,7 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
     if (value == nil) then
-      props[key] = FujifilmDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
     else
       -- everything else is the default case!
       props[key] = value
@@ -236,7 +235,7 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= FujifilmDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
@@ -300,7 +299,9 @@ end
   Returns whether manual focus has been used on the given photo
 --]]
 function FujifilmDelegates.manualFocusUsed(_photo, metaData)
-  local focusMode = ExifUtils.findFirstMatchingValue(metaData, FujifilmDelegates.metaKeyFocusMode)
+  local focusMode, key = ExifUtils.findFirstMatchingValue(metaData, FujifilmDelegates.metaKeyFocusMode)
+  Log.logInfo("Fujifilm",
+    string.format("Tag '%s' found: %s", key, focusMode))
   return (focusMode == "Manual" or focusMode == "AF-M")
 end
 

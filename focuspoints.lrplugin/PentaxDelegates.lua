@@ -53,10 +53,12 @@ PentaxDelegates.supportedModels = {
     "k-3 mark iii monochrome",                                                  -- Pentax version 15
 }
 
--- Tag which indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
+-- Note: There is a "Pentax Version" tag, but it does not exist for pre-2008 models.
+--       "PictureMode" is exists for all Pentax models.
 PentaxDelegates.metaKeyAfInfoSection        = "Picture Mode"
 
--- AF relevant tags
+-- AF-relevant tags
 PentaxDelegates.metaKeyPentaxVersion        = "Pentax Version"
 PentaxDelegates.metaKeyFocusMode            = "Focus Mode"
 PentaxDelegates.metaKeyContrastDetect       = "Contrast-detect"
@@ -81,15 +83,14 @@ PentaxDelegates.metaKeyFirstFrameActionAFC  = "First Frame Action In AFC"
 PentaxDelegates.metaKeyActionAFCContinuous  = "Action In AFC Cont"
 
 
--- Image and Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
 PentaxDelegates.metaKeyExposureProgram      = "Exposure Program"
 PentaxDelegates.metaKeyPictureMode          = "Picture Mode"
 PentaxDelegates.metaKeyDriveMode            = "Drive Mode"
 PentaxDelegates.metaKeyShotNumber           = "Shot Number"
 PentaxDelegates.metaKeyShakeReduction       = "Shake Reduction"
 
--- relevant metadata values
-PentaxDelegates.metaValueNA                 = "N/A"
+-- Relevant metadata values
 PentaxDelegates.metaValueFaceDetection      = "Face Detection"
 
 
@@ -682,7 +683,7 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
       end
 
     elseif not value then
-      props[key] = PentaxDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
 
     elseif (key == PentaxDelegates.metaKeyPictureMode) then
       -- extract 'mode' part of PictureMode tag by removing the trailing 'EV steps' portion
@@ -692,7 +693,7 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
         props[key] = escape(pictureMode[1])
       else
         -- in case PictureMode is a duplicate of ExposureProgram we skip this entry
-        props[key] = PentaxDelegates.metaValueNA
+        props[key] = ExifUtils.metaValueNA
       end
 
     elseif (key == PentaxDelegates.metaKeyDriveMode) then

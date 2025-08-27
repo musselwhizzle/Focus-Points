@@ -34,10 +34,10 @@ NikonDelegates.supportedModels = {
     "z 5", "z 6", "z 6_2", "z6_3", "z 7", "z 7_2", "z 8", "z 9", "z 30", "z 50", "z50_2", "z f", "z fc",
 }
 
--- Tag which indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
 NikonDelegates.metaKeyAfInfoSection           = "AF Info 2 Version"
 
--- AF relevant tags
+-- AF-relevant tags
 NikonDelegates.metaKeyAfInfoVersion           = "AF Info 2 Version"
 NikonDelegates.metaKeyAfAreaXPosition         = "AF Area X Position"
 NikonDelegates.metaKeyAfAreaYPosition         = "AF Area Y Position"
@@ -73,9 +73,6 @@ NikonDelegates.metaKeyAfSPriority             = { "AF-S Priority Sel", "AF-S Pri
 -- Image and Camera Settings relevant tags
 NikonDelegates.metaKeyCropHiSpeed             = "Crop Hi Speed"
 NikonDelegates.metaKeyShootingMode            = "Shooting Mode"
-
--- relevant metadata values
-NikonDelegates.metaValueNA                    = "N/A"
 
 
 --[[
@@ -487,7 +484,7 @@ function NikonDelegates.addInfo(title, key, props, metaData)
   local function populateInfo(key)
     local value = ExifUtils.findValue(metaData, key)
     if not value then
-      props[key] = NikonDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
     elseif (key == NikonDelegates.metaKeyCropHiSpeed) then
       props[key] = NikonDelegates.getCropType(value)
     else
@@ -502,7 +499,7 @@ function NikonDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= NikonDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
@@ -571,6 +568,9 @@ end
 --]]
 function NikonDelegates.manualFocusUsed(_photo, metaData)
   local focusMode = ExifUtils.findValue(metaData, NikonDelegates.metaKeyFocusMode)
+  Log.logInfo("Nikon",
+    string.format("Tag '%s' found: %s",
+      NikonDelegates.metaKeyFocusMode, focusMode))
   return (focusMode == "Manual")
 end
 

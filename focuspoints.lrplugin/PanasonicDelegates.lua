@@ -38,10 +38,10 @@ require "Log"
 
 PanasonicDelegates = {}
 
--- Tag which indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
 PanasonicDelegates.metaKeyAfInfoSection = "Panasonic Exif Version"
 
--- AF relevant tags
+-- AF-relevant tags
 PanasonicDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 PanasonicDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 PanasonicDelegates.metaKeyAfPointPosition             = "AF Point Position"
@@ -51,18 +51,18 @@ PanasonicDelegates.metaKeyAfFacesDetected             = "Faces Detected"
 PanasonicDelegates.metaKeyAfNumFacePositions          = "Num Face Positions"
 PanasonicDelegates.metaKeyAfFacePosition              = "Face %s Position"
 
--- Image and Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
 PanasonicDelegates.metaKeyShootingMode                = "Shooting Mode"
 PanasonicDelegates.metaKeyImageStabilization          = "Image Stabilization"
 PanasonicDelegates.metaKeyBurstMode                   = "Burst Mode"
 PanasonicDelegates.metaKeySequenceNumber              = "Sequence Number"
 
--- relevant metadata values
-PanasonicDelegates.metaValueNA                        = "n/a"
+-- Relevant metadata values
 PanasonicDelegates.metaValueOn                        = "On"
 PanasonicDelegates.metaValueOff                       = "Off"
 PanasonicDelegates.metaKeyAfPointPositionPattern      = "0(%.%d+) 0(%.%d+)"
 PanasonicDelegates.metaKeyAfAreaSizePattern           = "([%d%.]+)%s+([%d%.]+)"
+
 
 --[[
   @@public table PanasonicDelegates.getAfPoints(table photo, table metaData)
@@ -191,7 +191,7 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
     if not value then
-      props[key] = PanasonicDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
     else
       -- everything else is the default case!
       props[key] = value
@@ -205,7 +205,7 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= PanasonicDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},

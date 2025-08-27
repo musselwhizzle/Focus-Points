@@ -27,10 +27,10 @@ require "Log"
 
 CanonDelegates = {}
 
--- Tag which indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
 CanonDelegates.metaKeyAfInfoSection         = "Canon Firmware Version"
 
--- AF relevant tags
+-- AF-relevant tags
 CanonDelegates.metaKeyAfPointsInFocus       = "AF Points In Focus"
 CanonDelegates.metaKeyAfAreaWidth           = "AF Area Width"
 CanonDelegates.metaKeyAfAreaHeight          = "AF Area Height"
@@ -59,12 +59,12 @@ CanonDelegates.metaKeyFocusDistanceLower    = "Focus Distance Lower"
 CanonDelegates.metaKeyDepthOfField          = "Depth Of Field"
 CanonDelegates.metaKeyHyperfocalDistance    = "Hyperfocal Distance"
 
--- Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
+CanonDelegates.metaKeyAspectRatio           = "Aspect Ratio"
 CanonDelegates.metaKeyContinuousDrive       = "Continuous Drive"
 CanonDelegates.metaKeyImageStabilization    = "Image Stabilization"
 
--- relevant metadata values
-CanonDelegates.metaValueNA                  = "N/A"
+-- Relevant metadata values
 CanonDelegates.metaValueOneShotAf           = "One-shot AF"
 
 --[[
@@ -234,7 +234,18 @@ function CanonDelegates.addInfo(title, key, props, metaData)
     local value = ExifUtils.findValue(metaData, key)
 
     if (value == nil) then
-      props[key] = CanonDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
+    elseif (key == CanonDelegates.metaKeyAspectRatio) then
+      if (value == "3:2 (APS-C crop)") then
+        FocusInfo.cropMode = true
+        props[key] = "APS-C"
+      elseif (key == CanonDelegates.metaKeyAspectRatio) and (value == "3:2 (APS-H crop)") then
+        FocusInfo.cropMode = true
+        props[key] = "APS-H"
+      else
+        -- ignore crops like 1:1, 4:3, 16:9 etc
+        props[key] = ExifUtils.metaValueNA
+      end
     else
       -- everything else is the default case!
       props[key] = value
@@ -248,7 +259,7 @@ function CanonDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= CanonDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
@@ -314,6 +325,23 @@ function CanonDelegates.manualFocusUsed(_photo, metaData)
   local mfName = "Manual Focus"
   local focusMode = ExifUtils.findValue(metaData, CanonDelegates.metaKeyFocusMode)
   return (string.sub(focusMode, 1, #mfName) == mfName )
+end
+
+
+--[[
+  @@public table function CanonDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  -- if any, otherwise return an empty column
+--]]
+function CanonDelegates.getImageInfo(_photo, props, metaData)
+  local f = LrView.osFactory()
+  local imageInfo
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    CanonDelegates.addInfo("Crop Mode", CanonDelegates.metaKeyAspectRatio, props, metaData),
+  }
+  return imageInfo
 end
 
 
