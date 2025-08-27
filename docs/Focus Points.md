@@ -1,4 +1,4 @@
-Focus Points Plugin for Lightroom Classic
+    Focus Points Plugin for Lightroom Classic
 =======
 
 ## Content ##
@@ -277,7 +277,7 @@ You can also access this information from the plugin window by clicking the link
 ### Plugin Status
 
 If errors or warnings were encountered while processing the autofocus metadata, a status message is displayed at the bottom of the text pane. To the right of this message, you can click the `Check log` button to open the logfile for more details. The logfile contains detailed information about the metadata processing, such as relevant tags found (or not found).<br>
-See also section "Logging" under [Viewing Options](#viewing-options).
+See [Logging](#logging) how to setup and customize logging. 
 
 For the image above, where focus info is said to be "missing from file", the logfile looks like this:
 
@@ -392,7 +392,7 @@ Examples:
 D850, Group Area shot.<br><br>
 
 <img src="../screens/Nikon 7.jpg" alt="Nikon 7" style="width: 1000px;"/><br>
-D6, Dynamic Area (3D tracking) shot. Multiple AF points were used to focus the image; the primary AF point is indicated by a center dot.<br><br>.
+D6, Dynamic Area (3D tracking) shot. Multiple AF points were used to focus the image; the primary AF point is indicated by a center dot.<br><br>
 
 <img src="../screens/Nikon 2.jpg" alt="Nikon 2" style="width: 1000px;"/><br>
 D500, Live View shot. In Contrast AF modes, the focus "point" is an area that varies in size depending on the shooting conditions.<br><br>
@@ -873,7 +873,7 @@ Note: `NumPad *` and `NumPad /` may not work because macOS sometimes treats NumP
 1. Go to _Settings → Keyboard → Keyboard Shortcuts → App Shortcuts_.
 2. Click `+`.
    - Application: `Adobe Lightroom Classic`
-   - Menu Title: `Show Focus Point`
+   - Menu Title: "&nbsp;&nbsp;&nbsp;Show Focus Point" (with **3 spaces** before the actual text!)
    - Keyboard Shortcut: Press `F12` (or your desired shortcut)<br>
 3. Repeat 2. for `Show Metadata` and `F11`.
 4. Restart Lightroom Classic if the shortcuts don’t show immediately.
