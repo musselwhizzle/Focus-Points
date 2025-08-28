@@ -22,6 +22,8 @@ local LrView = import 'LrView'
 local LrTasks = import 'LrTasks'
 local LrBinding = import "LrBinding"
 local LrPrefs = import "LrPrefs"
+local LrColor           = import "LrColor"
+local LrHttp            = import "LrHttp"
 
 require "FocusPointPrefs"
 require "FocusPointDialog"
@@ -47,6 +49,8 @@ local function showDialog()
     local done
     local prefs = LrPrefs.prefsForPlugin( nil )
     local props = LrBinding.makePropertyTable(context, { clicked = false })
+    local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
+    local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
@@ -58,14 +62,7 @@ local function showDialog()
     FocusPointPrefs.setDisplayScaleFactor()
     Log.logInfo("System", "Display scaling level " ..
            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
-    end
 
-    -- Find the index 'current' of the target photo in set of selectedPhotos
-    for i, photo in ipairs(selectedPhotos) do
-       if photo == targetPhoto then
-         current = i
-         break
-       end
     end
 
     -- only on WIN (issue #199):
@@ -78,7 +75,7 @@ local function showDialog()
         LrApplicationView.switchToModule("library")
         LrApplicationView.showView("loupe")
         switchedToLibrary = true
-        LrTasks.sleep(0)  -- timing-specific; might need to be increased on certain systems. tbe
+--        LrTasks.sleep(5)  -- timing-specific; might need to be increased on certain systems. tbe
       end
     end
 
@@ -92,9 +89,15 @@ local function showDialog()
       Log.resetErrorsWarnings()
       Log.logInfo("FocusPoint", string.rep("=", 72))
 
+      -- Find the index 'current' of the target photo in set of selectedPhotos
+      for i, photo in ipairs(selectedPhotos) do
+         if photo == targetPhoto then
+           current = i
+           break
+         end
+      end
       -- Save link to current photo, eg. as supplementary information in user messages
       FocusPointDialog.currentPhoto = targetPhoto
-      FocusPointDialog.errorsEncountered = nil
 
       LrFunctionContext.callWithContext("innerContext", function(dialogContext)
         dialogScope = LrDialogs.showModalProgressDialog {
@@ -134,10 +137,10 @@ local function showDialog()
         skipMainWindow = true
       end
 
-      -- a fatal error has occured for the current image: ask user wether to "Exit" the plugin
+      -- a fatal error has occured for the current image: ask user whether to "Exit" the plugin
       -- or "Continue" with the next image in multi-image mode (which means repeat in single-image mode)
       if errorMsg then
-        userResponse = errorMessage(errorMsg)
+        userResponse = LrDialogs.confirm(msg, getPhotoFileName(), "Continue", "Stop")
         if userResponse == "cancel" then
           -- Stop plugin operation
           return
@@ -156,67 +159,129 @@ local function showDialog()
           targetPhoto = selectedPhotos[current]
         end
       else
-        -- Main dialog with has slightly different controls depending on single/multi mode
-        Log.logInfo("FocusPoint", "Present information")
-        if (#selectedPhotos == 1) then
-          -- single photo operation
-          userResponse = LrDialogs.presentModalDialog {
-            title = "Focus Points for " ..  targetPhoto:getRawMetadata("path"),
-            cancelVerb = "< exclude >",
-            actionVerb = "OK",
-            contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView)
-          }
-        else
-          -- operate on a series of selected photos
-          local f = LrView.osFactory()
-          local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
-          local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
 
+        -- Open main window
+        Log.logInfo("FocusPoint", "Present dialog and information")
+
+
+
+          local f = LrView.osFactory()
+
+        local lastKey
+        props.text = ""
           props.clicked = false
+        local kbdHandler = f:edit_field {
+          value = LrView.bind('text'),
+          width  = 1,     -- tiny width
+          height = 1,     -- tiny height
+          border_enabled = false, -- optionally suppress borders
+          immediate = true,
+          validate = function(view, value)
+            local key = string.sub(value, -1) -- look at the last char entered
+            if key and key ~= "" and key ~= lastKey then
+            lastKey = key
+              -- check if last input is a shortcut and if so, trigger assigned action
+              if string.find(FocusPointPrefs.kbdShortcutsExit, key, 1, true) or (MAC_ENV and key == ".") then
+              LrDialogs.stopModalWithResult(view, "ok")
+
+              -- next image
+              elseif string.find(FocusPointPrefs.kbdShortcutsNext, key, 1, true) then
+              current = (current % #selectedPhotos) + 1
+              LrDialogs.stopModalWithResult(view, "next")
+
+              -- previous image
+              elseif string.find(FocusPointPrefs.kbdShortcutsPrev, key, 1, true) then
+              current =  (current - 2) % #selectedPhotos + 1
+              LrDialogs.stopModalWithResult(view, "previous")
+              -- open user manual
+              elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, key, 1, true) then
+                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
+              -- troubleshooting
+              elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, key, 1, true) then
+                local statusCode = FocusInfo.getStatusCode()
+                if statusCode > 1 then
+                  LrTasks.startAsyncTask(function()
+                    LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
+                  end)
+                end
+              -- check log
+              elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, key, 1, true) then
+                if prefs.loggingLevel ~= "NONE" then
+                  openFileInApp(Log.getFileName())
+                end
+              end
+            end
+            return true
+          end,
+        }
           userResponse = LrDialogs.presentModalDialog {
-            title = "Focus Points of " ..  targetPhoto:getRawMetadata("path") .. " (" .. current .. "/" .. #selectedPhotos .. ")",
-            contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView),
+          title = "Focus-Points (Version " .. getPluginVersion() .. ")",
+          contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdHandler),
             accessoryView = f:row {
               spacing = 0,     -- removes uniform spacing; we control it manually
               f:push_button {
                 title = buttonPrevImage,
-                action = function(button)
+              enabled = #selectedPhotos > 1,
+              tooltip = "Load previous image from selection.\nKeyboard shortcut: '-' or 'p'",
+              action = (function(button)
                   -- Prevent multiple executions - known LrC SDK quirk!
                   if props.clicked then return end
                   props.clicked = true
                   -- set index to previous image, wrap around at beginning of list
+                if #selectedPhotos > 1 then
                   current =  (current - 2) % #selectedPhotos + 1
                   LrDialogs.stopModalWithResult(button, "previous")
                 end
+              end)
+            },
+            f:spacer { width = 20 },    -- space before the file name
+            f:static_text{
+              title = getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")",
               },
               f:spacer { width = 20 },    -- space before the next button
               f:push_button {
                 title = buttonNextImage,
-                action = function(button)
+              enabled = #selectedPhotos > 1,
+              tooltip = "Load next image from selection\nKeyboard shortcut: space bar, '+' or 'n'",
+              action = function(button)
                   -- Prevent multiple executions - known LrC SDK quirk!
                   if props.clicked then return end
                   props.clicked = true
                   -- set index to next image, wrap around at end of list
+                if #selectedPhotos > 1 then
                   current = (current % #selectedPhotos) + 1
                   LrDialogs.stopModalWithResult(button, "next")
                 end
+              end
               },
+            f:spacer{fill_horizontal = 1},
+            f:static_text {
+              title = "User Manual " .. string.char(0xF0, 0x9F, 0x94, 0x97),
+              text_color = LrColor("blue"),
+              tooltip = "Click to open user documentation",
+              immediate = true,
+              mouse_down = function(_view)
+                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(urlUserManual) end)
+              end,
             },
+          f:spacer { width = 20 },    -- space before 'Exit' button
+          },
             actionVerb = "Exit",
             cancelVerb = "< exclude >",
           }
           -- Proceed to selected photo
           targetPhoto = selectedPhotos[current]
-        end
 
+        -- Clean up
         rendererTable.cleanup()
 
-        -- Funnily, using the right side of the expression directly with until doesn't work !??
+        -- Close the windows if user clicked <Exit> button or pressed <Esc>
         done = (userResponse == "ok") or (userResponse == "cancel")
       end
 
     until done
 
+    -- Return to Develop modul if the plugin has been started from there
     if WIN_ENV and switchedToLibrary then
       LrApplicationView.switchToModule("develop")
     end

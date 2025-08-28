@@ -38,6 +38,7 @@
 #   26) https://github.com/SamsungVR/android_upload_sdk/blob/master/SDKLib/src/main/java/com/samsung/msca/samsungvr/sdk/UserVideo.java
 #   27) https://exiftool.org/forum/index.php?topic=11517.0
 #   28) https://docs.mp3tag.de/mapping/
+#   29) https://developer.apple.com/documentation/quicktime-file-format/media_data_reference_atom
 #------------------------------------------------------------------------------
 
 package Image::ExifTool::QuickTime;
@@ -48,7 +49,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 
-$VERSION = '3.14';
+$VERSION = '3.19';
 
 sub ProcessMOV($$;$);
 sub ProcessKeys($$$);
@@ -502,7 +503,7 @@ my %qtFlags = ( #12
 # (used only to avoid warnings when Validate-ing)
 my %dupTagOK = ( mdat => 1, trak => 1, free => 1, infe => 1, sgpd => 1, dimg => 1, CCDT => 1,
                  sbgp => 1, csgm => 1, uuid => 1, cdsc => 1, maxr => 1, '----' => 1 );
-my %dupDirOK = ( ipco => 1, '----' => 1 );
+my %dupDirOK = ( ipco => 1, iref => 1, '----' => 1 );
 
 # the usual atoms required to decode timed metadata with the ExtractEmbedded option
 my %eeStd = ( stco => 'stbl', co64 => 'stbl', stsz => 'stbl', stz2 => 'stbl',
@@ -815,6 +816,13 @@ my %userDefined = (
             ProcessProc => 'Image::ExifTool::LigoGPS::ProcessLigoJSON',
         },
     },{
+        Name => 'GKUData',
+        Condition => '$$valPt =~ /^.{8}__V35AX_QVDATA__/',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Stream',
+            ProcessProc => 'Image::ExifTool::LigoGPS::ProcessGKU',
+        },
+    },{
         Name => 'FLIRData',
         SubDirectory => { TagTable => 'Image::ExifTool::FLIR::UserData' },
     }],
@@ -944,13 +952,22 @@ my %userDefined = (
         Notes => 'MP4-format video saved in Samsung motion-photo HEIC images.',
         Binary => 1,
         # note that this may be written and/or deleted, but can't currently be added back again
-        Writable => 1,
+        Writable => 'undef',
     },
     # '35AX'? - seen "AT" (Yada RoadCam Pro 4K dashcam)
     cust => 'CustomInfo', # 70mai A810
     SEAL => {
         Name => 'SEAL',
         SubDirectory => { TagTable => 'Image::ExifTool::XMP::SEAL' },
+    },
+    inst => {
+        Name => 'Insta360Info',
+        DontRead => 1,  # don't read into memory when extracting
+        WriteLast => 1, # must go at end of file
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::QuickTime::Stream',
+            ProcessProc => \&ProcessInsta360,
+        },
     },
 );
 
@@ -1227,6 +1244,7 @@ my %userDefined = (
     # clip - clipping --> contains crgn (clip region) (ref 12)
     # mvex - movie extends --> contains mehd (movie extends header), trex (track extends) (ref 14)
     # ICAT - 4 bytes: "6350" (Nikon CoolPix S6900), "6500" (Panasonic FT7)
+    # ctab - color table (ref 29)
 );
 
 # (ref CFFMediaFormat-2_1.pdf)
@@ -1426,6 +1444,7 @@ my %userDefined = (
     # load - track loading settings
     # imap - track input map --> contains '  in' --> contains '  ty', obid
     # prfl - Profile (ref 12)
+    # txas - track exclude from autoselection (ref 29)
 );
 
 # track header data block
@@ -1629,6 +1648,10 @@ my %userDefined = (
             TagTable => 'Image::ExifTool::QuickTime::Meta',
             Start => 4, # must skip 4-byte version number header
         },
+    },
+    tnam => { #29 (NC)
+        Name => 'TrackName',
+        IText => 4,
     },
    'ptv '=> {
         Name => 'PrintToVideo',
@@ -2355,6 +2378,32 @@ my %userDefined = (
     # @etc - 4 bytes all zero (Samsung WB30F)
     # saut - 4 bytes all zero (Samsung SM-N900T)
     # smrd - string "TRUEBLUE" (Samsung SM-C101, etc)
+    # ---- Sigma ----
+    SIGM => [{
+        Name => 'SigmaEXIF',
+        Condition => '$$valPt =~ /^(II\x2a\0|MM\0\x2a)/',
+        SubDirectory => {
+            TagTable => 'Image::ExifTool::Exif::Main',
+            ProcessProc => \&Image::ExifTool::ProcessTIFF, # (because ProcessMOV is default)
+        },
+    },{
+        Name => 'PreviewImage',
+        # 32-byte header followed by preview image.  Length at offset 6 in header
+        Condition => 'length($$valPt) > 0x20 and length($$valPt) == unpack("x6V",$$valPt) + 0x20',
+        Groups => { 2 => 'Preview' },
+        SetBase => 1,   # so $$self{BASE} will be set for correct offsets in verbose/html dumps
+        RawConv => q{
+            $val = substr($val, 0x20);
+            my $pt = $self->ValidateImage(\$val, $tag);
+            if ($pt) {
+                $$self{BASE} += 0x20;
+                $$self{DOC_NUM} = ++$$self{DOC_COUNT};
+                $self->ExtractInfo($pt, { ReEntry => 1 });
+                $$self{DOC_NUM} = 0;
+            }
+            return $pt;
+        },
+    }],
     # ---- TomTom Bandit Action Cam ----
     TTMD => {
         Name => 'TomTomMetaData',
@@ -2378,6 +2427,19 @@ my %userDefined = (
     mcvr => {
         Name => 'PreviewImage',
         Groups => { 2 => 'Preview' },
+        Binary => 1,
+    },
+    # ---- Insta360 ----
+    nail => {
+        Name => 'ThumbnailTIFF',
+        Notes => 'image found in some Insta360 videos, converted to TIFF format',
+        Groups => { 2 => 'Preview' },
+        RawConv => q{
+            return undef if length $val < 8;
+            my ($w, $h) = unpack('NN', $val);
+            return undef if length $val < $w * $h + 8;
+            return MakeTiffHeader($w, $h, 1, 8) . substr($val, 8, $w * $h);
+        },
         Binary => 1,
     },
     # ---- Nextbase ----
@@ -2801,6 +2863,8 @@ my %userDefined = (
         Name => 'Unknown_grpl',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::grpl' },
     },
+    # ctry - country list (ref 29)
+    # lang - language list (ref 29)
 );
 
 # unknown grpl container
@@ -2880,7 +2944,7 @@ my %userDefined = (
         Writable => 'int8u',
         Protected => 1,
         PrintConv => {
-            0 => 'Horizontal (Normal)',
+            0 => 'Horizontal (normal)',
             1 => 'Rotate 270 CW',
             2 => 'Rotate 180',
             3 => 'Rotate 90 CW',
@@ -3279,21 +3343,28 @@ my %userDefined = (
 %Image::ExifTool::QuickTime::TrackRef = (
     PROCESS_PROC => \&ProcessMOV,
     GROUPS => { 1 => 'Track#', 2 => 'Video' },
-    chap => { Name => 'ChapterListTrackID', Format => 'int32u' },
-    tmcd => { Name => 'TimeCode', Format => 'int32u' },
+    chap => { Name => 'ChapterListTrackID',     Format => 'int32u' },
+    tmcd => { Name => 'TimecodeTrack',          Format => 'int32u' },
     mpod => { #PH (FLIR MP4)
         Name => 'ElementaryStreamTrack',
         Format => 'int32u',
         ValueConv => '$val =~ s/^1 //; $val',  # (why 2 numbers? -- ignore the first if "1")
     },
-    # also: sync, scpt, ssrc, iTunesInfo
+    # also: iTunesInfo
     cdsc => {
         Name => 'ContentDescribes',
         Format => 'int32u',
         PrintConv => '"Track $val"',
     },
-    # cdep (Structural Dependency QT tag?)
-    # fall - ? int32u, seen: 2
+    clcp => { Name => 'ClosedCaptionTrack',     Format => 'int32u' }, #29
+    fall => { Name => 'AlternateFormatTrack',   Format => 'int32u' }, #29
+    folw => { Name => 'SubtitleTrack',          Format => 'int32u' }, #29
+    forc => { Name => 'ForcedSubtitleTrack',    Format => 'int32u' }, #29
+    scpt => { Name => 'TranscriptTrack',        Format => 'int32u' }, #29
+    ssrc => { Name => 'Non-primarySourceTrack', Format => 'int32u' }, #29
+    sync => { Name => 'SyncronizedTrack',       Format => 'int32u' }, #29
+    # hint - Original media for hint track (ref 29)
+    # cdep (Structural Dependency QT tag?)    
 );
 
 # track aperture mode dimensions atoms
@@ -6582,7 +6653,6 @@ my %userDefined = (
     'apple.photos.variation-identifier'   => { Name => 'ApplePhotosVariationIdentifier',  Writable => 'int64s' },
     'direction.facing' => { Name => 'CameraDirection', Groups => { 2 => 'Location' } },
     'direction.motion' => { Name => 'CameraMotion',    Groups => { 2 => 'Location' } },
-    'location.body'    => { Name => 'LocationBody',    Groups => { 2 => 'Location' } },
     'player.version'                => 'PlayerVersion',
     'player.movie.visual.brightness'=> 'Brightness',
     'player.movie.visual.color'     => 'Color',
@@ -7046,6 +7116,7 @@ my %userDefined = (
         Name => 'MediaInfo',
         SubDirectory => { TagTable => 'Image::ExifTool::QuickTime::MediaInfo' },
     },
+    elng => 'ExtendedLanguageTag', #29 (NC) eg. "zh-CN"
 );
 
 # MP4 media header box (ref 5)
@@ -7637,6 +7708,8 @@ my %userDefined = (
     mrlh => { Name => 'MarlinHeader',    SubDirectory => { TagTable => 'Image::ExifTool::GM::mrlh' } },
     mrlv => { Name => 'MarlinValues',    SubDirectory => { TagTable => 'Image::ExifTool::GM::mrlv' } },
     mrld => { Name => 'MarlinDictionary',SubDirectory => { TagTable => 'Image::ExifTool::GM::mrld' } },
+  # tbox - text box (ref 29)
+  # styl - subtitle style (ref 29)
 );
 
 # AMR decode config box (ref 3)
@@ -9333,7 +9406,7 @@ sub HandleItemInfo($)
             $et->ProcessDirectory(\%dirInfo, $subTable, $proc);
             delete $$et{DOC_NUM};
         }
-        $raf->Seek($curPos, 0) or $et->Warn('Seek error'), last;     # seek back to original position
+        $raf->Seek($curPos, 0) or $et->Warn('Seek error');  # seek back to original position
         pop @{$$et{PATH}};
     }
     # process the item properties now that we should know their associations and document numbers
@@ -9725,6 +9798,7 @@ sub IdentifyTrailers($)
         } else {
             last;
         }
+        # 0) trailer type, 1) trailer start, 2) trailer length, 3) pointer to next trailer
         $trailer = [ $type , $raf->Tell() - $len, $len, $nextTrail ];
         $nextTrail = $trailer;
         $offset += $len;
@@ -9999,7 +10073,7 @@ sub ProcessMOV($$;$)
                 }
             }
         }
-        if (defined $tagInfo and not $ignore) {
+        if (defined $tagInfo and not $ignore and not ($tagInfo and $$tagInfo{DontRead})) {
             # set document number for this item property if necessary
             if ($$et{IsItemProperty}) {
                 my $items = $$et{ItemInfo};
@@ -10052,7 +10126,7 @@ ItemID:         foreach $id (reverse sort { $a <=> $b } keys %$items) {
             # use value to get tag info if necessary
             $tagInfo or $tagInfo = $et->GetTagInfo($tagTablePtr, $tag, \$val);
             my $hasData = ($$dirInfo{HasData} and $val =~ /^....data\0/s);
-            if ($verbose and not $hasData) {
+            if ($verbose and defined $val and not $hasData) {
                 my $tval;
                 if ($tagInfo and $$tagInfo{Format}) {
                     $tval = ReadValue(\$val, 0, $$tagInfo{Format}, $$tagInfo{Count}, length($val));
@@ -10371,7 +10445,25 @@ ItemID:         foreach $id (reverse sort { $a <=> $b } keys %$items) {
                 Size  => $size,
                 Extra => sprintf(' at offset 0x%.4x', $raf->Tell()),
             ) if $verbose;
-            if ($size and (not $raf->Seek($size-1, 1) or $raf->Read($buff, 1) != 1)) {
+            my $seekTo = $raf->Tell() + $size;
+            if ($tagInfo and $$tagInfo{DontRead} and $$tagInfo{SubDirectory}) {
+                # ignore first trailer if it is the payload of this box
+                $trailer = $$trailer[3] if $trailer and $$trailer[1] == $raf->Tell();
+                my $subdir = $$tagInfo{SubDirectory};
+                my %dirInfo = (
+                    RAF     => $raf,
+                    DirName => $$tagInfo{Name},
+                    DirID   => $tag,
+                    DirEnd  => $seekTo,
+                );
+                my $subTable = GetTagTable($$subdir{TagTable});
+                my $proc = $$subdir{ProcessProc};
+                # make ProcessMOV() the default processing procedure for subdirectories
+                $proc = \&ProcessMOV unless $proc or $$subTable{PROCESS_PROC};
+                $et->ProcessDirectory(\%dirInfo, $subTable, $proc);
+                $raf->Seek($seekTo);
+            }
+            unless ($raf->Seek($seekTo-1) and $raf->Read($buff, 1) == 1) {
                 my $t = PrintableTagID($tag,2);
                 $warnStr = sprintf("Truncated '${t}' data at offset 0x%x", $lastPos);
                 last;
@@ -10437,12 +10529,13 @@ QTLang: foreach $tag (@{$$et{QTLang}}) {
     for (; $trailer; $trailer=$$trailer[3]) {
         next if $lastPos > $$trailer[1];    # skip if we have already processed this as an atom
         last unless $raf->Seek($$trailer[1], 0);
-        if ($$trailer[0] eq 'LigoGPS' and $raf->Read($buff, 8) == 8 and $buff =~ /skip$/) {
+        if ($$trailer[0] eq 'LigoGPS' and $raf->Read($buff, 8) == 8 and $buff =~ /skip$/i) {
             $ee or $et->Warn('Use the ExtractEmbedded option to decode timed GPS',3), next;
             my $len = Get32u(\$buff, 0) - 16;
             if ($len > 0 and $raf->Read($buff, $len) == $len and $buff =~ /^LIGOGPSINFO\0/) {
                 my $tbl = GetTagTable('Image::ExifTool::QuickTime::Stream');
                 my %dirInfo = ( DataPt => \$buff, DataPos => $$trailer[1] + 8, DirName => 'LigoGPSTrailer' );
+                $et->VerboseDump(\$buff, DataPos => $dirInfo{DataPos});
                 Image::ExifTool::LigoGPS::ProcessLigoGPS($et, \%dirInfo, $tbl);
             } else {
                 $et->Warn('Unrecognized data in LigoGPS trailer');

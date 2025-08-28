@@ -28,7 +28,7 @@ require "Log"
 
 FocusPointPrefs = {}
 
-FocusPointPrefs.displayScaleFactor = 0
+FocusPointPrefs.displayScaleFactor = 0.0
 
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
@@ -39,9 +39,21 @@ FocusPointPrefs.focusBoxSizeMedium = 2
 FocusPointPrefs.focusBoxSizeLarge  = 3
 FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 
+-- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
+-- URL definitions
+FocusPointPrefs.urlUserManual      = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Focus%20Points.md"
+FocusPointPrefs.urlTroubleShooting = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Troubleshooting_FAQ.md"
+
+-- Keyboard shortcut definitions
+FocusPointPrefs.kbdShortcutsPrev            = "-pP"
+FocusPointPrefs.kbdShortcutsNext            = "+ nN"
+FocusPointPrefs.kbdShortcutsCheckLog        = "lL"
+FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
+FocusPointPrefs.kbdShortcutsUserManual      = "uUmM"
+FocusPointPrefs.kbdShortcutsExit            = "xX"
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()
@@ -157,7 +169,7 @@ end
   @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table viewFactory, p )
   -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
 --]]
-function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
+function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
   -- Set the defaults
@@ -258,13 +270,13 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           value = bind ('loggingLevel'),
           width = dropDownWidth,
           items = {
-            { title = "Full",  value = "FULL" },
+            { title = "Auto",  value = "AUTO"  },
+            { title = "Full",  value = "FULL"  },
             { title = "Debug", value = "DEBUG" },
-            { title = "Auto",  value = "AUTO" },
-            { title = "Info",  value = "INFO" },
-            { title = "Warn",  value = "WARN" },
+            { title = "Info",  value = "INFO"  },
+            { title = "Warn",  value = "WARN"  },
             { title = "Error", value = "ERROR" },
-            { title = "None",  value = "NONE" },
+            { title = "None",  value = "NONE"  },
           }
         },
         viewFactory:static_text {

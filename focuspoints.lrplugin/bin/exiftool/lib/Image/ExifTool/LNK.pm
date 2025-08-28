@@ -7,6 +7,7 @@
 #
 # References:   1) http://msdn.microsoft.com/en-us/library/dd871305(PROT.10).aspx
 #               2) http://www.i2s-lab.com/Papers/The_Windows_Shortcut_File_Format.pdf
+#               3) https://harfanglab.io/insidethelab/sadfuture-xdspy-latest-evolution/#tid_specifications_ignored
 #------------------------------------------------------------------------------
 
 package Image::ExifTool::LNK;
@@ -14,8 +15,9 @@ package Image::ExifTool::LNK;
 use strict;
 use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
+use Image::ExifTool::Microsoft;
 
-$VERSION = '1.09';
+$VERSION = '1.11';
 
 sub ProcessItemID($$$);
 sub ProcessLinkInfo($$$);
@@ -440,6 +442,8 @@ sub ProcessLinkInfo($$$);
     0x08 => {
         Name => 'CodePage',
         Format => 'int32u',
+        SeparateTable => 'Microsoft CodePage',
+        PrintConv => \%Image::ExifTool::Microsoft::codePage,
     },
 );
 
@@ -647,17 +651,32 @@ sub ProcessLNK($$)
     my @strings = qw(Description RelativePath WorkingDirectory
                      CommandLineArguments IconFileName);
     for ($i=0; $i<@strings; ++$i) {
+        my ($val, $limit);
         my $mask = 0x04 << $i;
         next unless $flags & $mask;
         $raf->Read($buff, 2) or return 1;
+        my $pos = $raf->Tell();
         $len = unpack('v', $buff) or next;
+        # Windows doesn't follow their own specification and limits the length
+        # for most of these strings (ref 3)
+        if ($i != 3 and $len >= 260) {
+            $limit = 1;
+            if ($len > 260) {
+                $len = 260;
+                $et->Warn('LNK string data overrun! Possible security issue');
+            }
+        }
         $len *= 2 if $flags & 0x80;  # characters are 2 bytes if Unicode flag is set
         $raf->Read($buff, $len) or return 1;
-        my $val;
+        # remove last character if string is at length limit (Windows treats this as a null)
+        if ($limit) {
+            $len -= $flags & 0x80 ? 2 : 1;
+            $buff = substr($buff, 0, $len);
+        }
         $val = $et->Decode($buff, 'UCS2') if $flags & 0x80;
         $et->HandleTag($tagTablePtr, 0x30000 | $mask, $val,
             DataPt  => \$buff,
-            DataPos => $raf->Tell() - $len,
+            DataPos => $pos,
             Size    => $len,
         );
     }
@@ -715,6 +734,8 @@ under the same terms as Perl itself.
 =item L<http://msdn.microsoft.com/en-us/library/dd871305(PROT.10).aspx>
 
 =item L<http://www.i2s-lab.com/Papers/The_Windows_Shortcut_File_Format.pdf>
+
+=item L<https://harfanglab.io/insidethelab/sadfuture-xdspy-latest-evolution/#tid_specifications_ignored>
 
 =back
 

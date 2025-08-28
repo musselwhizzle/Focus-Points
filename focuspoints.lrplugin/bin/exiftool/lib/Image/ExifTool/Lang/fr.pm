@@ -11,7 +11,7 @@ package Image::ExifTool::Lang::fr;
 use strict;
 use vars qw($VERSION);
 
-$VERSION = '1.36';
+$VERSION = '1.37';
 
 %Image::ExifTool::Lang::fr::Translate = (
    'AEAperture' => 'Ouverture AE',
@@ -6607,6 +6607,7 @@ $VERSION = '1.36';
    'LensType' => {
       Description => 'Type d\'objectif',
       PrintConv => {
+        'None' => 'Aucun',
         'n/a' => 'Non applicable',
         'smc PENTAX-F 100-300mm F4.5-5.6 or Sigma Lens' => 'smc PENTAX-F 100-300mm F4.5-5.6 ou objectif Sigma',
         'smc PENTAX-F 28-80mm F3.5-4.5 or Tokina Lens' => 'smc PENTAX-F 28-80mm F3.5-4.5 ou objectif Tokina',
@@ -8873,7 +8874,6 @@ $VERSION = '1.36';
         '270' => '270°',
         '90' => '90°',
         'Horizontal' => 'Horizontale',
-        'Horizontal (Normal)' => 'Horizontale (normale)',
         'Horizontal (normal)' => 'Horizontale (normale)',
         'Rotate 180' => 'Rotation de 180°',
         'Rotate 270 CW' => 'Rotation antihoraire de 270°',

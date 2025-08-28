@@ -37,7 +37,7 @@ use vars qw($VERSION %leicaLensTypes);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 
-$VERSION = '2.24';
+$VERSION = '2.26';
 
 sub ProcessLeicaLEIC($$$);
 sub WhiteBalanceConv($;$$);
@@ -1374,10 +1374,10 @@ my %shootingMode = (
         Writable => 'int16u',
         Format => 'int16s',
     },
-    0xbe => { #forum11194
+    0xbe => { #forum11194/17508
         Name => 'LongExposureNRUsed',
         Writable => 'int16u',
-        PrintConv => { 0 => 'No', 1 => 'Yes' },
+        PrintConv => { 1 => 'No', 2 => 'Yes' },
     },
     0xbf => { #forum11194
         Name => 'PostFocusMerging',
@@ -1435,6 +1435,14 @@ my %shootingMode = (
     0xd6 => { #PH (DC-S1)
         Name => 'NoiseReductionStrength',
         Writable => 'rational64s',
+    },
+    0xde => { #forum17299
+        Name => 'AFAreaSize',
+        Writable => 'rational64u',
+        Notes => 'relative to size of image.  "n/a" for manual focus',
+        Count => 2,
+        PrintConv => '$val =~ /^4194303.999/ ? "n/a" : $val',
+        PrintConvInv => '$val eq "n/a" ? "4194303.999 4194303.999" : $val',
     },
     0xe4 => { #IB
         Name => 'LensTypeModel',

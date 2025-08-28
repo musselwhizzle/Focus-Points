@@ -27,7 +27,6 @@ FocusPointDialog.PhotoWidth  = 0
 FocusPointDialog.PhotoHeight = 0
 
 FocusPointDialog.currentPhoto = nil
-FocusPointDialog.errorsEncountered = nil
 
 
 function FocusPointDialog.calculatePhotoDimens(photo)
@@ -54,7 +53,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   local photoWidth
   local photoHeight
   if (w > h) then
-    photoWidth = math.min(w, contentWidth)
+    photoWidth = math.min(  (w), contentWidth)
     photoHeight = h/w * photoWidth
     if photoHeight > contentHeight then
         photoHeight = math.min(h, contentHeight)
@@ -74,7 +73,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
 end
 
 
-function FocusPointDialog.createDialog(photo, photoView, infoView)
+function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdHandler)
   local myView
   local f = LrView.osFactory()
 
@@ -89,7 +88,7 @@ function FocusPointDialog.createDialog(photo, photoView, infoView)
       infoView,
     }
     local row = f:row {
-      column1, column2
+      kbdHandler, column1, column2
     }
     myView = f:view {
       row,

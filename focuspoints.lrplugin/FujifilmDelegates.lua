@@ -30,13 +30,12 @@ require "Log"
 
 FujifilmDelegates = {}
 
--- To trigger display whether focus points have been detected or not
-FujifilmDelegates.focusPointsDetected = false
-
--- Tag that indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
+-- Note: The very first Fujifilm makernotes entry is "Version", but using a text-based approach
+--       to read ExifTool output this term is too generic. "Fuji Flash Mode" is a better choice.
 FujifilmDelegates.metaKeyAfInfoSection               = "Fuji Flash Mode"
 
--- AF relevant tags
+-- AF-relevant tags
 FujifilmDelegates.metaKeyExifImageWidth              = "Exif Image Width"
 FujifilmDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 FujifilmDelegates.metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
@@ -55,15 +54,12 @@ FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivit
 FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
 
--- Image and Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
 FujifilmDelegates.metaKeyCropMode                    = "Crop Mode"
 FujifilmDelegates.metaKeyDriveMode                   = "Drive Mode"
 FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
 FujifilmDelegates.metaKeySequenceNumber              = "Sequence Number"
 FujifilmDelegates.metaKeyImageStabilization          = "Image Stabilization"
-
--- relevant metadata values
-FujifilmDelegates.metaValueNA                        = "N/A"
 
 
 --[[
@@ -72,7 +68,6 @@ FujifilmDelegates.metaValueNA                        = "N/A"
   Get the autofocus points from metadata
 --]]
 function FujifilmDelegates.getAfPoints(photo, metaData)
-  FujifilmDelegates.focusPointsDetected = false
 
   -- Search EXIF for the focus point key
   local focusPoint = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyFocusPixel)
@@ -82,13 +77,15 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   else
     Log.logError("Fujifilm",
       string.format("Focus point tag '%s' not found", FujifilmDelegates.metaKeyFocusPixel))
-    Log.logWarn("Fujifilm", FocusInfo.msgImageNotOoc)
     return nil
   end
 
+  local x, y
   local values = split(focusPoint, " ")
-  local x = LrStringUtils.trimWhitespace(values[1])
-  local y = LrStringUtils.trimWhitespace(values[2])
+  if values then
+    x = LrStringUtils.trimWhitespace(values[1])
+    y = LrStringUtils.trimWhitespace(values[2])
+  end
   if x == nil or y == nil then
     Log.logError("Fujifilm", "Error at extracting x/y positions from focus point tag")
     return nil
@@ -100,7 +97,8 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     Log.logError("Fujifilm",
       string.format("No valid information on image width/height. Relevant tags '%s' / '%s' not found",
         FujifilmDelegates.metaKeyExifImageWidth, FujifilmDelegates.metaKeyExifImageHeight))
-    Log.logWarn("Fujifilm", FocusInfo.msgImageNotOoc)
+    Log.logWarn("Fujifilm", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
 
@@ -111,8 +109,8 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   Log.logInfo("Fujifilm", "AF points detected at [" .. math.floor(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
 
   -- the only real focus point is this - the below code just checks for visualization frames
-  FujifilmDelegates.focusPointsDetected = true
-  local result = DefaultPointRenderer.createFocusPixelBox(x*xScale, y*yScale)
+  FocusInfo.focusPointsDetected = true
+  local result = DefaultPointRenderer.createFocusFrame(x*xScale, y*yScale)
 
   -- Let see if we have detected faces
   local detectedFaces = ExifUtils.findValue(metaData, FujifilmDelegates.FacesDetected)
@@ -120,19 +118,21 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FacesPositions)
     if coordinatesStr ~= nil then
       local coordinatesTable = split(coordinatesStr, " ")
-      for i=1, detectedFaces, 1 do
-        local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
-        local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
-        local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
-        local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
-        Log.logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
-        table.insert(result.points, {
-          pointType = DefaultDelegates.POINTTYPE_FACE,
-          x = (x1 + x2) / 2,
-          y = (y1 + y2) / 2,
-          width = math.abs(x1 - x2),
-          height = math.abs(y1 - y2)
-        })
+      if coordinatesTable then
+        for i=1, detectedFaces, 1 do
+          local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
+          local y1 = coordinatesTable[4 * (i-1) + 2] * yScale
+          local x2 = coordinatesTable[4 * (i-1) + 3] * xScale
+          local y2 = coordinatesTable[4 * (i-1) + 4] * yScale
+          Log.logInfo("Fujifilm", "Face detected at [" .. math.floor((x1 + x2) / 2) .. ", " .. math.floor((y1 + y2) / 2) .. "]")
+          table.insert(result.points, {
+            pointType = DefaultDelegates.POINTTYPE_FACE,
+            x = (x1 + x2) / 2,
+            y = (y1 + y2) / 2,
+            width = math.abs(x1 - x2),
+            height = math.abs(y1 - y2)
+          })
+        end
       end
     end
   end
@@ -221,7 +221,7 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
     if (value == nil) then
-      props[key] = FujifilmDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
     else
       -- everything else is the default case!
       props[key] = value
@@ -235,12 +235,12 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= FujifilmDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
       f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
+      f:column{f:static_text{title = wrapText(props[key], {','},30), font="<system>"}}
     }
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == "AF-C") then
@@ -267,11 +267,51 @@ end
 
 
 --[[
+  @@public boolean FujifilmDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
+--]]
+function FujifilmDelegates.modelSupported(_model)
+  -- supports entire X-, GFX-series and FinePix after 2007
+  -- so there is not really anything that justifies the effort to write code to exclude ancient models
+  return true
+end
+
+
+--[[
+  @@public boolean FujifilmDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function FujifilmDelegates.makerNotesFound(_photo, metaData)
+  local result = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyAfInfoSection)
+  if not result then
+    Log.logWarn("Fujifilm",
+      string.format("Tag '%s' not found", FujifilmDelegates.metaKeyAfInfoSection))
+  end
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean FujifilmDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+function FujifilmDelegates.manualFocusUsed(_photo, metaData)
+  local focusMode, key = ExifUtils.findFirstMatchingValue(metaData, FujifilmDelegates.metaKeyFocusMode)
+  Log.logInfo("Fujifilm",
+    string.format("Tag '%s' found: %s", key, focusMode))
+  return (focusMode == "Manual" or focusMode == "AF-M")
+end
+
+
+--[[
   @@public table function FujifilmDelegates.getImageInfo(table photo, table props, table metaData)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function FujifilmDelegates.getImageInfo(photo, props, metaData)
+function FujifilmDelegates.getImageInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local imageInfo
   imageInfo = f:column {
@@ -288,7 +328,7 @@ end
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
   -- if any, otherwise return an empty column
 --]]
-function FujifilmDelegates.getCameraInfo(photo, props, metaData)
+function FujifilmDelegates.getCameraInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
@@ -309,21 +349,13 @@ end
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function FujifilmDelegates.getFocusInfo(photo, props, metaData)
+function FujifilmDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, FujifilmDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(FujifilmDelegates.focusPointsDetected),
       FujifilmDelegates.addInfo("Focus Mode",                       FujifilmDelegates.metaKeyFocusMode                    , props, metaData),
       FujifilmDelegates.addInfo("AF Mode",                          FujifilmDelegates.metaKeyAfMode                       , props, metaData),
       FujifilmDelegates.addInfo("Focus Warning",                    FujifilmDelegates.metaKeyFocusWarning                 , props, metaData),

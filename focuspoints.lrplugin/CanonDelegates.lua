@@ -27,13 +27,10 @@ require "Log"
 
 CanonDelegates = {}
 
--- To trigger display whether focus points have been detected or not
-CanonDelegates.focusPointsDetected = false
-
--- Tag which indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
 CanonDelegates.metaKeyAfInfoSection         = "Canon Firmware Version"
 
--- AF relevant tags
+-- AF-relevant tags
 CanonDelegates.metaKeyAfPointsInFocus       = "AF Points In Focus"
 CanonDelegates.metaKeyAfAreaWidth           = "AF Area Width"
 CanonDelegates.metaKeyAfAreaHeight          = "AF Area Height"
@@ -62,12 +59,12 @@ CanonDelegates.metaKeyFocusDistanceLower    = "Focus Distance Lower"
 CanonDelegates.metaKeyDepthOfField          = "Depth Of Field"
 CanonDelegates.metaKeyHyperfocalDistance    = "Hyperfocal Distance"
 
--- Camera Settings relevant tags
+-- Image Information and Camera Settings relevant tags
+CanonDelegates.metaKeyAspectRatio           = "Aspect Ratio"
 CanonDelegates.metaKeyContinuousDrive       = "Continuous Drive"
 CanonDelegates.metaKeyImageStabilization    = "Image Stabilization"
 
--- relevant metadata values
-CanonDelegates.metaValueNA                  = "N/A"
+-- Relevant metadata values
 CanonDelegates.metaValueOneShotAf           = "One-shot AF"
 
 --[[
@@ -81,8 +78,6 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local imageWidth
   local imageHeight
 
-  CanonDelegates.focusPointsDetected = false
-
   -- #TODO ATTENTION!!!
   -- Searching for ImageWidth/Height tags in a simplified listing output may result in unusable information!
   if cameraModel == "canon eos 5d" then   -- For some reason for this camera, the AF Image Width/Height has to be replaced by Canon Image Width/Height
@@ -95,7 +90,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
   if imageWidth == nil or imageHeight == nil then
     Log.logError(string.format("Canon", "Required image size tags '%s' / '%s' not found",
       CanonDelegates.metaKeyExifImageWidth, CanonDelegates.metaKeyExifImageHeight))
-    Log.logWarn("Canon", FocusInfo.msgImageNotOoc)
+    Log.logWarn("Canon", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
 
@@ -109,7 +105,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local afPointHeights = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaHeights)
 
   if (afPointWidth == nil and afPointWidths == nil) or (afPointHeight == nil and afPointHeights == nil) then
-    Log.logWarn("Canon", "Information on 'AF Area Width/Height' not found")
+    Log.logError("Canon", "Information on 'AF Area Width/Height' not found")
+    Log.logWarn("Canon", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
   if afPointWidths == nil then
@@ -126,7 +124,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local afAreaXPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaXPositions)
   local afAreaYPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaYPositions)
   if afAreaXPositions == nil or afAreaYPositions == nil then
-    Log.Error("Canon", "Information on 'AF Area X/Y Positions' not found")
+    Log.logError("Canon", "Information on 'AF Area X/Y Positions' not found")
+    Log.logWarn("Canon", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
 
@@ -170,8 +170,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
   for key, _ in pairs(afAreaXPositions) do
     local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everything is referenced from the center,
     local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
-    local width = 0
-    local height = 0
+    local width = 0.0
+    local height = 0.0
     if afPointWidths[key] == nil then
       width = afPointWidth * xScale
     else
@@ -190,14 +190,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
     end
     local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
     local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
---[[ #TODO we won't support such detailed classifcation in future
-    if isInFocus and isSelected then
-      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
-    end
--- ]]
     if isInFocus then
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
-      CanonDelegates.focusPointsDetected = true
+      FocusInfo.focusPointsDetected = true
 
       Log.logInfo("Canon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
         math.floor(x), math.floor(y), math.floor(width), math.floor(height)))
@@ -239,7 +234,18 @@ function CanonDelegates.addInfo(title, key, props, metaData)
     local value = ExifUtils.findValue(metaData, key)
 
     if (value == nil) then
-      props[key] = CanonDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
+    elseif (key == CanonDelegates.metaKeyAspectRatio) then
+      if (value == "3:2 (APS-C crop)") then
+        FocusInfo.cropMode = true
+        props[key] = "APS-C"
+      elseif (key == CanonDelegates.metaKeyAspectRatio) and (value == "3:2 (APS-H crop)") then
+        FocusInfo.cropMode = true
+        props[key] = "APS-H"
+      else
+        -- ignore crops like 1:1, 4:3, 16:9 etc
+        props[key] = ExifUtils.metaValueNA
+      end
     else
       -- everything else is the default case!
       props[key] = value
@@ -253,7 +259,7 @@ function CanonDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= CanonDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
     local result = f:row {
       f:column{f:static_text{title = title .. ":", font="<system>"}},
@@ -277,11 +283,74 @@ end
 
 
 --[[
+  @@public boolean CanonDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
+--]]
+function CanonDelegates.modelSupported(model)
+  -- extract the model ID for comparison
+  local makeID  = "canon eos "
+  local modelID = string.sub(model,#makeID+1, #model)
+  return not (modelID == "300d" or
+              modelID == "10d"  or
+              modelID == "1ds"  or
+              modelID == "d60"  or
+              modelID == "1d"   or
+              modelID == "d30")
+end
+
+
+--[[
+  @@public boolean CanonDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function CanonDelegates.makerNotesFound(_photo, metaData)
+  local result = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfInfoSection)
+  if not result then
+    Log.logWarn("Canon",
+      string.format("Tag '%s' not found", CanonDelegates.metaKeyAfInfoSection))
+  end
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean CanonDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+function CanonDelegates.manualFocusUsed(_photo, metaData)
+-- #TODO no test samples!
+  local mfName = "Manual Focus"
+  local focusMode = ExifUtils.findValue(metaData, CanonDelegates.metaKeyFocusMode)
+  return (string.sub(focusMode, 1, #mfName) == mfName )
+end
+
+
+--[[
+  @@public table function CanonDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
+  -- if any, otherwise return an empty column
+--]]
+function CanonDelegates.getImageInfo(_photo, props, metaData)
+  local f = LrView.osFactory()
+  local imageInfo
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    CanonDelegates.addInfo("Crop Mode", CanonDelegates.metaKeyAspectRatio, props, metaData),
+  }
+  return imageInfo
+end
+
+
+--[[
   @@public table function CanonDelegates.getCameraInfo(table photo, table props, table metaData)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
   -- if any, otherwise return an empty column
 --]]
-function CanonDelegates.getCameraInfo(photo, props, metaData)
+function CanonDelegates.getCameraInfo(_photo, props, metaData)
   local f = LrView.osFactory()
   local cameraInfo
   -- append maker specific entries to the "Camera Settings" section
@@ -300,22 +369,13 @@ end
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function CanonDelegates.getFocusInfo(photo, props, metaData)
+function CanonDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, CanonDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(CanonDelegates.focusPointsDetected),
-
       CanonDelegates.addInfo("Focus Mode"               , CanonDelegates.metaKeyFocusMode        , props, metaData),
       CanonDelegates.addInfo("AF Area Mode"             , CanonDelegates.metaKeyAfAreaMode       , props, metaData),
       CanonDelegates.addInfo("One Shot AF Release"      , CanonDelegates.metaKeyOneShotAfRelease , props, metaData),

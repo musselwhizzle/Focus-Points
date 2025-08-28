@@ -1248,6 +1248,8 @@ ItemID2:    foreach $id (reverse sort { $a <=> $b } keys %$items) {
                 my $base = ($$dirInfo{Base} || 0) + $raf->Tell() - $size;
                 my $dPos = 0;
                 my $hdrLen = $start;
+                # handle case where known trailer is the payload of a "DontRead" box (eg. 'inst')
+                $trailer = $$trailer[3] if $$tagInfo{DontRead} and $trailer and $base == $$trailer[1];
                 if ($$subdir{Base}) {
                     my $localBase = eval $$subdir{Base};
                     $dPos -= $localBase;
@@ -1729,6 +1731,7 @@ ItemID2:    foreach $id (reverse sort { $a <=> $b } keys %$items) {
         # (note that $tag may be a binary Keys index here)
         foreach $tag (@addTags) {
             my $tagInfo = $$dirs{$tag} || $$newTags{$tag};
+            next unless ref $tagInfo eq 'HASH'; # (shouldn't happen, but somehow there is forum17260)
             next if defined $$tagInfo{CanCreate} and not $$tagInfo{CanCreate};
             next if defined $$tagInfo{MediaType} and $$et{MediaType} ne $$tagInfo{MediaType};
             my $subdir = $$tagInfo{SubDirectory};

@@ -34,9 +34,6 @@ require "ExifUtils"
 require "Log"
 
 
-
-local LrErrors = import 'LrErrors'
-
 PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
@@ -49,7 +46,8 @@ function PointsRendererFactory.createRenderer(photo)
     cameraMake  = "unknown"
     cameraModel = "unknown"
     Log.logError("PointsRenderFactory", "Unknown camera make / model")
-  else
+    FocusInfo.severeErrorEncountered = true
+else
     cameraMake = string.lower(cameraMake)
     cameraModel = string.lower(cameraModel)
   end
@@ -62,7 +60,7 @@ function PointsRendererFactory.createRenderer(photo)
   if (string.find(cameraMake, "ricoh imaging company", 1, true)
           or (string.find(cameraMake, "pentax", 1, true) and cameraMake ~= "pentax")
           -- since K-3, tested with K-3, K-1, K-1 Mark II. cameraMake is too unspecific, therefor we test against cameraModel as well
-          or (string.find(cameraMake, "ricoh", 1, true) and string.find(cameraModel, "pentax", 1, true))) then
+          or (string.find(cameraMake, "ricoh", 1, true))) then -- @FIXME and string.find(cameraModel, "pentax", 1, true))) then
     cameraMake = "pentax"
     mapped = true
   end
@@ -80,8 +78,8 @@ function PointsRendererFactory.createRenderer(photo)
   end
 
   -- Olympus and OM Digital share the same exact makernotes structures
-  if (string.find(cameraMake, "om digital solutions", 1, true)
-          or (string.find(cameraMake, "olympus", 1, true)) and cameraMake ~= "olympus") then
+  if string.find(cameraMake, "om digital solutions", 1, true)
+  or string.find(cameraMake, "olympus", 1, true) then
     cameraMake = "olympus"
     mapped = true
   end
@@ -96,60 +94,87 @@ function PointsRendererFactory.createRenderer(photo)
   DefaultDelegates.cameraModel = cameraModel
 
   -- initialize the function pointers for handling the current image (in a series)
-  if (cameraMake == "fujifilm") then
-    DefaultPointRenderer.funcGetAfPoints   = FujifilmDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = FujifilmDelegates.getImageInfo
-    DefaultPointRenderer.funcGetCameraInfo = FujifilmDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = FujifilmDelegates.getFocusInfo
+  if (cameraMake == "apple") then
+    DefaultPointRenderer.funcModelSupported  = AppleDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = AppleDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = AppleDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = AppleDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetCameraInfo   = AppleDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = AppleDelegates.getFocusInfo
 
   elseif (cameraMake == "canon") then
-    DefaultPointRenderer.funcGetAfPoints   = CanonDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = CanonDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = CanonDelegates.getFocusInfo
+    DefaultPointRenderer.funcModelSupported  = CanonDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = CanonDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = CanonDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = CanonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = CanonDelegates.getImageInfo
+    DefaultPointRenderer.funcGetCameraInfo   = CanonDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = CanonDelegates.getFocusInfo
 
-  elseif (cameraMake == "apple") then
-    DefaultPointRenderer.funcGetAfPoints   = AppleDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = AppleDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = AppleDelegates.getFocusInfo
-
-  elseif (cameraMake == "sony") then
-    DefaultPointRenderer.funcGetAfPoints   = SonyDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = SonyDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = SonyDelegates.getFocusInfo
-
-  elseif (cameraMake == "nikon corporation") then
-    DefaultPointRenderer.funcGetAfPoints   = NikonDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = NikonDelegates.getImageInfo
-    DefaultPointRenderer.funcGetCameraInfo = NikonDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = NikonDelegates.getFocusInfo
+  elseif (cameraMake == "fujifilm") then
+    DefaultPointRenderer.funcModelSupported  = FujifilmDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = FujifilmDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = FujifilmDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = FujifilmDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = FujifilmDelegates.getImageInfo 
+    DefaultPointRenderer.funcGetCameraInfo   = FujifilmDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = FujifilmDelegates.getFocusInfo 
+                                                                              
+  elseif (cameraMake == "nikon corporation"  ) then
+    DefaultPointRenderer.funcModelSupported  = NikonDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = NikonDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = NikonDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = NikonDelegates.getAfPoints     
+    DefaultPointRenderer.funcGetImageInfo    = NikonDelegates.getImageInfo    
+    DefaultPointRenderer.funcGetCameraInfo   = NikonDelegates.getCameraInfo   
+    DefaultPointRenderer.funcGetFocusInfo    = NikonDelegates.getFocusInfo    
 
   elseif (cameraMake == "olympus") then
-    DefaultPointRenderer.funcGetAfPoints   = OlympusDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = OlympusDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = OlympusDelegates.getFocusInfo
+    DefaultPointRenderer.funcModelSupported  = OlympusDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = OlympusDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = OlympusDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = OlympusDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = OlympusDelegates.getImageInfo
+    DefaultPointRenderer.funcGetCameraInfo   = OlympusDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = OlympusDelegates.getFocusInfo
 
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
-    DefaultPointRenderer.funcGetAfPoints   = PanasonicDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = PanasonicDelegates.getCameraInfo
-    DefaultPointRenderer.funcGetFocusInfo  = PanasonicDelegates.getFocusInfo
+    DefaultPointRenderer.funcModelSupported  = PanasonicDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = PanasonicDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = PanasonicDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = PanasonicDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetCameraInfo   = PanasonicDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = PanasonicDelegates.getFocusInfo
 
   elseif (cameraMake == "pentax") then
-    DefaultPointRenderer.funcGetAfPoints   = PentaxDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = nil
-    DefaultPointRenderer.funcGetFocusInfo  = PentaxDelegates.getFocusInfo
+    DefaultPointRenderer.funcModelSupported  = PentaxDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = PentaxDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = PentaxDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = PentaxDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetCameraInfo   = PentaxDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = PentaxDelegates.getFocusInfo
+
+  elseif (cameraMake == "sony") then
+    DefaultPointRenderer.funcModelSupported  = SonyDelegates.modelSupported
+    DefaultPointRenderer.funcMakerNotesFound = SonyDelegates.makerNotesFound
+    DefaultPointRenderer.funcManualFocusUsed = SonyDelegates.manualFocusUsed
+    DefaultPointRenderer.funcGetAfPoints     = SonyDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = SonyDelegates.getImageInfo
+    DefaultPointRenderer.funcGetCameraInfo   = SonyDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetFocusInfo    = SonyDelegates.getFocusInfo
 
   else
-    -- Unknown camera maker or model
-    DefaultPointRenderer.funcGetAfPoints   = DefaultPointRenderer.getAfPointsUnknown
-    DefaultPointRenderer.funcGetImageInfo  = nil
-    DefaultPointRenderer.funcGetCameraInfo = DefaultPointRenderer.getCameraInfoUnknown
-    DefaultPointRenderer.funcGetFocusInfo  = DefaultPointRenderer.getFocusInfoUnknown
+    -- Unknown camera maker
+    DefaultPointRenderer.funcModelSupported  = nil
+    DefaultPointRenderer.funcMakerNotesFound = nil
+    DefaultPointRenderer.funcManualFocusUsed = nil
+    DefaultPointRenderer.funcGetAfPoints     = nil
+    DefaultPointRenderer.funcGetImageInfo    = nil
+    DefaultPointRenderer.funcGetCameraInfo   = nil
+    DefaultPointRenderer.funcGetFocusInfo    = nil
   end
 
   DefaultDelegates.metaData = ExifUtils.readMetaDataAsTable(photo)

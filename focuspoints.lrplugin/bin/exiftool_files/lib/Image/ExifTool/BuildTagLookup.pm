@@ -271,11 +271,11 @@ tags remain.
 
 The table below lists all EXIF tags.  Also listed are TIFF, DNG, HDP and
 other tags which are not part of the EXIF specification, but may co-exist
-with EXIF tags in some images.  Tags which are part of the EXIF 2.32
+with EXIF tags in some images.  Tags which are part of the EXIF 3.0
 specification have an underlined B<Tag Name> in the HTML version of this
 documentation.  See
-L<https://web.archive.org/web/20190624045241if_/http://www.cipa.jp:80/std/documents/e/DC-008-Translation-2019-E.pdf>
-for the official EXIF 2.32 specification.
+L<https://www.cipa.jp/std/documents/download_e.html?CIPA_DC-008-2024-E>
+for the official EXIF 3.0 specification.
 },
     GPS => q{
 These GPS tags are part of the EXIF standard, and are stored in a separate
@@ -995,7 +995,7 @@ TagID:  foreach $tagID (@keys) {
                     if ($format and $format =~ /\$val\{/ and
                         ($$tagInfo{Writable} or not defined $$tagInfo{Writable}))
                     {
-                        warn "Warning: \$var{} used in Format of writable tag - $short $name\n"
+                        warn "Warning: \$val{} used in Format of writable tag - $short $name\n"
                     }
                 }
                 if ($$tagInfo{Hidden}) {
@@ -2338,7 +2338,8 @@ sub WriteTagNames($$)
         my ($hid, $showGrp);
         # widths of the different columns in the POD documentation
         my ($wID,$wTag,$wReq,$wGrp) = (8,36,24,10);
-        my ($composite, $derived, $notes, $longTags, $wasLong, $prefix);
+        my ($composite, $derived, $notes, $longTags, $prefix);
+        my $wasLong = 0;
         if ($short eq 'Shortcuts') {
             $derived = '<th>Refers To</th>';
             $composite = 2;
@@ -2396,7 +2397,7 @@ sub WriteTagNames($$)
                     $wID -= $longTag - $wTag;
                     $wTag = $longTag;
                 }
-                $wasLong = 1 if $wID <= $self->{LONG_ID}->{$tableName};
+                ++$wasLong if $wID <= $self->{LONG_ID}->{$tableName};
             }
         } elsif ($composite) {
             $wTag += $wID - $wReq;
@@ -2471,6 +2472,7 @@ sub WriteTagNames($$)
                     if ($over <= $wTag - length($$tagNames[0])) {
                         $wTag2 -= $over;
                         $w += $over;
+                        --$wasLong;
                     } else {
                         # put tag name on next line if ID is too long
                         $idStr = "  $tagIDstr\n   " . (' ' x $w);

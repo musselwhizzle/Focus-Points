@@ -1,0 +1,24 @@
+This plugin contains a compiled AutoHotkey script created with Ahk2Exe.
+
+The AutoHotkey interpreter is licensed under the GNU General Public License, version 2 (GPLv2).
+The GPLv2 applies to the combined executable (interpreter + script).
+
+Your rights under the GPLv2 include:
+- The freedom to run, study, share, and modify the software.
+- Access to the complete corresponding source code.
+
+Source Code:
+The full source code for the AutoHotkey parts of this plugin is included in this package as
+FocusPointsHotkeys.ahk.
+
+License Text:
+A copy of the GNU General Public License, version 2, is included in this package as `GPLv2.txt`.
+You may also read it online at:
+https://www.gnu.org/licenses/old-licenses/gpl-2.0.html
+
+Attribution:
+This plugin uses the AutoHotkey interpreter (https://www.autohotkey.com), which is
+(c) 2003-2023 Chris Mallett and others, licensed under GPLv2.
+
+Non-AutoHotkey parts of this plugin (such as Lightroom integration code and assets) are licensed under:
+[Apache 2.0]

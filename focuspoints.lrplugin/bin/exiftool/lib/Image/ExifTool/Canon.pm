@@ -88,7 +88,7 @@ sub ProcessCTMD($$$);
 sub ProcessExifInfo($$$);
 sub SwapWords($);
 
-$VERSION = '4.89';
+$VERSION = '4.95';
 
 # Note: Removed 'USM' from 'L' lenses since it is redundant - PH
 # (or is it?  Ref 32 shows 5 non-USM L-type lenses)
@@ -636,8 +636,10 @@ $VERSION = '4.89';
    '61182.58' => 'Canon RF 70-200mm F2.8 L IS USM Z + RF1.4x', #42
    '61182.59' => 'Canon RF 70-200mm F2.8 L IS USM Z + RF2x', #42
    '61182.60' => 'Canon RF 16-28mm F2.8 IS STM', #42
-   '61182.61' => 'Canon RF 50mm F1.4 L VCM', #42
-   '61182.62' => 'Canon RF 24mm F1.4 L VCM', #42
+   '61182.61' => 'Canon RF-S 14-30mm F4-6.3 IS STM PZ', #42
+   '61182.62' => 'Canon RF 50mm F1.4 L VCM', #42
+   '61182.63' => 'Canon RF 24mm F1.4 L VCM', #42
+   '61182.64' => 'Canon RF 20mm F1.4 L VCM', #42
     65535 => 'n/a',
 );
 
@@ -1005,6 +1007,7 @@ $VERSION = '4.89';
     0x80000495 => 'EOS R1', #PH
     0x80000496 => 'R5 Mark II', #forum16406
     0x80000498 => 'EOS R100', #25
+    0x80000516 => 'EOS R50 V', #42
     0x80000520 => 'EOS D2000C', #IB
     0x80000560 => 'EOS D6000C', #PH (guess)
 );
@@ -1410,7 +1413,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         },
         {
             Name => 'CanonCameraInfoR6m2',
-            Condition => '$$self{Model} =~ /\bEOS R6m2$/',
+            Condition => '$$self{Model} =~ /\bEOS (R6m2|R8|R50)$/',
             SubDirectory => { TagTable => 'Image::ExifTool::Canon::CameraInfoR6m2' },
         },
         {
@@ -2053,7 +2056,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
     # 0x4014 (similar to 0x83?)
     0x4015 => [{
         Name => 'VignettingCorr', # (LensPacket)
-        Condition => '$$valPt =~ /^\0/ and $$valPt !~ /^\0\0\0\0/', # (data may be all zeros for 60D)
+        Condition => '$$valPt =~ /^\0/ and $$valPt !~ /^(\0\0\0\0|\x00\x40\xdc\x05)/', # (data may be all zeros for 60D)
         SubDirectory => {
             # (the size word is at byte 2 in this structure)
             Validate => 'Image::ExifTool::Canon::Validate($dirData,$subdirStart+2,$size)',
@@ -2061,7 +2064,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
         },
     },{
         Name => 'VignettingCorrUnknown1',
-        Condition => '$$valPt =~ /^[\x01\x02\x10\x20]/ and $$valPt !~ /^\0\0\0\0/',
+        Condition => '$$valPt =~ /^[\x01\x02\x10\x20]/ and $$valPt !~ /^(\0\0\0\0|\x02\x50\x7c\x04)/',
         SubDirectory => {
             # (the size word is at byte 2 in this structure)
             Validate => 'Image::ExifTool::Canon::Validate($dirData,$subdirStart+2,$size)',
@@ -2148,6 +2151,7 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
             TagTable => 'Image::ExifTool::Canon::RawBurstInfo',
         }
     },
+  # 0x4049 - related to croping (forum13491) - "8 0 0 0" = no crop, "8 1 0 1" = crop enabled
     0x4059 => { #forum16111
         Name => 'LevelInfo',
         SubDirectory => {
@@ -2618,12 +2622,20 @@ my %offOn = ( 0 => 'Off', 1 => 'On' );
     # 47 - related to aspect ratio: 100=4:3,70=1:1/16:9,90=3:2,60=4:5 (PH G12)
     #      (roughly image area in percent - 4:3=100%,1:1/16:9=75%,3:2=89%,4:5=60%)
     # 48 - 3 for CR2/CR3, 4 or 7 for JPG, -1 for edited JPG (see forum16127)
+    50 => { #github340
+        Name => 'FocusBracketing',
+        PrintConv => { 0 => 'Disable', 1 => 'Enable' },
+    },
     51 => { #forum16036 (EOS R models)
         Name => 'Clarity',
         PrintConv => {
             OTHER => sub { shift },
             0x7fff => 'n/a',
         },
+    },
+    52 => { #github336
+        Name  => 'HDR-PQ',
+        PrintConv => { %offOn, -1 => 'n/a' },
     },
 );
 
@@ -4758,6 +4770,7 @@ my %ciMaxFocal = (
         Format => 'int32u',
         Notes => 'includes electronic + mechanical shutter',
     },
+    # 0x0b5a - related to image stabilization (ref forum17239) (R5)
     # 0x0bb7 - counts down during focus stack (ref forum16111)
 );
 
@@ -7030,8 +7043,10 @@ my %ciMaxFocal = (
             320 => 'Canon RF 70-200mm F2.8 L IS USM Z + RF1.4x', #42
             321 => 'Canon RF 70-200mm F2.8 L IS USM Z + RF2x', #42
             323 => 'Canon RF 16-28mm F2.8 IS STM', #42
+            324 => 'Canon RF-S 14-30mm F4-6.3 IS STM PZ', #42
             325 => 'Canon RF 50mm F1.4 L VCM', #42
             326 => 'Canon RF 24mm F1.4 L VCM', #42
+            327 => 'Canon RF 20mm F1.4 L VCM', #42
             # Note: add new RF lenses to %canonLensTypes with ID 61182
         },
     },
@@ -8925,7 +8940,7 @@ my %ciMaxFocal = (
     },
     3 => {
         Name => 'HighlightTonePriority',
-        PrintConv => \%offOn,
+        PrintConv => { %offOn, 2 => 'Enhanced' }, #github339 (Enhanced)
     },
     4 => {
         Name => 'LongExposureNoiseReduction',
@@ -9315,6 +9330,14 @@ my %filterConv = (
             1 => 'People',
             2 => 'Animals',
             3 => 'Vehicles',
+        },
+    },
+    21 => { #github344 (R6)
+        Name => 'SubjectSwitching',
+        PrintConv => {
+            0 => 'Initial Priority',
+            1 => 'On Subject',
+            2 => 'Switch Subject',
         },
     },
     24 => { #forum16068

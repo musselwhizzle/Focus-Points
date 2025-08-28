@@ -17,7 +17,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::QuickTime;
 
-$VERSION = '1.12';
+$VERSION = '1.14';
 
 sub ProcessGoPro($$$);
 sub ProcessString($$$);
@@ -750,19 +750,31 @@ sub ProcessString($$$)
     my @list = ref $$dataPt eq 'ARRAY' ? @{$$dataPt} : ( $$dataPt );
     my ($string, $val);
     $et->VerboseDir('GoPro structure');
+    my $docNum = $$et{DOC_NUM};
+    my $subDoc = 0;
     foreach $string (@list) {
         my @val = split ' ', $string;
         my $i = 0;
         foreach $val (@val) {
             $et->HandleTag($tagTablePtr, $i, $val);
-            $$tagTablePtr{++$i} or $i = 0;
+            next if $$tagTablePtr{++$i};
+            # increment subdoc for records stored as string of values (eg. GPS5)
+            $i = 0;
+            ++$subDoc;
+            $$et{DOC_NUM} = "$docNum-$subDoc";
+        }
+        if ($i) {
+            # increment subdoc for records stored as array of strings (eg. GPS9)
+            ++$subDoc;
+            $$et{DOC_NUM} = "$docNum-$subDoc";
         }
     }
+    $$et{DOC_NUM} = $docNum;
     return 1;
 }
 
 #------------------------------------------------------------------------------
-# Process "GP\x06\0" records in MP4 'mdat'atom
+# Process "GP\x06\0" records in MP4 'mdat' atom
 # Inputs: 0) ExifTool object ref, 1) dirInfo ref (RAF and DirLen)
 # Returns: size of GoPro record, or 0 on error
 sub ProcessGP6($$)
@@ -815,9 +827,16 @@ sub ProcessGoPro($$$)
 
     for (; $pos+8<=$dirEnd; $pos+=($size+3)&0xfffffffc) {
         my ($tag,$fmt,$len,$count) = unpack("x${pos}a4CCn", $$dataPt);
+        if ($tag =~ /[^-_a-zA-Z0-9 ]/) {
+            $et->Warn('Unrecognized GoPro record') unless $tag eq "\0\0\0\0";
+            last;
+        }
         $size = $len * $count;
         $pos += 8;
-        last if $pos + $size > $dirEnd;
+        if ($pos + $size > $dirEnd) {
+            $et->Warn('Truncated GoPro record');
+            last;
+        }
         my $tagInfo = $et->GetTagInfo($tagTablePtr, $tag);
         last if $tag eq "\0\0\0\0";     # stop at null tag
         next unless $size or $verbose;  # don't save empty values unless verbose

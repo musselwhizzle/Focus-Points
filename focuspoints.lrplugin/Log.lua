@@ -173,18 +173,6 @@ end
 --]]
 function Log.info()
 
-  local Info = require 'Info.lua'
-
-  -- Retrieve plugin version
-  local pluginVersion = Info.VERSION
-  local versionString
-  if pluginVersion then
-    versionString = string.format("%d.%d.%d",
-                      pluginVersion.major, pluginVersion.minor, pluginVersion.revision)
-  else
-    versionString = "undefined"
-  end
-
   -- Output logfile header with general status information
   local osName = ""
   if not WIN_ENV then
@@ -193,7 +181,7 @@ function Log.info()
   Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
   Log.logInfo("System", string.format(
           "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
-            versionString, LrApplication.versionTable().major, LrApplication.versionTable().minor,
+            getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
             osName, LrSystemInfo.osVersion()))
   if FocusPointPrefs.updateAvailable() then
     Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
