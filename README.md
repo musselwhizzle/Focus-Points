@@ -135,7 +135,7 @@ Supported Cameras
 Installation
 --------
 **Installation steps**
-1. Download `source code.zip` from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of that page to find the download link).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+1. Download `source code.zip` from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/) (go to the bottom of that page to find the download link).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
 
 2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`
