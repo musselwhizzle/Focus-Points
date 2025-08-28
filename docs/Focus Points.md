@@ -1,4 +1,4 @@
-    Focus Points Plugin for Lightroom Classic
+Focus Points Plugin for Lightroom Classic
 =======
 
 ## Content ##
