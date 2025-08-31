@@ -66,11 +66,6 @@ Upcoming Release
   * Includes ExifTool 13.34 (Aug. 18, 2025)
 
 
-**Supported cameras:**  
-See below.
-
-For history of versions and changes see [changelog.](docs/changelog.md)
-
 ### **[Download v3.1 Pre-Release](**[Download](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip)**)**
 
 <br>
