@@ -51,7 +51,7 @@ return {
     },
   },
 
-  	VERSION = { major=3, minor=1, build=" PRE 4" },
+  	VERSION = { major=3, minor=1, build=" PRE 4a" },
 --	VERSION = { major=3, minor=1 },
 
 
