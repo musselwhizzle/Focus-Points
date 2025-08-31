@@ -23,7 +23,7 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 ## Upcoming Release
 
-## V3.1, September xx, 2025
+### V3.1, September xx, 2025
 
 ### New features and changes:
 
