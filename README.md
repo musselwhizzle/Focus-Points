@@ -9,7 +9,7 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 For details on scope and limitations as well as comprehensive operating instructions see [User Documentation](docs/Focus%20Points.md).
 
 ### ATTENTION V3.1 Pre-Release with many new features available !!!
-See **[Release Notes](https://github.com/musselwhizzle/Focus-Points/releases/tag/v3.1_pre)** for changes. Go to **[Focus Points V3.1](https://github.com/musselwhizzle/Focus-Points/tree/v3.1?tab=readme-ov-file#focus-points)** for updated Overview and User Manual. **[Download](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip)** the update plugin. 
+Go to **[Focus Points V3.1](https://github.com/musselwhizzle/Focus-Points/tree/v3.1?tab=readme-ov-file#focus-points)**.
 
 <br>
 
