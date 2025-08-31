@@ -21,9 +21,9 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 <br>
 
-## Upcoming Release
+## Current Release
 
-### V3.1, September xx, 2025
+### V3.1 PRE 4a, &nbsp;Aug 31, 2025
 
 ### New features and changes:
 
