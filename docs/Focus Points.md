@@ -14,7 +14,7 @@ Focus Points Plugin for Lightroom Classic
    - [Screen Scaling](#screen-scaling), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check) 
 
 *  [Focus Point Viewer](#23-focus-point-viewer)<br>
-   - [User Interface](#user-interface), [Information Section](#information-section), [User Messages](#user-interface), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
+   - [User Interface](#user-interface), [Information Section](#information-section), [User Messages](#user-messages), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
 *  [Metadata Viewer](#24-metadata-viewer)
 
 
