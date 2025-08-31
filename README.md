@@ -71,7 +71,7 @@ See below.
 
 For history of versions and changes see [changelog.](docs/changelog.md)
 
-### **[Download release](https://github.com/capricorn8/Focus-Points/releases/latest)**
+### **[Download v3.1 Pre-Release](**[Download](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip)**)**
 
 <br>
 
