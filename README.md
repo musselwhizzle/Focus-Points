@@ -1,5 +1,5 @@
-Focus Points
-=======
+# Focus Points
+
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
 - Show which focus point was active when the picture was taken
@@ -21,9 +21,9 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 <br>
 
-Upcoming Release
---------
-## V3.1, September xx, 2025
+## Upcoming Release
+
+### V3.1, September xx, 2025
 
 ### New features and changes:
 
@@ -66,17 +66,87 @@ Upcoming Release
   * Includes ExifTool 13.34 (Aug. 18, 2025)
 
 
-**Supported cameras:**  
-See below.
-
-For history of versions and changes see [changelog.](docs/changelog.md)
-
-### **[Download release](https://github.com/musselwhizzle/Focus-Points/releases/)**
+* **Supported cameras:**
+[See here for full list](#supported-cameras).
 
 <br>
 
-Supported Cameras
---------
+## Installation
+
+**Installation steps**
+
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`
+
+
+3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`. 
+
+
+4. Open Lightroom and go to `File → Plug-in Manager`.<br>
+_Windows_: Click the `Add` button and select the plugin.<br>
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.
+
+Once installed, select one or more photos and invoke the plugin via
+* `Library → Plug-in Extras → Show Focus Point`, or  
+* `File → Plug-in Extras → Show Focus Point`
+
+<br>
+
+## Supported AF Points
+
+
+The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in [User Interface](docs/Focus%20Points.md#user-interface).
+
+|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
+|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
+|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
+| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera  |
+|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                 |   
+|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup> |   
+|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                    |  
+|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                            |
+
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
+<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
+
+
+On macOS, the focus point display of title photo looks like this:
+
+<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
+
+
+Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, cameras from Canon and Nikon do not store any information on face or subject recognition (at least as far as is known), so visualization is not possible. 
+
+See [chapter 3]((docs/Focus%20Points.md)#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
+
+<br>
+
+## Metadata viewer
+
+The plugin also features a metadata viewer with live search: 
+  
+* `Library → Plug-in Extras → Show Metadata`, or  
+* `File → Plug-in Extras → Show Metadata`
+
+The Metadata Viewer is useful for viewing information that is neither visible in Lightroom's Metadata panel nor in the Information pane of the focus windows. The information is retrieved directly from the image file on disk, giving a complete picture of the metadata written by the camera. Metadata can be filtered by key or value. The filter accepts pattern matching with common 'magic characters':
+
+ | Char  | <div align="left">Meaning</div>                | 
+ |:-----:|------------------------------------------------|
+ |   .   | any character                                  | 
+ |   +   | one or more repetitions of previous character  |
+ |   *   | zero or more repetitions of previous character |                                            
+ |   ^   | start of line/string                           |
+ |   $   | end of line/string                             |              
+
+
+<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
+
+<br>
+
+## Supported Cameras
 
 * Canon
   * Mirrorless: entire R-series
@@ -132,95 +202,20 @@ Supported Cameras
 
 <br>
 
-Installation
---------
-**Installation steps**
-1. Download `source code.zip` from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/) (go to the bottom of that page to find the download link).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
+## Contributing as a Developer
 
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`
-
-
-3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`. 
-
-
-4. Open Lightroom and go to `File → Plug-in Manager`.<br>
-_Windows_: Click the `Add` button and select the plugin.<br>
-_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.
-
-Once installed, select one or more photos and invoke the plugin via
-* `Library → Plug-in Extras → Show Focus Point`, or  
-* `File → Plug-in Extras → Show Focus Point`
-
-<br>
-
-Supported AF Points
---------
-
-The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in [User Interface](docs/Focus%20Points.md#user-interface).
-
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera  |
-|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                 |   
-|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup> |   
-|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                    |  
-|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                            |
-
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
-<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
-
-
-On macOS, the focus point display of title photo looks like this:
-
-<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
-
-
-Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, cameras from Canon and Nikon do not store any information on face or subject recognition (at least as far as is known), so visualization is not possible. 
-
-See [chapter 3]((docs/Focus%20Points.md)#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
-
-<br>
-
-Metadata viewer
---------
-The plugin also features a metadata viewer with live search: 
-  
-* `Library → Plug-in Extras → Show Metadata`, or  
-* `File → Plug-in Extras → Show Metadata`
-
-The Metadata Viewer is useful for viewing information that is neither visible in Lightroom's Metadata panel nor in the Information pane of the focus windows. The information is retrieved directly from the image file on disk, giving a complete picture of the metadata written by the camera. Metadata can be filtered by key or value. The filter accepts pattern matching with common 'magic characters':
-
- | Char  | <div align="left">Meaning</div>                | 
- |:-----:|------------------------------------------------|
- |   .   | any character                                  | 
- |   +   | one or more repetitions of previous character  |
- |   *   | zero or more repetitions of previous character |                                            
- |   ^   | start of line/string                           |
- |   $   | end of line/string                             |              
-
-
-<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
-
-<br>
-
-Contributing as a Developer
---------
 Please see the [Contributing.md](Contributing.md) file before being any new work.
 
-Special Thanks
---------
+## Special Thanks
+
 There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who have worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
 
 rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma, capricorn8 (Karsten Gieselmann)
 
 <a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 
-Licenses
---------
+## Licenses
 
     Copyright 2016 Whizzbang Inc.
 
