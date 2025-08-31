@@ -1,5 +1,5 @@
-Focus Points
-=======
+# Focus Points
+
 
 A plugin for Lightroom Classic (LrC on Windows, macOS) to 
 - Show which focus point was active when the picture was taken
@@ -21,8 +21,8 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 <br>
 
-Upcoming Release
---------
+## Upcoming Release
+
 ## V3.1, September xx, 2025
 
 ### New features and changes:
@@ -71,8 +71,8 @@ Upcoming Release
 
 <br>
 
-Installation
---------
+## Installation
+
 **Installation steps**
 1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
@@ -94,8 +94,8 @@ Once installed, select one or more photos and invoke the plugin via
 
 <br>
 
-Supported AF Points
---------
+## Supported AF Points
+
 
 The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in [User Interface](docs/Focus%20Points.md#user-interface).
 
@@ -124,8 +124,8 @@ See [chapter 3]((docs/Focus%20Points.md)#3-display-of-focus-points) of the user 
 
 <br>
 
-Metadata viewer
---------
+## Metadata viewer
+
 The plugin also features a metadata viewer with live search: 
   
 * `Library → Plug-in Extras → Show Metadata`, or  
@@ -148,7 +148,6 @@ The Metadata Viewer is useful for viewing information that is neither visible in
 
 ## Supported Cameras
 
------
 * Canon
   * Mirrorless: entire R-series
   * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
@@ -204,20 +203,19 @@ The Metadata Viewer is useful for viewing information that is neither visible in
 <br>
 
 
-Contributing as a Developer
---------
+## Contributing as a Developer
+
 Please see the [Contributing.md](Contributing.md) file before being any new work.
 
-Special Thanks
---------
+## Special Thanks
+
 There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who have worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
 
 rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma, capricorn8 (Karsten Gieselmann)
 
 <a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
 
-Licenses
---------
+## Licenses
 
     Copyright 2016 Whizzbang Inc.
 
