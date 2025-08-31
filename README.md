@@ -12,7 +12,7 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 <sup>2</sup> Currently supported for Pentax and OM System.      
 <sup>3</sup> Currently supported for Fuji, OM (subjects, faces) and Sony, Olympus, Pentax (faces).
 
-To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the [User Manual](docs/Focus%20Points.md). It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
+To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 
 <br>
 
@@ -74,8 +74,8 @@ To understand the principles of this plugin, how to use it and how to interpret 
 ## Installation
 
 **Installation steps**
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
 2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`
 
