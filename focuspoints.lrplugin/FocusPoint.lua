@@ -261,7 +261,7 @@ local function showDialog()
               tooltip = "Click to open user documentation",
               immediate = true,
               mouse_down = function(_view)
-                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(urlUserManual) end)
+                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
               end,
             },
           f:spacer { width = 20 },    -- space before 'Exit' button
