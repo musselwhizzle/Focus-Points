@@ -42,6 +42,7 @@ FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 -- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
+FocusPointPrefs.isUpdateAvailable  = nil
 
 -- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Focus%20Points.md"
@@ -109,6 +110,9 @@ function FocusPointPrefs.getLatestVersion()
   -- Need to execute this as a collaborative task
   LrTasks.startAsyncTask(function()
     local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
+    -- @TODO disable test code prior to release !!
+    -- latestVersionNumber = LrFileUtils.readFile( "L:\\Plugins\\focuspoints.lrdevplugin\\Version.txt" )
+    -- end of test code
     if latestVersionNumber then
       prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+")
     end
@@ -139,29 +143,44 @@ end
 function FocusPointPrefs.updateAvailable()
   local prefs = LrPrefs.prefsForPlugin( nil )
   local Info = require 'Info.lua'
-  local result
+  local result = false
 
-  if prefs.latestVersion then
-    local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
-    if major and minor and revision then
-      -- we have a valid version number from the URL
-      local pluginVersion = Info.VERSION
-      if tonumber(major) > pluginVersion.major then
-        result = true
-      elseif tonumber(major) == pluginVersion.major then
-        if  tonumber(minor) > pluginVersion.minor then
+  if FocusPointPrefs.isUpdateAvailable == nil then
+    -- information still empty, so determine its status
+    if prefs.latestVersion then
+      local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
+      if major and minor and revision then
+        -- we have a valid version number from the URL
+        local pluginVersion = Info.VERSION
+        if tonumber(major) > pluginVersion.major then
+          -- new major version available
           result = true
-        elseif tonumber(minor) == pluginVersion.minor then
-          result = tonumber(revision) > pluginVersion.revision
+        elseif tonumber(major) == pluginVersion.major then
+          if  tonumber(minor) > pluginVersion.minor then
+            -- new minor version available
+            result = true
+          elseif tonumber(minor) == pluginVersion.minor then
+            if tonumber(revision) > pluginVersion.revision then
+              -- new revision available
+              result = true
+            elseif tonumber(revision) == pluginVersion.revision then
+              -- major, minor versions and revision numbers are the same
+              if pluginVersion.build and string.find(string.lower(pluginVersion.build), "pre") then
+                -- release available for local pre-release version
+                result = true
+              end
+            end
+          end
         end
+      else
+        Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
       end
     else
-      Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
+      Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
     end
-  else
-    Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
+    FocusPointPrefs.isUpdateAvailable = result
   end
-  return result
+  return FocusPointPrefs.isUpdateAvailable
 end
 
 
