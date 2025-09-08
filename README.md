@@ -14,6 +14,8 @@ A plugin for Lightroom Classic (LrC on Windows, macOS) to
 
 To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 
+**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip)** or see detailed **[installation instructions](#installation)**.
+
 <br>
 
 <img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
@@ -23,7 +25,7 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 ## Current Release
 
-### V3.1 PRE 4a, &nbsp;Aug 31, 2025
+### V3.1 Pre-Release,&nbsp;  Build "PRE 5"  Sep 8, 2025
 
 ### New features and changes:
 
