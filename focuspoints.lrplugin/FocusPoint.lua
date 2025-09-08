@@ -186,13 +186,17 @@ local function showDialog()
 
               -- next image
               elseif string.find(FocusPointPrefs.kbdShortcutsNext, key, 1, true) then
+                if #selectedPhotos > 1 then
               current = (current % #selectedPhotos) + 1
               LrDialogs.stopModalWithResult(view, "next")
+                end
 
               -- previous image
               elseif string.find(FocusPointPrefs.kbdShortcutsPrev, key, 1, true) then
+                if #selectedPhotos > 1 then
               current =  (current - 2) % #selectedPhotos + 1
               LrDialogs.stopModalWithResult(view, "previous")
+                end
               -- open user manual
               elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, key, 1, true) then
                 LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)

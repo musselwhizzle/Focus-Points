@@ -40,6 +40,8 @@ FujifilmDelegates.metaKeyExifImageWidth              = "Exif Image Width"
 FujifilmDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 FujifilmDelegates.metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
 FujifilmDelegates.metaKeyAfMode                      = {"AF Area Mode", "AF Mode" }
+FujifilmDelegates.metaKeyAfAreaPointSize             = "AF Area Point Size"
+FujifilmDelegates.metaKeyAfAreaZoneSize              = "AF Area Zone Size"
 FujifilmDelegates.metaKeyFocusPixel                  = "Focus Pixel"
 FujifilmDelegates.metaKeyAfSPriority                 = "AF-S Priority"
 FujifilmDelegates.metaKeyAfCPriority                 = "AF-C Priority"
@@ -61,6 +63,8 @@ FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
 FujifilmDelegates.metaKeySequenceNumber              = "Sequence Number"
 FujifilmDelegates.metaKeyImageStabilization          = "Image Stabilization"
 
+-- To control output of AF-C relevant settings
+FujifilmDelegates.focusMode                          = ""
 
 --[[
   @@public table FujiFilmDelegates.getAfPoints(table photo, table metaData)
@@ -247,14 +251,40 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
       return f:column{
         fill = 1, spacing = 2, result,
         FujifilmDelegates.addInfo("AF-C Priority", FujifilmDelegates.metaKeyAfCPriority, props, metaData) }
+
     elseif (props[key] == "AF-S") then
       return f:column{
         fill = 1, spacing = 2, result,
         FujifilmDelegates.addInfo("AF-S Priority", FujifilmDelegates.metaKeyAfSPriority, props, metaData) }
-    elseif (key == FujifilmDelegates.metaKeyDriveSpeed) then
+
+    elseif key == FujifilmDelegates.metaKeyAfMode and props[key] == "Single Point" then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        FujifilmDelegates.addInfo("AF Area Point Size", FujifilmDelegates.metaKeyAfAreaPointSize, props, metaData) }
+
+    elseif key == FujifilmDelegates.metaKeyAfMode and props[key] == "Zone" then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        FujifilmDelegates.addInfo("AF Area Zone Size", FujifilmDelegates.metaKeyAfAreaZoneSize, props, metaData) }
+
+    elseif key == FujifilmDelegates.metaKeyDriveSpeed then
       return f:column{
         fill = 1, spacing = 2, result,
         FujifilmDelegates.addInfo("Sequence Number", FujifilmDelegates.metaKeySequenceNumber, props, metaData) }
+
+    elseif ((key == FujifilmDelegates.metaKeyAfCSetting) or
+            (key == FujifilmDelegates.metaKeyAfCTrackingSensitivity) or
+            (key == FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity) or
+            (key == FujifilmDelegates.metaKeyAfCZoneAreaSwitching))
+                and FujifilmDelegates.focusMode ~= "AF-C" then
+      -- these settings are not relevant for focus modes than AF-C
+      return FocusInfo.emptyRow()
+
+    elseif key == FujifilmDelegates.FacesDetected and props[key] == "0"
+        or key == FujifilmDelegates.metaKeyPreAf  and props[key] == "Off" then
+      -- omit tags with irrelevant values
+      return FocusInfo.emptyRow()
+
     else
       -- add row as composed
       return result
@@ -300,6 +330,7 @@ end
 --]]
 function FujifilmDelegates.manualFocusUsed(_photo, metaData)
   local focusMode, key = ExifUtils.findFirstMatchingValue(metaData, FujifilmDelegates.metaKeyFocusMode)
+  FujifilmDelegates.focusMode = focusMode
   Log.logInfo("Fujifilm",
     string.format("Tag '%s' found: %s", key, focusMode))
   return (focusMode == "Manual" or focusMode == "AF-M")
@@ -363,9 +394,9 @@ function FujifilmDelegates.getFocusInfo(_photo, props, metaData)
       FujifilmDelegates.addInfo("Faces Detected",                   FujifilmDelegates.FacesDetected                       , props, metaData),
       FujifilmDelegates.addInfo("Subject Element Types",            FujifilmDelegates.FaceElementTypes                    , props, metaData),
       FujifilmDelegates.addInfo("AF-C Setting",                     FujifilmDelegates.metaKeyAfCSetting                   , props, metaData),
-      FujifilmDelegates.addInfo("AF-C Tracking Sensitivity",        FujifilmDelegates.metaKeyAfCTrackingSensitivity       , props, metaData),
-      FujifilmDelegates.addInfo("AF-C Speed Tracking Sensitivity",  FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity  , props, metaData),
-      FujifilmDelegates.addInfo("AF-C Zone Area Switching",         FujifilmDelegates.metaKeyAfCZoneAreaSwitching         , props, metaData),
+      FujifilmDelegates.addInfo("- Tracking Sensitivity",        FujifilmDelegates.metaKeyAfCTrackingSensitivity       , props, metaData),
+      FujifilmDelegates.addInfo("- Speed Tracking Sensitivity",  FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity  , props, metaData),
+      FujifilmDelegates.addInfo("- Zone Area Switching",         FujifilmDelegates.metaKeyAfCZoneAreaSwitching         , props, metaData),
       }
   return focusInfo
 end

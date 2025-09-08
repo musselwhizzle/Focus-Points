@@ -44,8 +44,6 @@ Focus Points Plugin for Lightroom Classic
 
 * [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin)
 
-### [Glossary](#G-glossary)
-
 ___
 
 
@@ -97,22 +95,20 @@ Note that this may depend on the specific camera make/model. E.g. for Fuji it do
 This section explains how to use the plugin.
 
 ### 2.1 Installation
-1. Unless you have a special link (e.g. for a pre-release), download the **source code.zip** file from [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) (go to the bottom of this page to find the download link). A file named **Focus-Points-[plugin_version].zip** will be downloaded to your computer.<br>
-_MAC users_: The zip file will be automatically unzipped according to your macOS preferences.
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br><br>
 
-2. Extract the downloaded file if necessary. Within the extracted contents, locate the plugin folder **focuspoints.lrplugin**
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br><br>
 
-3. Move this folder to the location where you normally keep your Lightroom plug-ins.<br>Tip: If you don't know this location, the Plugin Manager will tell you (see next step).<br>
-_MAC users_: if you need to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose `show package content`.
+3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br><br>
 
-4. Open Lightroom and go to _File → Plug-in Manager_.<br>
+4. Open Lightroom and go to `File → Plug-in Manager`.<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
-_MAC_: If you copied the plugin to the default Lightroom plugin location, the new plugin is already listed - activate it. Otherwise, click the `Add` button and select the plugin.
-
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br><br>
 
 Once installed, select one or more photos and invoke the plugin via
-  * _Library → Plug-in Extras → Show Focus Point_, or
-  * _File → Plug-in Extras → Show Focus Point_
+* `Library → Plug-in Extras → Show Focus Point`, or  
+* `File → Plug-in Extras → Show Focus Point`
 
 <br>
 
@@ -277,7 +273,7 @@ You can also access this information from the plugin window by clicking the link
 ### Plugin Status
 
 If errors or warnings were encountered while processing the autofocus metadata, a status message is displayed at the bottom of the text pane. To the right of this message, you can click the `Check log` button to open the logfile for more details. The logfile contains detailed information about the metadata processing, such as relevant tags found (or not found).<br>
-See [Logging](#logging) how to setup and customize logging. 
+See [Logging](#logging) how to set up and customize logging. 
 
 For the image above, where focus info is said to be "missing from file", the logfile looks like this:
 
@@ -824,7 +820,7 @@ The plugin comes with a compiled, ready-to-run Autohotkey script that assigns:<b
 \- `NumPad *` as a shortcut for `Show Focus Point`<br>
 \- `NumPad /` as a shortcut for `Show Metadata`
 
-This file **FocusPointsHotkeys.exe** can be found in the `ahk` folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows `Startup` folder, so that the shortcuts are automatically available each time you start Windows. A green `H` icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
+This file **FocusPointsHotkeys.exe** can be found in the `ahk` folder of focuspoints.lrplugin. It works with both the English and German Lightroom interfaces. To activate the shortcuts, run this file and also drag it to your Windows `Startup` folder, so that the shortcuts are automatically available each time you start Windows. A green<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>icon in the system tray indicates that the script is active.
 
 -----
 
@@ -836,7 +832,7 @@ If you want to create your own shortcuts, you can use [FocusPointsHotkeys.ahk](.
 
 3. To define different shortcut keys, you have to replace `NumpadMult` and `NumpadDiv` by whatever suits you.<br> See [Hotkeys](https://www.autohotkey.com/docs/v2/Hotkeys.htm) and [List of Keys](https://www.autohotkey.com/docs/v2/KeyList.htm) for hotkey syntax.<br>  E.g. if you want to assign the two plugin functions to `Win-F` and `Win-M` you have to replace `NumpadMult` by `#f` and `NumpadDiv` by `#m`. If you prefer a `Ctrl-Shift` combination instead of `Win` the hotkey names are `^+f` and `^+m`.<br>Save your changes to the file.
 
-4. Double-click `FocusPointsHotkeys.ahk` to run the script. In case you didn't introduce any errors, a green `H` icon<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>in the system tray indicates that the script is active.
+4. Double-click `FocusPointsHotkeys.ahk` to run the script. In case you didn't introduce any errors, a green<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>icon in the system tray indicates that the script is active.
 
 5. To make the shortcuts available permanently, place `FocusPointsHotkeys.ahk` in your Windows `Startup` folder.<br>
 
@@ -880,8 +876,3 @@ Note: `NumPad *` and `NumPad /` may not work because macOS sometimes treats NumP
 
 Note:<br> 
 Of course, you can use any other keys you like. Just note, that if you assign the same shortcut to two different items, macOS picks one unpredictably.
-
-
-## G Glossary
-
-to be added
