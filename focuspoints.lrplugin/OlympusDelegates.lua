@@ -290,12 +290,11 @@ function getOMDSAfPoints(photo, metaData)
     end
   end
 
-  --[[ We could add more faces but the number of yellow boxes look way too confusing!
-  -- Add face detection frame to the table, if any
+  -- Add face detection frames to the table, if any. The resulting number of yellow boxes might look confusing,
+  -- but on OM-1 II there's no other way to display this information
   if pointsTable then
     OlympusDelegates.addFaces(photo, metaData, pointsTable)
   end
-  --]]
 
   -- Return table of the different elements to be visualized
   return pointsTable
