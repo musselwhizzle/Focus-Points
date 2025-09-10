@@ -2,17 +2,17 @@
 
 
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
-- Show which focus point was active when the picture was taken
-- Display user-selected autofocus points/area <sup>2,3</sup>
-- Visualize faces and subjects detected by the camera <sup>2,4</sup> 
-- Display (EXIF) metadata of the selected image
-- Supports Canon, Nikon, Sony, Fuji, Pentax, Olympus/OM, Panasonic, Ricoh, Apple <sup>5</sup>. 
+- Show which focus point was active when the picture was taken <sup>2</sup>
+- Display user-selected autofocus points/area <sup>3,4</sup>
+- Visualize faces and subjects detected by the camera <sup>3,5</sup> 
+- Display (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
-<sup>2</sup> Depending on the presence of metadata. 
-<sup>3</sup> Currently supported for Pentax and OM System.      
-<sup>4</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
-<sup>5</sup> See [list of supported cameras](#supported-cameras).
+<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See [list of supported cameras](#supported-cameras).<br>
+<sup>3</sup> Depending on the presence of metadata. 
+<sup>4</sup> Currently supported for Pentax and OM System.      
+<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
+
 
 To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 
