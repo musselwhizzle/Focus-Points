@@ -324,7 +324,7 @@ function CanonDelegates.manualFocusUsed(_photo, metaData)
 -- #TODO no test samples!
   local mfName = "Manual Focus"
   local focusMode = ExifUtils.findValue(metaData, CanonDelegates.metaKeyFocusMode)
-  return (string.sub(focusMode, 1, #mfName) == mfName )
+  return focusMode and (string.sub(focusMode, 1, #mfName) == mfName )
 end
 
 

@@ -50,6 +50,8 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
 
   local photoView, overlayViews
 
+  Log.logDebug("DefaultPointRenderer", "Create photo view: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
+
   if WIN_ENV then
     local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
     MogrifyUtils.drawFocusPoints(photo,fpTable)

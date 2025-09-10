@@ -14,30 +14,8 @@ SetWorkingDir(A_ScriptDir)  ; Ensures a consistent starting directory.
 ;Shortcuts for Lightroom (English)
 ; ------------------------------------------------------------------------------
 
-#HotIf WinActive("Lightroom Classic - Library")
+#HotIf WinActive("Lightroom Classic")
 {
   NumpadMult::  MenuSelect(, , "File",  "Plug-in Extras",      "` ` ` Show Focus Point")
   NumpadDiv::   MenuSelect(, , "File",  "Plug-in Extras",      "` ` ` Show Metadata")
-}
-
-#HotIf WinActive("Lightroom Classic - Develop")
-{
-  NumpadMult::  MenuSelect(, , "File",  "Plug-in Extras",      "` ` ` Show Focus Point")
-  NumpadDiv::   MenuSelect(, , "File",  "Plug-in Extras",      "` ` ` Show Metadata")
-}
-
-; ------------------------------------------------------------------------------
-;Shortcuts for Lightroom (Deutsch)
-; ------------------------------------------------------------------------------
-
-#HotIf WinActive("Lightroom Classic - Bibliothek")
-{
-  NumpadMult::  MenuSelect(, , "Datei", "Zusatzmoduloptionen", "` ` ` Show Focus Point")
-  NumpadDiv::   MenuSelect(, , "Datei", "Zusatzmoduloptionen", "` ` ` Show Metadata")
-}
-
-#HotIf WinActive("Lightroom Classic - Entwickeln")
-{
-  NumpadMult::  MenuSelect(, , "Datei", "Zusatzmoduloptionen", "` ` ` Show Focus Point")
-  NumpadDiv::   MenuSelect(, , "Datei", "Zusatzmoduloptionen", "` ` ` Show Metadata")
 }

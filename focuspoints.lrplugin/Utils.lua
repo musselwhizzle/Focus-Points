@@ -252,27 +252,7 @@ end
   Retrieves the plugin version number as string
 --]]
 function getPluginVersion()
-
-  local Info = require 'Info.lua'
-
-  -- Retrieve plugin version record
-  local pluginVersion = Info.VERSION
-  local versionString
-  if pluginVersion then
-    versionString = pluginVersion.major
-    if pluginVersion.minor then
-      versionString = versionString .. "." .. pluginVersion.minor
-      if pluginVersion.revision then
-        versionString = versionString .. "." .. pluginVersion.revision
-      end
-    end
-    if pluginVersion.build and pluginVersion.build ~= "" then
-      versionString = versionString .. pluginVersion.build
-    end
-  else
-    versionString = "undefined"
-  end
-  return versionString
+  return require 'Info.lua'.VERSION.display
 end
 
 

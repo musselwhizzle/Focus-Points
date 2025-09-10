@@ -68,7 +68,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
     end
   end
 
-  return photoWidth, photoHeight
+  return math.floor(photoWidth), math.floor(photoHeight)
 
 end
 

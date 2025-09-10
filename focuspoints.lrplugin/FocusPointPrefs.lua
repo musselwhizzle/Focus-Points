@@ -45,8 +45,8 @@ FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwh
 FocusPointPrefs.isUpdateAvailable  = nil
 
 -- URL definitions
-FocusPointPrefs.urlUserManual      = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Focus%20Points.md"
-FocusPointPrefs.urlTroubleShooting = "https://github.com/capricorn8/Focus-Points/blob/develop/docs/Troubleshooting_FAQ.md"
+FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/v3.1/docs/Focus%20Points.md"
+FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/v3.1/docs/Troubleshooting_FAQ.md"
 
 -- Keyboard shortcut definitions
 FocusPointPrefs.kbdShortcutsPrev            = "-pP"
@@ -165,7 +165,7 @@ function FocusPointPrefs.updateAvailable()
               result = true
             elseif tonumber(revision) == pluginVersion.revision then
               -- major, minor versions and revision numbers are the same
-              if pluginVersion.build and string.find(string.lower(pluginVersion.build), "pre") then
+              if pluginVersion.build and tonumber(pluginVersion.build) >= 9000 then
                 -- release available for local pre-release version
                 result = true
               end

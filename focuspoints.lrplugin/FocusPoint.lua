@@ -16,7 +16,6 @@
 
 local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication = import 'LrApplication'
-local LrApplicationView = import 'LrApplicationView'
 local LrDialogs = import 'LrDialogs'
 local LrView = import 'LrView'
 local LrTasks = import 'LrTasks'
@@ -51,6 +50,7 @@ local function showDialog()
     local props = LrBinding.makePropertyTable(context, { clicked = false })
     local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
     local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
+    local runningLR5 = (LrApplication.versionTable().major <= 6)
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
@@ -69,7 +69,8 @@ local function showDialog()
     -- if launched in Develop module switch to Library to enforce that a preview of the image is available
     -- must switch to loupe view because only in this view previews will be rendered
     -- perform module switch as early as possible to give Library time to create a preview if none exists
-    if WIN_ENV then
+    if WIN_ENV and not runningLR5 then
+      local LrApplicationView = import 'LrApplicationView'
       local moduleName = LrApplicationView.getCurrentModuleName()
       if moduleName == "develop" then
         LrApplicationView.switchToModule("library")
@@ -287,7 +288,7 @@ local function showDialog()
 
     -- Return to Develop modul if the plugin has been started from there
     if WIN_ENV and switchedToLibrary then
-      LrApplicationView.switchToModule("develop")
+      import 'LrApplicationView'.switchToModule("develop")
     end
 
   end)
