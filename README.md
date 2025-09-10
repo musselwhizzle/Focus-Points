@@ -29,7 +29,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release
 
-### V3.1 Pre-Release,&nbsp;  Build "PRE 5"  Sep 8, 2025
+### V3.1 Pre-Release,&nbsp;  Build "PRE 6"  Sep 10, 2025
 
 ### New features and changes:
 
@@ -63,13 +63,16 @@ If you have any questions, comments or suggestions for improving this plugin, pl
  
      
 * **Bugfixes**
+  * PRE 5: Plugin stops with error message when run in LR 5/6 (VERSION.build) [#282](https://github.com/musselwhizzle/Focus-Points/issues/282) 
+  * PRE 5: Plugin stops with error message when run in LR 5 (Could not find namespace: LrApplicationView) 
+  [#283](https://github.com/musselwhizzle/Focus-Points/issues/283)
   * Metadata table not properly displayed when develop settings are written to image file [#257](https://github.com/musselwhizzle/Focus-Points/issues/257)
 
 
 * **Other**
   * Keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
   * User documentation reworked
-  * Includes ExifTool 13.34 (Aug. 18, 2025)
+  * Includes ExifTool 13.36 (Sep. 9, 2025)
 
 
 * **Supported cameras:**
