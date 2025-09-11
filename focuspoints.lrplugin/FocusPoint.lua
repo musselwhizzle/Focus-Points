@@ -23,6 +23,7 @@ local LrBinding = import "LrBinding"
 local LrPrefs = import "LrPrefs"
 local LrColor           = import "LrColor"
 local LrHttp            = import "LrHttp"
+local LrSystemInfo      = import 'LrSystemInfo'
 
 require "FocusPointPrefs"
 require "FocusPointDialog"
@@ -50,7 +51,7 @@ local function showDialog()
     local props = LrBinding.makePropertyTable(context, { clicked = false })
     local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
     local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
-    local runningLR5 = (LrApplication.versionTable().major <= 6)
+    local runningLR5 = (LrApplication.versionTable().major == 5)
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
@@ -65,19 +66,32 @@ local function showDialog()
 
     end
 
+    -- Retrieve dimensions of application window before opening the progress window to workaround LR5 SDK issue
+    FocusPointDialog.AppWidth, FocusPointDialog.AppHeight = LrSystemInfo.appWindowSize()
+    Log.logInfo("System", string.format(
+      "Application window size: %s x %s",FocusPointDialog.AppWidth, FocusPointDialog.AppHeight))
     -- only on WIN (issue #199):
     -- if launched in Develop module switch to Library to enforce that a preview of the image is available
     -- must switch to loupe view because only in this view previews will be rendered
     -- perform module switch as early as possible to give Library time to create a preview if none exists
     if WIN_ENV and not runningLR5 then
+      LrTasks.startAsyncTask(function()
       local LrApplicationView = import 'LrApplicationView'
       local moduleName = LrApplicationView.getCurrentModuleName()
       if moduleName == "develop" then
         LrApplicationView.switchToModule("library")
         LrApplicationView.showView("loupe")
         switchedToLibrary = true
---        LrTasks.sleep(5)  -- timing-specific; might need to be increased on certain systems. tbe
+        end
+      end)
+      --[[ if it turns out that 'busy wait' is required it needs to conditioned with a timeout!
+      if not switchedToLibrary then
+        -- busy wait for asynchronously performed module switch to complete
+        while not switchedToLibrary do
+          LrTasks.sleep (0.1)
+        end
       end
+      --]]
     end
 
     -- throw up this dialog as soon as possible as it blocks input which keeps the plugin from potentially launching

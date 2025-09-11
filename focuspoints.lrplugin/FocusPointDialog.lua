@@ -14,8 +14,7 @@
   limitations under the License.
 --]]
 
-local LrSystemInfo = import 'LrSystemInfo'
-local LrView       = import 'LrView'
+local LrView = import 'LrView'
 
 require "Utils"
 require "Log"
@@ -25,31 +24,33 @@ FocusPointDialog = {}
 
 FocusPointDialog.PhotoWidth  = 0
 FocusPointDialog.PhotoHeight = 0
+FocusPointDialog.AppWidth    = 0
+FocusPointDialog.AppHeight   = 0
 
 FocusPointDialog.currentPhoto = nil
 
 
 function FocusPointDialog.calculatePhotoDimens(photo)
-  local appWidth, appHeight = LrSystemInfo.appWindowSize()
+
+  -- Retrieve photo dimensions
   local dimens = photo:getFormattedMetadata("croppedDimensions")
   local w, h = parseDimens(dimens)
+  Log.logInfo("FocusPointDialog", string.format(
+    "Image: %s (%s x %s)", photo:getFormattedMetadata('fileName'), w, h))
 
-  -- store for use with drawing variable sized focus boxes around 'focus pixels'
+  -- Store for use with drawing variable sized focus boxes around 'focus pixels'
   FocusPointDialog.PhotoWidth  = w
   FocusPointDialog.PhotoHeight = h
 
-  local contentWidth  = appWidth  * .8
-  local contentHeight = appHeight * .8
+  local contentWidth  = FocusPointDialog.AppWidth  * .8
+  local contentHeight = FocusPointDialog.AppHeight * .8
 
   if WIN_ENV then
     local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
     contentWidth  = contentWidth  * scalingLevel
     contentHeight = contentHeight * scalingLevel
   end
-
-  Log.logInfo("FocusPointDialog",
-    string.format("Image: %s (%sx%spx)", photo:getFormattedMetadata('fileName'), w, h))
-
+  
   local photoWidth
   local photoHeight
   if (w > h) then

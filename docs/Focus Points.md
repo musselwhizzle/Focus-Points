@@ -40,7 +40,7 @@ Focus Points Plugin for Lightroom Classic
 
 * [Apple](#310-apple)
 
-### [Appendix](#A-appendix)
+### [Appendix](#appendix)
 
 * [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin)
 
@@ -49,15 +49,19 @@ ___
 
 ## 1. Scope and Limitations
 
-A plugin for Lightroom Classic (LrC on Windows, macOS) to
-- Show which focus point was active when the picture was taken.
-- Display user-selected autofocus points/area<sup>1,2</sup>
-- Visualize faces and subjects detected by the camera<sup>1,3</sup>
-- Display (EXIF) metadata of the selected image
+A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
+- Show which focus point was active when the picture was taken <sup>2</sup>
+- Display user-selected autofocus points/area <sup>3,4</sup>
+- Visualize faces and subjects detected by the camera <sup>3,5</sup> 
+- Display (EXIF) metadata of the selected image 
 
-<sup>1</sup> Depending on the presence of metadata.
-<sup>2</sup> Currently supported for Pentax and OM System.
-<sup>3</sup> Currently supported for Fuji and OM System (subjects, faces) and Sony, Olympus, Pentax (faces).
+<sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
+<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple.<br>
+<sup>3</sup> Depending on the presence of metadata. 
+<sup>4</sup> Currently supported for Pentax and OM System.      
+<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
+
+To understand the principles of this plugin, how to use it and how to interpret the results, it is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 <br>
 <br>
 
@@ -95,20 +99,25 @@ Note that this may depend on the specific camera make/model. E.g. for Fuji it do
 This section explains how to use the plugin.
 
 ### 2.1 Installation
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br><br>
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
 
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br><br>
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br>
 
 3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br><br>
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br>
 
 4. Open Lightroom and go to `File → Plug-in Manager`.<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
-_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br><br>
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br>
 
-Once installed, select one or more photos and invoke the plugin via
+Once the plugin has been installed, choose one or more photos and select:
 * `Library → Plug-in Extras → Show Focus Point`, or  
 * `File → Plug-in Extras → Show Focus Point`
+
+See [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
+
+If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
+
 
 <br>
 
@@ -801,7 +810,7 @@ Face detection for an image exported from Apple Photos:
 
 <br>
 
-## A Appendix
+## Appendix
 
 
 ## How to use a keyboard shortcut to run the plugin
