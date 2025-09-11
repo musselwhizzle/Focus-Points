@@ -84,22 +84,22 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 **Installation steps**
 
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br><br>
 
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`
-
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br><br>
 
 3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`. 
-
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br><br> 
 
 4. Open Lightroom and go to `File → Plug-in Manager`.<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
 _MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.
 
-Once installed, select one or more photos and invoke the plugin via
+Once the plugin has been installed, choose one or more photos and select:
 * `Library → Plug-in Extras → Show Focus Point`, or  
 * `File → Plug-in Extras → Show Focus Point`
+
+See [here](docs/Focus%20Points.md#how-to-use-a-keyboard-shortcut-to-run-the-plugin) how to use a keyboard shortcut to run the plugin. 
 
 <br>
 
@@ -108,17 +108,17 @@ Once installed, select one or more photos and invoke the plugin via
 
 The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in [User Interface](docs/Focus%20Points.md#user-interface).
 
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                                |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|----------------------------------------------------------------------------------------|
-|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                         |
-| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera  |
-|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                 |   
-|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup> |   
-|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                    |  
-|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                            |
+|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                               |
+|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
+|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                        |
+| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera |
+|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                |   
+|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup>      |   
+|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |  
+|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
 
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md##22-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
 <sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
 
 
@@ -129,7 +129,7 @@ On macOS, the focus point display of title photo looks like this:
 
 Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, cameras from Canon and Nikon do not store any information on face or subject recognition (at least as far as is known), so visualization is not possible. 
 
-See [chapter 3]((docs/Focus%20Points.md)#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
+See [chapter 3](docs/Focus%20Points.md#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
 
 <br>
 
@@ -218,7 +218,7 @@ Please see the [Contributing.md](Contributing.md) file before being any new work
 
 ## Special Thanks
 
-There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who have worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev and I've missed you, please feel free to update this file or add your real name):
+There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who have worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev, and I've missed you, please feel free to update this file or add your real name):
 
 rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma, capricorn8 (Karsten Gieselmann)
 
