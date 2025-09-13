@@ -8,7 +8,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 - Display (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
-<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See [list of supported cameras](#supported-cameras).<br>
+<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](#supported-cameras).<br>
 <sup>3</sup> Depending on the presence of metadata. 
 <sup>4</sup> Currently supported for Pentax and OM System.      
 <sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
@@ -205,7 +205,7 @@ The Metadata Viewer is useful for viewing information that is neither visible in
   
 
 * Ricoh
-  * GR III, GR IIIx
+  * GR III, GR IIIx, GR IV
   * Face detection
 
 
