@@ -56,7 +56,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 - Display (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
-<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple.<br>
+<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](../README.md#supported-cameras).<br>
 <sup>3</sup> Depending on the presence of metadata. 
 <sup>4</sup> Currently supported for Pentax and OM System.      
 <sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
@@ -171,7 +171,7 @@ The logging mechanism provides a fine-grained hierarchy of levels at which infor
    | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |
 
 
-<u>Hint</u>: `Auto` logging will start on an empty logfile for each image. When opening such a logfile, this will immediately focus on what just happened on the recent image. For all other logging levels, the logfile will be emptied only in case of loading the plugin, which happens at the time of starting LrC or explicitely reloading the plugin.
+<u>Hint</u>: `Auto`logging will start on an empty log file for each image. When you open such a log file, it will immediately focus on the most recent image. The log file will be emptied when the plugin starts for all other logging levels. 
 
 
 #### Update Check
