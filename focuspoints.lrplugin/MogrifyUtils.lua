@@ -136,13 +136,7 @@ local function exportToDisk(photo, xSize, ySize)
     end
     done = true
   end)
-  if not done then
-  -- busy wait for (asynchronous) callback to complete
-    while not done do
-      Log.logDebug('Mogrify', "not done - sleeping")
-      LrTasks.sleep (0.2)
-    end
-  end
+  while not done do LrTasks.sleep(0.2) end  -- busy wait for async callback to complete
 end
 
 --[[

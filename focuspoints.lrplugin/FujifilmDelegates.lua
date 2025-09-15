@@ -32,8 +32,8 @@ FujifilmDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 -- Note: The very first Fujifilm makernotes entry is "Version", but using a text-based approach
---       to read ExifTool output this term is too generic. "Fuji Flash Mode" is a better choice.
-FujifilmDelegates.metaKeyAfInfoSection               = "Fuji Flash Mode"
+--       to read ExifTool output this term is too generic. "Internal Serial Number" is a better choice.
+FujifilmDelegates.metaKeyAfInfoSection               = "Internal Serial Number"
 
 -- AF-relevant tags
 FujifilmDelegates.metaKeyExifImageWidth              = "Exif Image Width"
@@ -56,7 +56,7 @@ FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivit
 FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
 FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
 
--- Image Information and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
 FujifilmDelegates.metaKeyCropMode                    = "Crop Mode"
 FujifilmDelegates.metaKeyDriveMode                   = "Drive Mode"
 FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
@@ -355,15 +355,15 @@ end
 
 
 --[[
-  @@public table function FujifilmDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function FujifilmDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function FujifilmDelegates.getCameraInfo(_photo, props, metaData)
+function FujifilmDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
 
@@ -371,7 +371,7 @@ function FujifilmDelegates.getCameraInfo(_photo, props, metaData)
     FujifilmDelegates.addInfo("Drive Mode", FujifilmDelegates.metaKeyDriveMode, props, metaData),
     FujifilmDelegates.addInfo("Drive Speed", FujifilmDelegates.metaKeyDriveSpeed, props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 

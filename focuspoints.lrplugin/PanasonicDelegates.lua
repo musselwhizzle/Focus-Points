@@ -51,7 +51,7 @@ PanasonicDelegates.metaKeyAfFacesDetected             = "Faces Detected"
 PanasonicDelegates.metaKeyAfNumFacePositions          = "Num Face Positions"
 PanasonicDelegates.metaKeyAfFacePosition              = "Face %s Position"
 
--- Image Information and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
 PanasonicDelegates.metaKeyShootingMode                = "Shooting Mode"
 PanasonicDelegates.metaKeyImageStabilization          = "Image Stabilization"
 PanasonicDelegates.metaKeyBurstMode                   = "Burst Mode"
@@ -291,21 +291,21 @@ end
 
 
 --[[
-  @@public table function PanasonicDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function PanasonicDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function PanasonicDelegates.getCameraInfo(_photo, props, metaData)
+function PanasonicDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     PanasonicDelegates.addInfo("Image Stabilization", PanasonicDelegates.metaKeyImageStabilization, props, metaData),
     PanasonicDelegates.addInfo("Burst Mode"         , PanasonicDelegates.metaKeyBurstMode         , props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 

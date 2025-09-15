@@ -31,7 +31,7 @@ NikonDelegates.supportedModels = {
     "d3", "d3s", "d3x", "d4", "d4s", "d5", "d5s", "d6", "df",
     "d300", "d300s", "d500", "d600", "d610", "d700", "d750", "d780", "d780", "d800", "d800e", "d810", "d850",
     "d5200", "d5300", "d5500", "d5600", "d7000", "d7100", "d7200", "d7500",
-    "z 5", "z 6", "z 6_2", "z6_3", "z 7", "z 7_2", "z 8", "z 9", "z 30", "z 50", "z50_2", "z f", "z fc",
+    "z 5", "z5_2", "z 6", "z 6_2", "z6_3", "z 7", "z 7_2", "z 8", "z 9", "z 30", "z 50", "z50_2", "z f", "z fc",
 }
 
 -- Tag indicating that makernotes / AF section exists
@@ -592,20 +592,20 @@ function NikonDelegates.getImageInfo(_photo, props, metaData)
 end
 
 --[[
-  @@public table function NikonDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function NikonDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function NikonDelegates.getCameraInfo(_photo, props, metaData)
+function NikonDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     NikonDelegates.addInfo("Shooting Mode", NikonDelegates.metaKeyShootingMode, props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 

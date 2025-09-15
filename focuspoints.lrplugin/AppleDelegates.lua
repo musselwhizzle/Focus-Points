@@ -42,7 +42,7 @@ AppleDelegates.metaKeyImageHeight          = "Image Height"
 AppleDelegates.metaKeyExifImageWidth       = "Exif Image Width"
 AppleDelegates.metaKeyExifImageHeight      = "Exif Image Height"
 
--- Image Information and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
 AppleDelegates.metaKeyCameraType           = "Camera Type"
 AppleDelegates.metaKeyImageCaptureType     = "Image Capture Type"
 AppleDelegates.metaKeyOISMode              = "OIS Mode"
@@ -255,22 +255,22 @@ end
 
 
 --[[
-  @@public table function AppleDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function AppleDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function AppleDelegates.getCameraInfo(_photo, props, metaData)
+function AppleDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     AppleDelegates.addInfo("Image Capture Type", AppleDelegates.metaKeyImageCaptureType, props, metaData),
     AppleDelegates.addInfo("OIS Mode"          , AppleDelegates.metaKeyOISMode         , props, metaData),
     AppleDelegates.addInfo("CameraType"        , AppleDelegates.metaKeyCameraType      , props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 

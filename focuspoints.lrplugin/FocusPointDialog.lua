@@ -83,7 +83,7 @@ function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdHandler)
     photoView
   }
 
-  -- view for textual information on image, camera settings and AF information
+  -- view for textual information on image, shooting and focus information
   if infoView ~= nil then
     local column2 = f:column { fill_vertical = 1,
       infoView,

@@ -26,6 +26,7 @@ local bind = LrView.bind
 
 require "Log"
 
+
 FocusPointPrefs = {}
 
 FocusPointPrefs.displayScaleFactor = 0.0
@@ -62,10 +63,13 @@ FocusPointPrefs.kbdShortcutsExit            = "xX"
   Initialize preferences at first run after installation of plugin
 --]]
 function FocusPointPrefs.InitializePrefs(prefs)
+
+  -- Set any undefined properties to their default values
   if not prefs.screenScaling      then	prefs.screenScaling   = 0 end
   if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
   if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
+  if not prefs.latestVersion      then	prefs.latestVersion   = _PLUGIN.version end
   if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
   -- get the latest plugin version for update checks
   FocusPointPrefs.getLatestVersion()

@@ -50,7 +50,7 @@ PentaxDelegates.supportedModels = {
     "k-70", "k-1", "kp", "k-1 mark ii",                                         -- Pentax version 12
     "gr iii",                                                                   -- Pentax version 13
     "k-3 mark iii", "gr iiix",                                                  -- Pentax version 14
-    "k-3 mark iii monochrome",                                                  -- Pentax version 15
+    "k-3 mark iii monochrome", "gr iv"                                          -- Pentax version 15
 }
 
 -- Tag indicating that makernotes / AF section exists
@@ -66,6 +66,7 @@ PentaxDelegates.metaKeyAfPointsSelected     = "AF Points Selected"
 PentaxDelegates.metaKeyAfPointSelected      = "AF Point Selected"
 PentaxDelegates.metaKeyAfPointsInFocus      = "AF Points In Focus"
 PentaxDelegates.metaKeyAfPoints             = "AF Points"
+PentaxDelegates.metaKeyMaxNumAfPoints       = "Max Num AF Points"
 PentaxDelegates.metaKeyAfSelectionMode      = "AF Selection Mode"
 PentaxDelegates.metaKeyContrastDetectAfArea = "Contrast Detect AF Area"
 PentaxDelegates.metaKeyCAfGridSize          = "CAF Grid Size"
@@ -83,7 +84,7 @@ PentaxDelegates.metaKeyFirstFrameActionAFC  = "First Frame Action In AFC"
 PentaxDelegates.metaKeyActionAFCContinuous  = "Action In AFC Cont"
 
 
--- Image Information and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
 PentaxDelegates.metaKeyExposureProgram      = "Exposure Program"
 PentaxDelegates.metaKeyPictureMode          = "Picture Mode"
 PentaxDelegates.metaKeyDriveMode            = "Drive Mode"
@@ -100,6 +101,7 @@ function modelHasK3iiiAfInfo(model)
       or (model == "pentax k-3 mark iii monochrome")
       or (model == "ricoh gr iii")
       or (model == "ricoh gr iiix")
+      or (model == "ricoh gr iv")
 end
 
 --[[
@@ -700,6 +702,20 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
       -- just take the basic mode and skip all the trailing details after ";"
       props[key] = PentaxDelegates.getDriveMode(value)
 
+    elseif (key == PentaxDelegates.metaKeyMaxNumAfPoints) then
+      -- this tag determines whether camera setting "AF Area Restriction" is ON or OFF
+      local k3iii = "pentax k-3 mark iii"
+      if (string.sub(DefaultDelegates.cameraModel, 1, #k3iii) == k3iii ) then
+        -- only for K-3 III and K-3 III Mono
+        if value ~= "101" then
+          props[key] = "Off"
+        else
+          props[key] = "On"
+        end
+      else
+        -- otherwise, skip this entry
+        props[key] = ExifUtils.metaValueNA
+      end
     else
       props[key] = value
     end
@@ -871,22 +887,22 @@ end
 
 
 --[[
-  @@public table function PentaxDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function PentaxDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function PentaxDelegates.getCameraInfo(_photo, props, metaData)
+function PentaxDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     PentaxDelegates.addInfo("Picture Mode"           , PentaxDelegates.metaKeyPictureMode          , props, metaData),
     PentaxDelegates.addInfo("Shake Reduction"        , PentaxDelegates.metaKeyShakeReduction       , props, metaData),
     PentaxDelegates.addInfo("Drive Mode"             , PentaxDelegates.metaKeyDriveMode            , props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 
@@ -903,6 +919,7 @@ function PentaxDelegates.getFocusInfo(_photo, props, metaData)
       spacing = 2,
       PentaxDelegates.addInfo("Focus Mode",           PentaxDelegates.metaKeyFocusMode          , props, metaData),
       PentaxDelegates.addInfo("Focusing Area",        PentaxDelegates.metaKeyAfPointSelected    , props, metaData),
+      PentaxDelegates.addInfo("AF Area Restriction",  PentaxDelegates.metaKeyMaxNumAfPoints     , props, metaData),
       PentaxDelegates.addInfo("1st Frame Action",     PentaxDelegates.metaKeyFirstFrameActionAFC, props, metaData),
       PentaxDelegates.addInfo("Action Continuous",    PentaxDelegates.metaKeyActionAFCContinuous, props, metaData),
       PentaxDelegates.addInfo("AF Hold",              PentaxDelegates.metaKeyAFHold             , props, metaData),

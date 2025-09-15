@@ -100,7 +100,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = AppleDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = AppleDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = nil
-    DefaultPointRenderer.funcGetCameraInfo   = AppleDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = AppleDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = AppleDelegates.getFocusInfo
 
   elseif (cameraMake == "canon") then
@@ -109,7 +109,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = CanonDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = CanonDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = CanonDelegates.getImageInfo
-    DefaultPointRenderer.funcGetCameraInfo   = CanonDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = CanonDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = CanonDelegates.getFocusInfo
 
   elseif (cameraMake == "fujifilm") then
@@ -118,7 +118,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = FujifilmDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = FujifilmDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = FujifilmDelegates.getImageInfo 
-    DefaultPointRenderer.funcGetCameraInfo   = FujifilmDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = FujifilmDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = FujifilmDelegates.getFocusInfo 
                                                                               
   elseif (cameraMake == "nikon corporation"  ) then
@@ -127,7 +127,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = NikonDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = NikonDelegates.getAfPoints     
     DefaultPointRenderer.funcGetImageInfo    = NikonDelegates.getImageInfo    
-    DefaultPointRenderer.funcGetCameraInfo   = NikonDelegates.getCameraInfo   
+    DefaultPointRenderer.funcGetShootingInfo = NikonDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = NikonDelegates.getFocusInfo    
 
   elseif (cameraMake == "olympus") then
@@ -136,7 +136,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = OlympusDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = OlympusDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = OlympusDelegates.getImageInfo
-    DefaultPointRenderer.funcGetCameraInfo   = OlympusDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = OlympusDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = OlympusDelegates.getFocusInfo
 
   elseif (string.find(cameraMake, "panasonic", 1, true)) then
@@ -145,7 +145,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = PanasonicDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = PanasonicDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = nil
-    DefaultPointRenderer.funcGetCameraInfo   = PanasonicDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = PanasonicDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = PanasonicDelegates.getFocusInfo
 
   elseif (cameraMake == "pentax") then
@@ -154,7 +154,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = PentaxDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = PentaxDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = nil
-    DefaultPointRenderer.funcGetCameraInfo   = PentaxDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = PentaxDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = PentaxDelegates.getFocusInfo
 
   elseif (cameraMake == "sony") then
@@ -163,7 +163,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = SonyDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = SonyDelegates.getAfPoints
     DefaultPointRenderer.funcGetImageInfo    = SonyDelegates.getImageInfo
-    DefaultPointRenderer.funcGetCameraInfo   = SonyDelegates.getCameraInfo
+    DefaultPointRenderer.funcGetShootingInfo = SonyDelegates.getShootingInfo
     DefaultPointRenderer.funcGetFocusInfo    = SonyDelegates.getFocusInfo
 
   else
@@ -173,7 +173,7 @@ else
     DefaultPointRenderer.funcManualFocusUsed = nil
     DefaultPointRenderer.funcGetAfPoints     = nil
     DefaultPointRenderer.funcGetImageInfo    = nil
-    DefaultPointRenderer.funcGetCameraInfo   = nil
+    DefaultPointRenderer.funcGetShootingInfo   = nil
     DefaultPointRenderer.funcGetFocusInfo    = nil
   end
 

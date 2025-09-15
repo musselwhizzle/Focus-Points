@@ -24,6 +24,7 @@ local LrSystemInfo = import "LrSystemInfo"
 
 require "Info"
 
+
 Log = {}
 
 Log.logName  = "FocusPoints"
@@ -167,13 +168,12 @@ end
 
 
 --[[
-  @@public void Log.info()
+  @@public void Log.sysInfo()
   ----
-  Logs a message, which level of information is logged and to which file
+  Output logfile header with system level information. Cqlled during Log.initialize()
 --]]
-function Log.info()
+function Log.sysInfo()
 
-  -- Output logfile header with general status information
   local osName = ""
   if not WIN_ENV then
     osName = "macOS "
@@ -183,10 +183,26 @@ function Log.info()
           "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
             getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
             osName, LrSystemInfo.osVersion()))
+end
+
+--[[
+  @@public void Log.appInfo()
+  ----
+  Extend logfile header with application level information. Needs to be called separately.
+--]]
+function Log.appInfo()
+
   if FocusPointPrefs.updateAvailable() then
     Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
   end
+  if WIN_ENV then
+    Log.logInfo("System", "Display scaling level " ..
+            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+  end
+  Log.logInfo("System", string.format(
+    "Application window size: %s x %s", FocusPointDialog.AppWidth, FocusPointDialog.AppHeight))
 end
+
 
 --[[
   @@public void Log.resetErrorsWarnings()
@@ -206,6 +222,7 @@ end
 --]]
 function Log.initialize()
   Log.delete()
-  Log.info()
   Log.resetErrorsWarnings()
+  Log.sysInfo()
 end
+

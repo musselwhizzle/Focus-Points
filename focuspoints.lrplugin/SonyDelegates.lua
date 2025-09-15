@@ -49,9 +49,11 @@ SonyDelegates.metaKeyAfSonyImageWidth            = "Sony Image Width"
 SonyDelegates.metaKeyAfSonyImageHeight           = "Sony Image Height"
 SonyDelegates.metaKeyAfPointsUsed                = "AF Points Used"
 
--- Image Information and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
 SonyDelegates.metaKeyAPSCSizeCapture             = "APS-C Size Capture"
 SonyDelegates.metaKeySceneMode                   = "Scene Mode"
+SonyDelegates.metaKeyReleaseMode                 = "Release Mode"
+SonyDelegates.metaKeySequenceNumber              = "Sequence Number"
 SonyDelegates.metaKeyImageStabilization          = "Image Stabilization"
 
 
@@ -385,21 +387,23 @@ end
 
 
 --[[
-  @@public table function SonyDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function SonyDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function SonyDelegates.getCameraInfo(_photo, props, metaData)
+function SonyDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     SonyDelegates.addInfo("Scene Mode"         , SonyDelegates.metaKeySceneMode         , props, metaData),
     SonyDelegates.addInfo("Image Stabilization", SonyDelegates.metaKeyImageStabilization, props, metaData),
+    SonyDelegates.addInfo("Release Mode"       , SonyDelegates.metaKeyReleaseMode       , props, metaData),
+    SonyDelegates.addInfo("Sequence Number"    , SonyDelegates.metaKeySequenceNumber    , props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 

@@ -61,7 +61,7 @@ OlympusDelegates.metaKeyFaceDetectFrameSize      = "Face Detect Frame Size"
 OlympusDelegates.metaKeyMaxFaces                 = "Max Faces"
 OlympusDelegates.metaKeyAfEyePriority            = "Eye Priority"
 
--- Image Information and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
 OlympusDelegates.metaKeyDriveMode                = "Drive Mode"
 OlympusDelegates.metaKeyStackedImage             = "Stacked Image Custom"
 OlympusDelegates.metaKeyImageStabilization       = "Image Stabilization"
@@ -776,22 +776,22 @@ function OlympusDelegates.getImageInfo(_photo, props, metaData)
 end
 
 --[[
-  @@public table function OlympusDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function OlympusDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function OlympusDelegates.getCameraInfo(_photo, props, metaData)
+function OlympusDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     OlympusDelegates.addInfo("Drive Mode",            OlympusDelegates.metaKeyDriveMode,           props, metaData),
     OlympusDelegates.addInfo("Image Stabilization",   OlympusDelegates.metaKeyImageStabilization,  props, metaData),
     OlympusDelegates.addInfo("Stacked Image",         OlympusDelegates.metaKeyStackedImage,        props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 

@@ -9125,7 +9125,7 @@ my %filterConv = (
         RawConv => '$val == 0x7fffffff ? undef : $val',
     },
     7 => {  # -4 to 4
-        Name => 'Saturation', 
+        Name => 'Saturation',
         RawConv => '$val == 0x7fffffff ? undef : $val',
         %Image::ExifTool::Exif::printParameter,
     },
@@ -9175,6 +9175,7 @@ my %filterConv = (
         ValueConvInv => '$val - 1',
         PrintHex => 1,
         PrintConv => {
+            11 => 'Case A',  # KG instead of 'Case 11'. Canon use A for Auto
             0x80000000 => 'n/a',
             OTHER => sub { 'Case ' . shift },
         },
@@ -9184,6 +9185,7 @@ my %filterConv = (
         Name => 'AFTrackingSensitivity',
         PrintHex => 1,
         PrintConv => {
+            127 => 'Auto', # KG
             0x7fffffff => 'n/a',
             OTHER => sub { shift },
         },
@@ -9193,6 +9195,7 @@ my %filterConv = (
         Description => 'AF Accel/Decel Tracking',
         PrintHex => 1,
         PrintConv => {
+            127 => 'Auto', # KG
             0x7fffffff => 'n/a',
             OTHER => sub { shift },
         },
@@ -9353,6 +9356,7 @@ my %filterConv = (
             1 => 'People',
             2 => 'Animals',
             3 => 'Vehicles',
+            4 => 'Auto',  # KG (R1, R5m2)
         },
     },
     21 => { #github344 (R6)
@@ -9363,9 +9367,55 @@ my %filterConv = (
             2 => 'Switch Subject',
         },
     },
-    24 => { #forum16068
+    24 => { #forum16068  #KG extensions for 'left' and 'right'
         Name => 'EyeDetection',
-        PrintConv => \%offOn,
+        PrintConv => {
+            0 => 'Off',
+            1 => 'Auto',
+            2 => 'Left Eye',
+            3 => 'Right Eye',
+         },
+    },
+    # ---------------
+    # Entries 25..31 exist for recent models only (R1, R5m2, ...)
+    # ---------------
+    26 => { #KG
+        Name => 'WholeAreaTracking',
+        PrintConv => {
+            0 => 'Off',
+            1 => 'On',
+        },
+    },
+    27 => { #KG
+        Name => 'ServoAFCharacteristics',
+        PrintConv => {
+            0 => 'Case Auto',
+            1 => 'Case Manual',
+        },
+    },
+    28 => { #KG
+        Name => 'CaseAutoSetting',
+        PrintConv => {
+           -1 => 'Locked On',
+            0 => 'Standard',
+            1 => 'Responsive',
+            0x7fffffff => 'n/a',
+        },
+    },
+    29 => { #KG
+        Name => 'ActionPriority',
+        PrintConv => {
+            0 => 'Off',
+            1 => 'On',
+        },
+    },
+    30 => { #KG
+        Name => 'SportEvents',
+        PrintConv => {
+            0 => 'Soccer',
+            1 => 'Basketball',
+            2 => 'Volleyball',
+        }
     },
 );
 

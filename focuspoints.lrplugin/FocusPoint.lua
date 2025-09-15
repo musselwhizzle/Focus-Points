@@ -55,26 +55,26 @@ local function showDialog()
 
     -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
-    -- Initialize logging for non-Auto modes
-    if prefs.loggingLevel ~= "AUTO" then Log.initialize() end
+    -- Initialize logging, log system level information
+    Log.initialize()
 
     -- Set scale factor for sizing of dialog window
     if WIN_ENV then
     FocusPointPrefs.setDisplayScaleFactor()
-    Log.logInfo("System", "Display scaling level " ..
-           math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
 
     end
 
     -- Retrieve dimensions of application window before opening the progress window to workaround LR5 SDK issue
     FocusPointDialog.AppWidth, FocusPointDialog.AppHeight = LrSystemInfo.appWindowSize()
-    Log.logInfo("System", string.format(
-      "Application window size: %s x %s",FocusPointDialog.AppWidth, FocusPointDialog.AppHeight))
+
+    -- Log applicaton level information (includes scale factor and app window size)
+    Log.appInfo()
     -- only on WIN (issue #199):
     -- if launched in Develop module switch to Library to enforce that a preview of the image is available
     -- must switch to loupe view because only in this view previews will be rendered
     -- perform module switch as early as possible to give Library time to create a preview if none exists
     if WIN_ENV and not runningLR5 then
+      local done
       LrTasks.startAsyncTask(function()
       local LrApplicationView = import 'LrApplicationView'
       local moduleName = LrApplicationView.getCurrentModuleName()
@@ -83,15 +83,10 @@ local function showDialog()
         LrApplicationView.showView("loupe")
         switchedToLibrary = true
         end
+        done = true
       end)
-      --[[ if it turns out that 'busy wait' is required it needs to conditioned with a timeout!
-      if not switchedToLibrary then
-        -- busy wait for asynchronously performed module switch to complete
-        while not switchedToLibrary do
-          LrTasks.sleep (0.1)
-        end
-      end
-      --]]
+      -- wait for async task to end
+      while not done do LrTasks.sleep(0.2) end
     end
 
     -- throw up this dialog as soon as possible as it blocks input which keeps the plugin from potentially launching
@@ -99,10 +94,9 @@ local function showDialog()
     -- let the renderer build the view now and show progress dialog
     repeat
 
-      -- Initialize logging
-      if prefs.loggingLevel == "AUTO" then Log.initialize() end
-      Log.resetErrorsWarnings()
+      -- Get logging ready for next photo
       Log.logInfo("FocusPoint", string.rep("=", 72))
+      Log.resetErrorsWarnings()
 
       -- Find the index 'current' of the target photo in set of selectedPhotos
       for i, photo in ipairs(selectedPhotos) do
@@ -277,7 +271,7 @@ local function showDialog()
             f:static_text {
               title = "User Manual " .. string.char(0xF0, 0x9F, 0x94, 0x97),
               text_color = LrColor("blue"),
-              tooltip = "Click to open user documentation",
+              tooltip = "Click to open user documentation\nKeyboard shortcut: 'U' or 'M'",
               immediate = true,
               mouse_down = function(_view)
                 LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
@@ -298,6 +292,11 @@ local function showDialog()
         done = (userResponse == "ok") or (userResponse == "cancel")
       end
 
+      -- Clean log for next photo if in AUTO mode
+      if not done and prefs.loggingLevel == "AUTO" then
+        Log.initialize()
+        Log.appInfo()
+      end
     until done
 
     -- Return to Develop modul if the plugin has been started from there

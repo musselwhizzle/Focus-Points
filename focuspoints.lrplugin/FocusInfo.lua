@@ -117,9 +117,9 @@ end
   @@public table, table, table FocusInfo.getMakerInfo(table photo, table props)
    ----
    For each of the three view sections (image, settings, focus) collect maker specific information:
-   - specific information on image and camera settings will be appended to generic information
+   - specific information on image and shooting information will be appended to generic information
    - focus information will be completely filled as there is no generic focus information
-   Result:  imageInfo, cameraInfo, focusInfo
+   Result:  imageInfo, shootingInfo, focusInfo
 --]]
 function FocusInfo.getMakerInfo(photo, props)
 
@@ -131,12 +131,12 @@ function FocusInfo.getMakerInfo(photo, props)
     imageInfo = FocusInfo.emptyRow()
   end
 
-  -- get maker specific camera settings information, if any
-  local cameraInfo
-  if (DefaultPointRenderer.funcGetCameraInfo ~= nil) then
-    cameraInfo = DefaultPointRenderer.funcGetCameraInfo(photo, props, DefaultDelegates.metaData)
+  -- get maker specific shooting information, if any
+  local shootingInfo
+  if (DefaultPointRenderer.funcGetShootingInfo ~= nil) then
+    shootingInfo = DefaultPointRenderer.funcGetShootingInfo(photo, props, DefaultDelegates.metaData)
   else
-    cameraInfo = FocusInfo.emptyRow()
+    shootingInfo = FocusInfo.emptyRow()
   end
 
   -- get focus information which is always maker specific
@@ -147,7 +147,7 @@ function FocusInfo.getMakerInfo(photo, props)
     focusInfo = FocusInfo.emptyRow()
   end
 
-  return imageInfo, cameraInfo, focusInfo
+  return imageInfo, shootingInfo, focusInfo
 end
 
 
@@ -245,12 +245,12 @@ function FocusInfo.statusMessage(statusCode)
         title      = FocusInfo.status[statusCode].message,
         text_color = FocusInfo.status[statusCode].color,
         tooltip    = FocusInfo.status[statusCode].tooltip
-                     .. "\nClick " .. linkSymbol .. " to open troubleshooting information",
+                     .. "\nClick " .. linkSymbol .. " to open troubleshooting information or press '?'",
       },
       f:static_text {
         title = linkSymbol,
         text_color = LrColor(0, 0.25, 1),
-        tooltip = "Open troubleshooting information",
+        tooltip = "Open troubleshooting information\nKeyboard shortcut: '?'",
         immediate = true,
         mouse_down = function(_view)
           LrTasks.startAsyncTask(function()
@@ -344,6 +344,7 @@ function FocusInfo.pluginStatus()
                 f:spacer{fill_horizontal = 1},
                 f:push_button {
                   title = "Check log",
+                  tooltip = "Click to open log file.\nKeyboard shortcut: 'L'",
                   font = "<system>",
                   action = function() openFileInApp(Log.getFileName()) end,
                 },
@@ -404,7 +405,7 @@ end
 function FocusInfo.createInfoView(photo, props)
   local f = LrView.osFactory()
 
-  local imageInfo, cameraInfo, focusInfo = FocusInfo.getMakerInfo(photo, props)
+  local imageInfo, shootingInfo, focusInfo = FocusInfo.getMakerInfo(photo, props)
 
   -- for manually focused images there will be only a summary message
   local statusCode = FocusInfo.getStatusCode()
@@ -436,7 +437,7 @@ function FocusInfo.createInfoView(photo, props)
               },
           },
           f:spacer { height = 20 },
-          f:group_box { title = "Camera Settings", fill = 1, font = "<system/bold>",
+          f:group_box { title = "Shooting Information", fill = 1, font = "<system/bold>",
               f:column {fill = 1, fill_vertical = 0, spacing = 2,
                   FocusInfo.addInfo("Make"             , FocusInfo.metaKeyCameraMake, photo, props),
                   FocusInfo.addInfo("Model"            , FocusInfo.metaKeyCameraModel, photo, props),
@@ -448,7 +449,7 @@ function FocusInfo.createInfoView(photo, props)
                   FocusInfo.addInfo("Exposure Bias"    , FocusInfo.metaKeyExposureBias, photo, props),
                   FocusInfo.addInfo("Exposure Program" , FocusInfo.metaKeyExposureProgram, photo, props),
                   FocusInfo.addInfo("Metering Mode"    , FocusInfo.metaKeyMeteringMode, photo, props),
-                  cameraInfo
+                  shootingInfo
              },
           },
           f:spacer { height = 20 },
