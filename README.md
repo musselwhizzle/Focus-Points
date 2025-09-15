@@ -29,7 +29,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release
 
-### V3.1 Pre-Release,&nbsp;  Build "PRE 7"  Sep 11, 2025
+### V3.1 Pre-Release,&nbsp;  Build "PRE 8"  Sep 15, 2025
 
 ### New features and changes:
 
@@ -47,10 +47,14 @@ If you have any questions, comments or suggestions for improving this plugin, pl
     * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
   * Olympus: 
     * Support entire Olympus E-System [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
+  * Nikon
+    * Support Nikon Z5 II [#286](https://github.com/musselwhizzle/Focus-Points/issues/286)
   * Ricoh: 
-    * Support Ricoh GR III / IIIx models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
+    * Support Ricoh GR III / IIIx / IV models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
   * Sony:
     * Visualization of focus points considering `FocusFrameSize` tag on newer α bodies [part of #176](https://github.com/musselwhizzle/Focus-Points/issues/176)   
+  * Canon
+    * Improved display of Canon focus information [#285](https://github.com/musselwhizzle/Focus-Points/issues/285) 
 
 
 * **User interface**
@@ -66,8 +70,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
   * PRE 6: Focus point display shows white space instead of the photo [#254](https://github.com/musselwhizzle/Focus-Points/issues/254)
   * PRE 6: Plugin window very small when run in LR 5 [#284](https://github.com/musselwhizzle/Focus-Points/issues/284)
   * PRE 5: Plugin stops with error message when run in LR 5/6 (VERSION.build) [#282](https://github.com/musselwhizzle/Focus-Points/issues/282) 
-  * PRE 5: Plugin stops with error message when run in LR 5 (Could not find namespace: LrApplicationView) 
-  [#283](https://github.com/musselwhizzle/Focus-Points/issues/283)
+  * PRE 5: Plugin stops with error message when run in LR 5 (Could not find namespace: LrApplicationView) [#283](https://github.com/musselwhizzle/Focus-Points/issues/283)
   * Metadata table not properly displayed when develop settings are written to image file [#257](https://github.com/musselwhizzle/Focus-Points/issues/257)
 
 

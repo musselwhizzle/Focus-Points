@@ -229,10 +229,10 @@ Availability of the same method(s) on both platforms (ideally chosen by the user
 
 The text pane right to the photo view comprises three groups:
 - Image information
-- Camera settings
+- Shooting information
 - Focus information
 
-Image information and camera settings are largely taken from the Lightroom catalog, so this information is available for every photo. Depending on the availability of information in the makernotes, these two sections may be expanded to include various camera-specific information such as crop mode, drive mode, shot number, etc., which may be useful in the context of evaluating focus results.
+Image information and Shooting information are largely taken from the Lightroom catalog, so this information is available for every photo. Depending on the availability of information in the makernotes, these two sections may be expanded to include various camera-specific information such as crop mode, drive mode, shot number, etc., which may be useful in the context of evaluating focus results.
 
 Focus information is only available for photos for which the corresponding image file contains complete metadata. See [Scope and Limitations](#1-scope-and-limitations) for more detailed information.
 
@@ -800,7 +800,7 @@ The makernotes section is rather short; older models do not even have an "Apple"
 
 <img src="../screens/Apple 2.jpg" alt="Apple 2" style="width: 1000px;"/>
 
-For modern Apple devices there are some interesting tags to extend the camera settings section. However, the number of AF-relevant tags is limited. ExifTool can decode tags like `AFPerformance`, `AFMeasuredDepth` or `AFConfidence`, but their meaning is not documented and therefore the associated values are meaningless.
+For modern Apple devices there are some interesting tags to extend the Shooting information section. However, the number of AF-relevant tags is limited. ExifTool can decode tags like `AFPerformance`, `AFMeasuredDepth` or `AFConfidence`, but their meaning is not documented and therefore the associated values are meaningless.
 
 <img src="../screens/Apple 1.jpg" alt="Apple 1" style="width: 1000px;"/>
 
