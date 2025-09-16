@@ -29,7 +29,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release
 
-### V3.1 Pre-Release,&nbsp;  Build "PRE 8"  Sep 15, 2025
+### V3.1 Release Candidate RC1 (Sep 16, 2025)
 
 ### New features and changes:
 
