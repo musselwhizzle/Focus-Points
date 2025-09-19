@@ -54,7 +54,7 @@ For example, this image was imported into Lightroom as a RAW file and then edite
 
 <img src="../screens/Troubleshooting 6.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-The log file reveals which tag has not been found in metadata:
+The log file reveals whether intact metadata is available or not by indicating which tag has not been found:
 
 <img src="../screens/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
@@ -65,7 +65,7 @@ The selected photo was taken by a camera that the plugin cannot handle.
 
 This message may be displayed for older camera models that do not use the same structures to store AF-related information as their successor models. It can also be displayed for newer models where the AF related information has not yet been decoded by ExifTool.
 
-Example for 'ancient' Olympus E-510:
+Example for the original Canon 1D from 2001:
 
 <img src="../screens/Troubleshooting 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
@@ -85,7 +85,7 @@ The selected photo does not include information about the camera used. The make 
 
 Clearly, the plugin is unable to perform any actions on this photo other than display it.
 
-<img src="../screens/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="../screens/Troubleshooting 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### "Severe error encountered"
