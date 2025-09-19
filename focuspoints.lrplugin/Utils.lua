@@ -139,6 +139,7 @@ end
 -- @param delimiters A table of delimiters (e.g., { " ", "-", "/" }).
 -- @return A string wrapped with line breaks (`\n`).
 function wrapText(input, delimiters, maxLen)
+  if not input then return "" end
   -- Escape delimiters for pattern use
   local delimSet = {}
   for _, d in ipairs(delimiters) do
@@ -159,7 +160,7 @@ function wrapText(input, delimiters, maxLen)
           if #currentLine > 0 then
               -- Trim trailing spaces from the current line before pushing
               -- Wrap gsub call in parentheses so it only returns one result value and not more)
-              table.insert(lines, (currentLine:gsub("%s+$", "")))
+              table.insert(lines, (currentLine:gsub("[%s" .. table.concat(escaped) .. "]+$", "")))
           end
           -- Trim leading whitespace in the new line part
           currentLine = part:gsub("^%s+", "")

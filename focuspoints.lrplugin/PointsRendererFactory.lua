@@ -45,16 +45,15 @@ function PointsRendererFactory.createRenderer(photo)
     -- we map both to unknown and deal with the consequences on upper levels
     cameraMake  = "unknown"
     cameraModel = "unknown"
-    Log.logError("PointsRenderFactory", "Unknown camera make / model")
-    FocusInfo.severeErrorEncountered = true
-else
+    Log.logError("PointsRendererFactory", "Unknown camera make / model")
+  else
     cameraMake = string.lower(cameraMake)
     cameraModel = string.lower(cameraModel)
   end
 
   local mapped
-  Log.logInfo("PointsRenderFactory", "Camera Make: " .. cameraMake)
-  Log.logInfo("PointsRenderFactory", "Camera Model: " .. cameraModel)
+  Log.logInfo("PointsRendererFactory", "Camera Make: " .. cameraMake)
+  Log.logInfo("PointsRendererFactory", "Camera Model: " .. cameraModel)
 
   -- normalize the camera names. Pentax can be called multiple things
   if (string.find(cameraMake, "ricoh imaging company", 1, true)
@@ -85,8 +84,8 @@ else
   end
 
   if mapped then
-    Log.logDebug("PointsRenderFactory", "Camera Make (after map): " .. cameraMake)
-    Log.logDebug("PointsRenderFactory", "Camera Model (after map): " .. cameraModel)
+    Log.logDebug("PointsRendererFactory", "Camera Make (after map): " .. cameraMake)
+    Log.logDebug("PointsRendererFactory", "Camera Model (after map): " .. cameraModel)
   end
 
   -- for use in make specific Delegates, to avoid repeatedly normalization

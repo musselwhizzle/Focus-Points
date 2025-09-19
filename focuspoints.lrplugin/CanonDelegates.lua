@@ -302,12 +302,9 @@ function CanonDelegates.addInfo(title, key, props, metaData)
 
   -- Check if there is (meaningful) content to add
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
+
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = props[key], font="<system>"}}
-    }
+    local result = FocusInfo.addRow(title, props[key])
 
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == CanonDelegates.metaValueOneShotAf) then

@@ -176,13 +176,7 @@ function AppleDelegates.addInfo(title, key, props, metaData)
   -- Check if there is (meaningful) content to add
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = props[key], font="<system>"}}
-    }
-    -- add row as composed
-    return result
+    return FocusInfo.addRow(title, props[key])
   else
     -- we won't display any "N/A" entries - return empty row
     return FocusInfo.emptyRow()

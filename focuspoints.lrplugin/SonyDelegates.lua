@@ -287,12 +287,10 @@ function SonyDelegates.addInfo(title, key, props, metaData)
 
   -- Check if there is (meaningful) content to add
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
+
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = wrapText(props[key], {','},30), font="<system>"}}
-    }
+    local result = FocusInfo.addRow(title, props[key])
+
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (key == SonyDelegates.metaKeyAfTracking) and string.find(string.lower(props[key]), "face") then
       return f:column{
@@ -362,9 +360,9 @@ end
   ----
   Returns whether manual focus has been used on the given photo
 --]]
-function SonyDelegates.manualFocusUsed(_photo, metaData)
+  function SonyDelegates.manualFocusUsed(_photo, metaData)
   -- #TODO No test samples available for Sony manual focus
-  local focusMode = ExifUtils.findValue(metaData, SonyDelegates.metaKeyFocusMode)
+  local focusMode = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusMode)
   return (focusMode == "Manual")
 end
 

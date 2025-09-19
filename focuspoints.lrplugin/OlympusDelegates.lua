@@ -631,11 +631,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
   end
 
   -- compose the row to be added
-  local result = f:row {
-    f:column{f:static_text{title = title .. ":", font="<system>"}},
-    f:spacer{fill_horizontal = 1},
-    f:column{f:static_text{title = escape(props[key]), font="<system>"}}
-  }
+  local result = FocusInfo.addRow(title, props[key])
 
   -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
   if key == OlympusDelegates.metaKeyFocusMode then

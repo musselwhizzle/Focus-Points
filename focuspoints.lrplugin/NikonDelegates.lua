@@ -500,12 +500,10 @@ function NikonDelegates.addInfo(title, key, props, metaData)
 
   -- Check if there is (meaningful) content to add
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
+
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = props[key], font="<system>"}}
-    }
+    local result = FocusInfo.addRow(title, props[key])
+
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == "AF-C") then
       -- first, figure out which of the two tags is relevant for this camera
@@ -513,16 +511,19 @@ function NikonDelegates.addInfo(title, key, props, metaData)
       return f:column{
         fill = 1, spacing = 2, result,
         NikonDelegates.addInfo("AF-C Priority", afPriorityKey, props, metaData) }
+
     elseif (props[key] == "AF-S") then
       -- first, figure out which of the two tags is relevant for this camera
       local _afPriorityValue, afPriorityKey = ExifUtils.findFirstMatchingValue( metaData, NikonDelegates.metaKeyAfSPriority)
       return f:column{
         fill = 1, spacing = 2, result,
         NikonDelegates.addInfo("AF-S Priority", afPriorityKey, props, metaData) }
+
     else
       -- add row as composed
       return result
     end
+
   else
     -- we won't display any "N/A" entries - return empty row
     return FocusInfo.emptyRow()

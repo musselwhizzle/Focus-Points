@@ -30,6 +30,9 @@ require "Log"
 
 FocusInfo = {}
 
+FocusInfo.maxValueLen               = 30        -- longer texts for values will be wrapped across multiple lines
+
+FocusInfo.missingMetadata           = false
 FocusInfo.cameraMakerSupported      = false
 FocusInfo.cameraModelSupported      = false
 FocusInfo.makerNotesFound           = false
@@ -62,7 +65,8 @@ FocusInfo.statusManualFocusUsed        = 3
 FocusInfo.statusMakerNotesNotFound     = 4
 FocusInfo.statusModelNotSupported      = 5
 FocusInfo.statusMakerNotSupported      = 6
-FocusInfo.statusSevereErrorEncountered = 7
+FocusInfo.statusMissingMetadata        = 7
+FocusInfo.statusSevereErrorEncountered = 8
 FocusInfo.statusUndefined              = 255
 
 FocusInfo.status = {
@@ -90,6 +94,10 @@ FocusInfo.status = {
        color   = LrColor("red"),
        tooltip = "The photo was taken with a camera from a manufacturer that the plugin cannot handle.",
        link    = "#Camera-maker-not-supported" },
+    {  message = "No camera-specific metadata found",
+       color   = LrColor("red"),
+       tooltip = "The photo lacks camera-specific metadata.",
+       link    = "#No-camera-specific-metadata-found" },
     {  message = "Severe error encountered",
        color   = LrColor("red"),
        tooltip = "Something unexpected happened. Check log file." ,
@@ -152,6 +160,21 @@ end
 
 
 --[[
+  @@public table FocusInfo.addRow(key, value)
+  ----
+  Create a view element for another row to be added to the current section
+--]]
+function FocusInfo.addRow(key, value)
+  local f = LrView.osFactory()
+  return f:row {
+    f:column{ f:static_text{ title = key .. ":", font="<system>", alignment="left"  }},
+    f:spacer{ fill_horizontal = 1},
+    f:column{ f:static_text{ title = value,      font="<system>", alignment="right" }}
+  }
+end
+
+
+--[[
   @@public table FocusInfo.emptyRow()
   ----
   Creates an "empty row" that is really empty - f:row{} is not
@@ -165,11 +188,11 @@ end
 --[[
   @@public table FocusInfo.addSpace()
   ----
-  Adds a spacer between the current entry and the next one
+  Ceates a spacer to provide extra separation between two rows
 --]]
 function FocusInfo.addSpace()
   local f = LrView.osFactory()
-    return f:spacer{height = 2}
+  return f:spacer{height = 2}
 end
 
 
@@ -180,7 +203,7 @@ end
 --]]
 function FocusInfo.addSeparator()
   local f = LrView.osFactory()
-    return f:separator{ fill_horizontal = 1 }
+  return f:separator{ fill_horizontal = 1 }
 end
 
 
@@ -209,6 +232,7 @@ end
 function FocusInfo.getStatusCode()
   local statusCode
   if         FocusInfo.severeErrorEncountered then statusCode = FocusInfo.statusSevereErrorEncountered
+  elseif     FocusInfo.missingMetadata        then statusCode = FocusInfo.statusMissingMetadata
   elseif not FocusInfo.cameraMakerSupported   then statusCode = FocusInfo.statusMakerNotSupported
   elseif not FocusInfo.cameraModelSupported   then statusCode = FocusInfo.statusModelNotSupported
   elseif not FocusInfo.makerNotesFound        then statusCode = FocusInfo.statusMakerNotesNotFound
@@ -390,11 +414,7 @@ function FocusInfo.addInfo(title, key, photo, props)
   end
 
   -- return the row to be added
-  return f:row {
-      f:column { f:static_text { title = title .. ":", font = "<system>" } },
-      f:spacer { fill_horizontal = 1 },
-      f:column { f:static_text { title = props[key], font = "<system>" } }
-  }
+  return FocusInfo.addRow(title, props[key])
 end
 
 --[[

@@ -159,6 +159,14 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
 
   FocusInfo.initialize()
 
+  FocusInfo.missingMetadata = DefaultDelegates.cameraMake  == "unknown" and
+                              DefaultDelegates.cameraModel == "unknown"
+  if FocusInfo.missingMetadata then
+    -- the image file is probably an export w/o any metadata
+    Log.logError("DefaultPointRenderer", "Image file does not contain camera specific metadata")
+    return nil
+  end
+
   FocusInfo.cameraMakerSupported = DefaultPointRenderer.funcGetAfPoints ~= nil
   if not FocusInfo.cameraMakerSupported then
     Log.logError("DefaultPointRenderer", "Camera maker is not supported")

@@ -207,21 +207,21 @@ function PanasonicDelegates.addInfo(title, key, props, metaData)
   -- Check if there is (meaningful) content to add
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = wrapText(props[key],{',', ';'},30), font="<system>"}}
---    f:column{f:static_text{title = props[key], font="<system>"}}
-    }
+
+    -- compose the row to be added
+    local result = FocusInfo.addRow(title, props[key])
+
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (key == PanasonicDelegates.metaKeyBurstMode) and (props[key] == PanasonicDelegates.metaValueOn) then
       return f:column{
         fill = 1, spacing = 2, result,
         PanasonicDelegates.addInfo("Sequence Number", PanasonicDelegates.metaKeySequenceNumber, props, metaData)
       }
+
     elseif (key == PanasonicDelegates.metaKeyAfFacesDetected and props[key] == "0") then
       -- if no faces have been detected, we will skip this entry
       return FocusInfo.emptyRow()
+
 --[[
     elseif (key == PanasonicDelegates.metaKeyAfSubjectDetection) and
            string.find(string.lower(props[key]), "face") then

@@ -240,12 +240,14 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
 
   -- Check if there is (meaningful) content to add
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
+
+    -- wrap values as required
+    if key == FujifilmDelegates.metaKeyImageStabilization then props[key] = wrapText(props[key], {';'}, FocusInfo.maxValueLen) end
+    if key == FujifilmDelegates.FaceElementTypes          then props[key] = wrapText(props[key], {','}, FocusInfo.maxValueLen) end
+
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = wrapText(props[key], {','},30), font="<system>"}}
-    }
+    local result = FocusInfo.addRow(title, props[key])
+
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == "AF-C") then
       return f:column{
@@ -387,13 +389,13 @@ function FujifilmDelegates.getFocusInfo(_photo, props, metaData)
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FujifilmDelegates.addInfo("Focus Mode",                       FujifilmDelegates.metaKeyFocusMode                    , props, metaData),
-      FujifilmDelegates.addInfo("AF Mode",                          FujifilmDelegates.metaKeyAfMode                       , props, metaData),
-      FujifilmDelegates.addInfo("Focus Warning",                    FujifilmDelegates.metaKeyFocusWarning                 , props, metaData),
-      FujifilmDelegates.addInfo("Pre AF",                           FujifilmDelegates.metaKeyPreAf                        , props, metaData),
-      FujifilmDelegates.addInfo("Faces Detected",                   FujifilmDelegates.FacesDetected                       , props, metaData),
-      FujifilmDelegates.addInfo("Subject Element Types",            FujifilmDelegates.FaceElementTypes                    , props, metaData),
-      FujifilmDelegates.addInfo("AF-C Setting",                     FujifilmDelegates.metaKeyAfCSetting                   , props, metaData),
+      FujifilmDelegates.addInfo("Focus Mode",                    FujifilmDelegates.metaKeyFocusMode                    , props, metaData),
+      FujifilmDelegates.addInfo("AF Mode",                       FujifilmDelegates.metaKeyAfMode                       , props, metaData),
+      FujifilmDelegates.addInfo("Focus Warning",                 FujifilmDelegates.metaKeyFocusWarning                 , props, metaData),
+      FujifilmDelegates.addInfo("Pre AF",                        FujifilmDelegates.metaKeyPreAf                        , props, metaData),
+      FujifilmDelegates.addInfo("Faces Detected",                FujifilmDelegates.FacesDetected                       , props, metaData),
+      FujifilmDelegates.addInfo("Subject Element Types",         FujifilmDelegates.FaceElementTypes                    , props, metaData),
+      FujifilmDelegates.addInfo("AF-C Setting",                  FujifilmDelegates.metaKeyAfCSetting                   , props, metaData),
       FujifilmDelegates.addInfo("- Tracking Sensitivity",        FujifilmDelegates.metaKeyAfCTrackingSensitivity       , props, metaData),
       FujifilmDelegates.addInfo("- Speed Tracking Sensitivity",  FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity  , props, metaData),
       FujifilmDelegates.addInfo("- Zone Area Switching",         FujifilmDelegates.metaKeyAfCZoneAreaSwitching         , props, metaData),

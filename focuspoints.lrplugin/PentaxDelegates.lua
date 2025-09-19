@@ -734,11 +734,7 @@ function PentaxDelegates.addInfo(title, key, props, metaData)
   end
 
   -- compose the row to be added
-  local result = f:row {
-    f:column{f:static_text{title = title .. ":", font="<system>"}},
-    f:spacer{fill_horizontal = 1},
-    f:column{f:static_text{title = props[key], font="<system>"}}
-  }
+  local result = FocusInfo.addRow(title, props[key])
 
   -- tags that are only relevant in Continuous (AF-C) mode
   if (key == PentaxDelegates.metaKeyAFHold          )
@@ -837,7 +833,7 @@ function PentaxDelegates.getDriveMode(driveModeValue)
   if v2 ~= "Shutter Button"  then result = result .. "; " .. v2 end
   if v3 ~= "Single Exposure" then result = result .. "; " .. v3 end
 
-  return wrapText(result, {";"}, 30)
+  return wrapText(result, {";"}, FocusInfo.maxValueLen)
 end
 
 
