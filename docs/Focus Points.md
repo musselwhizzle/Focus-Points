@@ -270,6 +270,7 @@ The first line of text in the `Focus Information` section contains a message sum
 |  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file)              |
 |  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported)                  |
 |  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported)                  |
+|  Error  | [No camera-specific metadata found](Troubleshooting_FAQ.md#No-camera-specific-metadata-found)                  |
 |  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered)                      |
 
 Click on the message to learn what it means and how to deal with it in case of an error or warning.
@@ -823,19 +824,21 @@ However, at the system level, there are ways to automate the startup of the plug
 
 ### Windows
 
-Under Windows, you can use the free utility [AutoHotkey](https://www.autohotkey.com/) together with a small script, to assign the call of _File → Plug-in Extras → Show Focus Point_ to a key. Same for _Show Metadata_.
+On Windows, you can use the free [AutoHotkey](https://www.autohotkey.com/) utility together with a small script to assign the command _File → Plug-in Extras → Show Focus Point_ to a key. The same applies to _Show Metadata_.
 
-The plugin comes with a compiled, ready-to-run Autohotkey script that assigns:<br>
+The plugin comes with a ready-to-run, compiled Autohotkey script that assigns:<br>
 \- `NumPad *` as a shortcut for `Show Focus Point`<br>
 \- `NumPad /` as a shortcut for `Show Metadata`
 
-This file **FocusPointsHotkey.exe** (for English language UI) can be found in the `ahk` folder of focuspoints.lrplugin. Use FocusPointsHotkey_de.exe if you use German language UI in Lightroom.   
+The **FocusPointsHotkey.exe** file (for the English UI) can be found in the `ahk` folder of the focuspoints.lrplugin file. If you use the German language UI in Lightroom, use FocusPointsHotkey_de.exe instead.
 
-To activate the two shortcuts, run this file and also drag it to your Windows `Startup` folder, so that the shortcuts are automatically available each time you start Windows. A green<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>icon in the system tray indicates that the script is active.
+Note: If you are using a perpetual licence version of Lightroom Classic (Lightroom 5 or 6), rather than the subscription version, then you need to select **FocusPointsHotkey_LR.exe** (or FocusPointsHotkey_LR_de for German UI) from the `ahk` folder. Separate versions are necessary because the application window title that triggers the keyboard shortcut can differ between LR6/6 and LrC.     
+
+To activate the two shortcuts, run the executable file and also drag it to your Windows `Startup` folder, so that the shortcuts are automatically available each time you start Windows. A green<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>icon in the system tray indicates that the script is active.
 
 -----
 
-If you want to create your own shortcuts, you can use [FocusPointsHotkey.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkey.ahk) (or [FocusPointsHotkey_de.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkey_de.ahk)) as a starting point:
+You can use [FocusPointsHotkey.ahk](../focuspoints.lrplugin/ahk/FocusPointsHotkey.ahk) (or the corresponding .ahk file for your setup) as a starting point to **create your own shortcuts**:
 
 1. Download AutoHotKeys V2 from https://www.autohotkey.com/ and install it on your system.
 
