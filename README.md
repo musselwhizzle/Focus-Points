@@ -29,7 +29,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release
 
-### V3.1 Release Candidate RC1 (Sep 16, 2025)
+### V3.1 Release Candidate RC2 (Sep 19, 2025)
 
 ### New features and changes:
 
@@ -67,6 +67,8 @@ If you have any questions, comments or suggestions for improving this plugin, pl
  
      
 * **Bugfixes**
+  * RC1: Focus Point information is shown for Sony Non-AF lens [#287](https://github.com/musselwhizzle/Focus-Points/issues/287)
+  * RC1: Keyboard shortcuts to launch the plugin don't work on LR5/6
   * PRE 6: Focus point display shows white space instead of the photo [#254](https://github.com/musselwhizzle/Focus-Points/issues/254)
   * PRE 6: Plugin window very small when run in LR 5 [#284](https://github.com/musselwhizzle/Focus-Points/issues/284)
   * PRE 5: Plugin stops with error message when run in LR 5/6 (VERSION.build) [#282](https://github.com/musselwhizzle/Focus-Points/issues/282) 
