@@ -7,6 +7,7 @@
 * [Focus info missing from file](#Focus-info-missing-from-file)
 * [Camera model not supported](#Camera-model-not-supported)
 * [Camera maker not supported](#Camera-maker-not-supported)
+* [No camera-specific metadata found](#No-camera-specific-metadata-found)
 * [Severe error encountered](#Severe-error-encountered)
 
 ## General
@@ -78,6 +79,15 @@ While it is not difficult to add at least basic support for a camera brand, this
 <img src="../screens/Troubleshooting 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
+### "No camera-specific metadata found"
+
+The selected photo does not include information about the camera used. The make and model of the camera are both unknown, as is usually the case when an image file is exported from Lightroom (or any other program) without metadata. 
+
+Clearly, the plugin is unable to perform any actions on this photo other than display it.
+
+<img src="../screens/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+
 ### "Severe error encountered"
 
 This message is displayed when something serious and unexpected happens during the process of reading focus information from the metadata, processing it, and displaying the visualization elements.
@@ -100,4 +110,4 @@ The log file reveals what the problem is (artificially induced to provoke this e
 
 ### Plugin window exceeds screen dimensions
 
-to be completed
+to be added
