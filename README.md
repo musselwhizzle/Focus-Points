@@ -29,7 +29,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release
 
-### V3.1 updated September 22, 2025
+## V3.1 updated September 22, 2025
 
 ### New features and changes:
 
