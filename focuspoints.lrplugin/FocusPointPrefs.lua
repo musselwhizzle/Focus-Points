@@ -46,8 +46,8 @@ FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwh
 FocusPointPrefs.isUpdateAvailable  = nil
 
 -- URL definitions
-FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/v3.1/docs/Focus%20Points.md"
-FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/v3.1/docs/Troubleshooting_FAQ.md"
+FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
+FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
 
 -- Keyboard shortcut definitions
 FocusPointPrefs.kbdShortcutsPrev            = "-pP"
