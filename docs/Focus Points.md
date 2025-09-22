@@ -99,7 +99,7 @@ Note that this may depend on the specific camera make/model. E.g. for Fuji it do
 This section explains how to use the plugin.
 
 ### 2.1 Installation
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pre.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pub.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
 
 2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br>
 
