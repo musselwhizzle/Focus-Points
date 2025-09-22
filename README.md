@@ -20,9 +20,6 @@ To understand the principles of this plugin, how to use it and how to interpret 
 
 If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
 
-### ATTENTION V3.1 Pre-Release with many new features available !!!
-Go to **[Focus Points V3.1 Pre-Release](https://github.com/musselwhizzle/Focus-Points/tree/v3.1?tab=readme-ov-file#focus-points)**.
-
 <br>
 
 <img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
