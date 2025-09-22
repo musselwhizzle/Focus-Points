@@ -59,7 +59,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 use Image::ExifTool::HP;
 
-$VERSION = '3.57';
+$VERSION = '3.58';
 
 sub CryptShutterCount($$);
 sub PrintFilter($$$);
@@ -2214,10 +2214,9 @@ my %binaryDataAttrs = (
             # 256 - seen for GR III
             # 257 - seen for GR III
             # 262 - seen for GR III
-#           32768 => 'n/a', # KG If this is valid for models other than the K-3IIIm, how should the duplicate be handled other than by doubling the entire structure???
-            32768 => 'Standard', # KG (K-3IIIm)
-            32769 => 'Hard', # KG (K-3IIIm)
-            32770 => 'Soft', # KG (K-3IIIm)
+            32768 => 'Standard', #KG (K-3IIIm) (was "n/a" previously - PH)
+            32769 => 'Hard', #KG (K-3IIIm)
+            32770 => 'Soft', #KG (K-3IIIm)
         },
     },
     0x0050 => { #PH
@@ -5864,7 +5863,7 @@ my %binaryDataAttrs = (
     %binaryDataAttrs,
     GROUPS => { 0 => 'MakerNotes', 2 => 'Camera' },
     FORMAT => 'int16u',
-    DATAMEMBER => [ 3 ],
+    DATAMEMBER => [ 2, 3 ],
     NOTES => 'AF tags written by the K-3 Mark III, GR III, GR IIIx and GR IV.',
     0 => {
         Name => 'AFInfo',
