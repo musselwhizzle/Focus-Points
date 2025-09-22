@@ -79,7 +79,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 * **Other**
   * Keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
   * User documentation reworked
-  * Includes ExifTool 13.36 (Sep. 9, 2025)
+  * Includes ExifTool 13.37 (Sep. 22, 2025)
 
 
 * **Supported cameras:**
