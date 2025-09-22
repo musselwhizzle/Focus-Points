@@ -18,6 +18,8 @@
 #               2024/04/23 - PH Added ability to read more OpenTracks GPS tags
 #               2024/08/28 - PH Added support for new Google Takeout JSON format
 #               2024/11/26 - PH Also write GPSMeasureMode and GPSDOP
+#               2024/11/05 - PH Added support for Google Maps "Export timeline data"
+#                               JSON format
 #
 # References:   1) http://www.topografix.com/GPX/1/1/
 #               2) http://www.gpsinformation.org/dale/nmea.htm#GSA
@@ -32,7 +34,7 @@ use vars qw($VERSION);
 use Image::ExifTool qw(:Public);
 use Image::ExifTool::GPS;
 
-$VERSION = '1.81';
+$VERSION = '1.82';
 
 sub JITTER() { return 2 }       # maximum time jitter
 
@@ -273,6 +275,7 @@ sub LoadTrackLog($$;$)
             } elsif (((/\b(GPS)?Date/i and /\b(GPS)?(Date)?Time/i) or /\bTime\(seconds\)/i) and /\Q$csvDelim/) {
                 chomp;
                 @csvHeadings = split /\Q$csvDelim/;
+                my $isColumbus = ($csvHeadings[0] and $csvHeadings[0] eq 'INDEX'); # (Columbus GPS logger)
                 $format = 'CSV';
                 # convert recognized headings to our parameter names
                 foreach (@csvHeadings) {
@@ -304,7 +307,7 @@ sub LoadTrackLog($$;$)
                     } elsif (/^(Pos)?Lon/i) {
                         $param = 'lon';
                         /ref$/i and $param .= 'ref';
-                    } elsif (/^(Pos)?Alt/i) {
+                    } elsif (/^(Pos)?(Alt|Height)/i) {
                         $param = 'alt';
                     } elsif (/^Speed/i) {
                         $param = 'speed';
@@ -312,6 +315,9 @@ sub LoadTrackLog($$;$)
                         if (m{\((mph|km/h|m/s)\)}) {
                             $scaleSpeed = $otherConv{$1};
                             $xtra = " in $1";
+                        } elsif ($isColumbus) { # (Columbus GPS logger)
+                            $scaleSpeed = $otherConv{'km/h'};
+                            $xtra = " in km/h";
                         } else {
                             $xtra = ' in knots';
                         }
@@ -539,12 +545,16 @@ DoneFix:    $isDate = 1;
                         $date = Time::Local::timegm(0,0,0,$1,$2-1,$3);
                     } elsif ($val =~ /(\d{4}).*?(\d{2}).*?(\d{2})/) {
                         $date = Time::Local::timegm(0,0,0,$3,$2-1,$1);
+                    } elsif ($val =~ /^(\d{2})(\d{2})(\d{2})$/) { # (Columbus GPS logger)
+                        $date = Time::Local::timegm(0,0,0,$3,$2-1,$1+2000);
                     }
                 } elsif ($param eq 'time') {
                     if ($val =~ /^(\d{1,2}):(\d{2}):(\d{2}(\.\d+)?).*?(([-+])(\d{1,2}):?(\d{2}))?/) {
                         $secs = (($1 * 60) + $2) * 60 + $3;
                         # adjust for time zone if specified
                         $secs += ($7 * 60 + $8) * ($6 eq '-' ? 60 : -60) if $5;
+                    } elsif ($val =~ /^(\d{2})(\d{2})(\d{2})$/) { # (Columbus GPS logger)
+                        $secs = (($1 * 60) + $2) * 60 + $3;
                     }
                 } elsif ($param eq 'lat' or $param eq 'lon') {
                     $$fix{$param} = Image::ExifTool::GPS::ToDegrees($val, 1);
@@ -1545,9 +1555,9 @@ This module is used by Image::ExifTool
 
 This module loads GPS track logs, interpolates to determine position based
 on time, and sets new GPS values for geotagging images.  Currently supported
-formats are GPX, NMEA RMC/GGA/GLL, KML, IGC, Garmin XML and TCX, Magellan
-PMGNTRK, Honeywell PTNTHPR, Bramor gEO, Winplus Beacon text, Google Takeout
-JSON, GPS/IMU CSV, DJI CSV, ExifTool CSV log files.
+formats are GPX, NMEA RMC/GGA/GLL/GSA/ZDA, KML, IGC, Garmin XML and TCX,
+Magellan PMGNTRK, Honeywell PTNTHPR, Bramor gEO, Winplus Beacon text,
+GPS/IMU CSV, DJI CSV, ExifTool CSV and 3 different Google JSON formats.
 
 Methods in this module should not be called directly.  Instead, the Geotag
 feature is accessed by writing the values of the ExifTool Geotag, Geosync

@@ -50,7 +50,7 @@ use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 require Exporter;
 
-$VERSION = '3.72';
+$VERSION = '3.74';
 @ISA = qw(Exporter);
 @EXPORT_OK = qw(EscapeXML UnescapeXML);
 
@@ -862,35 +862,43 @@ my %sRangeMask = (
     },
     GAudio => {
         Name => 'GAudio',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GAudio' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GAudio' },
     },
     GImage => {
         Name => 'GImage',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GImage' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GImage' },
     },
     GPano => {
         Name => 'GPano',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GPano' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GPano' },
+    },
+    GContainer => {
+        Name => 'GContainer',
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GContainer' },
     },
     GSpherical => {
         Name => 'GSpherical',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GSpherical' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GSpherical' },
     },
     GDepth => {
         Name => 'GDepth',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GDepth' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GDepth' },
     },
     GFocus => {
         Name => 'GFocus',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GFocus' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GFocus' },
     },
     GCamera => {
         Name => 'GCamera',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GCamera' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GCamera' },
     },
     GCreations => {
         Name => 'GCreations',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GCreations' },
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::GCreations' },
+    },
+    Device => {
+        Name => 'Device',
+        SubDirectory => { TagTable => 'Image::ExifTool::Google::Device' },
     },
     dwc => {
         Name => 'dwc',
@@ -907,10 +915,6 @@ my %sRangeMask = (
     LImage => {
         Name => 'LImage',
         SubDirectory => { TagTable => 'Image::ExifTool::XMP::LImage' },
-    },
-    Device => {
-        Name => 'Device',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::Device' },
     },
     sdc => {
         Name => 'sdc',
@@ -947,10 +951,6 @@ my %sRangeMask = (
     seal => {
         Name => 'seal',
         SubDirectory => { TagTable => 'Image::ExifTool::XMP::seal' },
-    },
-    GContainer => {
-        Name => 'GContainer',
-        SubDirectory => { TagTable => 'Image::ExifTool::XMP::GContainer' },
     },
 );
 
@@ -3350,13 +3350,14 @@ sub PrintLensID(@)
 #------------------------------------------------------------------------------
 # Convert XMP date/time to EXIF format
 # Inputs: 0) XMP date/time string, 1) set if we aren't sure this is a date
-# Returns: EXIF date/time
+# Returns: EXIF date/time, and flag in list context if this was a standard date/time value
 sub ConvertXMPDate($;$)
 {
     my ($val, $unsure) = @_;
     if ($val =~ /^(\d{4})-(\d{2})-(\d{2})[T ](\d{2}:\d{2})(:\d{2})?\s*(\S*)$/) {
         my $s = $5 || '';           # seconds may be missing
         $val = "$1:$2:$3 $4$s$6";   # convert back to EXIF time format
+        return($val, 1) if wantarray;
     } elsif (not $unsure and $val =~ /^(\d{4})(-\d{2}){0,2}/) {
         $val =~ tr/-/:/;
     }
@@ -3539,14 +3540,19 @@ NoLoop:
                     }
                     last unless $sti;
                 }
-                # generate new tagInfo hash based on existing top-level tag
-                $tagInfo = { %$sti, Name => $flat . $$sti{Name} };
-                # be careful not to copy elements we shouldn't...
-                delete $$tagInfo{Description}; # Description will be different
-                # can't copy group hash because group 1 will be different and
-                # we need to check this when writing tag to a specific group
-                delete $$tagInfo{Groups};
-                $$tagInfo{Groups}{2} = $$sti{Groups}{2} if $$sti{Groups};
+                # use existing definition if we already added this tag
+                if ($$tagTablePtr{$tagID}) {
+                    $tagInfo = $$tagTablePtr{$tagID};
+                } else {
+                    # generate new tagInfo hash based on existing top-level tag
+                    $tagInfo = { %$sti, Name => $flat . $$sti{Name} };
+                    # be careful not to copy elements we shouldn't...
+                    delete $$tagInfo{Description}; # Description will be different
+                    # can't copy group hash because group 1 will be different and
+                    # we need to check this when writing tag to a specific group
+                    delete $$tagInfo{Groups};
+                    $$tagInfo{Groups}{2} = $$sti{Groups}{2} if $$sti{Groups};
+                }
                 last;
             }
         }
@@ -3592,13 +3598,15 @@ NoLoop:
         #} elsif (grep / /, @$props) {
         #    $$tagInfo{List} = 1;
         }
-        # save property list for verbose "adding" message unless this tag already exists
-        $added = \@tagList unless $$tagTablePtr{$tagID};
-        # if this is an empty structure, we must add a Struct field
-        if (not length $val and $$attrs{'rdf:parseType'} and $$attrs{'rdf:parseType'} eq 'Resource') {
-            $$tagInfo{Struct} = { STRUCT_NAME => 'XMP Unknown' };
+        unless ($$tagTablePtr{$tagID} and $$tagTablePtr{$tagID} eq $tagInfo) {
+            # save property list for verbose "adding" message unless this tag already exists
+            $added = \@tagList unless $$tagTablePtr{$tagID};
+            # if this is an empty structure, we must add a Struct field
+            if (not length $val and $$attrs{'rdf:parseType'} and $$attrs{'rdf:parseType'} eq 'Resource') {
+                $$tagInfo{Struct} = { STRUCT_NAME => 'XMP Unknown' } unless $$tagInfo{Struct};
+            }
+            AddTagToTable($tagTablePtr, $tagID, $tagInfo);
         }
-        AddTagToTable($tagTablePtr, $tagID, $tagInfo);
         last;
     }
     # decode value if necessary (et:encoding was used before exiftool 7.71)
@@ -3640,7 +3648,12 @@ NoLoop:
         if (($new or $fmt eq 'rational') and ConvertRational($val)) {
             $rational = $rawVal;
         } else {
-            $val = ConvertXMPDate($val, $new) if $new or $fmt eq 'date';
+            my $stdDate;
+            ($val, $stdDate) = ConvertXMPDate($val, $new) if $new or $fmt eq 'date';
+            if ($stdDate and $added) {
+                $$tagInfo{Groups}{2} = 'Time';
+                $$tagInfo{PrintConv} = '$self->ConvertDateTime($val)';
+            }
         }
         if ($$et{XmpValidate} and $fmt and $fmt eq 'boolean' and $val!~/^True|False$/) {
             if ($val =~ /^true|false$/) {
@@ -3651,6 +3664,10 @@ NoLoop:
         }
         # protect against large binary data in unknown tags
         $$tagInfo{Binary} = 1 if $new and length($val) > 65536;
+    }
+    if ($$et{OPTIONS}{Verbose}) {
+        my $tagID = join('/',@$props);
+        $et->VerboseInfo($tagID, $tagInfo, Value => $rawVal || $val);
     }
     # store the value for this tag
     my $key = $et->FoundTag($tagInfo, $val) or return 0;
@@ -3670,21 +3687,17 @@ NoLoop:
         # set group1 dynamically according to the namespace
         $et->SetGroup($key, "$$tagTablePtr{GROUPS}{0}-$ns");
     }
-    if ($$et{OPTIONS}{Verbose}) {
-        if ($added) {
-            my $props;
-            if (@$added > 1) {
-                $$tagInfo{Flat} = 0;    # this is a flattened tag
-                my @props = map { $$_[0] } @$added;
-                $props = ' (' . join('/',@props) . ')';
-            } else {
-                $props = '';
-            }
-            my $g1 = $et->GetGroup($key, 1);
-            $et->VPrint(0, $$et{INDENT}, "[adding $g1:$tag]$props\n");
+    if ($added and $$et{OPTIONS}{Verbose}) {
+        my $props;
+        if (@$added > 1) {
+            $$tagInfo{Flat} = 0;    # this is a flattened tag
+            my @props = map { $$_[0] } @$added;
+            $props = ' (' . join('/',@props) . ')';
+        } else {
+            $props = '';
         }
-        my $tagID = join('/',@$props);
-        $et->VerboseInfo($tagID, $tagInfo, Value => $rawVal || $val);
+        my $g1 = $et->GetGroup($key, 1);
+        $et->VPrint(0, $$et{INDENT}, "[adding $g1:$tag]$props\n");
     }
     # allow read-only subdirectories (eg. embedded base64 XMP/IPTC in NKSC files)
     if ($$tagInfo{SubDirectory} and not $$et{IsWriting}) {
@@ -3697,6 +3710,7 @@ NoLoop:
             DirName  => $$subdir{DirName} || $$tagInfo{Name},
             DataPt   => $dataPt,
             DirLen   => length $$dataPt,
+            TagInfo  => $tagInfo,
             IgnoreProp => $$subdir{IgnoreProp}, # (allow XML to ignore specified properties)
             IsExtended => 1, # (hack to avoid Duplicate warning for embedded XMP)
             NoStruct => 1,   # (don't try to build structures since this isn't true XMP)
@@ -3823,7 +3837,7 @@ sub ParseXMPElement($$$;$$$$)
         for (;;) {
             my ($attr, $quote);
             if (length($attrs) < 2000) { # (do it the easy way if attributes aren't stupid long)
-                last unless $attrs =~ /(\S+)\s*=\s*(['"])/g;
+                last unless $attrs =~ /(\S+?)\s*=\s*(['"])/g;
                 ($attr, $quote) = ($1, $2);
             } else {
                 # 13.23 patch to avoid capturing tons of garbage if XMP is corrupted

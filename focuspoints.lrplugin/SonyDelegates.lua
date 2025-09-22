@@ -27,18 +27,16 @@ require "Log"
 
 SonyDelegates = {}
 
--- To trigger display whether focus points have been detected or not
-SonyDelegates.focusPointsDetected = false
-
--- Tag that indicates that makernotes / AF section is present
+-- Tag indicating that makernotes / AF section exists
 SonyDelegates.metaKeyAfInfoSection = "Sony Model ID"
 
--- AF relevant tags
+-- AF-relevant tags
 SonyDelegates.metaKeyExifImageWidth              = "Exif Image Width"
 SonyDelegates.metaKeyExifImageHeight             = "Exif Image Height"
 SonyDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 SonyDelegates.metaKeyAfFocusLocation             = "Focus Location"
 SonyDelegates.metaKeyAfFocusPosition2            = "Focus Position 2"
+SonyDelegates.metaKeyAfFocusFrameSize            = "Focus Frame Size"
 SonyDelegates.metaKeyAfAreaModeSetting           = "AF Area Mode Setting"
 SonyDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 SonyDelegates.metaKeyAfTracking                  = "AF Tracking"
@@ -51,12 +49,12 @@ SonyDelegates.metaKeyAfSonyImageWidth            = "Sony Image Width"
 SonyDelegates.metaKeyAfSonyImageHeight           = "Sony Image Height"
 SonyDelegates.metaKeyAfPointsUsed                = "AF Points Used"
 
--- Image and Camera Settings relevant tags
+-- Image and Shooting Information relevant tags
+SonyDelegates.metaKeyAPSCSizeCapture             = "APS-C Size Capture"
 SonyDelegates.metaKeySceneMode                   = "Scene Mode"
+SonyDelegates.metaKeyReleaseMode                 = "Release Mode"
+SonyDelegates.metaKeySequenceNumber              = "Sequence Number"
 SonyDelegates.metaKeyImageStabilization          = "Image Stabilization"
-
--- relevant metadata values
-SonyDelegates.metaValueNA                         = "N/A"
 
 
 --[[
@@ -65,8 +63,6 @@ SonyDelegates.metaValueNA                         = "N/A"
   Get autofocus points and frames for detected face from metadata
 --]]
 function SonyDelegates.getAfPoints(photo, metaData)
-
-  SonyDelegates.focusPointsDetected = false
 
   -- Get orginal dimensions (in native aspect ratio)
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
@@ -78,7 +74,8 @@ function SonyDelegates.getAfPoints(photo, metaData)
     Log.logError("Sony",
       string.format("No valid information on image width/height. Relevant tags '%s' / '%s' not found",
         SonyDelegates.metaKeyExifImageWidth, SonyDelegates.metaKeyExifImageHeight))
-    Log.logWarn("Sony", FocusInfo.msgImageNotOoc)
+    Log.logWarn("Sony", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
 
@@ -105,12 +102,19 @@ function SonyDelegates.getAfPoints(photo, metaData)
         local x = fpX + (orgPhotoWidth  - fpW) / 2
         local y = fpY + (orgPhotoHeight - fpH) / 2
 
-        SonyDelegates.focusPointsDetected = true
+        FocusInfo.focusPointsDetected = true
 
-        Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s]",
-          math.floor(x), math.floor(y)))
-
-        result = DefaultPointRenderer.createFocusPixelBox(x, y)
+        local focusFrameSize = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusFrameSize)
+        if focusFrameSize then
+          local w, h = focusFrameSize:match("^(%d+)x(%d+)$")
+          Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
+            math.floor(x), math.floor(y)), w, h)
+          result = DefaultPointRenderer.createFocusFrame(x, y, w, h)
+        else
+          Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s]",
+            math.floor(x), math.floor(y)))
+          result = DefaultPointRenderer.createFocusFrame(x, y)
+        end
 
       else
         -- focus location string is "0 0 0 0" -> the focus point is a PDAF point #FIXME but which one exactly?
@@ -120,7 +124,8 @@ function SonyDelegates.getAfPoints(photo, metaData)
     else
       Log.logError("Sony",
         string.format("No valid information on image width/height found"))
-      Log.logWarn("Sony", FocusInfo.msgImageNotOoc)
+      Log.logWarn("Sony", FocusInfo.msgImageFileNotOoc)
+      FocusInfo.makerNotesFound = false
     end
   else
     -- no focus points found - handled on upper layers
@@ -168,10 +173,10 @@ function SonyDelegates.getAfPoints(photo, metaData)
                 local pdafPointSize = orgPhotoWidth * 0.039/2  -- #TODO is 0.039/2 be different for other models?
                 Log.logInfo("Sony", "PDAF scaled point at [" .. math.floor(x) .. ", " .. math.floor(x) .. "]")
 
-                if not SonyDelegates.focusPointsDetected then
+                if not FocusInfo.focusPointsDetected then
                   -- this is actually the focus point!
                   Log.logInfo("Sony", "Focus location at [" .. math.ceil(x * xScale) .. ", " .. math.floor(y * yScale) .. "]")
-                  SonyDelegates.focusPointsDetected = true
+                  FocusInfo.focusPointsDetected = true
                   result = {
                     pointTemplates = DefaultDelegates.pointTemplates,
                     points = {
@@ -262,8 +267,12 @@ function SonyDelegates.addInfo(title, key, props, metaData)
       -- type(key) == "table"
       value = ExifUtils.findFirstMatchingValue(metaData, key)
     end
+
     if (value == nil) then
-      props[key] = SonyDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
+    elseif (key == SonyDelegates.metaKeyAPSCSizeCapture) and (value == "On") then
+      FocusInfo.cropMode = true
+      props[key] = "APS-C"
     else
       -- everything else is the default case!
       props[key] = value
@@ -277,13 +286,11 @@ function SonyDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= SonyDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
+
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = wrapText(props[key], ",",30), font="<system>"}}
-    }
+    local result = FocusInfo.addRow(title, props[key])
+
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (key == SonyDelegates.metaKeyAfTracking) and string.find(string.lower(props[key]), "face") then
       return f:column{
@@ -302,32 +309,99 @@ end
 
 
 --[[
+  @@public boolean SonyDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
+--]]
+function SonyDelegates.modelSupported(model)
+  -- Note: 'model' string comes already in lower case
+
+  -- Extract the series name, e.g. 'ILCE' (include hyphen)
+  local series  = string.match(model, "([a-z-]+)")
+  if not series then
+    Log.logWarn("Sony", "Unexpected model name pattern")
+    return false
+  end
+
+  -- Removing the series name leaves the model ID, e.g. '6400'
+  local modelID = string.sub(model, #series+1)
+
+  if arrayKeyOf({"nex", "slt"}, string.sub(series, 1, 3)) then
+    -- NEX and SLT models are not supported
+    return false
+  elseif series == "dsc-rx" then
+    -- RX series supported with RX10M2, RX100M4 and later models
+    return not arrayKeyOf({"1", "10", "100", "100m2", "100m3"}, modelID)
+  elseif series == "ilce-" then
+    -- Alpha supported with α6100, α7 III / α7R III  and later models
+    return not arrayKeyOf({"6000", "7", "7m2", "7r", "7rm2"}, modelID)
+  end
+  return true
+end
+
+
+--[[
+  @@public boolean SonyDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function SonyDelegates.makerNotesFound(_photo, metaData)
+  local result = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfInfoSection)
+  if not result then
+    Log.logWarn("Sony",
+      string.format("Tag '%s' not found", SonyDelegates.metaKeyAfInfoSection))
+  end
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean SonyDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+  function SonyDelegates.manualFocusUsed(_photo, metaData)
+  -- #TODO No test samples available for Sony manual focus
+  local focusMode = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocusMode)
+  return (focusMode == "Manual")
+end
+
+
+--[[
   @@public table function SonyDelegates.getImageInfo(table photo, table props, table metaData)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function SonyDelegates.getImageInfo(photo, props, metaData)
+function SonyDelegates.getImageInfo(_photo, props, metaData)
+  local f = LrView.osFactory()
   local imageInfo
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    SonyDelegates.addInfo("Crop Mode", SonyDelegates.metaKeyAPSCSizeCapture, props, metaData),
+  }
   return imageInfo
 end
 
 
 --[[
-  @@public table function SonyDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public table function SonyDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function SonyDelegates.getCameraInfo(photo, props, metaData)
+function SonyDelegates.getShootingInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-  cameraInfo = f:column {
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+  shootingInfo = f:column {
     fill = 1,
     spacing = 2,
     SonyDelegates.addInfo("Scene Mode"         , SonyDelegates.metaKeySceneMode         , props, metaData),
     SonyDelegates.addInfo("Image Stabilization", SonyDelegates.metaKeyImageStabilization, props, metaData),
+    SonyDelegates.addInfo("Release Mode"       , SonyDelegates.metaKeyReleaseMode       , props, metaData),
+    SonyDelegates.addInfo("Sequence Number"    , SonyDelegates.metaKeySequenceNumber    , props, metaData),
   }
-  return cameraInfo
+  return shootingInfo
 end
 
 
@@ -336,22 +410,13 @@ end
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function SonyDelegates.getFocusInfo(photo, props, metaData)
+function SonyDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
 
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, SonyDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
-
   -- Create the "Focus Information" section
-
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(SonyDelegates.focusPointsDetected),
       SonyDelegates.addInfo("Focus Mode"          , SonyDelegates.metaKeyAfFocusMode             , props, metaData),
       SonyDelegates.addInfo("AF Area Mode Setting", SonyDelegates.metaKeyAfAreaModeSetting       , props, metaData),
       SonyDelegates.addInfo("AF Area Mode"        , SonyDelegates.metaKeyAfAreaMode              , props, metaData),

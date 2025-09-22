@@ -27,48 +27,53 @@ require "Log"
 
 CanonDelegates = {}
 
--- To trigger display whether focus points have been detected or not
-CanonDelegates.focusPointsDetected = false
+-- Tag indicating that makernotes / AF section exists
+CanonDelegates.metaKeyAfInfoSection           = "Canon Firmware Version"
 
--- Tag which indicates that makernotes / AF section is present
-CanonDelegates.metaKeyAfInfoSection         = "Canon Firmware Version"
+-- AF-relevant tags
+CanonDelegates.metaKeyAfPointsInFocus         = "AF Points In Focus"
+CanonDelegates.metaKeyAfAreaWidth             = "AF Area Width"
+CanonDelegates.metaKeyAfAreaHeight            = "AF Area Height"
+CanonDelegates.metaKeyAfAreaWidths            = "AF Area Widths"
+CanonDelegates.metaKeyAfAreaHeights           = "AF Area Heights"
+CanonDelegates.metaKeyAfAreaXPositions        = "AF Area X Positions"
+CanonDelegates.metaKeyAfAreaYPositions        = "AF Area Y Positions"
+CanonDelegates.metaKeyAfImageWidth            = "AF Image Width"
+CanonDelegates.metaKeyAfImageHeight           = "AF Image Height"
+CanonDelegates.metaKeyExifImageWidth          = "Exif Image Width"
+CanonDelegates.metaKeyExifImageHeight         = "Exif Image Height"
+CanonDelegates.metaKeyCanonImageWidth         = "Canon Image Width"
+CanonDelegates.metaKeyCanonImageHeight        = "Canon Image Height"
+CanonDelegates.metaKeyFocusMode               = "Focus Mode"
+CanonDelegates.metaKeyAfAreaMode              = "AF Area Mode"
+CanonDelegates.metaKeyOneShotAfRelease        = "One Shot AF Release"
+CanonDelegates.metaKeySubjectToDetect         = "Subject To Detect"
+CanonDelegates.metaKeySubjectSwitching        = "Subject Switching"
+CanonDelegates.metaKeyEyeDetection            = "Eye Detection"
+CanonDelegates.metaKeyAfConfigPreset          = "AF Config Tool"
+CanonDelegates.metaKeyServoAfCharacteristics  = "Servo AF Characteristics"
+CanonDelegates.metaKeyCaseAutoSetting         = "Case Auto Setting"
+CanonDelegates.metaKeyTrackingSensitivity     = "AF Tracking Sensitivity"
+CanonDelegates.metaKeyAccelDecelTracking      = "AF Accel/Decel Tracking"
+CanonDelegates.metaKeyAfPointSwitching        = "AF Point Switching"
+CanonDelegates.metaKeyEyeDetection            = "Eye Detection"
+CanonDelegates.metaKeyActionPriority          = "Action Priority"
+CanonDelegates.metaKeySportEvents             = "Sport Events"
+CanonDelegates.metaKeyWholeAreaTracking       = "Whole Area Tracking"
+CanonDelegates.metaKeyServoFirstImage         = "AI Servo First Image"
+CanonDelegates.metaKeyServoSecondImage        = "AI Servo Second Image"
+CanonDelegates.metaKeyFocusDistanceUpper      = "Focus Distance Upper"
+CanonDelegates.metaKeyFocusDistanceLower      = "Focus Distance Lower"
+CanonDelegates.metaKeyDepthOfField            = "Depth Of Field"
+CanonDelegates.metaKeyHyperfocalDistance      = "Hyperfocal Distance"
 
--- AF relevant tags
-CanonDelegates.metaKeyAfPointsInFocus       = "AF Points In Focus"
-CanonDelegates.metaKeyAfAreaWidth           = "AF Area Width"
-CanonDelegates.metaKeyAfAreaHeight          = "AF Area Height"
-CanonDelegates.metaKeyAfAreaWidths          = "AF Area Widths"
-CanonDelegates.metaKeyAfAreaHeights         = "AF Area Heights"
-CanonDelegates.metaKeyAfAreaXPositions      = "AF Area X Positions"
-CanonDelegates.metaKeyAfAreaYPositions      = "AF Area Y Positions"
-CanonDelegates.metaKeyAfImageWidth          = "AF Image Width"
-CanonDelegates.metaKeyAfImageHeight         = "AF Image Height"
-CanonDelegates.metaKeyExifImageWidth        = "Exif Image Width"
-CanonDelegates.metaKeyExifImageHeight       = "Exif Image Height"
-CanonDelegates.metaKeyCanonImageWidth       = "Canon Image Width"
-CanonDelegates.metaKeyCanonImageHeight      = "Canon Image Height"
-CanonDelegates.metaKeyFocusMode             = "Focus Mode"
-CanonDelegates.metaKeyAfAreaMode            = "AF Area Mode"
-CanonDelegates.metaKeyOneShotAfRelease      = "One Shot AF Release"
-CanonDelegates.metaKeySubjectToDetect       = "Subject To Detect"
-CanonDelegates.metaKeyEyeDetection          = "Eye Detection"
-CanonDelegates.AfTrackingSensitivity        = "AF Tracking Sensitivity"
-CanonDelegates.AfAccelDecelTracking         = "AF Accel Decel Tracking"
-CanonDelegates.AfPointSwitching             = "AF Point Switching"
-CanonDelegates.AIServoFirstImage            = "AI Servo First Image"
-CanonDelegates.AIServoSecondImage           = "AI Servo Second Image"
-CanonDelegates.metaKeyFocusDistanceUpper    = "Focus Distance Upper"
-CanonDelegates.metaKeyFocusDistanceLower    = "Focus Distance Lower"
-CanonDelegates.metaKeyDepthOfField          = "Depth Of Field"
-CanonDelegates.metaKeyHyperfocalDistance    = "Hyperfocal Distance"
+-- Image and Shooting Information relevant tags
+CanonDelegates.metaKeyAspectRatio             = "Aspect Ratio"
+CanonDelegates.metaKeyContinuousDrive         = "Continuous Drive"
+CanonDelegates.metaKeyImageStabilization      = "Image Stabilization"
 
--- Camera Settings relevant tags
-CanonDelegates.metaKeyContinuousDrive       = "Continuous Drive"
-CanonDelegates.metaKeyImageStabilization    = "Image Stabilization"
-
--- relevant metadata values
-CanonDelegates.metaValueNA                  = "N/A"
-CanonDelegates.metaValueOneShotAf           = "One-shot AF"
+-- Relevant metadata values
+CanonDelegates.metaValueOneShotAf             = "One-shot AF"
 
 --[[
   @@public table CanonDelegates.getAfPoints(table photo, table metaData)
@@ -80,8 +85,6 @@ function CanonDelegates.getAfPoints(photo, metaData)
 
   local imageWidth
   local imageHeight
-
-  CanonDelegates.focusPointsDetected = false
 
   -- #TODO ATTENTION!!!
   -- Searching for ImageWidth/Height tags in a simplified listing output may result in unusable information!
@@ -95,7 +98,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
   if imageWidth == nil or imageHeight == nil then
     Log.logError(string.format("Canon", "Required image size tags '%s' / '%s' not found",
       CanonDelegates.metaKeyExifImageWidth, CanonDelegates.metaKeyExifImageHeight))
-    Log.logWarn("Canon", FocusInfo.msgImageNotOoc)
+    Log.logWarn("Canon", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
 
@@ -109,7 +113,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local afPointHeights = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaHeights)
 
   if (afPointWidth == nil and afPointWidths == nil) or (afPointHeight == nil and afPointHeights == nil) then
-    Log.logWarn("Canon", "Information on 'AF Area Width/Height' not found")
+    Log.logError("Canon", "Information on 'AF Area Width/Height' not found")
+    Log.logWarn("Canon", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
   if afPointWidths == nil then
@@ -126,7 +132,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
   local afAreaXPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaXPositions)
   local afAreaYPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaYPositions)
   if afAreaXPositions == nil or afAreaYPositions == nil then
-    Log.Error("Canon", "Information on 'AF Area X/Y Positions' not found")
+    Log.logError("Canon", "Information on 'AF Area X/Y Positions' not found")
+    Log.logWarn("Canon", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
     return nil
   end
 
@@ -170,8 +178,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
   for key, _ in pairs(afAreaXPositions) do
     local x = (imageWidth/2 + afAreaXPositions[key]) * xScale     -- On Canon, everything is referenced from the center,
     local y = (imageHeight/2 + (afAreaYPositions[key] * yDirection)) * yScale
-    local width = 0
-    local height = 0
+    local width = 0.0
+    local height = 0.0
     if afPointWidths[key] == nil then
       width = afPointWidth * xScale
     else
@@ -190,14 +198,9 @@ function CanonDelegates.getAfPoints(photo, metaData)
     end
     local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
     local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
---[[ #TODO we won't support such detailed classifcation in future
-    if isInFocus and isSelected then
-      pointType = DefaultDelegates.POINTTYPE_AF_SELECTED_INFOCUS
-    end
--- ]]
     if isInFocus then
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
-      CanonDelegates.focusPointsDetected = true
+      FocusInfo.focusPointsDetected = true
 
       Log.logInfo("Canon", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
         math.floor(x), math.floor(y), math.floor(width), math.floor(height)))
@@ -234,14 +237,59 @@ end
 function CanonDelegates.addInfo(title, key, props, metaData)
   local f = LrView.osFactory()
 
+  -- returns true if focus mode is Servo AF
+  local function isServoAF()
+    return (props[CanonDelegates.metaKeyFocusMode]:match("Servo"))
+  end
+
+  -- returns true if focus mode is One-shot AF
+  local function isOneShotAF()
+    return (props[CanonDelegates.metaKeyFocusMode]:match("One-shot"))
+  end
+
   -- Creates and populates the property corresponding to metadata key
   local function populateInfo(key)
     local value = ExifUtils.findValue(metaData, key)
 
     if (value == nil) then
-      props[key] = CanonDelegates.metaValueNA
+      props[key] = ExifUtils.metaValueNA
+
+    elseif (key == CanonDelegates.metaKeyAspectRatio) then
+      if (value == "3:2 (APS-C crop)") then
+        FocusInfo.cropMode = true
+        props[key] = "APS-C"
+      elseif (key == CanonDelegates.metaKeyAspectRatio) and (value == "3:2 (APS-H crop)") then
+        FocusInfo.cropMode = true
+        props[key] = "APS-H"
+      else
+        -- ignore crops like 1:1, 4:3, 16:9 etc
+        props[key] = ExifUtils.metaValueNA
+      end
+
+    elseif key == CanonDelegates.metaKeyEyeDetection and value == "Off" then
+      -- we don't display the entry if it's disabled
+      props[key] = ExifUtils.metaValueNA
+
+    elseif key == CanonDelegates.metaKeyAfPointSwitching and value == "-1" then
+      -- valid user settings are 0, 1, 2
+      props[key] = ExifUtils.metaValueNA
+
+    elseif key == CanonDelegates.metaKeyOneShotAfRelease and not isOneShotAF() then
+      -- only relevant for One-shot AF modes
+      props[key] = ExifUtils.metaValueNA
+
+    elseif (key == CanonDelegates.metaKeyAfConfigPreset
+         or key == CanonDelegates.metaKeyTrackingSensitivity
+         or key == CanonDelegates.metaKeyAccelDecelTracking
+         or key == CanonDelegates.metaKeyAfPointSwitching
+         or key == CanonDelegates.metaKeyServoFirstImage
+         or key == CanonDelegates.metaKeyServoSecondImage)
+         and not isServoAF() then
+      -- only relevant for Servo AF modes
+      props[key] = ExifUtils.metaValueNA
+
+    -- everything else is the default case!
     else
-      -- everything else is the default case!
       props[key] = value
     end
   end
@@ -253,18 +301,27 @@ function CanonDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if props[key] and props[key] ~= CanonDelegates.metaValueNA then
+  if props[key] and props[key] ~= ExifUtils.metaValueNA then
+
     -- compose the row to be added
-    local result = f:row {
-      f:column{f:static_text{title = title .. ":", font="<system>"}},
-      f:spacer{fill_horizontal = 1},
-      f:column{f:static_text{title = props[key], font="<system>"}}
-    }
+    local result = FocusInfo.addRow(title, props[key])
+
     -- check if the entry to be added has implicite followers (eg. Priority for AF modes)
     if (props[key] == CanonDelegates.metaValueOneShotAf) then
       return f:column{
         fill = 1, spacing = 2, result,
         CanonDelegates.addInfo("One Shot AF Release", CanonDelegates.metaKeyOneShotAfRelease, props, metaData) }
+
+    elseif (key == CanonDelegates.metaKeyServoAfCharacteristics) and props[key] == "Case Auto" then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        CanonDelegates.addInfo("- Case Auto Setting", CanonDelegates.metaKeyCaseAutoSetting, props, metaData) }
+
+    elseif (key == CanonDelegates.metaKeyActionPriority) and props[key] ~= "Off"then
+      return f:column{
+        fill = 1, spacing = 2, result,
+        CanonDelegates.addInfo("Sport Events", CanonDelegates.metaKeySportEvents, props, metaData) }
+
     else
       -- add row as composed
       return result
@@ -277,21 +334,84 @@ end
 
 
 --[[
-  @@public table function CanonDelegates.getCameraInfo(table photo, table props, table metaData)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Camera Information" section
+  @@public boolean CanonDelegates.modelSupported(string model)
+  ----
+  Returns whether the given camera model is supported or not
+--]]
+function CanonDelegates.modelSupported(model)
+  -- extract the model ID for comparison
+  local makeID  = "canon eos "
+  local modelID = string.sub(model,#makeID+1, #model)
+  return not (modelID == "300d" or
+              modelID == "10d"  or
+              modelID == "1ds"  or
+              modelID == "d60"  or
+              modelID == "1d"   or
+              modelID == "d30")
+end
+
+
+--[[
+  @@public boolean CanonDelegates.makerNotesFound(table photo, table metaData)
+  ----
+  Returns whether the current photo has metadata with makernotes AF information included
+--]]
+function CanonDelegates.makerNotesFound(_photo, metaData)
+  local result = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfInfoSection)
+  if not result then
+    Log.logWarn("Canon",
+      string.format("Tag '%s' not found", CanonDelegates.metaKeyAfInfoSection))
+  end
+  return (result ~= nil)
+end
+
+
+--[[
+  @@public boolean CanonDelegates.manualFocusUsed(table photo, table metaData)
+  ----
+  Returns whether manual focus has been used on the given photo
+--]]
+function CanonDelegates.manualFocusUsed(_photo, metaData)
+-- #TODO no test samples!
+  local mfName = "Manual Focus"
+  local focusMode = ExifUtils.findValue(metaData, CanonDelegates.metaKeyFocusMode)
+  return focusMode and (string.sub(focusMode, 1, #mfName) == mfName )
+end
+
+
+--[[
+  @@public table function CanonDelegates.getImageInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function CanonDelegates.getCameraInfo(photo, props, metaData)
+function CanonDelegates.getImageInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-  local cameraInfo
-  -- append maker specific entries to the "Camera Settings" section
-    cameraInfo = f:column {
+  local imageInfo
+  imageInfo = f:column {
+    fill = 1,
+    spacing = 2,
+    CanonDelegates.addInfo("Crop Mode", CanonDelegates.metaKeyAspectRatio, props, metaData),
+  }
+  return imageInfo
+end
+
+
+--[[
+  @@public table function CanonDelegates.getShootingInfo(table photo, table props, table metaData)
+  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
+  -- if any, otherwise return an empty column
+--]]
+function CanonDelegates.getShootingInfo(_photo, props, metaData)
+  local f = LrView.osFactory()
+  local shootingInfo
+  -- append maker specific entries to the "Shooting Information" section
+    shootingInfo = f:column {
       fill = 1,
       spacing = 2,
       CanonDelegates.addInfo("Image Stabilization", CanonDelegates.metaKeyImageStabilization, props, metaData),
       CanonDelegates.addInfo("Continuous Drive", CanonDelegates.metaKeyContinuousDrive, props, metaData),
     }
-  return cameraInfo
+  return shootingInfo
 end
 
 
@@ -300,39 +420,36 @@ end
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function CanonDelegates.getFocusInfo(photo, props, metaData)
+function CanonDelegates.getFocusInfo(_photo, props, metaData)
   local f = LrView.osFactory()
-
-  -- Check if makernotes AF section is (still) present in metadata of file
-  local errorMessage = FocusInfo.afInfoMissing(metaData, CanonDelegates.metaKeyAfInfoSection)
-  if errorMessage then
-    -- if not, finish this section with predefined error message
-    return errorMessage
-  end
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FocusInfo.FocusPointsStatus(CanonDelegates.focusPointsDetected),
+      CanonDelegates.addInfo("Focus Mode"               , CanonDelegates.metaKeyFocusMode             , props, metaData),
+      CanonDelegates.addInfo("AF Area Mode"             , CanonDelegates.metaKeyAfAreaMode            , props, metaData),
+      CanonDelegates.addInfo("One Shot AF Release"      , CanonDelegates.metaKeyOneShotAfRelease      , props, metaData),
+      CanonDelegates.addInfo("Servo First Image"        , CanonDelegates.metaKeyServoFirstImage       , props, metaData),
+      CanonDelegates.addInfo("Servo Second Image"       , CanonDelegates.metaKeyServoSecondImage      , props, metaData),
+      CanonDelegates.addInfo("Servo AF Preset"          , CanonDelegates.metaKeyAfConfigPreset        , props, metaData),
+      CanonDelegates.addInfo("Servo AF Characteristics" , CanonDelegates.metaKeyServoAfCharacteristics, props, metaData),
+      CanonDelegates.addInfo("- Tracking Sensitivity"   , CanonDelegates.metaKeyTrackingSensitivity   , props, metaData),
+      CanonDelegates.addInfo("- Accel/Decel Tracking"   , CanonDelegates.metaKeyAccelDecelTracking    , props, metaData),
+      CanonDelegates.addInfo("Subject To Detect"        , CanonDelegates.metaKeySubjectToDetect       , props, metaData),
+      CanonDelegates.addInfo("Subject Switching"        , CanonDelegates.metaKeySubjectSwitching      , props, metaData),
+      CanonDelegates.addInfo("Eye Detection"            , CanonDelegates.metaKeyEyeDetection          , props, metaData),
+      CanonDelegates.addInfo("AF Point Auto-Switching"  , CanonDelegates.metaKeyAfPointSwitching      , props, metaData),
+      CanonDelegates.addInfo("Action Priority"          , CanonDelegates.metaKeyActionPriority        , props, metaData),
+      CanonDelegates.addInfo("Whole Area Tracking"      , CanonDelegates.metaKeyWholeAreaTracking     , props, metaData),
 
-      CanonDelegates.addInfo("Focus Mode"               , CanonDelegates.metaKeyFocusMode        , props, metaData),
-      CanonDelegates.addInfo("AF Area Mode"             , CanonDelegates.metaKeyAfAreaMode       , props, metaData),
-      CanonDelegates.addInfo("One Shot AF Release"      , CanonDelegates.metaKeyOneShotAfRelease , props, metaData),
-      CanonDelegates.addInfo("Subject To Detect"        , CanonDelegates.metaKeySubjectToDetect  , props, metaData),
-      CanonDelegates.addInfo("Eye Detection"            , CanonDelegates.metaKeyEyeDetection     , props, metaData),
-      CanonDelegates.addInfo("AF Tracking Sensitivity"  , CanonDelegates.AfTrackingSensitivity   , props, metaData),
-      CanonDelegates.addInfo("AF Accel Decel Tracking"  , CanonDelegates.AfAccelDecelTracking    , props, metaData),
-      CanonDelegates.addInfo("AF Point Switching"       , CanonDelegates.AfPointSwitching        , props, metaData),
-      CanonDelegates.addInfo("AI Servo First Image"     , CanonDelegates.AIServoFirstImage       , props, metaData),
-      CanonDelegates.addInfo("AI Servo Second Image"    , CanonDelegates.AIServoSecondImage      , props, metaData),
       FocusInfo.addSpace(),
       FocusInfo.addSeparator(),
       FocusInfo.addSpace(),
-      CanonDelegates.addInfo("Focus Distance (Upper)"   , CanonDelegates.metaKeyFocusDistanceUpper,  props, metaData),
-      CanonDelegates.addInfo("Focus Distance (Lower)"   , CanonDelegates.metaKeyFocusDistanceLower,  props, metaData),
-      CanonDelegates.addInfo("Depth of Field"           , CanonDelegates.metaKeyDepthOfField,        props, metaData),
-      CanonDelegates.addInfo("Hyperfocal Distance"      , CanonDelegates.metaKeyHyperfocalDistance,  props, metaData),
+      CanonDelegates.addInfo("Focus Distance (Upper)"   , CanonDelegates.metaKeyFocusDistanceUpper    , props, metaData),
+      CanonDelegates.addInfo("Focus Distance (Lower)"   , CanonDelegates.metaKeyFocusDistanceLower    , props, metaData),
+      CanonDelegates.addInfo("Depth of Field"           , CanonDelegates.metaKeyDepthOfField          , props, metaData),
+      CanonDelegates.addInfo("Hyperfocal Distance"      , CanonDelegates.metaKeyHyperfocalDistance    , props, metaData),
       }
   return focusInfo
 end

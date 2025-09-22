@@ -57,7 +57,7 @@ use vars qw($VERSION $AUTOLOAD @formatSize @formatName %formatNumber %intFormat
 use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::MakerNotes;
 
-$VERSION = '4.56';
+$VERSION = '4.60';
 
 sub ProcessExif($$$);
 sub WriteExif($$$);
@@ -402,7 +402,7 @@ my %opcodeInfo = (
             THM => 'THM - DCF thumbnail file',
         },
     },
-    0x2 => { #5
+    0x2 => { #5 (not in the EXIF spec)
         Name => 'InteropVersion',
         Description => 'Interoperability Version',
         Protected => 1,
@@ -2029,7 +2029,7 @@ my %opcodeInfo = (
         OffsetPair => -1,
     },
     0x8782 => 'T88Options', #20
-    0x87ac => 'ImageLayer',
+    0x87ac => 'ImageLayer', # Defined in the Mixed Raster Content part of RFC 2301
     0x87af => { #30
         Name => 'GeoTiffDirectory',
         Format => 'undef',
@@ -2081,7 +2081,7 @@ my %opcodeInfo = (
     0x8822 => {
         Name => 'ExposureProgram',
         Groups => { 2 => 'Camera' },
-        Notes => 'the value of 9 is not standard EXIF, but is used by the Canon EOS 7D',
+        Notes => 'the value of 9 is not standard EXIF, but is used by some Canon models',
         Writable => 'int16u',
         PrintConv => {
             0 => 'Not Defined',
@@ -4209,6 +4209,8 @@ my %opcodeInfo = (
         },
     },
     # 0xc7d6 - int8u: 1 (SubIFD1 of Nikon Z6/Z7 NEF)
+    0xc7d7 => { Name => 'ZIFMetadata',    Binary => 1 },
+    0xc7d8 => { Name => 'ZIFAnnotations', Binary => 1 },
     0xc7e9 => { # DNG 1.5
         Name => 'DepthFormat',
         Writable => 'int16u',
@@ -4350,6 +4352,7 @@ my %opcodeInfo = (
         Writable => 'undef',
         WriteGroup => 'IFD0',
         Protected => 1,
+        Binary => 1,
     },
     0xcd40 => { # DNG 1.7
         Name => 'ProfileGainTableMap2',
@@ -5804,6 +5807,8 @@ sub PrintLensID($$@)
     }
     if ($$et{Make} eq 'SONY') {
         if ($lensType eq 65535) {
+            # patch for manual lens (forum17379)
+            return $$printConv{$lensType} if $$printConv{$lensType} and not $focalLength and $maxAperture == 1;
             # handle Sony E-type lenses when LensType2 isn't valid (NEX/ILCE models only)
             if ($$et{Model} =~ /NEX|ILCE/) {
                 unless (%sonyEtype) {
@@ -6357,9 +6362,10 @@ sub ProcessExif($$$)
                     $et->Warn("Bad format ($format) for $dir entry $index", $inMakerNotes);
                     ++$warnCount;
                 }
-                # assume corrupted IFD if this is our first entry (except Sony ILCE-7M2 firmware 1.21)
-                return 0 unless $index or $$et{Model} eq 'ILCE-7M2';
-                next;
+                # assume corrupted IFD if this is our first entry (except Sony ILCE which have an empty first entry)
+                next if $index or $$et{Model} =~ /^ILCE/;
+                # $et->Warn(sprintf('Format code 0x%x encountered -- Possibly corrupted IFD'));
+                return 0;
             }
         }
         my $formatStr = $formatName[$format];   # get name of this format

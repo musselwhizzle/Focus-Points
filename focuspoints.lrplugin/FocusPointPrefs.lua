@@ -26,9 +26,10 @@ local bind = LrView.bind
 
 require "Log"
 
+
 FocusPointPrefs = {}
 
-FocusPointPrefs.displayScaleFactor = 0
+FocusPointPrefs.displayScaleFactor = 0.0
 
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
@@ -39,9 +40,22 @@ FocusPointPrefs.focusBoxSizeMedium = 2
 FocusPointPrefs.focusBoxSizeLarge  = 3
 FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 
+-- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
+FocusPointPrefs.isUpdateAvailable  = nil
 
+-- URL definitions
+FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
+FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
+
+-- Keyboard shortcut definitions
+FocusPointPrefs.kbdShortcutsPrev            = "-pP"
+FocusPointPrefs.kbdShortcutsNext            = "+ nN"
+FocusPointPrefs.kbdShortcutsCheckLog        = "lL"
+FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
+FocusPointPrefs.kbdShortcutsUserManual      = "uUmM"
+FocusPointPrefs.kbdShortcutsExit            = "xX"
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()
@@ -49,10 +63,13 @@ FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwh
   Initialize preferences at first run after installation of plugin
 --]]
 function FocusPointPrefs.InitializePrefs(prefs)
+
+  -- Set any undefined properties to their default values
   if not prefs.screenScaling      then	prefs.screenScaling   = 0 end
   if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
   if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
+  if not prefs.latestVersion      then	prefs.latestVersion   = _PLUGIN.version end
   if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
   -- get the latest plugin version for update checks
   FocusPointPrefs.getLatestVersion()
@@ -97,6 +114,9 @@ function FocusPointPrefs.getLatestVersion()
   -- Need to execute this as a collaborative task
   LrTasks.startAsyncTask(function()
     local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
+    -- @TODO disable test code prior to release !!
+    -- latestVersionNumber = LrFileUtils.readFile( "L:\\Plugins\\focuspoints.lrdevplugin\\Version.txt" )
+    -- end of test code
     if latestVersionNumber then
       prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+")
     end
@@ -127,29 +147,44 @@ end
 function FocusPointPrefs.updateAvailable()
   local prefs = LrPrefs.prefsForPlugin( nil )
   local Info = require 'Info.lua'
-  local result
+  local result = false
 
-  if prefs.latestVersion then
-    local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
-    if major and minor and revision then
-      -- we have a valid version number from the URL
-      local pluginVersion = Info.VERSION
-      if tonumber(major) > pluginVersion.major then
-        result = true
-      elseif tonumber(major) == pluginVersion.major then
-        if  tonumber(minor) > pluginVersion.minor then
+  if FocusPointPrefs.isUpdateAvailable == nil then
+    -- information still empty, so determine its status
+    if prefs.latestVersion then
+      local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
+      if major and minor and revision then
+        -- we have a valid version number from the URL
+        local pluginVersion = Info.VERSION
+        if tonumber(major) > pluginVersion.major then
+          -- new major version available
           result = true
-        elseif tonumber(minor) == pluginVersion.minor then
-          result = tonumber(revision) > pluginVersion.revision
+        elseif tonumber(major) == pluginVersion.major then
+          if  tonumber(minor) > pluginVersion.minor then
+            -- new minor version available
+            result = true
+          elseif tonumber(minor) == pluginVersion.minor then
+            if tonumber(revision) > pluginVersion.revision then
+              -- new revision available
+              result = true
+            elseif tonumber(revision) == pluginVersion.revision then
+              -- major, minor versions and revision numbers are the same
+              if pluginVersion.build and tonumber(pluginVersion.build) >= 9000 then
+                -- release available for local pre-release version
+                result = true
+              end
+            end
+          end
         end
+      else
+        Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
       end
     else
-      Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
+      Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
     end
-  else
-    Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
+    FocusPointPrefs.isUpdateAvailable = result
   end
-  return result
+  return FocusPointPrefs.isUpdateAvailable
 end
 
 
@@ -157,7 +192,7 @@ end
   @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table viewFactory, p )
   -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
 --]]
-function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
+function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
   -- Set the defaults
@@ -258,13 +293,13 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, p )
           value = bind ('loggingLevel'),
           width = dropDownWidth,
           items = {
-            { title = "Full",  value = "FULL" },
+            { title = "Auto",  value = "AUTO"  },
+            { title = "Full",  value = "FULL"  },
             { title = "Debug", value = "DEBUG" },
-            { title = "Auto",  value = "AUTO" },
-            { title = "Info",  value = "INFO" },
-            { title = "Warn",  value = "WARN" },
+            { title = "Info",  value = "INFO"  },
+            { title = "Warn",  value = "WARN"  },
             { title = "Error", value = "ERROR" },
-            { title = "None",  value = "NONE" },
+            { title = "None",  value = "NONE"  },
           }
         },
         viewFactory:static_text {

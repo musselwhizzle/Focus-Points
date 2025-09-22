@@ -11,7 +11,7 @@ use strict;
 use vars qw($VERSION);
 use Image::ExifTool;
 
-$VERSION = '1.02';
+$VERSION = '1.06';
 
 sub ProcessLigoGPS($$$;$);
 sub ProcessLigoJSON($$$);
@@ -223,11 +223,12 @@ sub DecipherLigoGPS($$$;$)
 #------------------------------------------------------------------------------
 # Parse decrypted/deciphered (but not defuzzed) LIGOGPSINFO record
 # (record starts with 4-byte int32u counter followed by date/time, etc)
-# Inputs: 0) ExifTool ref, 1) GPS string, 2) tag table ref, 3) not fuzzed
+# Inputs: 0) ExifTool ref, 1) GPS string, 2) tag table ref,
+#         3) flags: 0x01=not fuzzed, 0x02=spd in km/h
 # Returns: nothing
 sub ParseLigoGPS($$$;$)
 {
-    my ($et, $str, $tagTbl, $noFuzz) = @_;
+    my ($et, $str, $tagTbl, $flags) = @_;
 
     # example string input
     # "....2022/09/19 12:45:24 N:31.285065 W:124.759483 46.93 km/h x:-0.000 y:-0.000 z:-0.000"
@@ -235,15 +236,16 @@ sub ParseLigoGPS($$$;$)
         $et->Warn('LIGOGPSINFO format error');
         return;
     }
+    $flags or $flags = 0;
     my ($time,$latRef,$latNeg,$lat,$lonRef,$lonNeg,$lon,$spd) = ($1,$2,$3,$4,$5,$6,$7,$8);
     my %gpsScl = ( 1 => 1.524855137, 2 => 1.456027985, 3 => 1.15368 );
-    my $spdScl = $noFuzz ? $knotsToKph : 1.85407333;
+    my $spdScl = $flags & 0x01 ? ($flags & 0x02 ? 1 : $knotsToKph) : 1.85407333;
     $$et{DOC_NUM} = ++$$et{DOC_COUNT};
     $time =~ tr(/)(:);
     # convert from DDMM.MMMMMM to DD.DDDDDD if necessary
     # (speed wasn't scaled in my 1 sample with this format)
     $lat =~ /^\d{3}/ and Image::ExifTool::QuickTime::ConvertLatLon($lat,$lon), $spdScl = 1;
-    unless ($noFuzz) { # unfuzz the coordinates if necessary
+    unless ($flags & 0x01) { # unfuzz the coordinates if necessary
         my $scl = $$et{OPTIONS}{LigoGPSScale} || $$et{LigoGPSScale} || 1;
         $scl = $gpsScl{$scl} if $gpsScl{$scl};
         ($lat, $lon) = UnfuzzLigoGPS($lat, $lon, $scl);
@@ -262,6 +264,20 @@ sub ParseLigoGPS($$$;$)
     # (have a sample where tab is used to separate acc components)
     $et->HandleTag($tagTbl, 'Accelerometer',"$1 $2 $3") if $str =~ /x:(\S+)\sy:(\S+)\sz:(\S+)/;
     delete $$et{SET_GROUP1};
+}
+
+#------------------------------------------------------------------------------
+# Process GKU dashcam trailer containing JSON-format LigoGPS
+# Inputs: 0) ExifTool ref, 1) dirInfo ref, 2) tag table ref
+# Returns: 1 on success
+sub ProcessGKU($$$;$)
+{
+    my ($et, $dirInfo, $tagTbl) = @_;
+    my $dataPt = $$dirInfo{DataPt};
+    my $pos = unpack('V', $$dataPt);
+    return 0 if $pos + 13 > length $$dataPt or substr($$dataPt, $pos, 13) ne 'LIGOGPSINFO {';
+    pos($$dataPt) = $pos;
+    return ProcessLigoJSON($et, $dirInfo, $tagTbl);
 }
 
 #------------------------------------------------------------------------------
@@ -284,7 +300,13 @@ sub ProcessLigoGPS($$$;$)
     $et->VerboseDir($dirName);
     for (; $pos + 0x84 <= length($$dataPt); $pos+=0x84) {
         my $dat = substr($$dataPt, $pos, 0x84);
-        $dat =~ /^####/ or next; # (have seen blank records filled with zeros, so keep trying)
+        unless ($dat =~ /^####/) {
+            next unless $dat =~ m(^.{4}\d{4}/\d{2}/\d{2} )s; # (have seen blank records filled with zeros, so keep trying)
+            # non-encrypted format written by Redtiger F9 4K
+            $dat =~ s/\0+$//;   # remove trailing nulls
+            ParseLigoGPS($et, $dat, $tagTbl, 0x03);
+            next;
+        }
         # decipher if we already know the encryption
         $cipherInfo and $$cipherInfo{decipher} and DecipherLigoGPS($et, $dat, $tagTbl, $noFuzz) and next;
         my $str = DecryptLigoGPS($dat);
@@ -315,7 +337,7 @@ sub ProcessLigoJSON($$$)
     my $dataPt = $$dirInfo{DataPt};
     my $dirLen = $$dirInfo{DirLen};
     require Image::ExifTool::Import;
-    $et->VerboseDir('LIGO_JSON', undef, length($$dataPt));
+    $et->VerboseDir('LIGO_JSON', undef, length($$dataPt) - (pos($$dataPt) || 0));
     $$et{SET_GROUP1} = 'LIGO';
     while ($$dataPt =~ /LIGOGPSINFO (\{.*?\})/g) {
         my $json = $1;

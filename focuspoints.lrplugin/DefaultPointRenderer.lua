@@ -25,9 +25,9 @@ local LrApplication = import 'LrApplication'
 local LrPrefs = import 'LrPrefs'
 
 require "MogrifyUtils"
+require "Log"
 require "ExifUtils"
 a = require "affine"
-require "Log"
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
@@ -50,9 +50,11 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
 
   local photoView, overlayViews
 
+  Log.logDebug("DefaultPointRenderer", "Create photo view: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
+
   if WIN_ENV then
     local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
-    MogrifyUtils.drawFocusPoints(fpTable)
+    MogrifyUtils.drawFocusPoints(photo,fpTable)
     photoView = viewFactory:view {
       viewFactory:picture {
         width  = photoDisplayWidth,
@@ -101,7 +103,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
   local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
-  -- We read the rotation written in the Exif just for logging has it happens that the Lightroom rotation already includes it which is pretty handy
+  -- We read the rotation written in the Exif just for logging as it happens that the Lightroom rotation already includes it which is pretty handy
   local exifRotation = DefaultPointRenderer.getShotOrientation(photo, DefaultDelegates.metaData)
 
   -- "Dirty fix" for Apple: iPhone OOC JPGs in portrait format are missing rotation information.
@@ -154,9 +156,53 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
    Execute dedicated code (makerDelegates) to read AF information from EXIF makernotes and create table of focus points
    Table format: { focusPointType, x, y, width, height }
   --]]
-  local pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, DefaultDelegates.metaData)
-  if not pointsTable then
-    Log.logWarn("DefaultPointRenderer", "GetAfPoints() didn't find anything to be visualized.")
+
+  FocusInfo.initialize()
+
+  FocusInfo.missingMetadata = DefaultDelegates.cameraMake  == "unknown" and
+                              DefaultDelegates.cameraModel == "unknown"
+  if FocusInfo.missingMetadata then
+    -- the image file is probably an export w/o any metadata
+    Log.logError("DefaultPointRenderer", "Image file does not contain camera specific metadata")
+    return nil
+  end
+
+  FocusInfo.cameraMakerSupported = DefaultPointRenderer.funcGetAfPoints ~= nil
+  if not FocusInfo.cameraMakerSupported then
+    Log.logError("DefaultPointRenderer", "Camera maker is not supported")
+    return nil
+  end
+
+  FocusInfo.cameraModelSupported = DefaultPointRenderer.funcModelSupported(DefaultDelegates.cameraModel)
+  if not FocusInfo.cameraModelSupported then
+    Log.logError("DefaultPointRenderer", "Camera model is not supported")
+    return nil
+  end
+
+  FocusInfo.makerNotesFound = DefaultPointRenderer.funcMakerNotesFound(photo, DefaultDelegates.metaData)
+  if not FocusInfo.makerNotesFound then
+    Log.logError("DefaultPointRenderer",
+     "Makernotes section with AF information not found")
+    Log.logWarn("DefaultPointRenderer", FocusInfo.msgImageFileNotOoc)
+    return nil
+  end
+
+  FocusInfo.manualFocusUsed = DefaultPointRenderer.funcManualFocusUsed(photo, DefaultDelegates.metaData)
+  if FocusInfo.manualFocusUsed then
+    Log.logWarn("DefaultPointRenderer", "Manual focus mode used, no autofocus points recorded")
+    return nil
+  end
+
+  local pointsTable
+  if DefaultPointRenderer.funcGetAfPoints then
+    pointsTable = DefaultPointRenderer.funcGetAfPoints(photo, DefaultDelegates.metaData)
+    if not pointsTable then
+      Log.logWarn("DefaultPointRenderer", "GetAfPoints: Nothing found to be visualized")
+      return nil
+    end
+  else
+    Log.logError("DefaultPointRenderer", "Internal error: no delegate assigned")
+    FocusInfo.severeErrorEncountered = true
     return nil
   end
 
@@ -172,14 +218,19 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
     for _, point in pairs(pointsTable.points) do
       local template = pointsTable.pointTemplates[point.pointType]
       if not template then
-        Log.logError("DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found.")
-        errorMessage("Internal error:\nUnexpected point type " .. point.pointType)
+        Log.logError(
+          "DefaultPointRenderer", "Point template '" .. point.pointType .. "'' could not be found")
+        Log.logError(
+         "DefaultPointRenderer", "Internal error:\nUnexpected point type " .. point.pointType)
+        FocusInfo.severeErrorEncountered = true
         return nil
       end
 
       -- Placing icons
       local x, y = resultingTransformation(point.x, point.y)
-      Log.logInfo("DefaultPointRenderer", "Placing point of type '" .. point.pointType .. "' at position [" .. point.x .. ", " .. point.y .. "] -> ([" .. math.floor(x) .. ", " .. math.floor(y) .. "] on display)")
+      Log.logInfo("DefaultPointRenderer",
+        string.format("Placing point of type %s at position [%s,%s] -> ([%s,%s] on display)",
+          point.pointType, math.floor(point.x), math.floor(point.y), math.floor(x), math.floor(y)))
 
       local useSmallIcons = false
       local pointWidth = point.width
@@ -307,7 +358,7 @@ end
 -- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
 --]]
 function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
-  local fileRotationStr = ""
+  local fileRotationStr
 
   local function count_substring(text, sub)
     local _, count = text:gsub(sub, "")
@@ -445,20 +496,25 @@ function DefaultPointRenderer.getShotOrientation(photo, metaData)
 end
 
 --[[
-  @@public table DefaultPointRenderer.createFocusPixelBox(x, y)
+  @@public table DefaultPointRenderer.createFocusFrame(x, y)
   ----
   According to current viewing option settings, determines shape and size of focus box to be drawn around focus pixel
 --]]
-function DefaultPointRenderer.createFocusPixelBox(x, y)
-  local pointType, size
+function DefaultPointRenderer.createFocusFrame(x, y, w, h)
+  local pointType
 
-  if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
-    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+  if not (w and h) then
+    -- focus frame dimensions have not been given -> handle as focus pixel point
+    if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+    else
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+    end
+    w = math.min(FocusPointDialog.PhotoWidth, FocusPointDialog.PhotoHeight) * prefs.focusBoxSize
+    h = w
   else
-    pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+     pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
   end
-
-  size = math.min(FocusPointDialog.PhotoWidth, FocusPointDialog.PhotoHeight) * prefs.focusBoxSize
 
   return {
     pointTemplates = DefaultDelegates.pointTemplates,
@@ -467,22 +523,9 @@ function DefaultPointRenderer.createFocusPixelBox(x, y)
         pointType = pointType,
         x = x,
         y = y,
-        width  = size,
-        height = size
+        width  = w,
+        height = h,
       }
     }
   }
-end
-
-
-function DefaultPointRenderer.getAfPointsUnknown(photo, metaData)
-  return nil
-end
-
-function DefaultPointRenderer.getCameraInfoUnknown(photo, metaData)
-  return FocusInfo.errorMessage("Camera information not present")
-end
-
-function DefaultPointRenderer.getFocusInfoUnknown(photo, metaData)
-  return FocusInfo.errorMessage("Unknown")
 end

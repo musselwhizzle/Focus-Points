@@ -11,7 +11,7 @@ use strict;
 use warnings;
 require 5.004;
 
-my $version = '13.25';
+my $version = '13.37';
 
 $^W = 1;    # enable global warnings
 
@@ -26,9 +26,9 @@ BEGIN {
     # add lib directory at start of include path
     unshift @INC, ($0 =~ /(.*)[\\\/]/) ? "$1/lib" : './lib';
     # load or disable config file if specified
-    if (@ARGV and lc($ARGV[0]) eq '-config') {
+    while (@ARGV and lc($ARGV[0]) eq '-config') {
         shift;
-        $Image::ExifTool::configFile = shift;
+        push @Image::ExifTool::configFiles, shift;
     }
 }
 use Image::ExifTool qw{:Public};
@@ -48,7 +48,7 @@ sub FormatJSON($$$;$);
 sub PrintCSV(;$);
 sub AddGroups($$$$);
 sub ConvertBinary($);
-sub IsEqual($$);
+sub IsEqual($$;$);
 sub Printable($);
 sub LengthUTF8($);
 sub Infile($;$);
@@ -93,9 +93,9 @@ my @csvFiles;       # list of files when reading with CSV option (in ExifTool Ch
 my @csvTags;        # order of tags for first file with CSV option (lower case)
 my @delFiles;       # list of files to delete
 my @dynamicFiles;   # list of -tagsFromFile files with dynamic names and -TAG<=FMT pairs
+my (@echo3, @echo4);# stdout and stderr echo after processing is complete
 my @efile;          # files for writing list of error/fail/same file names
 my @exclude;        # list of excluded tags
-my (@echo3, @echo4);# stdout and stderr echo after processing is complete
 my @files;          # list of files and directories to scan
 my @moreArgs;       # more arguments to process after -stay_open -@
 my @newValues;      # list of new tag values to set
@@ -110,7 +110,6 @@ my %csvTags;        # lookup for all found tags with CSV option (lower case keys
 my %database;       # lookup for database information based on file name (in ExifTool Charset)
 my %filterExt;      # lookup for filtered extensions
 my %ignore;         # directory names to ignore
-my $ignoreHidden;   # flag to ignore hidden files
 my %outComma;       # flag that output text file needs a comma
 my %outTrailer;     # trailer for output text file
 my %preserveTime;   # preserved timestamps for files
@@ -122,6 +121,7 @@ my %usedFileName;   # lookup for file names we already used in TestName feature
 my %utf8FileName;   # lookup for file names that are UTF-8 encoded
 my %warnedOnce;     # lookup for once-only warnings
 my %wext;           # -W extensions to write
+my %wroteHEAD;      # list of output txt files to which we wrote HEAD
 my $allGroup;       # show group name for all tags
 my $altEnc;         # alternate character encoding if not UTF-8
 my $argFormat;      # use exiftool argument-format output
@@ -167,6 +167,7 @@ my $forcePrint;     # string to use for missing tag values (undef to not print t
 my $geoOnly;        # flag to extract Geolocation tags only
 my $helped;         # flag to avoid printing help if no tags specified
 my $html;           # flag for html-formatted output (2=html dump)
+my $ignoreHidden;   # flag to ignore hidden files
 my $interrupted;    # flag set if CTRL-C is pressed during a critical process
 my $isBinary;       # true if value is a SCALAR ref
 my $isWriting;      # flag set if we are writing tags
@@ -219,7 +220,6 @@ my $validFile;      # flag indicating we processed a valid file
 my $verbose;        # verbose setting
 my $vout;           # verbose output file reference (\*STDOUT or \*STDERR by default)
 my $windowTitle;    # title for console window
-my %wroteHEAD;      # list of output txt files to which we wrote HEAD
 my $xml;            # flag for XML-formatted output
 
 # flag to keep the input -@ argfile open:
@@ -464,8 +464,10 @@ undef @efile;
 undef @exclude;
 undef @files;
 undef @newValues;
+undef @requestTags;
 undef @srcFmt;
 undef @tags;
+undef %altFile;
 undef %appended;
 undef %countLink;
 undef %created;
@@ -485,6 +487,7 @@ undef %usedFileName;
 undef %utf8FileName;
 undef %warnedOnce;
 undef %wext;
+undef %wroteHEAD;
 undef $allGroup;
 undef $altEnc;
 undef $argFormat;
@@ -501,8 +504,8 @@ undef $doSetFileName;
 undef $doUnzip;
 undef $end;
 undef $endDir;
-undef $escapeHTML;
 undef $escapeC;
+undef $escapeHTML;
 undef $evalWarning;
 undef $executeID;
 undef $failCondition;
@@ -513,18 +516,22 @@ undef $fixLen;
 undef $forcePrint;
 undef $geoOnly;
 undef $ignoreHidden;
+undef $isBinary;
 undef $joinLists;
 undef $langOpt;
+undef $listDir;
 undef $listItem;
 undef $multiFile;
 undef $noBinary;
 undef $outOpt;
+undef $plot;
 undef $preserveTime;
 undef $progress;
 undef $progressCount;
 undef $progressIncr;
 undef $progressMax;
 undef $progressNext;
+undef $rafStdin;
 undef $recurse;
 undef $scanWritable;
 undef $sectHeader;
@@ -534,6 +541,7 @@ undef $showTagID;
 undef $structOpt;
 undef $tagOut;
 undef $textOut;
+undef $textOut2;
 undef $textOverwrite;
 undef $tmpFile;
 undef $tmpText;
@@ -974,6 +982,7 @@ for (;;) {
     if (/^diff$/i) {
         $diff = shift;
         defined $diff or Error("Expecting file name for -$_ option\n"), $badCmd=1;
+        CleanFilename($diff);   # change to forward slashes if necessary
         next;
     }
     /^delete_original(!?)$/i and $deleteOrig = ($1 ? 2 : 1), next;
@@ -1409,8 +1418,7 @@ for (;;) {
                 # add geotag/geosync/geolocate commands first
                 unshift @newValues, pop @newValues;
                 if (lc $2 eq 'geotag' and (not defined $addGeotime or $addGeotime) and length $val) {
-                    $addGeotime = [ ($1 || '') . 'Geotime<DateTimeOriginal#',
-                                    ($1 || '') . 'Geotime<SubSecDateTimeOriginal#' ];
+                    $addGeotime = ($1 || '') . q[Geotime<${DateTimeOriginal#;$_=$self->GetValue('SubSecDateTimeOriginal','ValueConv') || $_}];
                 }
             }
         }
@@ -1484,8 +1492,7 @@ if (not @files and not $outOpt and not @newValues) {
 # print help
 unless ((@tags and not $outOpt) or @files or @newValues or $geoOnly) {
     if ($doGlob and $doGlob == 2) {
-        Warn "No matching files\n";
-        $rtnVal = 1;
+        Error "No matching files\n";
         next;
     }
     if ($outOpt) {
@@ -1698,9 +1705,8 @@ if (@newValues) {
     # assume -geotime value if -geotag specified without -geotime
     if ($addGeotime) {
         AddSetTagsFile($setTagsFile = '@') unless $setTagsFile and $setTagsFile eq '@';
-        push @{$setTags{$setTagsFile}}, @$addGeotime;
-        my @a = map qq("-$_"), @$addGeotime;
-        $verbose and print $vout 'Arguments ',join(' and ', @a)," are assumed\n";
+        push @{$setTags{$setTagsFile}}, $addGeotime;
+        $verbose and print $vout qq(Using default "-$addGeotime"\n);
     }
     my %setTagsIndex;
     # add/delete option lookup
@@ -2146,10 +2152,12 @@ sub GetImageInfo($$)
     # set alternate file names
     foreach $g8 (sort keys %altFile) {
         my $altName = $orig;
-        # must double any '$' symbols in the original file name because
-        # they are used for tag names in a -fileNUM argument
-        $altName =~ s/\$/\$\$/g;
-        $altName = FilenameSPrintf($altFile{$g8}, $altName);
+        unless ($altFile{$g8} eq '@') {
+            # must double any '$' symbols in the original file name because
+            # they are used for tag names in a -fileNUM argument
+            $altName =~ s/\$/\$\$/g;
+            $altName = FilenameSPrintf($altFile{$g8}, $altName);
+        }
         $et->SetAlternateFile($g8, $altName);
     }
 
@@ -2174,15 +2182,7 @@ sub GetImageInfo($$)
     }
     # evaluate -if expression for conditional processing
     if (@condition) {
-        unless ($file eq '-' or $et->Exists($file)) {
-            Warn "Error: File not found - $file\n";
-            EFile($file);
-            FileNotFound($file);
-            ++$countBad;
-            return;
-        }
         my $result;
-
         unless ($failCondition) {
             # catch run time errors as well as compile errors
             undef $evalWarning;
@@ -2221,7 +2221,10 @@ sub GetImageInfo($$)
             }
             undef @foundTags if $fastCondition; # ignore if we didn't get all tags
         }
-        unless ($result) {
+        if ($result) {
+            # discard $info for non-existent file
+            undef $info unless $file eq '-' or $et->Exists($file);
+        } else {
             Progress($vout, "-------- $file (failed condition)") if $verbose;
             EFile($file, 2);
             ++$countFailed;
@@ -2533,7 +2536,7 @@ T2:         foreach $t2 (@tags2) {
     # print the results for this file
     if (%printFmt) {
         # output using print format file (-p) option
-        my ($type, $doc, $grp, $lastDoc, $cache);
+        my ($type, @doc, $grp, $lastDoc, $cache);
         $fileTrailer = '';
         # repeat for each embedded document if necessary (only if -ee used)
         if ($et->Options('ExtractEmbedded')) {
@@ -2542,7 +2545,8 @@ T2:         foreach $t2 (@tags2) {
         } else {
             $lastDoc = 0;
         }
-        for ($doc=0; $doc<=$lastDoc; ++$doc) {
+        for ($doc[0]=0; $doc[0]<=$lastDoc; ) {
+            my $doc = join '-', @doc;
             my ($skipBody, $opt);
             foreach $type (qw(HEAD SECT IF BODY ENDS TAIL)) {
                 my $prf = $printFmt{$type} or next;
@@ -2552,7 +2556,7 @@ T2:         foreach $t2 (@tags2) {
                 }
                 next if $type eq 'BODY' and $skipBody;
                 # silence "IF" warnings and warnings for subdocuments > 1
-                if ($type eq 'IF' or ($doc > 1 and not $$et{OPTIONS}{IgnoreMinorErrors})) {
+                if ($type eq 'IF' or (($doc[0] > 1 or @doc > 1) and not $$et{OPTIONS}{IgnoreMinorErrors})) {
                     $opt = 'Silent';
                 } else {
                     $opt = 'Warn';
@@ -2590,6 +2594,14 @@ T2:         foreach $t2 (@tags2) {
                 } elsif (@lines) {
                     print $fp @lines;
                 }
+            }
+            # find next available doc-subdoc
+            push @doc, 1;
+            while (@doc > 1) {
+                my $nextDoc = join '-', @doc;
+                last if $$et{HAS_DOC}{$nextDoc};
+                pop @doc;
+                ++$doc[-1];
             }
         }
         delete $printFmt{HEAD} unless defined $outfile; # print header only once per output file
@@ -2909,7 +2921,7 @@ TAG:    foreach $tag (@foundTags) {
                             $val = $et->GetValue($tag, 'ValueConv');
                             $val = '' unless defined $val;
                             # go back to print ValueConv value only if different
-                            next unless IsEqual($val, $lastVal);
+                            next unless IsEqual($val, $lastVal, 1);
                             print $fp "$descClose\n </$tok>";
                             last;
                         }
@@ -2946,7 +2958,7 @@ TAG:    foreach $tag (@foundTags) {
                         $$val{desc} = $desc;
                         if ($printConv) {
                             my $num = $et->GetValue($tag, 'ValueConv');
-                            $$val{num} = $num if defined $num and not IsEqual($num, $$val{val});
+                            $$val{num} = $num if defined $num and not IsEqual($num, $$val{val}, 1);
                         }
                         my $ex = $$et{TAG_EXTRA}{$tag};
                         $$val{'fmt'} = $$ex{G6} if defined $$ex{G6};
@@ -2959,6 +2971,7 @@ TAG:    foreach $tag (@foundTags) {
                                 $$val{'hex'} = join ' ', unpack '(H2)*', $$ex{BinVal};
                             }
                         }
+                        $$val{rat} = $$ex{Rational} if defined $$ex{Rational} and $$et{OPTIONS}{SaveBin};
                     }
                 }
                 FormatJSON($fp, $val, $ind, $quote);
@@ -3932,24 +3945,29 @@ sub ConvertBinary($)
 
 #------------------------------------------------------------------------------
 # Compare ValueConv and PrintConv values of a tag to see if they are equal
-# Inputs: 0) value1, 1) value2
+# Inputs: 0) value1, 1) value2, 2) flag to return true for any scalar references
 # Returns: true if they are equal
-sub IsEqual($$)
+sub IsEqual($$;$)
 {
-    my ($a, $b) = @_;
+    my ($a, $b, $trueScalar) = @_;
     # (scalar values are not print-converted)
-    return 1 if $a eq $b or ref $a eq 'SCALAR';
+    return 1 if $a eq $b;
+    if (ref $a eq 'SCALAR') {
+        return 1 if $trueScalar;
+        return 1 if ref $b eq 'SCALAR' and $$a eq $$b;
+        return 0;
+    }
     if (ref $a eq 'HASH' and ref $b eq 'HASH') {
         return 0 if scalar(keys %$a) != scalar(keys %$b);
         my $key;
         foreach $key (keys %$a) {
-            return 0 unless IsEqual($$a{$key}, $$b{$key});
+            return 0 unless IsEqual($$a{$key}, $$b{$key}, $trueScalar);
         }
     } else {
         return 0 if ref $a ne 'ARRAY' or ref $b ne 'ARRAY' or @$a != @$b;
         my $i;
         for ($i=0; $i<scalar(@$a); ++$i) {
-            return 0 unless IsEqual($$a[$i], $$b[$i]);
+            return 0 unless IsEqual($$a[$i], $$b[$i], $trueScalar);
         }
     }
     return 1;
@@ -4291,6 +4309,7 @@ sub ScanDir($$;$)
             next unless $recurse;
             # ignore directories starting with "." by default
             next if $file =~ /^\./ and $recurse == 1;
+            # note: this doesn't work in Windows cmd (see forum17243)
             next if $ignore{$file} or ($ignore{SYMLINKS} and -l $path);
             ScanDir($et, $path, $list);
             last if $end;
@@ -4366,7 +4385,7 @@ sub FindFileWindows($$)
     # recode file name as UTF-8 if necessary
     my $enc = $et->Options('CharsetFileName');
     $wildfile = $et->Decode($wildfile, $enc, undef, 'UTF8') if $enc and $enc ne 'UTF8';
-    $wildfile =~ tr/\\/\//; # use forward slashes
+    CleanFilename($wildfile); # use forward slashes
     my ($dir, $wildname) = ($wildfile =~ m{(.*[:/])(.*)}) ? ($1, $2) : ('', $wildfile);
     if (HasWildcards($dir)) {
         Warn "Wildcards don't work in the directory specification\n";
@@ -4446,7 +4465,7 @@ sub AbsPath($)
             local $SIG{'__WARN__'} = sub { };
             $path = eval { Cwd::abs_path($file) };
         }
-        $path =~ tr/\\/\// if $^O eq 'MSWin32' and defined $path;   # use forward slashes
+        CleanFilename($path) if defined $path;  # use forward slashes
     }
     return $path;
 }
@@ -4521,6 +4540,10 @@ sub SuggestedExtension($$$)
     } elsif ($$valPt =~ /^.{4}ftyp(3gp|mp4|f4v|qt  )/s) {
         my %movType = ( 'qt  ' => 'mov' );
         $ext = $movType{$1} || $1;
+    } elsif ($$valPt =~ /^<(!DOCTYPE )?html/i) {
+        $ext = 'html';
+    } elsif ($$valPt =~ /^[\n\r]*\{[\n\r]*\\rtf/) {
+        $ext = 'rtf';
     } elsif ($$valPt !~ /^.{0,4096}\0/s) {
         $ext = 'txt';
     } elsif ($$valPt =~ /^BM.{15}\0/s) {

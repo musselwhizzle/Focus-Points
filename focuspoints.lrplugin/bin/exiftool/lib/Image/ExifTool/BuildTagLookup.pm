@@ -35,7 +35,7 @@ use Image::ExifTool::Sony;
 use Image::ExifTool::Validate;
 use Image::ExifTool::MacOS;
 
-$VERSION = '3.62';
+$VERSION = '3.63';
 @ISA = qw(Exporter);
 
 sub NumbersFirst($$);
@@ -109,6 +109,7 @@ my %tweakOrder = (
     'FujiFilm::RAFData' => 'FujiFilm::RAF',
     'QuickTime::AudioKeys' => 'QuickTime::Keys',
     'QuickTime::VideoKeys' => 'QuickTime::AudioKeys',
+    'Google::HDRPText' => 'Google::HDRPlusMakerNote',
 );
 
 # list of all recognized Format strings
@@ -271,11 +272,11 @@ tags remain.
 
 The table below lists all EXIF tags.  Also listed are TIFF, DNG, HDP and
 other tags which are not part of the EXIF specification, but may co-exist
-with EXIF tags in some images.  Tags which are part of the EXIF 2.32
+with EXIF tags in some images.  Tags which are part of the EXIF 3.0
 specification have an underlined B<Tag Name> in the HTML version of this
 documentation.  See
-L<https://web.archive.org/web/20190624045241if_/http://www.cipa.jp:80/std/documents/e/DC-008-Translation-2019-E.pdf>
-for the official EXIF 2.32 specification.
+L<https://www.cipa.jp/std/documents/download_e.html?CIPA_DC-008-2024-E>
+for the official EXIF 3.0 specification.
 },
     GPS => q{
 These GPS tags are part of the EXIF standard, and are stored in a separate
@@ -867,15 +868,15 @@ sub new
         $longID{$tableName} = 0;
         $longName{$tableName} = 0;
         # save all tag names
-        my ($tagID, $binaryTable, $noID, $hexID, $isIPTC, $isXMP);
+        my ($tagID, $binaryTable, $noID, $prtID, $isIPTC, $isXMP);
         $isIPTC = 1 if $writeProc and $writeProc eq \&Image::ExifTool::IPTC::WriteIPTC;
         # generate flattened tag names for structure fields if this is an XMP table
         if ($$table{GROUPS} and $$table{GROUPS}{0} eq 'XMP' or $$vars{ADD_FLATTENED}) {
             Image::ExifTool::XMP::AddFlattenedTags($table);
             $isXMP = 1;
         }
-        $noID = 1 if $isXMP or $short =~ /^(Shortcuts|ASF.*)$/ or $$vars{NO_ID};
-        $hexID = $$vars{HEX_ID};
+        $prtID = $$vars{ID_FMT};
+        $noID = 1 if $isXMP or $short =~ /^(Shortcuts|ASF.*)$/ or $prtID and $prtID eq 'none';
         if ($$table{WRITE_PROC} and $$table{WRITE_PROC} eq \&Image::ExifTool::WriteBinaryData
             and not $$table{CHECK_PROC})
         {
@@ -995,7 +996,7 @@ TagID:  foreach $tagID (@keys) {
                     if ($format and $format =~ /\$val\{/ and
                         ($$tagInfo{Writable} or not defined $$tagInfo{Writable}))
                     {
-                        warn "Warning: \$var{} used in Format of writable tag - $short $name\n"
+                        warn "Warning: \$val{} used in Format of writable tag - $short $name\n"
                     }
                 }
                 if ($$tagInfo{Hidden}) {
@@ -1104,7 +1105,7 @@ TagID:  foreach $tagID (@keys) {
                         $note = 'NOT a flattened tag!';
                     } else {
                         # add note about different XMP Tag ID
-                        $note = $$tagInfo{RootTagInfo} ? $tagID : "called $tagID by the spec";
+                        $note = $$tagInfo{RootTagInfo} ? $tagID : "tag ID is '${tagID}'";
                     }
                     if ($$tagInfo{Notes}) {
                         $values[-1] =~ s/^\(/($note; /;
@@ -1492,8 +1493,14 @@ TagID:  foreach $tagID (@keys) {
             if ($tagID =~ /^(-)?\d+(\.\d+)?$/) {
                 if ($1) {
                     $tagIDstr = $tagID;
-                } elsif (defined $hexID) {
-                    $tagIDstr = $hexID ? sprintf('0x%.4x',$tagID) : $tagID;
+                } elsif (defined $prtID) {
+                    if ($prtID eq 'hex') {
+                        $tagIDstr = sprintf('0x%.4x',$tagID);
+                    } elsif ($prtID eq 'str') {
+                        $tagIDstr = "'${tagID}'";
+                    } else {
+                        $tagIDstr = $tagID;
+                    }
                 } elsif (not $2 and not $binaryTable and not $isIPTC and
                          not ($short =~ /^CanonCustom/ and $tagID < 256))
                 {
@@ -1911,7 +1918,7 @@ sub SortedTagTableKeys($)
     my $table = shift;
     my $vars = $$table{VARS} || { };
     my @keys = TagTableKeys($table);
-    if ($$vars{NO_ID}) {
+    if ($$vars{ID_FMT} and $$vars{ID_FMT} eq 'none') {
         # sort by tag name if ID not shown
         my ($key, %name);
         foreach $key (@keys) {
@@ -2338,7 +2345,8 @@ sub WriteTagNames($$)
         my ($hid, $showGrp);
         # widths of the different columns in the POD documentation
         my ($wID,$wTag,$wReq,$wGrp) = (8,36,24,10);
-        my ($composite, $derived, $notes, $longTags, $wasLong, $prefix);
+        my ($composite, $derived, $notes, $longTags, $prefix);
+        my $wasLong = 0;
         if ($short eq 'Shortcuts') {
             $derived = '<th>Refers To</th>';
             $composite = 2;
@@ -2396,7 +2404,7 @@ sub WriteTagNames($$)
                     $wID -= $longTag - $wTag;
                     $wTag = $longTag;
                 }
-                $wasLong = 1 if $wID <= $self->{LONG_ID}->{$tableName};
+                ++$wasLong if $wID <= $self->{LONG_ID}->{$tableName};
             }
         } elsif ($composite) {
             $wTag += $wID - $wReq;
@@ -2471,6 +2479,7 @@ sub WriteTagNames($$)
                     if ($over <= $wTag - length($$tagNames[0])) {
                         $wTag2 -= $over;
                         $w += $over;
+                        --$wasLong;
                     } else {
                         # put tag name on next line if ID is too long
                         $idStr = "  $tagIDstr\n   " . (' ' x $w);

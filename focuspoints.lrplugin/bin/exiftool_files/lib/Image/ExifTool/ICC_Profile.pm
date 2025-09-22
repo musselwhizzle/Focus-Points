@@ -336,6 +336,7 @@ my %manuSig = ( #6
     'Zebr' => 'Zebra Technologies Inc',
     'ZRAN' => 'Zoran Corporation',
     # also seen: "    ",ACMS,KCMS,UCCM,etc2,SCTX
+    # registry: https://www.color.org/signatureRegistry/index.xalter
 );
 
 # ICC_Profile tag table
@@ -963,7 +964,7 @@ my %manuSig = ( #6
 %Image::ExifTool::ICC_Profile::Metadata = (
     PROCESS_PROC => \&ProcessMetadata,
     GROUPS => { 0 => 'ICC_Profile', 1 => 'ICC-meta', 2 => 'Image' },
-    VARS => { NO_ID => 1 },
+    VARS => { ID_FMT => 'none' },
     NOTES => q{
         Only these few tags have been pre-defined, but ExifTool will extract any
         Metadata tags that exist.

@@ -12,7 +12,7 @@ meta information extracted from or written to a file.
 =head1 TAG TABLES
 
 The tables listed below give the names of all tags recognized by ExifTool.
-They contain a total of 28422 tags, with 17656 unique tag names.
+They contain a total of 28745 tags, with 17885 unique tag names.
 
 B<Tag ID>, B<Index#> or B<Sequence> is given in the first column of each
 table.  A B<Tag ID> is the computer-readable equivalent of a tag name, and
@@ -154,7 +154,7 @@ L<https://www.w3.org/Graphics/JPEG/jfif3.pdf> for the JPEG specification.
                InfiRaySensor                    InfiRay Sensor
                SEAL                             XMP SEAL
   'APP10'      Comment                          no
-               HDRGainCurve                     no
+               HDRGainInfo                      -
   'APP11'      JPEG-HDR                         JPEG HDR
                JUMBF                            Jpeg2000
   'APP12'      PictureInfo                      APP12 PictureInfo
@@ -171,6 +171,7 @@ L<https://www.w3.org/Graphics/JPEG/jfif3.pdf> for the JPEG specification.
                FotoStation                      FotoStation
                PhotoMechanic                    PhotoMechanic
                MIE                              MIE
+               MPF                              MPF
                Samsung                          Samsung Trailer
                Vivo                             Trailer Vivo
                OnePlus                          Trailer OnePlus
@@ -277,6 +278,13 @@ Tags found in the XML metadata of the APP9 "Media Jukebox" segment.
   Tool_Name                                     no
   Tool_Version                                  no
 
+=head3 JPEG HDRGainInfo Tags
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+      6    HDRGainCurveSize                     no
+     10    HDRGainCurve                         no
+
 =head3 JPEG HDR Tags
 
 Information extracted from APP11 of a JPEG-HDR image.
@@ -356,11 +364,11 @@ tags remain.
 
 The table below lists all EXIF tags.  Also listed are TIFF, DNG, HDP and
 other tags which are not part of the EXIF specification, but may co-exist
-with EXIF tags in some images.  Tags which are part of the EXIF 2.32
+with EXIF tags in some images.  Tags which are part of the EXIF 3.0
 specification have an underlined B<Tag Name> in the HTML version of this
 documentation.  See
-L<https://web.archive.org/web/20190624045241if_/http://www.cipa.jp:80/std/documents/e/DC-008-Translation-2019-E.pdf>
-for the official EXIF 2.32 specification.
+L<https://www.cipa.jp/std/documents/download_e.html?CIPA_DC-008-2024-E>
+for the official EXIF 3.0 specification.
 
   Tag ID   Tag Name                  Group      Writable
   ------   --------                  -----      --------
@@ -733,6 +741,7 @@ for the official EXIF 2.32 specification.
            MakerNoteFujiFilm         ExifIFD    FujiFilm
            MakerNoteGE               ExifIFD    GE
            MakerNoteGE2              ExifIFD    FujiFilm
+           MakerNoteGoogle           ExifIFD    Google HDRPlusMakerNote
            MakerNoteHasselblad       ExifIFD    Unknown
            MakerNoteHP               ExifIFD    HP
            MakerNoteHP2              ExifIFD    HP Type2
@@ -789,9 +798,11 @@ for the official EXIF 2.32 specification.
            MakerNotePentax5          ExifIFD    Pentax
            MakerNotePentax6          ExifIFD    Pentax S1
            MakerNotePhaseOne         ExifIFD    PhaseOne
-           MakerNoteReconyx          ExifIFD    Reconyx
-           MakerNoteReconyx2         ExifIFD    Reconyx Type2
-           MakerNoteReconyx3         ExifIFD    Reconyx Type3
+           MakerNoteReconyxHyperFire ExifIFD    Reconyx HyperFire
+           MakerNoteReconyxUltraFire ExifIFD    Reconyx UltraFire
+           MakerNoteReconyxHyperFire2 ExifIFD    Reconyx HyperFire2
+           MakerNoteReconyxMicroFire ExifIFD    Reconyx MicroFire
+           MakerNoteReconyxHyperFire4K ExifIFD    Reconyx HyperFire4K
            MakerNoteRicohPentax      ExifIFD    Pentax
            MakerNoteRicoh            ExifIFD    Ricoh
            MakerNoteRicoh2           ExifIFD    Ricoh Type2
@@ -1031,6 +1042,8 @@ for the official EXIF 2.32 specification.
   0xc7aa   CacheVersion              SubIFD2    int32u!
   0xc7b5   DefaultUserCrop           SubIFD     rational64u[4]!
   0xc7d5   NikonNEFInfo              -          Nikon NEFInfo
+  0xc7d7   ZIFMetadata               -          no
+  0xc7d8   ZIFAnnotations            -          no
   0xc7e9   DepthFormat               IFD0       int16u!
   0xc7ea   DepthNear                 IFD0       rational64u!
   0xc7eb   DepthFar                  IFD0       rational64u!
@@ -1386,7 +1399,7 @@ L<http://www.adobe.com/devnet/xmp/> for the official XMP specification.
   creatorAtom                                   XMP creatorAtom
   crs                                           XMP crs
   dc                                            XMP dc
-  Device                                        XMP Device
+  Device                                        Google Device
   dex                                           XMP dex
   DICOM                                         XMP DICOM
   digiKam                                       XMP digiKam
@@ -1398,16 +1411,16 @@ L<http://www.adobe.com/devnet/xmp/> for the official XMP specification.
   expressionmedia                               XMP ExpressionMedia
   extensis                                      XMP extensis
   fpv                                           XMP fpv
-  GAudio                                        XMP GAudio
-  GCamera                                       XMP GCamera
-  GContainer                                    XMP GContainer
-  GCreations                                    XMP GCreations
-  GDepth                                        XMP GDepth
+  GAudio                                        Google GAudio
+  GCamera                                       Google GCamera
+  GContainer                                    Google GContainer
+  GCreations                                    Google GCreations
+  GDepth                                        Google GDepth
   getty                                         XMP GettyImages
-  GFocus                                        XMP GFocus
-  GImage                                        XMP GImage
-  GPano                                         XMP GPano
-  GSpherical                                    XMP GSpherical
+  GFocus                                        Google GFocus
+  GImage                                        Google GImage
+  GPano                                         Google GPano
+  GSpherical                                    Google GSpherical
   hdr                                           XMP hdr
   HDRGainMap                                    XMP HDRGainMap
   hdrgm                                         XMP hdrgm
@@ -4194,291 +4207,6 @@ These tags belong to the ExifTool XMP-dc family 1 group.
   Title                                         lang-alt
   Type                                          string+
 
-=head3 XMP Device Tags
-
-Google depth-map Device tags.  See
-L<https://developer.android.com/training/camera2/Dynamic-depth-v1.0.pdf> for
-the specification.
-
-These tags belong to the ExifTool XMP-Device family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  AppInfo                                       AppInfo Struct
-  AppInfoApplication                            string_
-  AppInfoItemURI                                string_
-  AppInfoVersion                                string_
-  Cameras                                       DeviceCameras Struct+
-  Camera                                        DeviceCamera Struct_+
-  CameraAppInfo                                 AppInfo Struct_+
-  CameraAppInfoApplication                      string_+
-  CameraAppInfoItemURI                          string_+
-  CameraAppInfoVersion                          string_+
-  CameraDepthMap                                DeviceDepthMap Struct_+
-  CameraDepthMapConfidenceURI                   string_+
-  CameraDepthMapDepthURI                        string_+
-  CameraDepthMapFar                             real_+
-  CameraDepthMapFocalTable                      string_+
-  CameraDepthMapFocalTableEntryCount            integer_+
-  CameraDepthMapFormat                          string_+
-  CameraDepthMapItemSemantic                    string_+
-  CameraDepthMapMeasureType                     string_+
-  CameraDepthMapNear                            real_+
-  CameraDepthMapSoftware                        string_+
-  CameraDepthMapUnits                           string_+
-  CameraImage                                   DeviceImage Struct_+
-  CameraImageItemSemantic                       string_+
-  CameraImageItemURI                            string_+
-  CameraImagingModel                            DeviceImagingModel Struct_+
-  CameraImagingModelDistortion                  string_+
-  CameraImagingModelDistortionCount             integer_+
-  CameraImagingModelFocalLengthX                real_+
-  CameraImagingModelFocalLengthY                real_+
-  CameraImagingModelImageHeight                 integer_+
-  CameraImagingModelImageWidth                  integer_+
-  CameraImagingModelPixelAspectRatio            real_+
-  CameraImagingModelPrincipalPointX             real_+
-  CameraImagingModelPrincipalPointY             real_+
-  CameraImagingModelSkew                        real_+
-  CameraLightEstimate                           DeviceLightEstimate Struct_+
-  CameraLightEstimateColorCorrectionB           real_+
-  CameraLightEstimateColorCorrectionG           real_+
-  CameraLightEstimateColorCorrectionR           real_+
-  CameraLightEstimatePixelIntensity             real_+
-  CameraPointCloud                              DevicePointCloud Struct_+
-  CameraPointCloudMetric                        boolean_+
-  CameraPointCloudPointCloud                    integer_+
-  CameraPointCloudPoints                        string_+
-  CameraPose                                    Pose Struct_+
-  CameraPosePositionX                           real_+
-  CameraPosePositionY                           real_+
-  CameraPosePositionZ                           real_+
-  CameraPoseRotationW                           real_+
-  CameraPoseRotationX                           real_+
-  CameraPoseRotationY                           real_+
-  CameraPoseRotationZ                           real_+
-  CameraPoseTimestamp                           integer_+
-  CameraTrait                                   string_+
-  CameraVendorInfo                              VendorInfo Struct_+
-  CameraVendorInfoManufacturer                  string_+
-  CameraVendorInfoModel                         string_+
-  CameraVendorInfoNotes                         string_+
-  Container                                     DeviceContainer Struct
-  ContainerDirectory                            DeviceDirectory Struct_+
-  ContainerDirectoryItem                        DeviceItem Struct_+
-  ContainerDirectoryItemDataURI                 string_+
-  ContainerDirectoryItemLength                  integer_+
-  ContainerDirectoryItemMime                    string_+
-  ContainerDirectoryItemPadding                 integer_+
-  EarthPos                                      EarthPose Struct
-  EarthPosAltitude                              real_
-  EarthPosLatitude                              real_
-  EarthPosLongitude                             real_
-  EarthPosRotationW                             real_
-  EarthPosRotationX                             real_
-  EarthPosRotationY                             real_
-  EarthPosRotationZ                             real_
-  EarthPosTimestamp                             integer_
-  Planes                                        DevicePlanes Struct+
-  Plane                                         DevicePlane Struct_+
-  PlaneBoundary                                 string_+
-  PlaneBoundaryVertexCount                      integer_+
-  PlaneExtentX                                  real_+
-  PlaneExtentZ                                  real_+
-  PlanePose                                     Pose Struct_+
-  PlanePosePositionX                            real_+
-  PlanePosePositionY                            real_+
-  PlanePosePositionZ                            real_+
-  PlanePoseRotationW                            real_+
-  PlanePoseRotationX                            real_+
-  PlanePoseRotationY                            real_+
-  PlanePoseRotationZ                            real_+
-  PlanePoseTimestamp                            integer_+
-  Pose                                          Pose Struct
-  PosePositionX                                 real_
-  PosePositionY                                 real_
-  PosePositionZ                                 real_
-  PoseRotationW                                 real_
-  PoseRotationX                                 real_
-  PoseRotationY                                 real_
-  PoseRotationZ                                 real_
-  PoseTimestamp                                 integer_
-  Profiles                                      DeviceProfiles Struct+
-  Profile                                       DeviceProfile Struct_+
-  ProfileCameraIndices                          integer_+
-  ProfileType                                   string_+
-  VendorInfo                                    VendorInfo Struct
-  VendorInfoManufacturer                        string_
-  VendorInfoModel                               string_
-  VendorInfoNotes                               string_
-
-=head3 XMP AppInfo Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Application                                   string
-  ItemURI                                       string
-  Version                                       string
-
-=head3 XMP DeviceCameras Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Camera                                        DeviceCamera Struct
-
-=head3 XMP DeviceCamera Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  AppInfo                                       AppInfo Struct
-  DepthMap                                      DeviceDepthMap Struct
-  Image                                         DeviceImage Struct
-  ImagingModel                                  DeviceImagingModel Struct
-  LightEstimate                                 DeviceLightEstimate Struct
-  PointCloud                                    DevicePointCloud Struct
-  Pose                                          Pose Struct
-  Trait                                         string
-  VendorInfo                                    VendorInfo Struct
-
-=head3 XMP DeviceDepthMap Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  ConfidenceURI                                 string
-  DepthURI                                      string
-  Far                                           real
-  FocalTable                                    string
-  FocalTableEntryCount                          integer
-  Format                                        string
-  ItemSemantic                                  string
-  MeasureType                                   string
-  Near                                          real
-  Software                                      string
-  Units                                         string
-
-=head3 XMP DeviceImage Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  ItemSemantic                                  string
-  ItemURI                                       string
-
-=head3 XMP DeviceImagingModel Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Distortion                                    string
-  DistortionCount                               integer
-  FocalLengthX                                  real
-  FocalLengthY                                  real
-  ImageHeight                                   integer
-  ImageWidth                                    integer
-  PixelAspectRatio                              real
-  PrincipalPointX                               real
-  PrincipalPointY                               real
-  Skew                                          real
-
-=head3 XMP DeviceLightEstimate Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  ColorCorrectionB                              real
-  ColorCorrectionG                              real
-  ColorCorrectionR                              real
-  PixelIntensity                                real
-
-=head3 XMP DevicePointCloud Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Metric                                        boolean
-  PointCloud                                    integer
-  Points                                        string
-
-=head3 XMP Pose Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  PositionX                                     real
-  PositionY                                     real
-  PositionZ                                     real
-  RotationW                                     real
-  RotationX                                     real
-  RotationY                                     real
-  RotationZ                                     real
-  Timestamp                                     integer
-
-=head3 XMP VendorInfo Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Manufacturer                                  string
-  Model                                         string
-  Notes                                         string
-
-=head3 XMP DeviceContainer Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Directory                                     DeviceDirectory Struct+
-
-=head3 XMP DeviceDirectory Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Item                                          DeviceItem Struct
-
-=head3 XMP DeviceItem Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  DataURI                                       string
-  Length                                        integer
-  Mime                                          string
-  Padding                                       integer
-
-=head3 XMP EarthPose Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Altitude                                      real
-  Latitude                                      real
-  Longitude                                     real
-  RotationW                                     real
-  RotationX                                     real
-  RotationY                                     real
-  RotationZ                                     real
-  Timestamp                                     integer
-
-=head3 XMP DevicePlanes Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Plane                                         DevicePlane Struct
-
-=head3 XMP DevicePlane Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Boundary                                      string
-  BoundaryVertexCount                           integer
-  ExtentX                                       real
-  ExtentZ                                       real
-  Pose                                          Pose Struct
-
-=head3 XMP DeviceProfiles Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Profile                                       DeviceProfile Struct
-
-=head3 XMP DeviceProfile Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  CameraIndices                                 integer+
-  Type                                          string
-
 =head3 XMP dex Tags
 
 Description Explorer namespace tags.  These tags are not very common.  The
@@ -4807,113 +4535,6 @@ These tags belong to the ExifTool XMP-fpv family 1 group.
   --------                                      --------
   RichTextComment                               string
 
-=head3 XMP GAudio Tags
-
-These tags belong to the ExifTool XMP-GAudio family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  AudioData                                     string
-  AudioMimeType                                 string
-
-=head3 XMP GCamera Tags
-
-Camera information found in Google panorama images.
-
-These tags belong to the ExifTool XMP-GCamera family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  BurstID                                       string
-  BurstPrimary                                  string
-  DisableAutoCreation                           string+
-  DisableSuggestedAction                        string+
-  HDRPMakerNote                                 string
-  HdrPlusMakernote                              string
-  MicroVideo                                    integer
-  MicroVideoOffset                              integer
-  MicroVideoPresentationTimestampUs             integer
-  MicroVideoVersion                             integer
-  MotionPhoto                                   integer
-  MotionPhotoPresentationTimestampUs            integer
-  MotionPhotoVersion                            integer
-  PortraitNote                                  string
-  PortraitRequest                               string
-  PortraitVersion                               string
-  ShotLogData                                   string
-  SpecialTypeID                                 string+
-
-=head3 XMP GContainer Tags
-
-Google Container namespace.  ExifTool uses the prefix 'GContainer' instead
-of 'Container' to avoid a conflict with the Google Device Container
-namespace.
-
-These tags belong to the ExifTool XMP-GContainer family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  ContainerDirectory                            Directory Struct+
-  DirectoryItem                                 Item Struct_+
-  DirectoryItemLabel                            string_+
-  DirectoryItemLength                           integer_+
-  DirectoryItemMime                             string_+
-  DirectoryItemPadding                          integer_+
-  DirectoryItemSemantic                         string_+
-  DirectoryItemURI                              string_+
-
-=head3 XMP Directory Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Item                                          Item Struct
-
-=head3 XMP Item Struct
-
-  Field Name                                    Writable
-  ----------                                    --------
-  Label                                         string
-  Length                                        integer
-  Mime                                          string
-  Padding                                       integer
-  Semantic                                      string
-  URI                                           string
-
-=head3 XMP GCreations Tags
-
-Google creations tags.
-
-These tags belong to the ExifTool XMP-GCreations family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  CameraBurstID                                 string
-  Type                                          string/
-
-=head3 XMP GDepth Tags
-
-Google depthmap information. See
-L<https://developers.google.com/depthmap-metadata/> for the specification.
-
-These tags belong to the ExifTool XMP-GDepth family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  Confidence                                    string/
-  ConfidenceMime                                string/
-  DepthImage                                    string/
-  Far                                           real/
-  Format                                        string/
-  ImageHeight                                   real/
-  ImageWidth                                    real/
-  Manufacturer                                  string/
-  MeasureType                                   string/
-  Mime                                          string/
-  Model                                         string/
-  Near                                          real/
-  Software                                      string/
-  Units                                         string/
-
 =head3 XMP GettyImages Tags
 
 The actual Getty Images namespace prefix is "GettyImagesGIFT", which is the
@@ -4944,94 +4565,6 @@ These tags belong to the ExifTool XMP-getty family 1 group.
   RoutingExclusions                             string+
   SecondaryFTP                                  string+
   TimeShot                                      string
-
-=head3 XMP GFocus Tags
-
-Focus information found in Google depthmap images.
-
-These tags belong to the ExifTool XMP-GFocus family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  BlurAtInfinity                                real
-  FocalDistance                                 real
-  FocalPointX                                   real
-  FocalPointY                                   real
-
-=head3 XMP GImage Tags
-
-These tags belong to the ExifTool XMP-GImage family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  ImageData                                     string
-  ImageMimeType                                 string
-
-=head3 XMP GPano Tags
-
-Panorama tags written by Google Photosphere. See
-L<https://developers.google.com/panorama/metadata/> for the specification.
-
-These tags belong to the ExifTool XMP-GPano family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  CaptureSoftware                               string
-  CroppedAreaImageHeightPixels                  real
-  CroppedAreaImageWidthPixels                   real
-  CroppedAreaLeftPixels                         real
-  CroppedAreaTopPixels                          real
-  ExposureLockUsed                              boolean
-  FirstPhotoDate                                date
-  FullPanoHeightPixels                          real
-  FullPanoWidthPixels                           real
-  InitialCameraDolly                            real
-  InitialHorizontalFOVDegrees                   real
-  InitialVerticalFOVDegrees                     real
-  InitialViewHeadingDegrees                     real
-  InitialViewPitchDegrees                       real
-  InitialViewRollDegrees                        real
-  LargestValidInteriorRectHeight                real
-  LargestValidInteriorRectLeft                  real
-  LargestValidInteriorRectTop                   real
-  LargestValidInteriorRectWidth                 real
-  LastPhotoDate                                 date
-  PoseHeadingDegrees                            real
-  PosePitchDegrees                              real
-  PoseRollDegrees                               real
-  ProjectionType                                string
-  SourcePhotosCount                             integer
-  StitchingSoftware                             string
-  UsePanoramaViewer                             boolean
-
-=head3 XMP GSpherical Tags
-
-Not actually XMP.  These RDF/XML tags are used in Google spherical MP4
-videos.  These tags are written into the video track of MOV/MP4 files, and
-not at the top level like other XMP tags.  See
-L<https://github.com/google/spatial-media/blob/master/docs/spherical-video-rfc.md>
-for the specification.
-
-These tags belong to the ExifTool XMP-GSpherical family 1 group.
-
-  Tag Name                                      Writable
-  --------                                      --------
-  CroppedAreaImageHeightPixels                  integer/
-  CroppedAreaImageWidthPixels                   integer/
-  CroppedAreaLeftPixels                         integer/
-  CroppedAreaTopPixels                          integer/
-  FullPanoHeightPixels                          integer/
-  FullPanoWidthPixels                           integer/
-  InitialViewHeadingDegrees                     real/
-  InitialViewPitchDegrees                       real/
-  InitialViewRollDegrees                        real/
-  ProjectionType                                string/
-  SourceCount                                   integer/
-  Spherical                                     boolean/
-  StereoMode                                    string/
-  Stitched                                      boolean/
-  StitchingSoftware                             string/
-  TimeStamp                                     integer/
 
 =head3 XMP hdr Tags
 
@@ -6366,7 +5899,9 @@ These tags belong to the ExifTool XMP-xmpBJ family 1 group.
 
 =head3 XMP xmpDM Tags
 
-XMP Dynamic Media namespace tags.
+XMP Dynamic Media namespace tags.  See
+L<https://developer.adobe.com/xmp/docs/XMPNamespaces/xmpDM/> for the
+specification.
 
 These tags belong to the ExifTool XMP-xmpDM family 1 group.
 
@@ -7158,6 +6693,550 @@ GeoTiffAsciiParams.
   0xb7a7   InsetNWPixelX                        no
   0xb7a8   InsetNWPixelY                        no
   0xb7a9   ChartContourInterval                 no
+
+=head2 Google Tags
+
+=head3 Google Device Tags
+
+Google depth-map Device tags.  See
+L<https://developer.android.com/training/camera2/Dynamic-depth-v1.0.pdf> for
+the specification.
+
+These tags belong to the ExifTool XMP-Device family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  AppInfo                                       Google AppInfo Struct
+  AppInfoApplication                            string_
+  AppInfoItemURI                                string_
+  AppInfoVersion                                string_
+  Cameras                                       Google DeviceCameras Struct+
+  Camera                                        Google DeviceCamera Struct_+
+  CameraAppInfo                                 Google AppInfo Struct_+
+  CameraAppInfoApplication                      string_+
+  CameraAppInfoItemURI                          string_+
+  CameraAppInfoVersion                          string_+
+  CameraDepthMap                                Google DeviceDepthMap Struct_+
+  CameraDepthMapConfidenceURI                   string_+
+  CameraDepthMapDepthURI                        string_+
+  CameraDepthMapFar                             real_+
+  CameraDepthMapFocalTable                      string_+
+  CameraDepthMapFocalTableEntryCount            integer_+
+  CameraDepthMapFormat                          string_+
+  CameraDepthMapItemSemantic                    string_+
+  CameraDepthMapMeasureType                     string_+
+  CameraDepthMapNear                            real_+
+  CameraDepthMapSoftware                        string_+
+  CameraDepthMapUnits                           string_+
+  CameraImage                                   Google DeviceImage Struct_+
+  CameraImageItemSemantic                       string_+
+  CameraImageItemURI                            string_+
+  CameraImagingModel                            Google DeviceImagingModel Struct_+
+  CameraImagingModelDistortion                  string_+
+  CameraImagingModelDistortionCount             integer_+
+  CameraImagingModelFocalLengthX                real_+
+  CameraImagingModelFocalLengthY                real_+
+  CameraImagingModelImageHeight                 integer_+
+  CameraImagingModelImageWidth                  integer_+
+  CameraImagingModelPixelAspectRatio            real_+
+  CameraImagingModelPrincipalPointX             real_+
+  CameraImagingModelPrincipalPointY             real_+
+  CameraImagingModelSkew                        real_+
+  CameraLightEstimate                          Google DeviceLightEstimate Struct_+
+  CameraLightEstimateColorCorrectionB           real_+
+  CameraLightEstimateColorCorrectionG           real_+
+  CameraLightEstimateColorCorrectionR           real_+
+  CameraLightEstimatePixelIntensity             real_+
+  CameraPointCloud                              Google DevicePointCloud Struct_+
+  CameraPointCloudMetric                        boolean_+
+  CameraPointCloudPointCloud                    integer_+
+  CameraPointCloudPoints                        string_+
+  CameraPose                                    Google Pose Struct_+
+  CameraPosePositionX                           real_+
+  CameraPosePositionY                           real_+
+  CameraPosePositionZ                           real_+
+  CameraPoseRotationW                           real_+
+  CameraPoseRotationX                           real_+
+  CameraPoseRotationY                           real_+
+  CameraPoseRotationZ                           real_+
+  CameraPoseTimestamp                           integer_+
+  CameraTrait                                   string_+
+  CameraVendorInfo                              Google VendorInfo Struct_+
+  CameraVendorInfoManufacturer                  string_+
+  CameraVendorInfoModel                         string_+
+  CameraVendorInfoNotes                         string_+
+  Container                                     Google DeviceContainer Struct
+  ContainerDirectory                            Google DeviceDirectory Struct_+
+  ContainerDirectoryItem                        Google DeviceItem Struct_+
+  ContainerDirectoryItemDataURI                 string_+
+  ContainerDirectoryItemLength                  integer_+
+  ContainerDirectoryItemMime                    string_+
+  ContainerDirectoryItemPadding                 integer_+
+  EarthPos                                      Google EarthPose Struct
+  EarthPosAltitude                              real_
+  EarthPosLatitude                              real_
+  EarthPosLongitude                             real_
+  EarthPosRotationW                             real_
+  EarthPosRotationX                             real_
+  EarthPosRotationY                             real_
+  EarthPosRotationZ                             real_
+  EarthPosTimestamp                             integer_
+  Planes                                        Google DevicePlanes Struct+
+  Plane                                         Google DevicePlane Struct_+
+  PlaneBoundary                                 string_+
+  PlaneBoundaryVertexCount                      integer_+
+  PlaneExtentX                                  real_+
+  PlaneExtentZ                                  real_+
+  PlanePose                                     Google Pose Struct_+
+  PlanePosePositionX                            real_+
+  PlanePosePositionY                            real_+
+  PlanePosePositionZ                            real_+
+  PlanePoseRotationW                            real_+
+  PlanePoseRotationX                            real_+
+  PlanePoseRotationY                            real_+
+  PlanePoseRotationZ                            real_+
+  PlanePoseTimestamp                            integer_+
+  Pose                                          Google Pose Struct
+  PosePositionX                                 real_
+  PosePositionY                                 real_
+  PosePositionZ                                 real_
+  PoseRotationW                                 real_
+  PoseRotationX                                 real_
+  PoseRotationY                                 real_
+  PoseRotationZ                                 real_
+  PoseTimestamp                                 integer_
+  Profiles                                      Google DeviceProfiles Struct+
+  Profile                                       Google DeviceProfile Struct_+
+  ProfileCameraIndices                          integer_+
+  ProfileType                                   string_+
+  VendorInfo                                    Google VendorInfo Struct
+  VendorInfoManufacturer                        string_
+  VendorInfoModel                               string_
+  VendorInfoNotes                               string_
+
+=head3 Google AppInfo Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Application                                   string
+  ItemURI                                       string
+  Version                                       string
+
+=head3 Google DeviceCameras Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Camera                                        Google DeviceCamera Struct
+
+=head3 Google DeviceCamera Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  AppInfo                                       Google AppInfo Struct
+  DepthMap                                      Google DeviceDepthMap Struct
+  Image                                         Google DeviceImage Struct
+  ImagingModel                                  Google DeviceImagingModel Struct
+  LightEstimate                                 Google DeviceLightEstimate Struct
+  PointCloud                                    Google DevicePointCloud Struct
+  Pose                                          Google Pose Struct
+  Trait                                         string
+  VendorInfo                                    Google VendorInfo Struct
+
+=head3 Google DeviceDepthMap Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  ConfidenceURI                                 string
+  DepthURI                                      string
+  Far                                           real
+  FocalTable                                    string
+  FocalTableEntryCount                          integer
+  Format                                        string
+  ItemSemantic                                  string
+  MeasureType                                   string
+  Near                                          real
+  Software                                      string
+  Units                                         string
+
+=head3 Google DeviceImage Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  ItemSemantic                                  string
+  ItemURI                                       string
+
+=head3 Google DeviceImagingModel Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Distortion                                    string
+  DistortionCount                               integer
+  FocalLengthX                                  real
+  FocalLengthY                                  real
+  ImageHeight                                   integer
+  ImageWidth                                    integer
+  PixelAspectRatio                              real
+  PrincipalPointX                               real
+  PrincipalPointY                               real
+  Skew                                          real
+
+=head3 Google DeviceLightEstimate Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  ColorCorrectionB                              real
+  ColorCorrectionG                              real
+  ColorCorrectionR                              real
+  PixelIntensity                                real
+
+=head3 Google DevicePointCloud Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Metric                                        boolean
+  PointCloud                                    integer
+  Points                                        string
+
+=head3 Google Pose Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  PositionX                                     real
+  PositionY                                     real
+  PositionZ                                     real
+  RotationW                                     real
+  RotationX                                     real
+  RotationY                                     real
+  RotationZ                                     real
+  Timestamp                                     integer
+
+=head3 Google VendorInfo Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Manufacturer                                  string
+  Model                                         string
+  Notes                                         string
+
+=head3 Google DeviceContainer Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Directory                                     Google DeviceDirectory Struct+
+
+=head3 Google DeviceDirectory Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Item                                          Google DeviceItem Struct
+
+=head3 Google DeviceItem Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  DataURI                                       string
+  Length                                        integer
+  Mime                                          string
+  Padding                                       integer
+
+=head3 Google EarthPose Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Altitude                                      real
+  Latitude                                      real
+  Longitude                                     real
+  RotationW                                     real
+  RotationX                                     real
+  RotationY                                     real
+  RotationZ                                     real
+  Timestamp                                     integer
+
+=head3 Google DevicePlanes Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Plane                                         Google DevicePlane Struct
+
+=head3 Google DevicePlane Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Boundary                                      string
+  BoundaryVertexCount                           integer
+  ExtentX                                       real
+  ExtentZ                                       real
+  Pose                                          Google Pose Struct
+
+=head3 Google DeviceProfiles Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Profile                                       Google DeviceProfile Struct
+
+=head3 Google DeviceProfile Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  CameraIndices                                 integer+
+  Type                                          string
+
+=head3 Google GAudio Tags
+
+These tags belong to the ExifTool XMP-GAudio family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  AudioData                                     string
+  AudioMimeType                                 string
+
+=head3 Google GCamera Tags
+
+Camera information found in Google panorama images.
+
+These tags belong to the ExifTool XMP-GCamera family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  BurstID                                       string
+  BurstPrimary                                  string
+  DisableAutoCreation                           string+
+  DisableSuggestedAction                        string+
+  HDRPMakerNote                                 Google HDRPMakerNote
+  HDRPlusMakerNote                              Google HDRPlusMakerNote
+  MicroVideo                                    integer
+  MicroVideoOffset                              integer
+  MicroVideoPresentationTimestampUs             integer
+  MicroVideoVersion                             integer
+  MotionPhoto                                   integer
+  MotionPhotoPresentationTimestampUs            integer
+  MotionPhotoVersion                            integer
+  PortraitNote                                  string
+  PortraitRequest                               Google HDRPMakerNote
+  PortraitVersion                               string
+  ShotLogData                                   Google ShotLogData
+  SpecialTypeID                                 string+
+
+=head3 Google HDRPMakerNote Tags
+
+Google text-based HDRP maker note tags.  Stored as base64-encoded,
+encrypted and gzipped text.
+
+  Tag ID                  Tag Name              Writable
+  ------                  --------              --------
+  'Finished image'        FinishedImage         no
+  'GoudaRequest'          GoudaRequestText      no
+  'InitParams'            InitParamsText        no
+  'Logging metadata'      LoggingMetadataText   no
+  'Merged image'          MergedImage           no
+  'Payload frame'         PayloadFrame          no
+  'Payload metadata'      PayloadMetadataText   no
+  'ProcessingNotes'       ProcessingNotes       no
+  'Rectiface'             RectifaceText         no
+  'ShotLogData'           ShotLogDataText       no
+  'ShotParams'            ShotParamsText        no
+  'StaticMetadata'        StaticMetadataText    no
+  'Summary'               SummaryText           no
+  'Time log'              TimeLogText           no
+  'Unused logging metadata'
+                          UnusedLoggingMetadata no
+
+=head3 Google HDRPlusMakerNote Tags
+
+Google protobuf-format HDR-Plus maker notes.  Tag ID's are hierarchical
+protobuf field numbers.  Stored as base64-encoded, encrypted and gzipped
+Protobuf data.
+
+  Tag ID       Tag Name                         Writable
+  ------       --------                         --------
+  '2'          TimeLogText                      no
+  '3'          SummaryText                      no
+  '1-1'        ImageName                        no
+  '1-2'        ImageData                        no
+  '12-1'       DeviceMake                       no
+  '12-10'      AppVersion                       no
+  '12-12-1'    ExposureTimeMin                  no
+  '12-12-2'    ExposureTimeMax                  no
+  '12-13-1'    ISOMin                           no
+  '12-13-2'    ISOMax                           no
+  '12-14'      MaxAnalogISO                     no
+  '12-2'       DeviceModel                      no
+  '12-3'       DeviceCodename                   no
+  '12-4'       DeviceHardwareRevision           no
+  '12-6'       HDRPSoftware                     no
+  '12-7'       AndroidRelease                   no
+  '12-8'       SoftwareDate                     no
+  '12-9'       Application                      no
+  '9-3'        FrameCount                       no
+  '9-36-1'     CreateDate                       no
+
+=head3 Google ShotLogData Tags
+
+Stored as base64-encoded, encrypted and gzipped Protobuf data.
+
+  Tag ID   Tag Name                             Writable
+  ------   --------                             --------
+  '2'      MeteringFrameCount                   no
+  '3'      OriginalPayloadFrameCount            no
+
+=head3 Google GContainer Tags
+
+Google Container namespace.  ExifTool uses the prefix 'GContainer' instead
+of 'Container' to avoid a conflict with the Google Device Container
+namespace.
+
+These tags belong to the ExifTool XMP-GContainer family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  ContainerDirectory                            Google Directory Struct+
+  DirectoryItem                                 Google Item Struct_+
+  DirectoryItemLabel                            string_+
+  DirectoryItemLength                           integer_+
+  DirectoryItemMime                             string_+
+  DirectoryItemPadding                          integer_+
+  DirectoryItemSemantic                         string_+
+  DirectoryItemURI                              string_+
+
+=head3 Google Directory Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Item                                          Google Item Struct
+
+=head3 Google Item Struct
+
+  Field Name                                    Writable
+  ----------                                    --------
+  Label                                         string
+  Length                                        integer
+  Mime                                          string
+  Padding                                       integer
+  Semantic                                      string
+  URI                                           string
+
+=head3 Google GCreations Tags
+
+Google creations tags.
+
+These tags belong to the ExifTool XMP-GCreations family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  CameraBurstID                                 string
+  Type                                          string/
+
+=head3 Google GDepth Tags
+
+Google depthmap information. See
+L<https://developers.google.com/depthmap-metadata/> for the specification.
+
+These tags belong to the ExifTool XMP-GDepth family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  Confidence                                    string/
+  ConfidenceMime                                string/
+  DepthImage                                    string/
+  Far                                           real/
+  Format                                        string/
+  ImageHeight                                   real/
+  ImageWidth                                    real/
+  Manufacturer                                  string/
+  MeasureType                                   string/
+  Mime                                          string/
+  Model                                         string/
+  Near                                          real/
+  Software                                      string/
+  Units                                         string/
+
+=head3 Google GFocus Tags
+
+Focus information found in Google depthmap images.
+
+These tags belong to the ExifTool XMP-GFocus family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  BlurAtInfinity                                real
+  FocalDistance                                 real
+  FocalPointX                                   real
+  FocalPointY                                   real
+
+=head3 Google GImage Tags
+
+These tags belong to the ExifTool XMP-GImage family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  ImageData                                     string
+  ImageMimeType                                 string
+
+=head3 Google GPano Tags
+
+Panorama tags written by Google Photosphere. See
+L<https://developers.google.com/panorama/metadata/> for the specification.
+
+These tags belong to the ExifTool XMP-GPano family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  CaptureSoftware                               string
+  CroppedAreaImageHeightPixels                  real
+  CroppedAreaImageWidthPixels                   real
+  CroppedAreaLeftPixels                         real
+  CroppedAreaTopPixels                          real
+  ExposureLockUsed                              boolean
+  FirstPhotoDate                                date
+  FullPanoHeightPixels                          real
+  FullPanoWidthPixels                           real
+  InitialCameraDolly                            real
+  InitialHorizontalFOVDegrees                   real
+  InitialVerticalFOVDegrees                     real
+  InitialViewHeadingDegrees                     real
+  InitialViewPitchDegrees                       real
+  InitialViewRollDegrees                        real
+  LargestValidInteriorRectHeight                real
+  LargestValidInteriorRectLeft                  real
+  LargestValidInteriorRectTop                   real
+  LargestValidInteriorRectWidth                 real
+  LastPhotoDate                                 date
+  PoseHeadingDegrees                            real
+  PosePitchDegrees                              real
+  PoseRollDegrees                               real
+  ProjectionType                                string
+  SourcePhotosCount                             integer
+  StitchingSoftware                             string
+  UsePanoramaViewer                             boolean
+
+=head3 Google GSpherical Tags
+
+Not actually XMP.  These RDF/XML tags are used in Google spherical MP4
+videos.  These tags are written into the video track of MOV/MP4 files, and
+not at the top level like other XMP tags.  See
+L<https://github.com/google/spatial-media/blob/master/docs/spherical-video-rfc.md>
+for the specification.
+
+These tags belong to the ExifTool XMP-GSpherical family 1 group.
+
+  Tag Name                                      Writable
+  --------                                      --------
+  CroppedAreaImageHeightPixels                  integer/
+  CroppedAreaImageWidthPixels                   integer/
+  CroppedAreaLeftPixels                         integer/
+  CroppedAreaTopPixels                          integer/
+  FullPanoHeightPixels                          integer/
+  FullPanoWidthPixels                           integer/
+  InitialViewHeadingDegrees                     real/
+  InitialViewPitchDegrees                       real/
+  InitialViewRollDegrees                        real/
+  ProjectionType                                string/
+  SourceCount                                   integer/
+  Spherical                                     boolean/
+  StereoMode                                    string/
+  Stitched                                      boolean/
+  StitchingSoftware                             string/
+  TimeStamp                                     integer/
 
 =head2 PLUS Tags
 
@@ -8038,7 +8117,9 @@ boot, not including standby time.
      41    ManualFlashOutput                    int16s
      42    ColorTone                            int16s
      46    SRAWQuality                          int16s
+     50    FocusBracketing                      int16s
      51    Clarity                              int16s
+     52    HDR-PQ                               int16s
 
 =head3 Canon FocalLength Tags
 
@@ -10325,7 +10406,13 @@ Information about creative filter settings.
      18    AFStatusViewfinder                   int32s
      19    InitialAFPointInServo                int32s
      20    SubjectToDetect                      int32s
+     21    SubjectSwitching                     int32s
      24    EyeDetection                         int32s
+     26    WholeAreaTracking                    int32s
+     27    ServoAFCharacteristics               int32s
+     28    CaseAutoSetting                      int32s
+     29    ActionPriority                       int32s
+     30    SportEvents                          int32s
 
 =head3 Canon RawBurstInfo Tags
 
@@ -11524,8 +11611,8 @@ file name combined with the hierarchical protobuf field numbers.
 ExifTool currently extracts timed GPS plus a few other tags from DJI devices
 which use the following protocols:  dvtm_AVATA2.proto (Avata 2),
 dvtm_ac203.proto (Osmo Action 4), dvtm_ac204.proto (Osmo Action 5),
-dvtm_wm265e.proto (Mavic 3), dvtm_pm320.proto (Matrice 30) and
-dvtm_pm320.proto (Mini 4 Pro).
+dvtm_wm265e.proto (Mavic 3), dvtm_pm320.proto (Matrice 30),
+dvtm_Mini4_Pro.proto (Mini 4 Pro) and dvtm_dji_neo.proto (DJI Neo).
 
 Note that with the protobuf format, numerical tags missing from the output
 for a given protocol should be considered to have the default value of 0.
@@ -11581,6 +11668,18 @@ for a given protocol should be considered to have the default value of 0.
   'dvtm_ac204_3-4-2-1'      GPSInfo             DJI GPSInfo
   'dvtm_ac204_3-4-2-2'      GPSAltitude         no
   'dvtm_ac204_3-4-2-6-1'    GPSDateTime         no
+  'dvtm_dji_neo_1-1-5'      SerialNumber        no
+  'dvtm_dji_neo_1-1-10'     Model               no
+  'dvtm_dji_neo_2-2-3-1'    SerialNumber2       no
+  'dvtm_dji_neo_2-3'        FrameInfo           DJI FrameInfo
+  'dvtm_dji_neo_3-1-2'      TimeStamp           no
+  'dvtm_dji_neo_3-2-2-1'    ISO                 no
+  'dvtm_dji_neo_3-2-4-1'    ShutterSpeed        no
+  'dvtm_dji_neo_3-2-6-1'    ColorTemperature    no
+  'dvtm_dji_neo_3-2-10-1'   FNumber             no
+  'dvtm_dji_neo_3-4-3'      DroneInfo           DJI DroneInfo
+  'dvtm_dji_neo_3-4-4-1'    GPSInfo             DJI GPSInfo
+  'dvtm_dji_neo_3-4-4-2'    AbsoluteAltitude    no
   'dvtm_pm320_1-1-5'        SerialNumber        no
   'dvtm_pm320_1-1-10'       Model               no
   'dvtm_pm320_2-2'          FrameInfo           DJI FrameInfo
@@ -12127,6 +12226,7 @@ Tags extracted from FLIR Public image Format (FPF) files.
   0x1032   ExposureCount                        int16u
   0x1033   EXRAuto                              int16u
   0x1034   EXRMode                              int16u
+  0x1037   MultipleExposure                     int16u
   0x1040   ShadowTone                           int32s
   0x1041   HighlightTone                        int32s
   0x1044   DigitalZoom                          int32u
@@ -12144,9 +12244,13 @@ Tags extracted from FLIR Public image Format (FPF) files.
   0x1053   CropSize                             int32u
   0x1100   AutoBracketing                       int16u
   0x1101   SequenceNumber                       int16u
+  0x1102   WhiteBalanceBracketing               int16u
   0x1103   DriveSettings                        FujiFilm DriveSettings
   0x1105   PixelShiftShots                      int16u
   0x1106   PixelShiftOffset                     rational64s[2]
+  0x1150   CompositeImageMode                   int32u
+  0x1151   CompositeImageCount1                 int16u
+  0x1152   CompositeImageCount2                 int16u
   0x1153   PanoramaAngle                        int16u
   0x1154   PanoramaDirection                    int16u
   0x1201   AdvancedFilter                       int32u
@@ -12175,6 +12279,9 @@ Tags extracted from FLIR Public image Format (FPF) files.
   0x1446   FlickerReduction                     int32u
   0x1447   FujiModel                            string
   0x1448   FujiModel2                           string
+  0x144a   WBRed                                int16u
+  0x144b   WBGreen                              int16u
+  0x144c   WBBlue                               int16u
   0x144d   RollAngle                            rational64s
   0x3803   VideoRecordingMode                   int32u
   0x3804   PeripheralLighting                   int16u
@@ -12335,14 +12442,15 @@ Tags found in the FujiIFD information of RAF images from some models.
 =head3 FujiFilm MRAW Tags
 
 Tags extracted from the M-RAW header of multi-image RAF files.  The family 1
-group name for these tags is "M-RAW".
+group name for these tags is "M-RAW".  Additional metadata may be extracted
+from the embedded RAW images with the ExtractEmbedded option.
 
   Tag ID   Tag Name                             Writable
   ------   --------                             --------
-  0x0001   RawImageNumber                       no
-  0x0005   ExposureTime                         no
-  0x0006   FNumber                              no
-  0x0007   ISO                                  no
+  0x2001   RawImageNumber                       no
+  0x2005   ExposureTime                         no
+  0x2006   FNumber                              no
+  0x2007   ISO                                  no
 
 =head3 FujiFilm FFMV Tags
 
@@ -15982,13 +16090,11 @@ These tags are used by the Z8 firmware 2.00 and 2.10.
    1812    NonCPULens1MaxAperture?              int32u~
    1816    NonCPULens2MaxAperture?              int32u~
    1820    NonCPULens3MaxAperture?              int32u~
-   1824    HDMIOutputResolution                 int8u
+   1824    NonCPULens4MaxAperture?              int32u~
    1828    NonCPULens5MaxAperture?              int32u~
    1832    NonCPULens6MaxAperture?              int32u~
    1836    NonCPULens7MaxAperture?              int32u~
    1840    NonCPULens8MaxAperture?              int32u~
-   1842    AirplaneMode?                        int8u
-   1843    EmptySlotRelease?                    int8u
    1844    NonCPULens9MaxAperture?              int32u~
    1848    NonCPULens10MaxAperture?             int32u~
    1852    NonCPULens11MaxAperture?             int32u~
@@ -15998,12 +16104,15 @@ These tags are used by the Z8 firmware 2.00 and 2.10.
    1868    NonCPULens15MaxAperture?             int32u~
    1872    NonCPULens16MaxAperture?             int32u~
    1876    NonCPULens17MaxAperture?             int32u~
-   1878    EnergySavingMode?                    int8u
    1880    NonCPULens18MaxAperture?             int32u~
    1884    NonCPULens19MaxAperture?             int32u~
    1888    NonCPULens20MaxAperture?             int32u~
-   1906    USBPowerDelivery?                    int8u
-   1915    SensorShield?                        int8u
+   1904    HDMIOutputResolution                 int8u
+   1922    AirplaneMode?                        int8u
+   1923    EmptySlotRelease?                    int8u
+   1958    EnergySavingMode?                    int8u
+   1986    USBPowerDelivery?                    int8u
+   1995    SensorShield?                        int8u
    2046    PixelShiftShooting                   int8u
    2048    PixelShiftNumberShots                int8u
    2050    PixelShiftDelay                      int8u
@@ -16014,6 +16123,9 @@ These tags are used by the Z8 firmware 2.00 and 2.10.
    2060    LensFunc2ButtonPlaybackMode          int8u
    2062    PlaybackButtonPlaybackMode           int8u
    2064    BracketButtonPlaybackMode            int8u
+   2206    MaximumApertureLV?                   int8u
+   2208    ReleaseModeButton                    int8u
+   2216    ReleaseModeButtonPlaybackMode        int8u
 
 =head3 Nikon ShotInfoZ9 Tags
 
@@ -16823,7 +16935,7 @@ Z6, Z6ii, Z7, Z7ii, Z50 and Zfc.
 =head3 Nikon AFInfo2V0400 Tags
 
 AF information for Nikon cameras with the Expeed 7 processor: The Zf, Z6_3,
-Z8, Z9 and Z50_3.
+Z8, Z9, Z50_2 and Z5_2.
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
@@ -18547,6 +18659,7 @@ Custom settings for the Z8.
     263    AutoFocusModeRestrictions?           int8u
     267    CHModeShootingSpeed                  int8u
     273    FlashBurstPriority?                  int8u
+    281    Func3Button                          int8u
     335    LimitAF-AreaModeSelDynamic_S?        int8u
     336    LimitAF-AreaModeSelDynamic_M?        int8u
     337    LimitAF-AreaModeSelDynamic_L?        int8u
@@ -18568,7 +18681,6 @@ Custom settings for the Z8.
     465    SubCommandDialVideoPlaybackMode?     int8u
     467    FocusPointLock?                      int8u
     469    ControlRingResponse                  int8u
-    515    MovieAFAreaMode?                     int8u
     529    ZebraPatternToneRange?               int8u
     531    MovieZebraPattern?                   int8u
     533    MovieHighlightDisplayThreshold?      int8u
@@ -18868,7 +18980,6 @@ Custom settings for the Z9.
     493    ControlRingResponse                  int8u
     505    VerticalMovieFuncButton?             int8u
     529    VerticalMovieAFOnButton?             int8u
-    539    MovieAFAreaMode?                     int8u
     551    HDMIViewAssist?                      int8u
     553    ZebraPatternToneRange?               int8u
     555    MovieZebraPattern?                   int8u
@@ -19330,6 +19441,8 @@ any information found here will be extracted, even if the tag is not listed.
   0x0307   AFFineTuneAdj                        int16s[3]
   0x0308   FocusBracketStepSize                 int8u
   0x0309   AISubjectTrackingMode                int16u
+  0x030a   AFTargetInfo                         Olympus AFTargetInfo
+  0x030b   SubjectDetectInfo                    Olympus SubjectDetectInfo
   0x0400   FlashMode                            int16u
   0x0401   FlashExposureComp                    rational64s
   0x0403   FlashRemoteControl                   int16u
@@ -19374,12 +19487,38 @@ any information found here will be extracted, even if the tag is not listed.
   0x0603   ImageQuality2                        int16u
   0x0604   ImageStabilization                   int32u
   0x0804   StackedImage                         int32u[2]
+  0x0821   ISOAutoSettings                      int16u[2]
   0x0900   ManometerPressure                    int16u
   0x0901   ManometerReading                     int32s[2]
   0x0902   ExtendedWBDetect                     int16u
   0x0903   RollAngle                            int16s[2]
   0x0904   PitchAngle                           int16s[2]
   0x0908   DateTimeUTC                          string
+
+=head3 Olympus AFTargetInfo Tags
+
+Position and size of selected AF Area and focus areas for OM cameras.
+
+  Index2   Tag Name                             Writable
+  ------   --------                             --------
+      0    AFFrameSize                          int16u[2]
+      2    AFFocusArea                          int16u[4]
+      6    AFSelectedArea                       int16u[4]
+
+=head3 Olympus SubjectDetectInfo Tags
+
+Subject Detection data for OM cameras. These tags contain the areas of a
+subject and its elements detected by Subject Detection, or the main face and
+eyes detected by Face Detection. These elements can be either L1 details
+(level 1, such as head, chassis, airplane nose, etc.) or L2 details (level
+2, such as eye, driver, airplane cockpit, etc.).
+
+  Index2   Tag Name                             Writable
+  ------   --------                             --------
+      0    SubjectDetectFrameSize               int16u[2]
+      2    SubjectDetectArea                    int16u[4]
+      6    SubjectDetectDetail                  int16u[4]
+     10    SubjectDetectStatus                  int16u
 
 =head3 Olympus RawDevelopment Tags
 
@@ -19428,6 +19567,13 @@ any information found here will be extracted, even if the tag is not listed.
   0x0119   RawDevAutoGradation                  int16u
   0x0120   RawDevPMNoiseFilter                  int16u
   0x0121   RawDevArtFilter                      int16u[4]
+  0x8000   RawDevSubIFD                         Olympus RawDevSubIFD
+
+=head3 Olympus RawDevSubIFD Tags
+
+  Tag ID   Tag Name                             Writable
+  ------   --------                             --------
+  [no tags known]
 
 =head3 Olympus ImageProcessing Tags
 
@@ -19496,6 +19642,7 @@ any information found here will be extracted, even if the tag is not listed.
   0x1900   KeystoneCompensation                 int8u[2]
   0x1901   KeystoneDirection                    int8u[2]
   0x1906   KeystoneValue                        int16s[3]
+  0x2110   GNDFilterType                        int8u
 
 =head3 Olympus FocusInfo Tags
 
@@ -19524,12 +19671,13 @@ any information found here will be extracted, even if the tag is not listed.
   0x120a   MacroLED                             int16u
   0x1500   SensorTemperature                    int16s
   0x1600   ImageStabilization                   undef~
+  0x2100   AntiShockWaitingTime                 yes
 
 =head3 Olympus AFInfo Tags
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
-  [no tags known]
+   1580    CAFSensitivity                       no
 
 =head3 Olympus FE Tags
 
@@ -19901,6 +20049,7 @@ These tags are used in Panasonic/Leica cameras.
   0x00d1   ISO                                  int32u
   0x00d2   MonochromeGrainEffect                int16u
   0x00d6   NoiseReductionStrength               rational64s
+  0x00de   AFAreaSize                           rational64u[2]
   0x00e4   LensTypeModel                        int16u
   0x00e8   MinimumISO                           int32u
   0x00e9   AFSubjectDetection                   int16u
@@ -20338,6 +20487,7 @@ These tags are used in Pentax/Asahi cameras.
   0x0230   FirmwareVersion                      string
   0x0231   ContrastDetectAFArea                 int16u[4]
   0x0235   CrossProcessParams                   undef[10]
+  0x0238   CAFPointInfo                         Pentax CAFPointInfo
   0x0239   LensInfoQ                            Pentax LensInfoQ
   0x023f   Model                                string
   0x0243   PixelShiftInfo                       Pentax PixelShiftInfo
@@ -20348,6 +20498,8 @@ These tags are used in Pentax/Asahi cameras.
   0x0402   ToneCurve                            yes~
   0x0403   ToneCurves                           yes~
   0x0405   UnknownBlock?                        undef
+  0x040b   FaceInfoK3III                        Pentax FaceInfoK3III
+  0x040c   AFInfoK3III                          Pentax AFInfoK3III
   0x0e00   PrintIM                              PrintIM
 
 =head3 Pentax LensRec Tags
@@ -20664,8 +20816,17 @@ Flash information tags for the K10D, K20D and K200D.
       6    AFDefocus                            int8u
       7    AFIntegrationTime                    int8u
      11    AFPointsInFocus                      int8u
+     20    AFPointValues?                       no
+    298    AFPointsSelected                     int8u[101]~
+    399    AFPointsUnknown?                     int8u[101]~
     506    LiveView                             int8u
     509    AFHold                               int8u
+    543    FirstFrameActionInAFC                int8u
+    544    ActionInAFCCont                      int8u
+    545    AFCHold                              int8u & 0x03
+  545.1    AFCPointTracking                     int8u & 0x0c
+  545.2    AFCSensitivity                       int8u & 0x70
+   2400    SubjectRecognition                   int8u
 
 =head3 Pentax KelvinWB Tags
 
@@ -20859,6 +21020,17 @@ valid for other models.
      83    WB_RGGBLevelsUnknown?                int16u[4]
      92    WB_RGGBLevelsUserSelected            int16u[4]
 
+=head3 Pentax CAFPointInfo Tags
+
+Contrast-detect AF-point information for the K-01 and later models.
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+      1    NumCAFPoints                         no
+    1.1    CAFGridSize                          no
+      2    CAFPointsInFocus                     no
+    2.1    CAFPointsSelected                    no
+
 =head3 Pentax LensInfoQ Tags
 
 More lens information stored by the Pentax Q.
@@ -20883,9 +21055,9 @@ AF point information written by the K-1.
   Index1   Tag Name                             Writable
   ------   --------                             --------
       2    NumAFPoints                          int16u
-      4    AFPointsInFocus                      int8u[9]~
-    4.1    AFPointsSelected                     int8u[9]~
-    4.2    AFPointsSpecial                      int8u[9]~
+      4    AFPointsInFocus                      no
+    4.1    AFPointsSelected                     no
+    4.2    AFPointsSpecial                      no
 
 =head3 Pentax TempInfo Tags
 
@@ -20896,16 +21068,103 @@ sensors are located in the camera.
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
+     10    ShotNumber                           no
      12    SensorTemperature                    int16s
      14    SensorTemperature2                   int16s
      20    CameraTemperature4                   int16s
      22    CameraTemperature5                   int16s
+     42    SensorTemperature                    int16s
 
 =head3 Pentax UnknownInfo Tags
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
   [no tags known]
+
+=head3 Pentax FaceInfoK3III Tags
+
+  Index4   Tag Name                             Writable
+  ------   --------                             --------
+      0    FaceImageSize                        int32u[2]
+    0.1    FaceInfoK3III?                       int32u[$size/4]
+      2    CAFArea                              int32u[4]
+      6    FacesDetectedA                       int32u
+      8    FacesDetectedB                       int32u
+     10    Face1AArea                           int32u[4]
+     14    Face1AEye1                           int32u[4]
+     18    Face1AEye2                           int32u[4]
+     30    Face2AArea                           int32u[4]
+     34    Face2AEye1                           int32u[4]
+     38    Face2AEye2                           int32u[4]
+     50    Face3AArea                           int32u[4]
+     54    Face3AEye1                           int32u[4]
+     58    Face3AEye2                           int32u[4]
+     70    Face4AArea                           int32u[4]
+     74    Face4AEye1                           int32u[4]
+     78    Face4AEye2                           int32u[4]
+     90    Face5AArea                           int32u[4]
+     94    Face5AEye1                           int32u[4]
+     98    Face5AEye2                           int32u[4]
+    110    Face6AArea                           int32u[4]
+    114    Face6AEye1                           int32u[4]
+    118    Face6AEye2                           int32u[4]
+    130    Face7AArea                           int32u[4]
+    134    Face7AEye1                           int32u[4]
+    138    Face7AEye2                           int32u[4]
+    150    Face8AArea                           int32u[4]
+    154    Face8AEye1                           int32u[4]
+    158    Face8AEye2                           int32u[4]
+    170    Face9AArea                           int32u[4]
+    174    Face9AEye1                           int32u[4]
+    178    Face9AEye2                           int32u[4]
+    190    Face10AArea                          int32u[4]
+    194    Face10AEye1                          int32u[4]
+    198    Face10AEye2                          int32u[4]
+    210    Face1BArea                           int32u[4]
+    214    Face1BEye1                           int32u[4]
+    218    Face1BEye2                           int32u[4]
+    230    Face2BArea                           int32u[4]
+    234    Face2BEye1                           int32u[4]
+    238    Face2BEye2                           int32u[4]
+    250    Face3BArea                           int32u[4]
+    254    Face3BEye1                           int32u[4]
+    258    Face3BEye2                           int32u[4]
+    270    Face4BArea                           int32u[4]
+    274    Face4BEye1                           int32u[4]
+    278    Face4BEye2                           int32u[4]
+    290    Face5BArea                           int32u[4]
+    294    Face5BEye1                           int32u[4]
+    298    Face5BEye2                           int32u[4]
+    310    Face6BArea                           int32u[4]
+    314    Face6BEye1                           int32u[4]
+    318    Face6BEye2                           int32u[4]
+    330    Face7BArea                           int32u[4]
+    334    Face7BEye1                           int32u[4]
+    338    Face7BEye2                           int32u[4]
+    350    Face8BArea                           int32u[4]
+    354    Face8BEye1                           int32u[4]
+    358    Face8BEye2                           int32u[4]
+    370    Face9BArea                           int32u[4]
+    374    Face9BEye1                           int32u[4]
+    378    Face9BEye2                           int32u[4]
+    390    Face10BArea                          int32u[4]
+    394    Face10BEye1                          int32u[4]
+    398    Face10BEye2                          int32u[4]
+
+=head3 Pentax AFInfoK3III Tags
+
+AF tags written by the K-3 Mark III, GR III, GR IIIx and GR IV.
+
+  Index2   Tag Name                             Writable
+  ------   --------                             --------
+      0    AFInfo?                              int16u[$size/2]
+    0.1    AFMode                               int16u
+      1    AFSelectionMode                      int16u
+      2    MaxNumAFPoints                       int16u
+      3    NumAFPoints                          int16u
+      7    AFFrameSize                          no
+    7.1    AFAreas                              no+
+     11    AFAreaSize                           no
 
 =head3 Pentax Type2 Tags
 
@@ -21093,8 +21352,10 @@ These tags are extracted from the maker notes of Phase One images.
 
 =head2 Reconyx Tags
 
-The following tags are extracted from the maker notes of Reconyx Hyperfire
-cameras such as the HC500, HC600 and PC900.
+=head3 Reconyx HyperFire Tags
+
+The following tags are extracted from the maker notes of Reconyx RapidFire
+and HyperFire models such as the HC500, HC600 and PC900.
 
   Index2   Tag Name                             Writable
   ------   --------                             --------
@@ -21108,7 +21369,7 @@ cameras such as the HC500, HC600 and PC900.
      18    MoonPhase                            int16u
      19    AmbientTemperatureFahrenheit         int16s
      20    AmbientTemperature                   int16s
-     21    SerialNumber                         undef[30]
+     21    SerialNumber                         unicode[15]
      36    Contrast                             int16u
      37    Brightness                           int16u
      38    Sharpness                            int16u
@@ -21118,9 +21379,9 @@ cameras such as the HC500, HC600 and PC900.
      42    BatteryVoltage                       int16u
      43    UserLabel                            string[22]
 
-=head3 Reconyx Type2 Tags
+=head3 Reconyx UltraFire Tags
 
-Tags extracted from models such as the UltraFire.
+Maker notes tags for Reconyx UltraFire models.
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
@@ -21141,14 +21402,15 @@ Tags extracted from models such as the UltraFire.
      75    SerialNumber                         string[15]
      90    UserLabel                            string[21]
 
-=head3 Reconyx Type3 Tags
+=head3 Reconyx HyperFire2 Tags
 
-Tags extracted from models such as the HF2 PRO.
+Maker notes tags for Reconyx HyperFire 2 models.
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
      16    FileNumber                           int16u
      18    DirectoryNumber                      int16u
+     20    DirectoryCreateDate                  int16u[2]
      42    FirmwareVersion                      int16u[3]
      48    FirmwareDate                         int16u[2]
      52    TriggerMode                          string[2]
@@ -21172,6 +21434,74 @@ Tags extracted from models such as the HF2 PRO.
     102    BatteryType                          int16u
     104    UserLabel                            string[22]
     126    SerialNumber                         unicode[15]
+
+=head3 Reconyx MicroFire Tags
+
+Maker notes tags for Reconyx MicroFire cameras.
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+     16    FileNumber                           int16u
+     18    DirectoryNumber                      int16u
+     20    DirectoryCreateDate                  int16u[2]
+     24    SDCardID                             int16u[8]~
+     42    FirmwareVersion                      int16u[3]
+     48    FirmwareDate                         int16u[2]
+     52    BluetoothFirmwareVersion             int16u[3]
+     58    BluetoothFirmwareDate                int16u
+     60    WifiFirmwareVersion                  int16u[3]
+     66    WifiFirmwareDate                     int16u
+     68    TriggerMode                          string[2]
+     70    Sequence                             int16u[2]
+     74    EventNumber                          int16u[2]
+     78    DateTimeOriginal                     int16u[6]
+     90    DayOfWeek                            int16u
+     92    MoonPhase                            int16u
+     94    AmbientTemperatureFahrenheit         int16s
+     96    AmbientTemperature                   int16s
+     98    Contrast                             int16u
+    100    Brightness                           int16u
+    102    Sharpness                            int16u
+    104    Saturation                           int16u
+    106    Flash                                int8u
+    108    AmbientInfrared                      int16u
+    110    AmbientLight                         int16u
+    112    MotionSensitivity                    int16u
+    114    BatteryVoltage                       int16u
+    116    BatteryType                          int16u
+    118    UserLabel                            string[22]
+    140    SerialNumber                         unicode[15]
+
+=head3 Reconyx HyperFire4K Tags
+
+Maker notes tags for Reconyx HyperFire 4K models.
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+     26    FirmwareVersion                      undef[7]
+     33    UIBFirmwareVersion                   undef[7]
+     40    TriggerMode                          undef[1]
+     41    Sequence                             int8u[2]
+     43    EventNumber                          int32u
+     47    DateTimeOriginal                     undef[7]
+     54    DayOfWeek                            int8u
+     55    MoonPhase                            int8u
+     56    AmbientTemperatureFahrenheit         int16s
+     58    AmbientTemperature                   int16s
+     60    Contrast                             int16u
+     62    Brightness                           int16u
+     64    Sharpness                            int16u
+     66    Saturation                           int16u
+     68    Flash                                int8u
+     69    AmbientLight                         int32u
+     73    MotionSensitivity                    int16u
+     75    BatteryVoltage                       int16u
+     77    BatteryVoltageAvg                    int16u
+     79    BatteryType                          int16u
+     81    UserLabel                            string[51]
+    132    SerialNumber                         string[15]
+    147    DirectoryNumber                      int16u
+    149    FileNumber                           int16u
 
 =head2 Ricoh Tags
 
@@ -21784,6 +22114,7 @@ are less than consistent about their metadata formats.
   0x003b   Firmware                             string
   0x003c   WhiteBalance                         string
   0x003d   PictureMode                          string
+  0x0047   ExposureCompensation                 rational64s
   0x0048   LensApertureRange                    string
   0x0049   FNumber                              rational64u
   0x004a   ExposureTime                         rational64u
@@ -21799,9 +22130,12 @@ are less than consistent about their metadata formats.
   0x0087   ResolutionMode                       string
   0x0088   WhiteBalance                         string
   0x008c   Firmware                             string
+  0x0113   PictureModeStrength                  int32s
   0x011f   CameraCalibration                    float[9]
   0x0120   WBSettings                           Sigma WBSettings
   0x0121   WBSettings2                          Sigma WBSettings2
+  0x0138   Fade                                 rational64u
+  0x0139   Vignette                             rational64u
 
 =head3 Sigma WBSettings Tags
 
@@ -21920,6 +22254,7 @@ MakerNotes.
   0x2039   JPEG-HEIFSwitch                      int16u
   0x2044   HiddenInfo                           Sony HiddenInfo
   0x204a   FocusLocation2                       int16u[4]
+  0x205c   StepCropShooting                     int8u
   0x3000   ShotInfo                             Sony ShotInfo
   0x900b   Tag900b                              Sony Tag900b
   0x9050   Tag9050a                             Sony Tag9050a
@@ -23456,11 +23791,11 @@ E-mount models.
 
 =head3 Sony Tag9416 Tags
 
-Valid for the ILCE-1/6700/7CM2/7CR/7M4/7RM5/7SM3/9M3, ILME-FX3/FX30, ZV-E1/E10M2.
+Valid for the ILCE-1/6700/7CM2/7CR/7M4/7RM5/7SM3/9M3, ILME-FX2/FX3/FX30,
+ZV-E1/E10M2.
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
-      0    Tag9416_0000                         no
       4    SonyISO                              no
       6    StopsAboveBaseISO                    no
      10    SonyExposureTime2                    no
@@ -23790,6 +24125,7 @@ still proprietary) Adobe format.
            MakerNoteFujiFilm                    FujiFilm
            MakerNoteGE                          GE
            MakerNoteGE2                         FujiFilm
+           MakerNoteGoogle                      Google HDRPlusMakerNote
            MakerNoteHasselblad                  Unknown
            MakerNoteHP                          HP
            MakerNoteHP2                         HP Type2
@@ -23846,9 +24182,11 @@ still proprietary) Adobe format.
            MakerNotePentax5                     Pentax
            MakerNotePentax6                     Pentax S1
            MakerNotePhaseOne                    PhaseOne
-           MakerNoteReconyx                     Reconyx
-           MakerNoteReconyx2                    Reconyx Type2
-           MakerNoteReconyx3                    Reconyx Type3
+           MakerNoteReconyxHyperFire            Reconyx HyperFire
+           MakerNoteReconyxUltraFire            Reconyx UltraFire
+           MakerNoteReconyxHyperFire2           Reconyx HyperFire2
+           MakerNoteReconyxMicroFire            Reconyx MicroFire
+           MakerNoteReconyxHyperFire4K          Reconyx HyperFire4K
            MakerNoteRicohPentax                 Pentax
            MakerNoteRicoh                       Ricoh
            MakerNoteRicoh2                      Ricoh Type2
@@ -29637,10 +29975,11 @@ C2PA JUMBF metadata extracted from "/C2PA_Manifest" file.
 
 =head3 PDF Pages Tags
 
-  Tag ID   Tag Name                             Writable
-  ------   --------                             --------
-  'Count'  PageCount                            no
-  'Kids'   Kids                                 PDF Kids
+  Tag ID       Tag Name                         Writable
+  ------       --------                         --------
+  'Count'      PageCount                        no
+  'Kids'       Kids                             PDF Kids
+  'MediaBox'   MediaBox                         no+
 
 =head3 PDF Kids Tags
 
@@ -30308,6 +30647,7 @@ for the official QuickTime specification.
   'gdat'               GPSData                  QuickTime Stream
   'gps0'               GPSTrack                 QuickTime Stream
   'gsen'               GSensor                  QuickTime Stream
+  'inst'               Insta360Info             QuickTime Stream
   'junk'               Junk?                    no
   'mdat'               MediaData?               no
   'mdat-offset'        MediaDataOffset          no
@@ -30316,7 +30656,7 @@ for the official QuickTime specification.
   'meta'               Meta                     QuickTime Meta
   'moof'               MovieFragment            QuickTime MovieFragment
   'moov'               Movie                    QuickTime Movie
-  'mpvd'               MotionPhotoVideo         yes
+  'mpvd'               MotionPhotoVideo         undef
   'nbmt'               NextbaseMeta             QuickTime Stream
   'pict'               PreviewPICT              no
   'pnot'               Preview                  QuickTime Preview
@@ -30332,6 +30672,7 @@ for the official QuickTime specification.
   'udat'               GPSLog                   no
   'udta'               KenwoodData              QuickTime Stream
                        LigoJSON                 QuickTime Stream
+                       GKUData                  QuickTime Stream
                        FLIRData                 FLIR UserData
   'uuid'               XMP                      XMP
                        UUID-PROF                QuickTime Profile
@@ -30351,81 +30692,83 @@ for the official QuickTime specification.
 The tags below are extracted from timed metadata in QuickTime and other
 formats of video files when the ExtractEmbedded option is used.  Although
 most of these tags are combined into the single table below, ExifTool
-currently reads 103 different types of timed GPS metadata from video files.
+currently reads 111 different types of timed GPS metadata from video files.
 
-  Tag Name                                      Writable
-  --------                                      --------
-  Accelerometer                                 no
-  AccelerometerData                             no
-  AngularVelocity                               no
-  CTMD                                          Canon CTMD
-  CameraDateTime                                no
-  CameraModel                                   no
-  Car                                           no
-  DJIDebug?                                     DJI Protobuf
-  DJIMetadata                                   DJI Protobuf
-  DateTimeOriginal                              no
-  DateTimeStamp                                 no
-  Distance                                      no
-  ExposureCompensation                          no
-  ExposureTime                                  no
-  FNumber                                       no
-  FrameNumber                                   no
-  GPSAltitude                                   no
-  GPSDOP                                        no
-  GPSDateTime                                   no
-  GPSLatitude                                   no
-  GPSLatitude2                                  no
-  GPSLongitude                                  no
-  GPSLongitude2                                 no
-  GPSSatellites                                 no
-  GPSSpeed                                      no
-  GPSSpeedRef                                   no
-  GPSTimeStamp                                  no
-  GPSTrack                                      no
-  GPSTrackRef                                   no
-  GSensor                                       no
-  INSV                                          QuickTime INSV_MakerNotes
-  ISO                                           no
-  JpgFromRaw                                    no
-  KiloCalories                                  no
-  MagneticVariation                             no
-  PreviewImage                                  no
-  PreviewInfo                                   QuickTime PreviewInfo
-  RVMI_gReV                                     QuickTime RVMI_gReV
-  RVMI_sReV                                     QuickTime RVMI_sReV
-  RawGSensor                                    no
-  SampleDateTime                                no
-  SampleDuration                                no
-  SampleTime                                    no
-  Text                                          no
-  TimeCode                                      no
-  Unknown00?                                    no
-  Unknown01?                                    no
-  Unknown02?                                    no
-  Unknown03?                                    no
-  UserLabel                                     no
-  VerticalSpeed                                 no
-  VideoTimeStamp                                no
-  camm0                                         QuickTime camm0
-  camm1                                         QuickTime camm1
-  camm2                                         QuickTime camm2
-  camm3                                         QuickTime camm3
-  camm4                                         QuickTime camm4
-  camm5                                         QuickTime camm5
-  camm6                                         QuickTime camm6
-  camm7                                         QuickTime camm7
-  fdsc                                          GoPro fdsc
-  gpmd_Kingslim                                 QuickTime Stream
-  gpmd_Rove                                     QuickTime Stream
-  gpmd_FMAS                                     QuickTime Stream
-  gpmd_Wolfbox                                  QuickTime Stream
-  gpmd_GoPro                                    GoPro GPMF
-  marl                                          GM marl
-  mebx                                          QuickTime Keys
-  mett                                          Parrot mett
-  rtmd                                          Sony rtmd
-  tx3g                                          QuickTime tx3g
+  Tag ID                 Tag Name               Writable
+  ------                 --------               --------
+  'Accelerometer'        Accelerometer          no
+  'AccelerometerData'    AccelerometerData      no
+  'AngularVelocity'      AngularVelocity        no
+  'CTMD'                 CTMD                   Canon CTMD
+  'CameraDateTime'       CameraDateTime         no
+  'CameraModel'          CameraModel            no
+  'Car'                  Car                    no
+  'DateTimeOriginal'     DateTimeOriginal       no
+  'DateTimeStamp'        DateTimeStamp          no
+  'Distance'             Distance               no
+  'ExposureCompensation' ExposureCompensation   no
+  'ExposureTime'         ExposureTime           no
+  'FNumber'              FNumber                no
+  'FrameNumber'          FrameNumber            no
+  'GPSAltitude'          GPSAltitude            no
+  'GPSDOP'               GPSDOP                 no
+  'GPSDateTime'          GPSDateTime            no
+  'GPSLatitude'          GPSLatitude            no
+  'GPSLatitude2'         GPSLatitude2           no
+  'GPSLongitude'         GPSLongitude           no
+  'GPSLongitude2'        GPSLongitude2          no
+  'GPSSatellites'        GPSSatellites          no
+  'GPSSpeed'             GPSSpeed               no
+  'GPSSpeedRef'          GPSSpeedRef            no
+  'GPSTimeStamp'         GPSTimeStamp           no
+  'GPSTrack'             GPSTrack               no
+  'GPSTrackRef'          GPSTrackRef            no
+  'GSensor'              GSensor                no
+  'INSV'                 INSV                   QuickTime INSV_MakerNotes
+  'ISO'                  ISO                    no
+  'JPEG'                 JpgFromRaw             no
+  'KiloCalories'         KiloCalories           no
+  'MagneticVariation'    MagneticVariation      no
+  'RVMI'                 RVMI_gReV              QuickTime RVMI_gReV
+                         RVMI_sReV              QuickTime RVMI_sReV
+  'RawGSensor'           RawGSensor             no
+  'SampleDateTime'       SampleDateTime         no
+  'SampleDuration'       SampleDuration         no
+  'SampleTime'           SampleTime             no
+  'Text'                 Text                   no
+  'TimeCode'             TimeCode               no
+  'Unknown00'            Unknown00?             no
+  'Unknown01'            Unknown01?             no
+  'Unknown02'            Unknown02?             no
+  'Unknown03'            Unknown03?             no
+  'UserLabel'            UserLabel              no
+  'VerticalSpeed'        VerticalSpeed          no
+  'VideoTimeStamp'       VideoTimeStamp         no
+  'camm'                 camm0                  QuickTime camm0
+                         camm1                  QuickTime camm1
+                         camm2                  QuickTime camm2
+                         camm3                  QuickTime camm3
+                         camm4                  QuickTime camm4
+                         camm5                  QuickTime camm5
+                         camm6                  QuickTime camm6
+                         camm7                  QuickTime camm7
+  'dbgi'                 DJIDebug?              DJI Protobuf
+  'djmd'                 DJIMetadata            DJI Protobuf
+  'fdsc'                 fdsc                   GoPro fdsc
+  'gpmd'                 gpmd_Kingslim          QuickTime Stream
+                         gpmd_Rove              QuickTime Stream
+                         gpmd_FMAS              QuickTime Stream
+                         gpmd_Wolfbox           QuickTime Stream
+                         gpmd_GoPro             GoPro GPMF
+  'marl'                 marl                   GM marl
+  'mebx'                 mebx                   QuickTime Keys
+  'mett'                 mett                   Parrot mett
+  'rtmd'                 rtmd                   Sony rtmd
+  'ssmd'                 RoveGPS                QuickTime RoveGPS
+                         Accelerometer          no
+                         PreviewImage           no
+  'text'                 PreviewInfo            QuickTime PreviewInfo
+  'tx3g'                 tx3g                   QuickTime tx3g
 
 =head3 QuickTime INSV_MakerNotes Tags
 
@@ -30435,14 +30778,6 @@ currently reads 103 different types of timed GPS metadata from video files.
   0x0012   Model                                no
   0x001a   Firmware                             no
   0x002a   Parameters                           no
-
-=head3 QuickTime PreviewInfo Tags
-
-Preview stored by TomTom Bandit ActionCam.
-
-  Index1   Tag Name                             Writable
-  ------   --------                             --------
-      8    PreviewImage                         no
 
 =head3 QuickTime RVMI_gReV Tags
 
@@ -30667,6 +31002,23 @@ VideoKeys family 1 gorup.
   Tag ID   Tag Name                             Writable
   ------   --------                             --------
   'cits'   FaceItem                             QuickTime Keys
+
+=head3 QuickTime RoveGPS Tags
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+      0    GPSLatitude                          no
+      8    GPSLongitude                         no
+     20    GPSSpeed                             no
+     22    GPSDateTime                          no
+
+=head3 QuickTime PreviewInfo Tags
+
+Preview stored by TomTom Bandit ActionCam.
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+      8    PreviewImage                         no
 
 =head3 QuickTime tx3g Tags
 
@@ -31157,6 +31509,7 @@ MP4 media box.
 
   Tag ID   Tag Name                             Writable
   ------   --------                             --------
+  'elng'   ExtendedLanguageTag                  no
   'hdlr'   Handler                              QuickTime Handler
   'mdhd'   MediaHeader                          QuickTime MediaHeader
   'minf'   MediaInfo                            QuickTime MediaInfo
@@ -31556,8 +31909,15 @@ MP4 video media header.
   ------   --------                             --------
   'cdsc'   ContentDescribes                     no
   'chap'   ChapterListTrackID                   no
+  'clcp'   ClosedCaptionTrack                   no
+  'fall'   AlternateFormatTrack                 no
+  'folw'   SubtitleTrack                        no
+  'forc'   ForcedSubtitleTrack                  no
   'mpod'   ElementaryStreamTrack                no
-  'tmcd'   TimeCode                             no
+  'scpt'   TranscriptTrack                      no
+  'ssrc'   Non-primarySourceTrack               no
+  'sync'   SyncronizedTrack                     no
+  'tmcd'   TimecodeTrack                        no
 
 =head3 QuickTime UserData Tags
 
@@ -31607,6 +31967,8 @@ the config file.
   'PENT'       PentaxPENT                       Pentax PENT
   'PXMN'       MakerNotePentax5b                Pentax
                MakerNotePentax5c                Pentax
+               MakerNoteRicohPentax2            Pentax
+               MakerNoteRicohPentax3            Pentax
                MakerNotePentaxUnknown           string
   'PXTH'       PentaxPreview                    Pentax PXTH
   'QVMI'       CasioQVMI                        EXIF
@@ -31619,6 +31981,8 @@ the config file.
   'RMKN'       RicohRMKN                        EXIF
   'RTHU'       PreviewImage                     no
   'SDLN'       PlayMode                         string
+  'SIGM'       SigmaEXIF                        EXIF
+               PreviewImage                     string
   'SNum'       SerialNumber                     string/
   'SelO'       PlaySelection                    int8u
   'TAGS'       FujiFilmTags                     FujiFilm MOV
@@ -31682,6 +32046,7 @@ the config file.
   'mcvr'       PreviewImage                     string
   'meta'       Meta                             QuickTime Meta
   'modl'       Model                            no
+  'nail'       ThumbnailTIFF                    no
   'name'       Name                             string
   'perf'       Performer                        string/
   'pmcc'       GarminSettings                   string
@@ -31705,6 +32070,7 @@ the config file.
                UnknownThumbnail                 string
   'time'       TimeStamp                        no
   'titl'       Title                            string/
+  'tnam'       TrackName                        string
   'urat'       UserRating                       undef/
   'uuid'       GarminSoftware                   string
                GarminModel                      no
@@ -32120,6 +32486,7 @@ metadata to WEBP images, but can't yet write to other RIFF-based formats.
   'EXIF'               EXIF                     EXIF
                        UnknownEXIF              no
   'ICCP'               ICC_Profile              ICC_Profile
+  'ID3 '               ID3-2                    ID3
   'IDIT'               DateTimeOriginal         no
   'JUNK'               OlympusJunk              Olympus AVI
                        CasioJunk                EXIF
@@ -32748,9 +33115,11 @@ specification.
   'E2'                         ParrotFollowMe   Parrot FollowMe
   'E3'                         ParrotAutomation Parrot Automation
   'application/arcore-accel'   ARCoreAccel      Parrot ARCoreAccel
+  'application/arcore-accel-0' ARCoreAccel0     Parrot ARCoreAccel0
   'application/arcore-custom-event'
                                ARCoreCustom     Parrot ARCoreCustom
   'application/arcore-gyro'    ARCoreGyro       Parrot ARCoreGyro
+  'application/arcore-gyro-0'  ARCoreGyro0      Parrot ARCoreGyro0
   'application/arcore-video-0' ARCoreVideo      Parrot ARCoreVideo
 
 =head3 Parrot V1 Tags
@@ -32888,6 +33257,14 @@ ARCore accelerometer data.
       4    AccelerometerUnknown?                no
       5    Accelerometer                        no
 
+=head3 Parrot ARCoreAccel0 Tags
+
+ARCore accelerometer data.
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+      9    Accelerometer                        no
+
 =head3 Parrot ARCoreCustom Tags
 
   Index1   Tag Name                             Writable
@@ -32896,12 +33273,20 @@ ARCore accelerometer data.
 
 =head3 Parrot ARCoreGyro Tags
 
-ARCore accelerometer data.
+ARCore gyro data.
 
   Index1   Tag Name                             Writable
   ------   --------                             --------
       4    GyroscopeUnknown?                    no
       5    Gyroscope                            no
+
+=head3 Parrot ARCoreGyro0 Tags
+
+ARCore gyro data.
+
+  Index1   Tag Name                             Writable
+  ------   --------                             --------
+      9    Gyroscope                            no
 
 =head3 Parrot ARCoreVideo Tags
 
@@ -36307,6 +36692,110 @@ Tags with index 54 and greater are conditional based on the StreamType.
      56    AudioChannels                        no
      58    AudioSampleRate                      no
            ImageHeight                          no
+
+=head2 TNEF Tags
+
+Information extracted from Transport Neutral Encapsulation Format (TNEF)
+files (eg. winmail.dat).  But note that the exiftool application doesn't
+process files with a .DAT extension by default when a directory name is
+given, so in this case either specify the .DAT file(s) by name or add
+C<-ext+ dat> to the command.
+
+  Tag ID   Tag Name                             Writable
+  ------   --------                             --------
+  0x8000   From                                 no
+  0x18004  Subject                              no
+  0x18009  MessageID                            no
+  0x18010  AttachTitle                          no
+  0x2800c  MessageBody                          no
+  0x30006  StartDate                            no
+  0x30007  EndDate                              no
+  0x38005  SentDate                             no
+  0x38006  ReceivedDate                         no
+  0x38012  AttachCreateDate                     no
+  0x38013  AttachModifyDate                     no
+  0x38020  MessageModifyDate                    no
+  0x40009  ResponseRequested                    no
+  0x4800d  Priority                             no
+  0x50008  OwnerAppointmentID                   no
+  0x60000  Owner                                no
+  0x60001  SentFor                              no
+  0x60002  Delegate                             no
+  0x68007  MessageStatus                        no
+  0x6800f  AttachData                           no
+  0x68011  AttachMetaFile                       no
+  0x69001  AttachTransportFilename              no
+  0x69002  AttachRenderingData                  no
+  0x69003  MessageProps                         TNEF MsgProps
+  0x69004  RecipientTable                       no
+  0x69005  AttachInfo                           TNEF AttachInfo
+  0x69007  CodePage                             no
+  0x70600  OriginalMessageClass                 no
+  0x78008  MessageClass                         no
+  0x89006  TNEFVersion                          no
+
+=head3 TNEF MsgProps Tags
+
+  Tag ID       Tag Name                         Writable
+  ------       --------                         --------
+  0x0002       AlternateRecipientAllowed        no
+  0x0039       ClientSubmitTime                 no
+  0x0040       ReceivedByName                   no
+  0x0044       ReceivedRepresentingName         no
+  0x004d       OriginalAuthorName               no
+  0x0055       OriginalDeliveryTime             no
+  0x0070       Subject                          no
+  0x0075       ReceivedByAddressType            no
+  0x0076       ReceivedByEmailAddress           no
+  0x0077       ReceivedRepresentingAddressType  no
+  0x0078       ReceivedRepresentingEmailAddress no
+  0x007f       CorrelationKey                   no
+  0x0c1a       SenderName                       no
+  0x0c1d       SenderSearchKey                  no
+  0x0e06       MessageDeliveryTime              no
+  0x0e1d       NormalizedSubject                no
+  0x0e28       PrimarySendAccount               no
+  0x0e29       NextSendAccount                  no
+  0x0f02       DeliveryOrRenewTime              no
+  0x1000       MessageBodyText                  no
+  0x1007       SyncBodyCount                    no
+  0x1008       SyncBodyData                     no
+  0x1009       MessageBodyRTF                   no
+  0x1013       MessageBodyHTML                  no
+  0x1035       InternetMessageID                no
+  0x10f4       Hidden                           no
+  0x10f6       ReadOnly                         no
+  0x3007       CreateDate                       no
+  0x3008       ModifyDate                       no
+  0x3fde       InternetCodePage                 no
+  0x3ff1       LocalUserID                      no
+  0x3ff8       CreatorName                      no
+  0x3ffa       LastModifierName                 no
+  0x3ffd       MessageCodePage                  no
+  0x4076       SpamConfidenceLevel              no
+  '00020329_Author' Author                      no
+  '00020329_LastAuthor' LastAuthor              no
+  '00062004_0000801A' HomeAddress               no
+  '00062004_000080DA' HomeAddressCountryCode    no
+  '00062008_00008554' AppVersion                no
+
+=head3 TNEF AttachInfo Tags
+
+  Tag ID   Tag Name                             Writable
+  ------   --------                             --------
+  0x0e20   AttachSize                           no
+  0x0e21   AttachNum                            no
+  0x0ff8   MappingSignature?                    no
+  0x3001   AttachFileName                       no
+  0x3701   AttachBinary                         no
+  0x3703   AttachFileExtension                  no
+  0x3705   AttachMethod                         no
+  0x3707   AttachLongFileName                   no
+  0x3708   AttachPathName                       no
+  0x370d   AttachLongPathName                   no
+  0x370e   AttachMIMEType                       no
+  0x7ffb   ExceptionStartTime?                  no
+  0x7ffc   ExceptionEndTime?                    no
 
 =head2 WTV Tags
 
@@ -40185,7 +40674,7 @@ Tags extracted from  CAP, PCAP and PCAPNG Packet Capture files.
   0x0bac               CustomOption1            no
   0x0bad               CustomOption2            no
   0x4bac               CustomOption3            no
-  0x4bad               CustomOption3            no
+  0x4bad               CustomOption4            no
   'ByteOrder'          ByteOrder                no
   'IDB-2'              DeviceName               no
   'IDB-3'              Description              no
@@ -40197,8 +40686,8 @@ Tags extracted from  CAP, PCAP and PCAPNG Packet Capture files.
   'IDB-9'              TimeStampResolution      no
   'IDB-10'             TimeZone                 no
   'IDB-11'             Filter                   no
-  'IDB-12'             OperatingSytem           no
-  'IDB-13'             FCSLen                   no
+  'IDB-12'             OperatingSystem          no
+  'IDB-13'             FrameCheckSequenceLength no
   'IDB-14'             TimeStampOffset          no
   'IDB-15'             Hardware                 no
   'IDB-16'             TXSpeed                  no
@@ -40207,7 +40696,7 @@ Tags extracted from  CAP, PCAP and PCAPNG Packet Capture files.
   'LinkType'           LinkType                 no
   'PCAPVersion'        PCAPVersion              no
   'SHB-2'              Hardware                 no
-  'SHB-3'              OperatingSytem           no
+  'SHB-3'              OperatingSystem          no
   'SHB-4'              UserApplication          no
   'TimeStamp'          TimeStamp                no
 
@@ -41528,6 +42017,7 @@ for more details.
                        MakerNoteFujiFilm
                        MakerNoteGE
                        MakerNoteGE2
+                       MakerNoteGoogle
                        MakerNoteHasselblad
                        MakerNoteHP
                        MakerNoteHP2
@@ -41585,12 +42075,14 @@ for more details.
                        MakerNotePentax5
                        MakerNotePentax6
                        MakerNotePhaseOne
-                       MakerNoteReconyx
-                       MakerNoteReconyx2
-                       MakerNoteReconyx3
+                       MakerNoteReconyxHyperFire
+                       MakerNoteReconyxUltraFire
+                       MakerNoteReconyxHyperFire2
+                       MakerNoteReconyxMicroFire
+                       MakerNoteReconyxHyperFire4K
+                       MakerNoteRicohPentax
                        MakerNoteRicoh
                        MakerNoteRicoh2
-                       MakerNoteRicohPentax
                        MakerNoteRicohText
                        MakerNoteSamsung1a
                        MakerNoteSamsung1b

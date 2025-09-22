@@ -76,6 +76,8 @@ my %jpegMap = (
     MetaIFD      => 'Meta',
     RMETA        => 'APP5',
     SEAL         => ['APP8','APP9'], # (note: add 'IFD0' if this is a possibility)
+    AROT         => 'APP10',
+    JUMBF        => 'APP11',
     Ducky        => 'APP12',
     Photoshop    => 'APP13',
     Adobe        => 'APP14',
@@ -138,12 +140,12 @@ my %rawType = (
 # 2) any dependencies must be added to %excludeGroups
 my @delGroups = qw(
     Adobe AFCP APP0 APP1 APP2 APP3 APP4 APP5 APP6 APP7 APP8 APP9 APP10 APP11 APP12
-    APP13 APP14 APP15 AudioKeys CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
+    APP13 APP14 APP15 AROT AudioKeys CanonVRD CIFF Ducky EXIF ExifIFD File FlashPix
     FotoStation GlobParamIFD GPS ICC_Profile IFD0 IFD1 Insta360 InteropIFD IPTC
-    ItemList iTunes JFIF Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft
-    MIE MPF Nextbase NikonApp NikonCapture PDF PDF-update PhotoMechanic
-    Photoshop PNG PNG-pHYs PrintIM QuickTime RMETA RSRC SEAL SubIFD Trailer
-    UserData VideoKeys Vivo XML XML-* XMP XMP-*
+    ItemList iTunes JFIF Jpeg2000 JUMBF Keys MakerNotes Meta MetaIFD Microsoft MIE
+    MPF Nextbase NikonApp NikonCapture PDF PDF-update PhotoMechanic Photoshop PNG
+    PNG-pHYs PrintIM QuickTime RMETA RSRC SEAL SubIFD Trailer UserData VideoKeys
+    Vivo XML XML-* XMP XMP-*
 );
 # family 2 group names that we can delete
 my @delGroup2 = qw(
@@ -693,12 +695,11 @@ TAG: foreach $tagInfo (@matchingTags) {
             my $src = GetTagTable($$table{SRC_TABLE});
             $writeProc = $$src{WRITE_PROC} unless $writeProc;
         }
-        {
+        if ($writeProc) {
             # make sure module is loaded if the writeProc is a string
             unless (ref $writeProc) {
                 my $module = $writeProc;
-                $module =~ s/::\w+$//;
-                eval "require $module";
+                $module =~ s/::\w+$// and eval "require $module";
             }
             no strict 'refs';
             next unless $writeProc and &$writeProc();
@@ -1351,7 +1352,8 @@ sub SetNewValuesFromFile($$;@)
         # get all tags from source file (including MakerNotes block)
         $info = $srcExifTool->ImageInfo($srcFile);
     }
-    return $info if $$info{Error} and $$info{Error} eq 'Error opening file';
+    # (allow processing to continue if we have alternate files that may have been read OK)
+    return $info if $$info{Error} and $$info{Error} eq 'Error opening file' and not $$self{ALT_EXIFTOOL};
     delete $$srcExifTool{VALUE}{Error}; # delete so we can check this later
 
     # sort tags in file order with priority tags last
@@ -1604,6 +1606,8 @@ SET:    foreach $set (@setList) {
             $$opts{Group} = $dstGrp if $dstGrp;
             my @rtnVals = $self->SetNewValue($dstTag, $val, %$opts);
             $rtnInfo{$dstTag} = $val if $rtnVals[0]; # tag was set successfully
+            # return warning if any
+            $rtnInfo{NextFreeTagKey(\%rtnInfo, 'Warning')} = $rtnVals[1] if $rtnVals[1];
             next;
         }
         foreach $tag (@{$setMatches{$set}}) {
@@ -1903,7 +1907,7 @@ sub RestoreNewValues($)
 #------------------------------------------------------------------------------
 # Set alternate file for extracting information
 # Inputs: 0) ExifTool ref, 1) family 8 group name (of the form "File#" where # is any number)
-#         2) alternate file name, or undef to reset
+#         2) alternate file name (may contain tag names with leading "$"), or undef to reset
 # Returns: 1 on success, or 0 on invalid group name
 sub SetAlternateFile($$$)
 {
@@ -1913,7 +1917,9 @@ sub SetAlternateFile($$$)
     # keep the same file if already initialized (possibly has metadata extracted)
     if (not defined $file) {
         delete $$self{ALT_EXIFTOOL}{$g8};
-    } elsif (not ($$self{ALT_EXIFTOOL}{$g8} and $$self{ALT_EXIFTOOL}{$g8}{ALT_FILE} eq $file)) {
+    } elsif (not ($$self{ALT_EXIFTOOL}{$g8} and $file !~ /\$/ and
+        $$self{ALT_EXIFTOOL}{$g8}{ALT_FILE} eq $file))
+    {
         my $altExifTool = Image::ExifTool->new;
         $$altExifTool{ALT_FILE} = $file;
         $$self{ALT_EXIFTOOL}{$g8} = $altExifTool;
@@ -3197,7 +3203,7 @@ sub InsertTagValues($$;$$$$)
     my ($docNum, $tag);
 
     if ($docGrp) {
-        $docNum = $docGrp =~ /(\d+)$/ ? $1 : 0;
+        $docNum = $docGrp =~ /(\d+(-\d+)*)$/ ? $1 : 0;
     } else {
         undef $cache;   # no cache if no document groups
     }
@@ -3265,25 +3271,25 @@ sub InsertTagValues($$;$$$$)
                 # (similar to code in BuildCompositeTags(), but this is case-insensitive)
                 my $cacheTag = $$cache{$lcTag};
                 unless ($cacheTag) {
-                    $cacheTag = $$cache{$lcTag} = [ ];
+                    $cacheTag = $$cache{$lcTag} = { };
                     # find all matching keys, organize into groups, and store in cache
                     my $ex = $$self{TAG_EXTRA};
                     my @matches = grep /^$tag(\s|$)/i, @$foundTags;
                     @matches = $self->GroupMatches($group, \@matches) if defined $group;
                     foreach (@matches) {
                         my $doc = $$ex{$_}{G3} || 0;
-                        if (defined $$cacheTag[$doc]) {
-                            next unless $$cacheTag[$doc] =~ / \((\d+)\)$/;
+                        if (defined $$cacheTag{$doc}) {
+                            next unless $$cacheTag{$doc} =~ / \((\d+)\)$/;
                             my $cur = $1;
                             # keep the most recently extracted tag
                             next if / \((\d+)\)$/ and $1 < $cur;
                         }
-                        $$cacheTag[$doc] = $_;
+                        $$cacheTag{$doc} = $_;
                     }
                 }
-                my $doc = $lcTag =~ /\b(main|doc(\d+)):/ ? ($2 || 0) : $docNum;
-                if ($$cacheTag[$doc]) {
-                    $tag = $$cacheTag[$doc];
+                my $doc = $lcTag =~ /\b(main|doc(\d+(-\d+)*)):/ ? ($2 || 0) : $docNum;
+                if ($$cacheTag{$doc}) {
+                    $tag = $$cacheTag{$doc};
                     $val = $self->GetValue($tag, $type);
                 }
             } else {
@@ -3399,14 +3405,14 @@ sub InsertTagValues($$;$$$$)
             undef $advFmtSelf;
             $didExpr = 1;   # set flag indicating an expression was evaluated
         }
-        unless (defined $val) {
+        unless (defined $val or (ref $opt and $$self{OPTIONS}{UndefTags})) {
             $val = $$self{OPTIONS}{MissingTagValue};
             unless (defined $val) {
                 my $g3 = ($docGrp and $var !~ /\b(main|doc\d+):/i) ? $docGrp . ':' : '';
                 my $msg = $didExpr ? "Advanced formatting expression returned undef for '$g3${var}'" :
                                      "Tag '$g3${var}' not defined";
                 if (ref $opt) {
-                    $self->Warn($msg,2) or $val = '';
+                    $val = '' if $$self{OPTIONS}{IgnoreMinorErrors};
                 } elsif ($opt) {
                     no strict 'refs';
                     ($opt eq 'Silent' or &$opt($self, $msg, 2)) and return $$self{FMT_EXPR} = undef;
@@ -4737,10 +4743,11 @@ sub DumpUnknownTrailer($$)
     my $pos = $$dirInfo{DataPos};
     my $endPos = $pos + $$dirInfo{DirLen};
     # account for preview/MPF image trailer
-    my $prePos = $$self{VALUE}{PreviewImageStart} || $$self{PreviewImageStart};
-    my $preLen = $$self{VALUE}{PreviewImageLength} || $$self{PreviewImageLength};
-    my $hidPos = $$self{VALUE}{HiddenDataOffset};
-    my $hidLen = $$self{VALUE}{HiddenDataLength};
+    my $value = $$self{VALUE};
+    my $prePos = $$value{PreviewImageStart} || $$self{PreviewImageStart};
+    my $preLen = $$value{PreviewImageLength} || $$self{PreviewImageLength};
+    my $hidPos = $$value{HiddenDataOffset};
+    my $hidLen = $$value{HiddenDataLength};
     my $tag = 'PreviewImage';
     my $mpImageNum = 0;
     my (%image, $lastOne);
@@ -4757,12 +4764,12 @@ sub DumpUnknownTrailer($$)
         last if $lastOne;   # checked all images
         # look for MPF images (in the proper order)
         ++$mpImageNum;
-        $prePos = $$self{VALUE}{"MPImageStart ($mpImageNum)"};
+        $prePos = $$value{"MPImageStart ($mpImageNum)"};
         if (defined $prePos) {
-            $preLen = $$self{VALUE}{"MPImageLength ($mpImageNum)"};
+            $preLen = $$value{"MPImageLength ($mpImageNum)"};
         } else {
-            $prePos = $$self{VALUE}{'MPImageStart'};
-            $preLen = $$self{VALUE}{'MPImageLength'};
+            $prePos = $$value{MPImageStart};
+            $preLen = $$value{MPImageLength};
             $lastOne = 1;
         }
         $tag = "MPImage$mpImageNum";
@@ -5046,6 +5053,7 @@ TryLib: for ($lib=$strptimeLib; ; $lib='') {
                 last;
             }
             if (not $lib) {
+                last unless $$self{OPTIONS}{StrictDate};
                 warn $wrn || "Install POSIX::strptime or Time::Piece for inverse date/time conversions\n";
                 return undef;
             } elsif ($lib eq 'POSIX::strptime') {
@@ -5736,6 +5744,8 @@ sub WriteJPEG($$)
                     $s =~ /^(Meta|META|Exif)\0\0/ and $dirName = 'Meta';
                 } elsif ($marker == 0xe5) {
                     $s =~ /^RMETA\0/        and $dirName = 'RMETA';
+                } elsif ($marker == 0xea) {
+                    $s =~ /^AROT\0\0/       and $dirName = 'AROT';
                 } elsif ($marker == 0xeb) {
                     $s =~ /^JP/             and $dirName = 'JUMBF';
                 } elsif ($marker == 0xec) {
@@ -5881,10 +5891,10 @@ sub WriteJPEG($$)
                         $writeBuffer = '';
                         $oldOutfile = $outfile;
                         $outfile = \$writeBuffer;
-                        # account for segment, EXIF and TIFF headers
-                        $$self{PREVIEW_INFO}{Fixup}{Start} += 18 if $$self{PREVIEW_INFO};
-                        $$self{LeicaTrailer}{Fixup}{Start} += 18 if $$self{LeicaTrailer};
-                        $$self{HiddenData}{Fixup}{Start} += 18 if $$self{HiddenData};
+                        # must account for segment, EXIF and TIFF headers
+                        foreach (qw(PREVIEW_INFO LeicaTrailer HiddenData)) {
+                            $$self{$_}{Fixup}{Start} += 18 if $$self{$_};
+                        }
                     }
                     # write as multi-segment
                     my $n = WriteMultiSegment($outfile, 0xe1, $exifAPP1hdr, \$buff, 'EXIF');
@@ -6030,8 +6040,8 @@ sub WriteJPEG($$)
             my $delPreview = $$self{DEL_PREVIEW};
             $trailInfo = $self->IdentifyTrailer($raf) unless $$delGroup{Trailer};
             my $nvTrail = $self->GetNewValueHash($Image::ExifTool::Extra{Trailer});
-            unless ($oldOutfile or $delPreview or $trailInfo or $$delGroup{Trailer} or $nvTrail or
-                $$self{HiddenData})
+            unless ($oldOutfile or $delPreview or $trailInfo or $$delGroup{Trailer} or
+                $nvTrail or $$self{HiddenData})
             {
                 # blindly copy the rest of the file
                 while ($raf->Read($buff, 65536)) {
@@ -6076,35 +6086,7 @@ sub WriteJPEG($$)
                 }
                 last;   # all done
             }
-            # copy HiddenData if necessary
-            if ($$self{HiddenData}) {
-                my $pad;
-                my $hd = $$self{HiddenData};
-                my $hdOff = $$hd{Offset} + $$hd{Base};
-                require Image::ExifTool::Sony;
-                # read HiddenData, updating $hdOff with actual offset if necessary
-                my $dataPt = Image::ExifTool::Sony::ReadHiddenData($self, $hdOff, $$hd{Size});
-                if ($dataPt) {
-                    # preserve padding to avoid invalidating MPF pointers (yuk!)
-                    my $padLen = $hdOff - $endPos;
-                    unless ($padLen >= 0 and $raf->Seek($endPos,0) and $raf->Read($pad,$padLen)==$padLen) {
-                        $self->Error('Error reading HiddenData padding',1);
-                        $pad = '';
-                    }
-                    $endPos += length($pad) + length($$dataPt); # update end position
-                } else {
-                    $$dataPt = $pad = '';
-                }
-                my $fixup = $$self{HiddenData}{Fixup};
-                # set MakerNote pointer and size (subtract 10 for segment and EXIF headers)
-                $fixup->SetMarkerPointers($outfile, 'HiddenData', length($$outfile) + length($pad) - 10);
-                # clean up and write the buffered data
-                $outfile = $oldOutfile;
-                undef $oldOutfile;
-                Write($outfile, $writeBuffer, $pad, $$dataPt) or $err = 1;
-                undef $writeBuffer;
-            }
-            # rewrite existing trailers
+            # rewrite existing trailers into buffer
             if ($trailInfo) {
                 my $tbuf = '';
                 $raf->Seek(-length($buff), 1);  # seek back to just after EOI
@@ -6112,100 +6094,126 @@ sub WriteJPEG($$)
                 $$trailInfo{ScanForTrailer} = 1;# scan if necessary
                 $self->ProcessTrailers($trailInfo) or undef $trailInfo;
             }
-            if (not $oldOutfile) {
-                # do nothing special
-            } elsif ($$self{LeicaTrailer}) {
-                my $trailLen;
-                if ($trailInfo) {
-                    $trailLen = $$trailInfo{DataPos} - $endPos;
-                } else {
-                    $raf->Seek(0, 2) or $err = 1;
-                    $trailLen = $raf->Tell() - $endPos;
-                }
-                my $fixup = $$self{LeicaTrailer}{Fixup};
-                $$self{LeicaTrailer}{TrailPos} = $endPos;
-                $$self{LeicaTrailer}{TrailLen} = $trailLen;
-                # get _absolute_ position of new Leica trailer
-                my $absPos = Tell($oldOutfile) + length($$outfile);
-                require Image::ExifTool::Panasonic;
-                my $dat = Image::ExifTool::Panasonic::ProcessLeicaTrailer($self, $absPos);
-                # allow some junk before Leica trailer (just in case)
-                my $junk = $$self{LeicaTrailerPos} - $endPos;
-                # set MakerNote pointer and size (subtract 10 for segment and EXIF headers)
-                $fixup->SetMarkerPointers($outfile, 'LeicaTrailer', length($$outfile) - 10 + $junk);
-                # use this fixup to set the size too (sneaky)
-                my $trailSize = defined($dat) ? length($dat) - $junk : $$self{LeicaTrailer}{Size};
-                $$fixup{Start} -= 4;  $$fixup{Shift} += 4;
-                $fixup->SetMarkerPointers($outfile, 'LeicaTrailer', $trailSize) if defined $trailSize;
-                $$fixup{Start} += 4;  $$fixup{Shift} -= 4;
-                # clean up and write the buffered data
-                $outfile = $oldOutfile;
-                undef $oldOutfile;
-                Write($outfile, $writeBuffer) or $err = 1;
-                undef $writeBuffer;
-                if (defined $dat) {
-                    Write($outfile, $dat) or $err = 1;  # write new Leica trailer
-                    $delPreview = 1;                    # delete existing Leica trailer
-                }
-            } else {
-                # locate preview image and fix up preview offsets
-                my $scanLen = $$self{Make} =~ /^SONY/i ? 65536 : 1024;
-                if (length($buff) < $scanLen) { # make sure we have enough trailer to scan
-                    my $buf2;
-                    $buff .= $buf2 if $raf->Read($buf2, $scanLen - length($buff));
-                }
-                # get new preview image position, relative to EXIF base
-                my $newPos = length($$outfile) - 10; # (subtract 10 for segment and EXIF headers)
-                my $junkLen;
-                # adjust position if image isn't at the start (eg. Olympus E-1/E-300)
-                if ($buff =~ /(\xff\xd8\xff.|.\xd8\xff\xdb)(..)/sg) {
-                    my ($jpegHdr, $segLen) = ($1, $2);
-                    $junkLen = pos($buff) - 6;
-                    # Sony previewimage trailer has a 32 byte header
-                    if ($$self{Make} =~ /^SONY/i and $junkLen > 32) {
-                        # with some newer Sony models, the makernotes preview pointer
-                        # points to JPEG at end of EXIF inside MPImage preview (what a pain!)
-                        if ($jpegHdr eq "\xff\xd8\xff\xe1") {   # is the first segment EXIF?
-                            $segLen = unpack('n', $segLen);     # the EXIF segment length
-                            # Sony PreviewImage starts with last 2 bytes of EXIF segment
-                            # (and first byte is usually "\0", not "\xff", so don't check this)
-                            if (length($buff) > $junkLen + $segLen + 6 and
-                                substr($buff, $junkLen + $segLen + 3, 3) eq "\xd8\xff\xdb")
-                            {
-                                $junkLen += $segLen + 2;
-                                # (note: this will not copy the trailer after PreviewImage,
-                                #  which is a 14kB block full of zeros for the A77)
-                            }
+            if ($oldOutfile) {
+                my $previewInfo;
+                # copy HiddenData if necessary
+                if ($$self{HiddenData}) {
+                    my $pad;
+                    my $hd = $$self{HiddenData};
+                    my $hdOff = $$hd{Offset} + $$hd{Base};
+                    require Image::ExifTool::Sony;
+                    # read HiddenData, updating $hdOff with actual offset if necessary
+                    my $dataPt = Image::ExifTool::Sony::ReadHiddenData($self, $hdOff, $$hd{Size});
+                    if ($dataPt) {
+                        # preserve padding to avoid invalidating MPF pointers (yuk!)
+                        my $padLen = $hdOff - $endPos;
+                        unless ($padLen >= 0 and $raf->Seek($endPos,0) and $raf->Read($pad,$padLen)==$padLen) {
+                            $self->Error('Error reading HiddenData padding',1);
+                            $pad = '';
                         }
-                        $junkLen -= 32;
+                        $endPos += length($pad) + length($$dataPt); # update end position
+                    } else {
+                        $$dataPt = $pad = '';
                     }
-                    $newPos += $junkLen;
+                    my $fixup = $$self{HiddenData}{Fixup};
+                    # set MakerNote pointer and size (subtract 10 for segment and EXIF headers)
+                    $fixup->SetMarkerPointers($outfile, 'HiddenData', length($$outfile) + length($pad) - 10);
+                    $writeBuffer .= $pad . $$dataPt;    # keep padding for now
                 }
-                # fix up the preview offsets to point to the start of the new image
-                my $previewInfo = $$self{PREVIEW_INFO};
-                delete $$self{PREVIEW_INFO};
-                my $fixup = $$previewInfo{Fixup};
-                $newPos += ($$previewInfo{BaseShift} || 0);
-                # adjust to absolute file offset if necessary (Samsung STMN)
-                $newPos += Tell($oldOutfile) + 10 if $$previewInfo{Absolute};
-                if ($$previewInfo{Relative}) {
-                    # adjust for our base by looking at how far the pointer got shifted
-                    $newPos -= ($fixup->GetMarkerPointers($outfile, 'PreviewImage') || 0);
-                } elsif ($$previewInfo{ChangeBase}) {
-                    # Leica S2 uses relative offsets for the preview only (leica sucks)
-                    my $makerOffset = $fixup->GetMarkerPointers($outfile, 'LeicaTrailer');
-                    $newPos -= $makerOffset if $makerOffset;
+                if ($$self{LeicaTrailer}) {
+                    my $trailLen;
+                    if ($trailInfo) {
+                        $trailLen = $$trailInfo{DataPos} - $endPos;
+                    } else {
+                        $raf->Seek(0, 2) or $err = 1;
+                        $trailLen = $raf->Tell() - $endPos;
+                    }
+                    my $fixup = $$self{LeicaTrailer}{Fixup};
+                    $$self{LeicaTrailer}{TrailPos} = $endPos;
+                    $$self{LeicaTrailer}{TrailLen} = $trailLen;
+                    # get _absolute_ position of new Leica trailer
+                    my $absPos = Tell($oldOutfile) + length($$outfile);
+                    require Image::ExifTool::Panasonic;
+                    my $dat = Image::ExifTool::Panasonic::ProcessLeicaTrailer($self, $absPos);
+                    # allow some junk before Leica trailer (just in case)
+                    my $junk = $$self{LeicaTrailerPos} - $endPos;
+                    # set MakerNote pointer and size (subtract 10 for segment and EXIF headers)
+                    $fixup->SetMarkerPointers($outfile, 'LeicaTrailer', length($$outfile) - 10 + $junk);
+                    # use this fixup to set the size too (sneaky)
+                    my $trailSize = defined($dat) ? length($dat) - $junk : $$self{LeicaTrailer}{Size};
+                    $$fixup{Start} -= 4;  $$fixup{Shift} += 4;
+                    $fixup->SetMarkerPointers($outfile, 'LeicaTrailer', $trailSize) if defined $trailSize;
+                    $$fixup{Start} += 4;  $$fixup{Shift} -= 4;
+                    if (defined $dat) {
+                        Write($outfile, $dat) or $err = 1;  # write new Leica trailer
+                        $delPreview = 1;                    # delete existing Leica trailer
+                    }
                 }
-                $fixup->SetMarkerPointers($outfile, 'PreviewImage', $newPos);
+                # handle preview image last
+                if ($$self{PREVIEW_INFO}) {
+                    # locate preview image and fix up preview offsets
+                    my $scanLen = $$self{Make} =~ /^SONY/i ? 65536 : 1024;
+                    if (length($buff) < $scanLen) { # make sure we have enough trailer to scan
+                        my $buf2;
+                        $buff .= $buf2 if $raf->Read($buf2, $scanLen - length($buff));
+                    }
+                    # get new preview image position, relative to EXIF base
+                    my $newPos = length($$outfile) - 10; # (subtract 10 for segment and EXIF headers)
+                    my $junkLen;
+                    # adjust position if image isn't at the start (eg. Olympus E-1/E-300)
+                    if ($buff =~ /(\xff\xd8\xff.|.\xd8\xff\xdb)(..)/sg) {
+                        my ($jpegHdr, $segLen) = ($1, $2);
+                        $junkLen = pos($buff) - 6;
+                        # Sony previewimage trailer has a 32 byte header
+                        if ($$self{Make} =~ /^SONY/i and $junkLen > 32) {
+                            # with some newer Sony models, the makernotes preview pointer
+                            # points to JPEG at end of EXIF inside MPImage preview (what a pain!)
+                            if ($jpegHdr eq "\xff\xd8\xff\xe1") {   # is the first segment EXIF?
+                                $segLen = unpack('n', $segLen);     # the EXIF segment length
+                                # Sony PreviewImage starts with last 2 bytes of EXIF segment
+                                # (and first byte is usually "\0", not "\xff", so don't check this)
+                                if (length($buff) > $junkLen + $segLen + 6 and
+                                    substr($buff, $junkLen + $segLen + 3, 3) eq "\xd8\xff\xdb")
+                                {
+                                    $junkLen += $segLen + 2;
+                                    # (note: this will not copy the trailer after PreviewImage,
+                                    #  which is a 14kB block full of zeros for the A77)
+                                }
+                            }
+                            $junkLen -= 32;
+                        }
+                        $newPos += $junkLen;
+                    }
+                    # fix up the preview offsets to point to the start of the new image
+                    $previewInfo = $$self{PREVIEW_INFO};
+                    delete $$self{PREVIEW_INFO};
+                    my $fixup = $$previewInfo{Fixup};
+                    $newPos += ($$previewInfo{BaseShift} || 0);
+                    # adjust to absolute file offset if necessary (Samsung STMN)
+                    $newPos += Tell($oldOutfile) + 10 if $$previewInfo{Absolute};
+                    if ($$previewInfo{Relative}) {
+                        # adjust for our base by looking at how far the pointer got shifted
+                        $newPos -= ($fixup->GetMarkerPointers($outfile, 'PreviewImage') || 0);
+                    } elsif ($$previewInfo{ChangeBase}) {
+                        # Leica S2 uses relative offsets for the preview only (leica sucks)
+                        my $makerOffset = $fixup->GetMarkerPointers($outfile, 'LeicaTrailer');
+                        $newPos -= $makerOffset if $makerOffset;
+                    }
+                    $fixup->SetMarkerPointers($outfile, 'PreviewImage', $newPos);
+                    if ($$previewInfo{Data} ne 'LOAD_PREVIEW') {
+                        # write any junk that existed before the preview image
+                        $$previewInfo{Junk} = substr($buff,0,$junkLen) if $junkLen;
+                    }
+                }
                 # clean up and write the buffered data
                 $outfile = $oldOutfile;
                 undef $oldOutfile;
                 Write($outfile, $writeBuffer) or $err = 1;
                 undef $writeBuffer;
                 # write preview image
-                if ($$previewInfo{Data} ne 'LOAD_PREVIEW') {
+                if ($previewInfo and $$previewInfo{Data} ne 'LOAD_PREVIEW') {
                     # write any junk that existed before the preview image
-                    Write($outfile, substr($buff,0,$junkLen)) or $err = 1 if $junkLen;
+                    Write($outfile, $$previewInfo{Junk}) or $err = 1 if defined $$previewInfo{Junk};
                     # write the saved preview image
                     Write($outfile, $$previewInfo{Data}) or $err = 1;
                     delete $$previewInfo{Data};
@@ -6218,7 +6226,7 @@ sub WriteJPEG($$)
                 my $extra;
                 if ($trailInfo) {
                     # copy everything up to start of first processed trailer
-                    $extra = $$trailInfo{DataPos} - $endPos;
+                    $extra = defined $$trailInfo{DataPos} ? ($$trailInfo{DataPos} - $endPos) : 0;
                 } else {
                     # copy everything up to end of file
                     $raf->Seek(0, 2) or $err = 1;
@@ -6387,9 +6395,9 @@ sub WriteJPEG($$)
                         $oldOutfile = $outfile;
                         $outfile = \$writeBuffer;
                         # must account for segment, EXIF and TIFF headers
-                        $$self{PREVIEW_INFO}{Fixup}{Start} += 18 if $$self{PREVIEW_INFO};
-                        $$self{LeicaTrailer}{Fixup}{Start} += 18 if $$self{LeicaTrailer};
-                        $$self{HiddenData}{Fixup}{Start} += 18 if $$self{HiddenData};
+                        foreach (qw(PREVIEW_INFO LeicaTrailer HiddenData)) {
+                            $$self{$_}{Fixup}{Start} += 18 if $$self{$_};
+                        }
                     }
                     # write as multi-segment
                     my $n = WriteMultiSegment($outfile, $marker, $exifAPP1hdr, $segDataPt, 'EXIF');
@@ -6644,7 +6652,12 @@ sub WriteJPEG($$)
                     $segType = 'SEAL';
                     $$delGroup{SEAL} and $del = 1;
                 }
-            } elsif ($marker == 0xeb) {         # APP10 (JUMBF)
+            } elsif ($marker == 0xea) {         # APP10 (AROT)
+                if ($$segDataPt =~ /^AROT\0\0/) {
+                    $segType = 'AROT';
+                    $$delGroup{AROT} and $del = 1;
+                }
+            } elsif ($marker == 0xeb) {         # APP11 (JUMBF)
                 if ($$segDataPt =~ /^JP/) {
                     $segType = 'JUMBF';
                     $$delGroup{JUMBF} and $del = 1;
@@ -6911,7 +6924,7 @@ sub CheckBinaryData($$$)
         $format = $1;
         $count = $2;
         # can't evaluate $count now because we don't know $size yet
-        undef $count if $count =~ /\$size/;
+        $count = -1 if $count =~ /\$size/;  # (-1 = any count allowed)
     }
     return CheckValue($valPtr, $format, $count);
 }
@@ -7237,6 +7250,8 @@ sub WriteBinaryData($$$)
             $self->VerboseValue("- $dirName:$$tagInfo{Name}", $val);
             $self->VerboseValue("+ $dirName:$$tagInfo{Name}", $newVal);
             ++$$self{CHANGED};
+        } else {
+            $self->Warn("Error packing $$tagInfo{Name} value");
         }
     }
     # add necessary fixups for any offsets

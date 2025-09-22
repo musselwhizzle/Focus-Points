@@ -24,6 +24,7 @@ local LrSystemInfo = import "LrSystemInfo"
 
 require "Info"
 
+
 Log = {}
 
 Log.logName  = "FocusPoints"
@@ -167,25 +168,12 @@ end
 
 
 --[[
-  @@public void Log.info()
+  @@public void Log.sysInfo()
   ----
-  Logs a message, which level of information is logged and to which file
+  Output logfile header with system level information. Cqlled during Log.initialize()
 --]]
-function Log.info()
+function Log.sysInfo()
 
-  local Info = require 'Info.lua'
-
-  -- Retrieve plugin version
-  local pluginVersion = Info.VERSION
-  local versionString
-  if pluginVersion then
-    versionString = string.format("%d.%d.%d",
-                      pluginVersion.major, pluginVersion.minor, pluginVersion.revision)
-  else
-    versionString = "undefined"
-  end
-
-  -- Output logfile header with general status information
   local osName = ""
   if not WIN_ENV then
     osName = "macOS "
@@ -193,12 +181,28 @@ function Log.info()
   Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
   Log.logInfo("System", string.format(
           "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
-            versionString, LrApplication.versionTable().major, LrApplication.versionTable().minor,
+            getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
             osName, LrSystemInfo.osVersion()))
+end
+
+--[[
+  @@public void Log.appInfo()
+  ----
+  Extend logfile header with application level information. Needs to be called separately.
+--]]
+function Log.appInfo()
+
   if FocusPointPrefs.updateAvailable() then
     Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
   end
+  if WIN_ENV then
+    Log.logInfo("System", "Display scaling level " ..
+            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+  end
+  Log.logInfo("System", string.format(
+    "Application window size: %s x %s", FocusPointDialog.AppWidth, FocusPointDialog.AppHeight))
 end
+
 
 --[[
   @@public void Log.resetErrorsWarnings()
@@ -218,6 +222,7 @@ end
 --]]
 function Log.initialize()
   Log.delete()
-  Log.info()
   Log.resetErrorsWarnings()
+  Log.sysInfo()
 end
+
