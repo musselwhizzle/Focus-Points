@@ -449,9 +449,9 @@ Z9, subject detection "People".<br><br>
 Z5 II, no subject detection.<br><br>
 
 <img src="../screens/Nikon 5.jpg" alt="Nikon 5" style="width: 1000px;"/><br>
-Z7. The first Nikon mirrorless models tended to determine the focus point using the PDAF grid, especially for "flat" scenes. 
+Z7. The first Nikon mirrorless models tended to determine the focus point using the PDAF grid, especially for "flat" scenes.
 
-
+<br> 
 
 
 ## 3.2 Canon
@@ -498,6 +498,7 @@ R1. AI Servo AF with Action Priority "On" and Sport Events "Basketball".<br><br>
 <img src= "../screens/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/><br>
 R1. When capturing flat subjects, focus point display for Canon R-series can be funny sometimes. 
 
+<br>
 
 ## 3.3 Sony
 
