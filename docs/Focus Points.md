@@ -194,10 +194,10 @@ The logging mechanism provides a fine-grained hierarchy of levels at which infor
 The plugin checks for an updated version that is available to download.
 If so, this will be highlighted, and you can click the `Open URL` button to access the latest version's release notice. Follow the [installation instructions](#21-installation) to install the update.
 
-The availability of an update will be indicated.
-- on the plugin's settings page.
-- in the 'Plug-in status' section of the text pane (provided the `Display message` checkbox is selected).
-- in the log file.
+The availability of an update will be indicated:
+- on the plugin's settings page (see above)
+- in the 'Plug-in status' section of the text pane (provided the `Display message` checkbox is selected)
+- in the log file
 
 <img src="../screens/UpdateAvailable1.jpg" alt="Update Available" style="width: 1000px;"/><br>
 
@@ -431,7 +431,7 @@ D6, Dynamic Area (3D tracking) shot. Multiple AF points were used to focus the i
 D500, Live View shot. In Contrast AF modes, the focus "point" is an area that varies in size depending on the shooting conditions.<br><br>
 
 <img src="../screens/Nikon 6.jpg" alt="Nikon 6" style="width: 1000px;"/><br>
-D780, Live View shot, with several of the sensor base 81 AF areas engaged. The primary AF area is indicated by a center dot.<br><br>
+D780, Live View shot, with several of the sensor based 81 AF areas engaged. The primary AF area is indicated by a center dot.<br><br>
 
 
 ### 3.1.2 Nikon Mirrorless
@@ -442,13 +442,13 @@ Early Z models had an 81-point (9x9) PDAF, which grew to 493 points (27x15) on t
 
 Examples:
 
-<img src="../screens/Nikon 4.jpg" alt="Nikon 4" style="width: 1000px;"/>
- Z9, subject detection "People".<br><br>
+<img src="../screens/Nikon 4.jpg" alt="Nikon 4" style="width: 1000px;"/><br>
+Z9, subject detection "People".<br><br>
 
-<img src="../screens/Nikon 10.jpg" alt="Nikon 10" style="width: 1000px;"/>
+<img src="../screens/Nikon 10.jpg" alt="Nikon 10" style="width: 1000px;"/><br>
 Z5 II, no subject detection.<br><br>
 
-<img src="../screens/Nikon 5.jpg" alt="Nikon 5" style="width: 1000px;"/>
+<img src="../screens/Nikon 5.jpg" alt="Nikon 5" style="width: 1000px;"/><br>
 Z7. The first Nikon mirrorless models tended to determine the focus point using the PDAF grid, especially for "flat" scenes. 
 
 
@@ -476,26 +476,26 @@ Unlike other manufacturers, Canon does not give a single value for the focus dis
 
 Like Nikon, Canon DSLRs support both PDAF and CAF. The position and size of the PDAF focus points are determined by the individual sensor AF layout of the camera model.
 
-<img src="../screens/Canon 1.jpg" alt="Canon 1" style="width: 1000px;"/>
+<img src="../screens/Canon 1.jpg" alt="Canon 1" style="width: 1000px;"/><br>
 5D Mark IV. PDAF-focused shot with Servo AF Preset "Case 1" and multiple focus points used.<br><br>
 
-<img src="../screens/Canon 2.jpg" alt="Canon 2" style="width: 1000px;"/>
+<img src="../screens/Canon 2.jpg" alt="Canon 2" style="width: 1000px;"/><br>
 CAF-focused shot using the 'green' color for in-focus points for better visibility.<br><br>
 
 ### 3.1.2 Canon Mirrorless
 
 As with Nikon, Canon mirrorless models feature a hybrid autofocus system. However, in terms of focusing information stored in EXIF, the cooperation of PDAF and CAF is transparent. You can find the x, y positions of the focus point area(s) used to focus the shot as well as their width and height always in the same format.
 
-<img src= "../screens/Canon 3.jpg" alt="Canon 3" style="width: 1000px;"/>
+<img src= "../screens/Canon 3.jpg" alt="Canon 3" style="width: 1000px;"/><br>
 R3. AI Servo AF with Case A preset and subject detection 'Animals'<br><br> 
 
-<img src= "../screens/Canon 5.jpg" alt="Canon 5" style="width: 1000px;"/>
+<img src= "../screens/Canon 5.jpg" alt="Canon 5" style="width: 1000px;"/><br>
 R5 Mark II. AI Servo AF with Case A preset and subject detection 'Auto'<br><br> 
 
-<img src= "../screens/Canon 6.jpg" alt="Canon 6" style="width: 1000px;"/>
+<img src= "../screens/Canon 6.jpg" alt="Canon 6" style="width: 1000px;"/><br>
 R1. AI Servo AF with Action Priority "On" and Sport Events "Basketball".<br><br> 
 
-<img src= "../screens/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/>
+<img src= "../screens/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/><br>
 R1. When capturing flat subjects, focus point display for Canon R-series can be funny sometimes. 
 
 
