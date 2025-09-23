@@ -298,7 +298,7 @@ Click on the message to learn what it means and how to deal with it in case of a
 
 You can also access this information from the plugin window by clicking the link icon 🔗 next to the message:
 
-<img src="../screens/BasicOperation6.jpg" alt="Basic Operation 6" style="width: 750px;"/>
+<img src="../screens/BasicOperation6.jpg" alt="Basic Operation 6" style="width: 850px;"/>
 
 
 ### Plugin Status
@@ -514,23 +514,38 @@ Supported features:
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).
 
-For Sony, the focus point of an image is given by the (x,y) coordinates in the `FocusLocation` tag. Newer models support an additional `FocusFrameSize` tag, which also specifies the size of the focus area. Custom settings for the focus frame size in the plugin's preferences only apply in cases where the focus frame size is not available in the metadata. In this case, medium and large focus boxes will show a center dot:
+In Sony models, the focus point of an image is specified by the (x, y) coordinates in the `FocusLocation` tag. Newer models also support a `FocusFrameSize` tag, which specifies the size of the focus area. Custom focus frame size settings in the plugin's preferences only apply when the focus frame size is not available in the metadata. In this case, medium and large focus boxes will display a center dot.
 
-<img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 1000px;"/>
+<img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 1000px;"/><br>
+α9. The focus point recorded by the camera corresponds to the center dot. The box is only there to make the dot more visible.<br><br>
 
-If focal plane phase detect AF points have been used during the focusing process, these will be displayed in grey color:
+<img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 1000px;"/><br>
+α9 II. If the focal plane phase detection autofocus points have been engaged during the focusing process, they will be displayed in grey.<br><br>
 
-<img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 1000px;"/>
 
-When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot:
+<img src= "../screens/Sony 2.jpg" alt="Sony 2" style="width: 1000px;"/><br>
+α9 III. When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot.<br><br>
 
-<img src= "../screens/Sony 2.jpg" alt="Sony 2" style="width: 1000px;"/>
 
 Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
 
-<img src= "../screens/Sony 3.jpg" alt="Sony 3" style="width: 1000px;"/>
+<img src= "../screens/Sony 5.jpg" alt="Sony 5" style="width: 750px;"/><br>
+α6600 Detected face indicated by a yellow frame. Detected eye in focus indicated by a red dot.<br><br>
 
-As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. Sony also doesn't have a focus distance tag, so there is no Depth of Field section either.
+<img src= "../screens/Sony 3.jpg" alt="Sony 3" style="width: 1000px;"/><br>
+α7 IV. Two face detected, one eye in focus.<br><br>
+
+<img src= "../screens/Sony 6.jpg" alt="Sony 6" style="width: 750px;"/><br>
+RX10 IV. Detected face indicated by a yellow frame. Detected eye in focus indicated by a red dot.<br><br>
+
+
+In contrast to Canon and Nikon, there's not much that you can find in the EXIF maker notes for Sony's AF menu settings. This is why the focus information section is rather empty. Sony also lacks a focus distance tag, meaning there is no Depth of Field section.
+
+<img src= "../screens/Sony 4.jpg" alt="Sony 4" style="width: 750px;"/><br>
+α1 II. The number of known* AF settings entries is small compared to a Canon R5 Mark II.<br>
+
+\* not "known" means that information may be present in metadata but has not been identified and decoded yet.
+
 
 
 ## 3.4 Fuji
@@ -782,10 +797,10 @@ KP image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF p
 <img src="../screens/Pentax 8.jpg" alt="Pentax 8" style="width: 1000px;"/><br>
 K-3 image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white.<br><br>
 
-<img src="../screens/Pentax 9.jpg" alt="Pentax 9" style="width: 1000px;"/><br>
+<img src="../screens/Pentax 9.jpg" alt="Pentax 9" style="width: 750px;"/><br>
 K-01 image taken with viewfinder using "Multiple AF Points".<br><br>
 
-<img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 1000px;"/><br>
+<img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 750px;"/><br>
 Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.<br><br>
 
 
