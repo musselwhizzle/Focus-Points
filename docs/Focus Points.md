@@ -96,19 +96,34 @@ Note that this may depend on the specific camera make/model. E.g. for Fuji it do
 <br>
 
 ## 2. Overview and Basic Operation
-This section explains how to use the plugin.
+This section will explain how to install, configure, and use the plugin.
 
 ### 2.1 Installation
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pub.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pub.zip).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
 
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br>
 
-3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br>
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`.<br>
+_MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
+
+
+3. Find the folder where you keep your Lightroom plugins.<br> If you don't know where this is, open Lightroom, go to `File → Plug-in Manager` and click `Add`. This will open a "Select Folder" dialog in Lightroom's default folder for plugins. 
+
+
+4. To **update an existing installation**, first remove the folder containing the version of the plugin you want to update. You can delete the folder or rename it, for example, `to focuspoints.lrplugin.303` (for version 3.03). This allows you to easily revert to the previous version if the update causes issues.<br>
+Note: It is necessary to remove the plugin folder at OS level because deleting a plugin in Lightroom's Plug-in Manager only removes it from Lightroom's list of known plugins. The plugin folder and its contents on disk remain as they are.<br>
+Important: Copying the downloaded files over those in the existing folder is not recommended!
+
+
+5. Move the downloaded plugin folder `focuspoints.lrplugin` to the folder where you keep your Lightroom plugins.<br> 
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br><br>
 
 4. Open Lightroom and go to `File → Plug-in Manager`.<br>
+**New installation**:<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
 _MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br>
+**Update installation**:<br>
+Select the plug-in and click `Reload plug-in` (only applies if Lightroom is open during the installation of the update.)
+
 
 Once the plugin has been installed, choose one or more photos and select:
 * `Library → Plug-in Extras → Show Focus Point`, or  
@@ -176,12 +191,18 @@ The logging mechanism provides a fine-grained hierarchy of levels at which infor
 
 #### Update Check
 
-During operation, the plugin checks if an updated version is available for download.
-If an update is available, it will be highlighted, and you can click the download button to go to the website. To install the update, follow the steps in [Installation](#21-installation) and reload the plugin.
+The plugin checks for an updated version that is available to download.
+If so, this will be highlighted, and you can click the `Open URL` button to access the latest version's release notice. Follow the [installation instructions](#21-installation) to install the update.
 
-If an update is available, it will also be displayed in the status area of the Focus Point Viewer if the `Show message` checkbox is selected:
+The availability of an update will be indicated:
+- on the plugin's settings page (see above)
+- in the 'Plug-in status' section of the text pane (provided the `Display message` checkbox is selected)
+- in the log file
 
-<img src="../screens/UpdateAvailable.jpg" alt="Update Available" style="width: 1000px;"/>
+<img src="../screens/UpdateAvailable1.jpg" alt="Update Available" style="width: 1000px;"/><br>
+
+<img src="../screens/UpdateAvailable2.jpg" alt="Update Available" style="width: 1000px;"/>
+
 
 <br>
 
@@ -194,7 +215,7 @@ _Library → Plug-in Extras → Focus Point_
 Develop module:<br>
 _File → Plug-in Extras → Focus Point_
 
-<sup>1</sup> If you want to run the plugin on a series of photos, you need to select those photos in Lightroom _before_ running the plugin. Technically, it is no big deal to support browsing through the photos visible in the active source (collection, folder, etc.) using the "Next" and "Previous" buttons, starting from a single photo. However, the LR SDK does not provide a way to retrieve these images in the order in which they are currently sorted and displayed in Lightroom. Because this can lead to a confusing user experience, it is not supported.
+<sup>1</sup> If you want to run the plugin on a series of photos, you need to select those photos in Lightroom _before_ running the plugin. Technically, it is no big deal to support browsing through the photos visible in the active source (collection, folder, etc.) using the `Next image` and `Previous image` buttons, starting from a single photo. However, the LR SDK does not provide a way to retrieve these images in the order in which they are currently sorted and displayed in Lightroom. Because this can lead to a confusing user experience, it is not supported.
   
 
 
@@ -277,7 +298,7 @@ Click on the message to learn what it means and how to deal with it in case of a
 
 You can also access this information from the plugin window by clicking the link icon 🔗 next to the message:
 
-<img src="../screens/BasicOperation6.jpg" alt="Basic Operation 6" style="width: 750px;"/>
+<img src="../screens/BasicOperation6.jpg" alt="Basic Operation 6" style="width: 850px;"/>
 
 
 ### Plugin Status
@@ -391,11 +412,17 @@ The position and size of the PDAF focus points are determined by the camera mode
 
 Examples:
 
+<img src="../screens/Nikon 8.jpg" alt="Nikon 8" style="width: 1000px;"/><br>
+ D7500, Single Area shot. The AF point in focus is highlighted within the matrix of 51 AF points.<br><br>
+
 <img src="../screens/Nikon 1.jpg" alt="Nikon 1" style="width: 1000px;"/><br>
  D850, Single Area shot. The AF point in focus is highlighted within the matrix of 55 user-selectable AF points (out of a total of 153).<br><br>
 
 <img src="../screens/Nikon 3.jpg" alt="Nikon 3" style="width: 1000px;"/><br>
 D850, Group Area shot.<br><br>
+
+<img src="../screens/Nikon 9.jpg" alt="Nikon 9" style="width: 1000px;"/><br>
+D3S, Dynamic Area (3D tracking) shot.<br><br>
 
 <img src="../screens/Nikon 7.jpg" alt="Nikon 7" style="width: 1000px;"/><br>
 D6, Dynamic Area (3D tracking) shot. Multiple AF points were used to focus the image; the primary AF point is indicated by a center dot.<br><br>
@@ -404,7 +431,7 @@ D6, Dynamic Area (3D tracking) shot. Multiple AF points were used to focus the i
 D500, Live View shot. In Contrast AF modes, the focus "point" is an area that varies in size depending on the shooting conditions.<br><br>
 
 <img src="../screens/Nikon 6.jpg" alt="Nikon 6" style="width: 1000px;"/><br>
-D780, Live View shot, with several of the sensor base 81 AF areas engaged. The primary AF area is indicated by a center dot.<br><br>
+D780, Live View shot, with several of the sensor based 81 AF areas engaged. The primary AF area is indicated by a center dot.<br><br>
 
 
 ### 3.1.2 Nikon Mirrorless
@@ -413,14 +440,19 @@ Nikon's mirrorless cameras feature a hybrid autofocus system that uses both PDAF
 
 Early Z models had an 81-point (9x9) PDAF, which grew to 493 points (27x15) on the Z8/Z9. Unlike DSLRs, information about inactive (unused) focus points is less useful here, so it is not displayed.
 
-Example for Contrast AF (with subject detection "People"):
+Examples:
 
-<img src="../screens/Nikon 4.jpg" alt="Nikon 4" style="width: 1000px;"/>
+<img src="../screens/Nikon 4.jpg" alt="Nikon 4" style="width: 1000px;"/><br>
+Z9, subject detection "People".<br><br>
 
+<img src="../screens/Nikon 10.jpg" alt="Nikon 10" style="width: 1000px;"/><br>
+Z5 II, no subject detection.<br><br>
 
-Example for Phase Detect AF (PDAF):
+<img src="../screens/Nikon 5.jpg" alt="Nikon 5" style="width: 1000px;"/><br>
+Z7. The first Nikon mirrorless models tended to determine the focus point using the PDAF grid, especially for "flat" scenes.
 
-<img src="../screens/Nikon 5.jpg" alt="Nikon 5" style="width: 1000px;"/>
+<br> 
+
 
 ## 3.2 Canon
 
@@ -444,29 +476,29 @@ Unlike other manufacturers, Canon does not give a single value for the focus dis
 
 Like Nikon, Canon DSLRs support both PDAF and CAF. The position and size of the PDAF focus points are determined by the individual sensor AF layout of the camera model.
 
-PDAF-focused shot with multiple focus points used:
+<img src="../screens/Canon 1.jpg" alt="Canon 1" style="width: 1000px;"/><br>
+5D Mark IV. PDAF-focused shot with Servo AF Preset "Case 1" and multiple focus points used.<br><br>
 
-<img src="../screens/Canon 1.jpg" alt="Canon 1" style="width: 1000px;"/>
-
-CAF-focused shot using the 'green' color setting for better visibility:
-
-<img src="../screens/Canon 2.jpg" alt="Canon 2" style="width: 1000px;"/>
-
+<img src="../screens/Canon 2.jpg" alt="Canon 2" style="width: 1000px;"/><br>
+CAF-focused shot using the 'green' color for in-focus points for better visibility.<br><br>
 
 ### 3.1.2 Canon Mirrorless
 
 As with Nikon, Canon mirrorless models feature a hybrid autofocus system. However, in terms of focusing information stored in EXIF, the cooperation of PDAF and CAF is transparent. You can find the x, y positions of the focus point area(s) used to focus the shot as well as their width and height always in the same format.
 
-Shot with 'Animal' subject detection:
+<img src= "../screens/Canon 3.jpg" alt="Canon 3" style="width: 1000px;"/><br>
+R3. AI Servo AF with Case A preset and subject detection 'Animals'<br><br> 
 
-<img src= "../screens/Canon 3.jpg" alt="Canon 3" style="width: 1000px;"/>
+<img src= "../screens/Canon 5.jpg" alt="Canon 5" style="width: 1000px;"/><br>
+R5 Mark II. AI Servo AF with Case A preset and subject detection 'Auto'<br><br> 
 
-When capturing flat subjects, focus point display for Canon R-series can be funny sometimes:
+<img src= "../screens/Canon 6.jpg" alt="Canon 6" style="width: 1000px;"/><br>
+R1. AI Servo AF with Action Priority "On" and Sport Events "Basketball".<br><br> 
 
-<img src= "../screens/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/>
+<img src= "../screens/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/><br>
+R1. When capturing flat subjects, focus point display for Canon R-series can be funny sometimes. 
 
-Note: The display of `AF Tracking Sensitivity` and `AF Point Switching` in the above screenshot indicates that the respective values have not been properly decoded by ExifTool. If you suspect such a decoding problem and really want to see the real values, you can help to fix it by creating a topic in the ExifTool forum, describing the problem and being prepared to provide sample images. ExifTool is very well maintained and there is a good chance that problems reported will be fixed quickly (unless the topic is difficult).
-
+<br>
 
 ## 3.3 Sony
 
@@ -482,23 +514,38 @@ Supported features:
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Viewing Options](#viewing-options).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Viewing Options](#viewing-options).
 
-For Sony, the focus point of an image is given by the (x,y) coordinates in the `FocusLocation` tag. Newer models support an additional `FocusFrameSize` tag, which also specifies the size of the focus area. Custom settings for the focus frame size in the plugin's preferences only apply in cases where the focus frame size is not available in the metadata. In this case, medium and large focus boxes will show a center dot:
+In Sony models, the focus point of an image is specified by the (x, y) coordinates in the `FocusLocation` tag. Newer models also support a `FocusFrameSize` tag, which specifies the size of the focus area. Custom focus frame size settings in the plugin's preferences only apply when the focus frame size is not available in the metadata. In this case, medium and large focus boxes will display a center dot.
 
-<img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 1000px;"/>
+<img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 1000px;"/><br>
+α9. The focus point recorded by the camera corresponds to the center dot. The box is only there to make the dot more visible.<br><br>
 
-If focal plane phase detect AF points have been used during the focusing process, these will be displayed in grey color:
+<img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 1000px;"/><br>
+α9 II. If the focal plane phase detection autofocus points have been engaged during the focusing process, they will be displayed in grey.<br><br>
 
-<img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 1000px;"/>
 
-When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot:
+<img src= "../screens/Sony 2.jpg" alt="Sony 2" style="width: 1000px;"/><br>
+α9 III. When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot.<br><br>
 
-<img src= "../screens/Sony 2.jpg" alt="Sony 2" style="width: 1000px;"/>
 
 Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
 
-<img src= "../screens/Sony 3.jpg" alt="Sony 3" style="width: 1000px;"/>
+<img src= "../screens/Sony 5.jpg" alt="Sony 5" style="width: 750px;"/><br>
+α6600 Detected face indicated by a yellow frame. Detected eye in focus indicated by a red dot.<br><br>
 
-As for the settings in Sony's AF menu, in contrast to Canon and Nikon there's not much that you can find in EXIF makernotes. That's why the focus information section is rather empty. Sony also doesn't have a focus distance tag, so there is no Depth of Field section either.
+<img src= "../screens/Sony 3.jpg" alt="Sony 3" style="width: 1000px;"/><br>
+α7 IV. Two face detected, one eye in focus.<br><br>
+
+<img src= "../screens/Sony 6.jpg" alt="Sony 6" style="width: 750px;"/><br>
+RX10 IV. Detected face indicated by a yellow frame. Detected eye in focus indicated by a red dot.<br><br>
+
+
+In contrast to Canon and Nikon, there's not much that you can find in the EXIF maker notes for Sony's AF menu settings. This is why the focus information section is rather empty. Sony also lacks a focus distance tag, meaning there is no Depth of Field section.
+
+<img src= "../screens/Sony 4.jpg" alt="Sony 4" style="width: 750px;"/><br>
+α1 II. The number of known* AF settings entries is small compared to a Canon R5 Mark II.<br>
+
+\* not "known" means that information may be present in metadata but has not been identified and decoded yet.
+
 
 
 ## 3.4 Fuji
@@ -750,10 +797,10 @@ KP image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF p
 <img src="../screens/Pentax 8.jpg" alt="Pentax 8" style="width: 1000px;"/><br>
 K-3 image taken with viewfinder using "Expanded Area (S)" (9 AF points). The AF point in focus is displayed in red, the selected AF points are displayed in white.<br><br>
 
-<img src="../screens/Pentax 9.jpg" alt="Pentax 9" style="width: 1000px;"/><br>
+<img src="../screens/Pentax 9.jpg" alt="Pentax 9" style="width: 750px;"/><br>
 K-01 image taken with viewfinder using "Multiple AF Points".<br><br>
 
-<img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 1000px;"/><br>
+<img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 750px;"/><br>
 Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.<br><br>
 
 
@@ -832,7 +879,7 @@ The plugin comes with a ready-to-run, compiled Autohotkey script that assigns:<b
 
 The **FocusPointsHotkey.exe** file (for the English UI) can be found in the `ahk` folder of the focuspoints.lrplugin file. If you use the German language UI in Lightroom, use FocusPointsHotkey_de.exe instead.
 
-Note: If you are using a perpetual licence version of Lightroom Classic (Lightroom 5 or 6), rather than the subscription version, then you need to select **FocusPointsHotkey_LR.exe** (or FocusPointsHotkey_LR_de for German UI) from the `ahk` folder. Separate versions are necessary because the application window title that triggers the keyboard shortcut can differ between LR6/6 and LrC.     
+Note: If you are using a perpetual licence version of Lightroom Classic (Lightroom 5 or 6), rather than the subscription version, then you need to select **FocusPointsHotkey_LR.exe** (or FocusPointsHotkey_LR_de for German UI) from the `ahk` folder. Separate versions are necessary because the application window title that triggers the keyboard shortcut can differ between LR5/6 and LrC.     
 
 To activate the two shortcuts, run the executable file and also drag it to your Windows `Startup` folder, so that the shortcuts are automatically available each time you start Windows. A green<img src="../screens/autohotkey_icon.jpg" style="width: 36px;"/>icon in the system tray indicates that the script is active.
 
