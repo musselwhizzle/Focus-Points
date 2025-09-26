@@ -378,8 +378,11 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
   if count_substring(iconFileTemplate, "%%s") == 2 then
     -- two placeholders to be filled in
     fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
+  elseif string.find(iconFileTemplate, "center") then
+    -- center dot, fill in the color placeholder
+    fileName = string.format(iconFileTemplate, prefs.focusBoxColor)
   else
-    -- just the rotation placeholder to be filled in
+    -- fill in the rotation placeholder
     fileName = string.format(iconFileTemplate, fileRotationStr)
   end
 
