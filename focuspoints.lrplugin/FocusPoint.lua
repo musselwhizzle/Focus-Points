@@ -149,7 +149,7 @@ local function showDialog()
       -- a fatal error has occured for the current image: ask user whether to "Exit" the plugin
       -- or "Continue" with the next image in multi-image mode (which means repeat in single-image mode)
       if errorMsg then
-        userResponse = LrDialogs.confirm(msg, getPhotoFileName(), "Continue", "Stop")
+        userResponse = LrDialogs.confirm(errorMsg, getPhotoFileName(), "Continue", "Stop")
         if userResponse == "cancel" then
           -- Stop plugin operation
           return
