@@ -49,8 +49,8 @@ PentaxDelegates.supportedModels = {
     "k-3", "k-s1", "k-s2", "k-3 ii",                                            -- Pentax version 11
     "k-70", "k-1", "kp", "k-1 mark ii",                                         -- Pentax version 12
     "gr iii",                                                                   -- Pentax version 13
-    "k-3 mark iii", "gr iiix",                                                  -- Pentax version 14
-    "k-3 mark iii monochrome", "gr iv"                                          -- Pentax version 15
+    "k-3 mark iii", "gr iii hdf", "gr iiix",                                    -- Pentax version 14
+    "k-3 mark iii monochrome", "gr iiix hdf", "gr iv"                           -- Pentax version 15
 }
 
 -- Tag indicating that makernotes / AF section exists
@@ -100,7 +100,9 @@ function modelHasK3iiiAfInfo(model)
   return (model == "pentax k-3 mark iii")
       or (model == "pentax k-3 mark iii monochrome")
       or (model == "ricoh gr iii")
+      or (model == "ricoh gr iii hdf")
       or (model == "ricoh gr iiix")
+      or (model == "ricoh gr iiix hdf")
       or (model == "ricoh gr iv")
 end
 
