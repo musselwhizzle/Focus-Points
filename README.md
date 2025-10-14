@@ -16,7 +16,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 
 To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 
-**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1_pub.zip)** or see detailed **[installation instructions](#installation)**.
+**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.1.zip)** or see detailed **[installation instructions](#installation)**.
 
 If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
 
