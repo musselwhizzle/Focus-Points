@@ -14,7 +14,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::XMP;
 use Image::ExifTool::ZIP;
 
-$VERSION = '1.09';
+$VERSION = '1.10';
 
 # test for recognized OOXML document extensions
 my %isOOXML = (
@@ -27,6 +27,7 @@ my %isOOXML = (
     XLAM => 1,
     XLSX => 1,  XLSM => 1,  XLSB => 1,
     XLTX => 1,  XLTM => 1,
+    VSDX => 1,
 );
 
 # generate reverse lookup for file type based on MIME
@@ -57,7 +58,7 @@ my @vectorVals;
     VARS => { ID_FMT => 'none' },
     NOTES => q{
         The Office Open XML (OOXML) format was introduced with Microsoft Office 2007
-        and is used by file types such as DOCX, PPTX and XLSX.  These are
+        and is used by file types such as DOCX, PPTX, XLSX and VSDX.  These are
         essentially ZIP archives containing XML files.  The table below lists some
         tags which have been observed in OOXML documents, but ExifTool will extract
         any tags found from XML files of the OOXML document properties ("docProps")
