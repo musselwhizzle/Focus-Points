@@ -16,7 +16,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 
 To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
 
-**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.1.zip)** or see detailed **[installation instructions](#installation)**.
+**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.2.zip)** or see detailed **[installation instructions](#installation)**.
 
 If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
 
@@ -29,9 +29,9 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release
 
-## V3.1 updated September 22, 2025
+## V3.1.1 updated October 1, 2025
 
-### New features and changes:
+### New features and changes in V3.1.x:
 
 * **Camera support**
   * Pentax:
@@ -67,19 +67,15 @@ If you have any questions, comments or suggestions for improving this plugin, pl
  
      
 * **Bugfixes**
-  * RC1: Focus Point information is shown for Sony Non-AF lens [#287](https://github.com/musselwhizzle/Focus-Points/issues/287)
-  * RC1: Keyboard shortcuts to launch the plugin don't work on LR5/6
-  * PRE 6: Focus point display shows white space instead of the photo [#254](https://github.com/musselwhizzle/Focus-Points/issues/254)
-  * PRE 6: Plugin window very small when run in LR 5 [#284](https://github.com/musselwhizzle/Focus-Points/issues/284)
-  * PRE 5: Plugin stops with error message when run in LR 5/6 (VERSION.build) [#282](https://github.com/musselwhizzle/Focus-Points/issues/282) 
-  * PRE 5: Plugin stops with error message when run in LR 5 (Could not find namespace: LrApplicationView) [#283](https://github.com/musselwhizzle/Focus-Points/issues/283)
-  * Metadata table not properly displayed when develop settings are written to image file [#257](https://github.com/musselwhizzle/Focus-Points/issues/257)
+  * Center dot is missing for 'focus pixel' points on macOS [#294](https://github.com/musselwhizzle/Focus-Points/issues/294)
+  * Internal error (macOS) or crippled error message (Windows) for photo where the image file is missing on disk [#296](https://github.com/musselwhizzle/Focus-Points/issues/296)
+  * Support Ricoh GR III / IIIx HDF (High Diffusion Filter) models [#300](https://github.com/musselwhizzle/Focus-Points/issues/300)
 
 
 * **Other**
   * Keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
   * User documentation reworked
-  * Includes ExifTool 13.37 (Sep. 22, 2025)
+  * Includes ExifTool 13.41 (Nov. 05, 2025)
 
 
 * **Supported cameras:**
@@ -91,7 +87,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 **Installation steps**
 
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.1.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
+1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.2.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
 
 2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br>
 

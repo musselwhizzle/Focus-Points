@@ -49,7 +49,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::GPS;
 
-$VERSION = '3.21';
+$VERSION = '3.23';
 
 sub ProcessMOV($$;$);
 sub ProcessKeys($$$);
@@ -579,10 +579,28 @@ my %userDefined = (
             },
             Binary => 1,
         },{
+            Name => 'HighlightMarkers',
+            # (DJI Action 4, forum17700)
+            Notes => 'written by some DJI models',
+            Condition => '$$valPt =~ /^data.{4}hglg.{5}/s',
+            RawConv => q{
+                my $len = unpack 'x4N', $val;
+                return undef if $len < 13 or $len + 4 > length($val);
+                my $n = int(($len - 13) / 5);
+                my @a = map $_/1000, unpack "x17(xV)$n", $val;
+                return \@a;
+            },
+        },{
             Unknown => 1,
             Binary => 1,
         },
-        # (also Samsung WB750 uncompressed thumbnail data starting with "SDIC\0")
+        # DJI videos also have block of offset/size of various atoms, eg)
+        #        Atom name   ????        Offset      Size
+        #  0000: 63 6f 76 72 00 00 00 00 00 ed 6f da 00 0a 46 e0 [covr......o...F.]
+        #  0010: 73 6e 61 6c 00 00 00 00 00 f7 b6 d2 00 0a 46 e0 [snal..........F.]
+        #  0020: 68 67 6c 67 00 00 00 00 01 02 0a a2 00 00 00 21 [hglg...........!]
+        #  0030: 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 [................]
+        # (also Samsung WB750 uncompressed thumbnail data starting with "SDIC\0")        
     ],
     # fre1 - 4 bytes: "june" (Kodak PixPro SP360)
     frea => {
@@ -10515,9 +10533,9 @@ ItemID:         foreach $id (reverse sort { $a <=> $b } keys %$items) {
             $et->Warn($warnStr);
         }
     }
-    # tweak file type based on track content ("iso*" and "dash" ftyp only)
+    # tweak file type based on track content ("iso*" and "dash" ftyp only ["mp42" added in 13.39])
     if ($topLevel and $$et{FileType} and $$et{FileType} eq 'MP4' and
-        $$et{save_ftyp} and $$et{HasHandler} and $$et{save_ftyp} =~ /^(iso|dash)/ and
+        $$et{save_ftyp} and $$et{HasHandler} and $$et{save_ftyp} =~ /^(iso|dash|mp42)/ and
         $$et{HasHandler}{soun} and not $$et{HasHandler}{vide})
     {
         $et->OverrideFileType('M4A', 'audio/mp4');
