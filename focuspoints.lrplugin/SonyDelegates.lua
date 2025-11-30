@@ -33,6 +33,7 @@ SonyDelegates.metaKeyAfInfoSection = "Sony Model ID"
 -- AF-relevant tags
 SonyDelegates.metaKeyExifImageWidth              = "Exif Image Width"
 SonyDelegates.metaKeyExifImageHeight             = "Exif Image Height"
+SonyDelegates.metaKeyFullImageSize               = "Full Image Size"
 SonyDelegates.metaKeyAfFocusMode                 = "Focus Mode"
 SonyDelegates.metaKeyAfFocusLocation             = "Focus Location"
 SonyDelegates.metaKeyAfFocusPosition2            = "Focus Position 2"
@@ -67,6 +68,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
   -- Get orginal dimensions (in native aspect ratio)
   local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
 
+  --[[ commented out code that uses ExifImageWidth and ExifImageHeight
   -- Exif Image dimensions may differ from original for photos taken with non-native aspect ratio
   local exifImageWidth  = ExifUtils.findValue(metaData, SonyDelegates.metaKeyExifImageWidth)
   local exifImageHeight = ExifUtils.findValue(metaData, SonyDelegates.metaKeyExifImageHeight)
@@ -78,6 +80,23 @@ function SonyDelegates.getAfPoints(photo, metaData)
     FocusInfo.makerNotesFound = false
     return nil
   end
+  -- ]]
+
+  -- Exif Image dimensions may differ from original for photos taken with non-native aspect ratio
+  local fullImageSize = ExifUtils.findValue(metaData, SonyDelegates.metaKeyFullImageSize)
+  local exifImageWidth, exifImageHeight
+  if fullImageSize then
+    exifImageWidth, exifImageHeight = fullImageSize:match("^(%d+)x(%d+)$")
+  end
+  if not (fullImageSize and exifImageWidth and exifImageHeight) then
+    Log.logError("Sony",
+      string.format("No valid information on image width/height. Relevant tag '%s' not found",
+        SonyDelegates.metaKeyFullImageSize))
+    Log.logWarn("Sony", FocusInfo.msgImageFileNotOoc)
+    FocusInfo.makerNotesFound = false
+    return nil
+  end
+
 
   local result
 
