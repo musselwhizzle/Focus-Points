@@ -48,14 +48,23 @@ FocusPointPrefs.isUpdateAvailable  = nil
 -- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
 FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
+FocusPointPrefs.urlKofi            = "https://ko-fi.com/focuspoints"
 
 -- Keyboard shortcut definitions
-FocusPointPrefs.kbdShortcutsPrev            = "-pP"
-FocusPointPrefs.kbdShortcutsNext            = "+ nN"
+FocusPointPrefs.kbdShortcutsPrev            = "-"
+FocusPointPrefs.kbdShortcutsNext            = " +"
+FocusPointPrefs.kbdShortcutsFlag            = "p"
+FocusPointPrefs.kbdShortcutsUnflag          = "u"
+FocusPointPrefs.kbdShortcutsReject          = "x"
+FocusPointPrefs.kbdShortcutsFlagNext        = "P"
+FocusPointPrefs.kbdShortcutsUnflagNext      = "U"
+FocusPointPrefs.kbdShortcutsRejectNext      = "X"
+FocusPointPrefs.kbdShortcutsSetRating       = "012345"
+FocusPointPrefs.kbdShortcutsSetColor        = "6789"
 FocusPointPrefs.kbdShortcutsCheckLog        = "lL"
 FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
-FocusPointPrefs.kbdShortcutsUserManual      = "uUmM"
-FocusPointPrefs.kbdShortcutsExit            = "xX"
+FocusPointPrefs.kbdShortcutsUserManual      = "mM"
+FocusPointPrefs.kbdShortcutsClose           = "cC"
 
 --[[
   @@public void FocusPointPrefs.InitializePrefs()
@@ -68,6 +77,7 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.screenScaling      then	prefs.screenScaling   = 0 end
   if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
+  if not prefs.processMfInfo      then  prefs.processMfInfo   = false    end
   if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
   if not prefs.latestVersion      then	prefs.latestVersion   = _PLUGIN.version end
   if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
@@ -254,12 +264,12 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
         spacing = viewFactory:control_spacing(),
         viewFactory:popup_menu {
           title = "focusBoxColor",
-          value = bind ("focusBoxColor"),
+          value = bind("focusBoxColor"),
           width = dropDownWidth,
           items = {
-            { title = "Red",   value = "red" },
+            { title = "Red", value = "red" },
             { title = "Green", value = "green" },
-            { title = "Blue",  value = "blue" },
+            { title = "Blue", value = "blue" },
           }
         },
         viewFactory:static_text {
@@ -270,12 +280,12 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
         bind_to_object = prefs,
         viewFactory:popup_menu {
           title = "focusBoxSize",
-          value = bind ("focusBoxSize"),
+          value = bind("focusBoxSize"),
           width = dropDownWidth,
           items = {
-            { title = "Small",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall ] },
+            { title = "Small", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] },
             { title = "Medium", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeMedium] },
-            { title = "Large",  value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge ] },
+            { title = "Large", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge] },
           }
         },
         viewFactory:static_text {
@@ -283,6 +293,27 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
         },
       },
     },
+
+    {
+      title = "Processing Options",
+      viewFactory:row {
+        bind_to_object = prefs,
+        spacing = viewFactory:control_spacing(),
+        viewFactory:popup_menu {
+          title = "processMfInfo",
+          value = bind ("processMfInfo"),
+          width = dropDownWidth,
+          items = {
+            { title = "On",  value = true  },
+            { title = "Off", value = false },
+          }
+        },
+        viewFactory:static_text {
+          title = 'Process focus information for images taken with manual focus (MF)',
+        },
+      },
+    },
+
     {
       title = "Logging",
       viewFactory:row {

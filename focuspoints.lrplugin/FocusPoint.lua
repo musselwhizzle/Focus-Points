@@ -23,7 +23,8 @@ local LrBinding = import "LrBinding"
 local LrPrefs = import "LrPrefs"
 local LrColor           = import "LrColor"
 local LrHttp            = import "LrHttp"
-local LrSystemInfo      = import 'LrSystemInfo'
+local LrSystemInfo      = import "LrSystemInfo"
+local LrSelection       = import "LrSelection"
 
 require "FocusPointPrefs"
 require "FocusPointDialog"
@@ -48,7 +49,7 @@ local function showDialog()
     local userResponse
     local done
     local prefs = LrPrefs.prefsForPlugin( nil )
-    local props = LrBinding.makePropertyTable(context, { clicked = false })
+    local props = LrBinding.makePropertyTable(context)
     local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
     local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
     local runningLR5 = (LrApplication.versionTable().major == 5)
@@ -108,6 +109,9 @@ local function showDialog()
       -- Save link to current photo, eg. as supplementary information in user messages
       FocusPointDialog.currentPhoto = targetPhoto
 
+      -- Make the current photo the only selected one
+      -- otherwise potential flagging operations will apply to all photos selected for the plugin to work on
+      catalog:setSelectedPhotos(targetPhoto, {})
       LrFunctionContext.callWithContext("innerContext", function(dialogContext)
         dialogScope = LrDialogs.showModalProgressDialog {
           title = "Loading Data",
@@ -176,67 +180,135 @@ local function showDialog()
 
         local f = LrView.osFactory()
 
-        local lastKey
-        props.text = ""
-        props.clicked = false
+        local previewText  = ""
+        props.shortcutText = ""
         local kbdHandler = f:edit_field {
-          value = LrView.bind('text'),
-          width  = 1,     -- tiny width
-          height = 1,     -- tiny height
+          value = LrView.bind('shortcutText', props),
+          width  = 1, height = 1,   -- set tiny dimensions to make the field invisible
           border_enabled = false, -- optionally suppress borders
           immediate = true,
-          validate = function(view, value)
-            local key = string.sub(value, -1) -- look at the last char entered
-            if key and key ~= "" and key ~= lastKey then
-              --[[ @TODO Figure out the reason to use lastKey and if/how it can be avoided
-                Observations:
-                (1) Without the 'and key ~= lastKey' condition next and prev will skip one image;
-                    'next' will go the next but one, 'prev' to the penultimate image.
-                (2) When opening a URL or logfile, lastKey needs to set to nil otherwise entering the same shortcut
-                    again when returning to the plugin (e.g. '?' or 'L' will have no function
+          validate = function(view, text)
+          --[[
+            Use the validate() function to interpret user keystrokes as shortcuts
+            BUT, attention: for each keystoke, validate() is called twice!!
+            1. “Preview” validation — non-committal check, to preview the proposed change of text
+            2. “Commit”  validation — actual update, to commit the change in the UI
+            3. Having two phases is pointless, because 'text' is the same and function result doesn't make a difference
+            => need to detect "Preview" vs "Commit" and skip one if this, otherwise shortcuts will be executed twice
+               e.g. 'next' will go the next but one, 'prev' to the penultimate image.
               --]]
-              lastKey = key
-              -- check if last input is a shortcut and if so, trigger assigned action
-              if string.find(FocusPointPrefs.kbdShortcutsExit, key, 1, true) or (MAC_ENV and key == ".") then
-                LrDialogs.stopModalWithResult(view, "ok")
+            if text == previewText then
+              -- call for "Commit" validation -> exit (because shortcut has already been processed in "Preview")
+              Log.logDebug("FocusPoint",
+                string.format("kbdHandler: Commit called with '%s'. Preview '%s'", text, previewText))
+              previewText = ""  -- reset for next Preview
+              return true
+            else
+              -- call for "Preview" validation -> save text and process
+              Log.logDebug("FocusPoint",
+                string.format("kbdHandler: Preview called with '%s'. lastCommitted '%s'", text, lastCommitted))
+              previewText = text
+            end
+            -- Get the most recent keystroke, check if it's a shortcut, and process it if it is
+            local keystroke = string.sub(text, -1) -- look at the last character entered
+            if keystroke ~= "" then
 
               -- next image
-              elseif string.find(FocusPointPrefs.kbdShortcutsNext, key, 1, true) then
+              if string.find(FocusPointPrefs.kbdShortcutsNext, keystroke, 1, true) then
                 if #selectedPhotos > 1 then
                   current = (current % #selectedPhotos) + 1
                   LrDialogs.stopModalWithResult(view, "next")
                 end
 
               -- previous image
-              elseif string.find(FocusPointPrefs.kbdShortcutsPrev, key, 1, true) then
+              elseif string.find(FocusPointPrefs.kbdShortcutsPrev, keystroke, 1, true) then
                 if #selectedPhotos > 1 then
                   current =  (current - 2) % #selectedPhotos + 1
                   LrDialogs.stopModalWithResult(view, "previous")
                 end
+              -- Flag/pick image
+              elseif string.find(FocusPointPrefs.kbdShortcutsFlag, keystroke, 1, true) then
+                if LrSelection.getFlag() == 1 then   -- pick
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsPick()
+                end
+              -- Flag/pick image and go to next image
+              elseif string.find(FocusPointPrefs.kbdShortcutsFlagNext, keystroke, 1, true) then
+                if LrSelection.getFlag() == 1 then   -- pick
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsPick()
+                end
+                if #selectedPhotos > 1 then
+                  current = (current % #selectedPhotos) + 1
+                  LrDialogs.stopModalWithResult(view, "next")
+                end
+              -- Unflag image
+              elseif string.find(FocusPointPrefs.kbdShortcutsUnflag, keystroke, 1, true) then
+                LrSelection.removeFlag()
+              -- Unflag image and go to next image
+              elseif string.find(FocusPointPrefs.kbdShortcutsUnflagNext, keystroke, 1, true) then
+                LrSelection.removeFlag()
+                if #selectedPhotos > 1 then
+                  current = (current % #selectedPhotos) + 1
+                  LrDialogs.stopModalWithResult(view, "next")
+                end
+              -- Reject image
+              elseif string.find(FocusPointPrefs.kbdShortcutsReject, keystroke, 1, true) then
+                if LrSelection.getFlag() == -1 then   -- reject
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsReject()
+                end
+              -- Reject image and go to next image
+              elseif string.find(FocusPointPrefs.kbdShortcutsRejectNext, keystroke, 1, true) then
+                if LrSelection.getFlag() == -1 then   -- reject
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsReject()
+                end
+                if #selectedPhotos > 1 then
+                  current = (current % #selectedPhotos) + 1
+                  LrDialogs.stopModalWithResult(view, "next")
+                end
+              -- Set rating 0, 1-5 stars
+              elseif string.find(FocusPointPrefs.kbdShortcutsSetRating, keystroke, 1, true) then
+                LrSelection.setRating(keystroke)
+              -- Set color label 6-9 (red, yellow, green, blue)
+              elseif string.find(FocusPointPrefs.kbdShortcutsSetColor, keystroke, 1, true) then
+                if     keystroke == '6' then LrSelection.toggleRedLabel()
+                elseif keystroke == '7' then LrSelection.toggleYellowLabel()
+                elseif keystroke == '8' then LrSelection.toggleGreenLabel()
+                elseif keystroke == '9' then LrSelection.toggleBlueLabel()
+                end
               -- open user manual
-              elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, key, 1, true) then
+              elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, keystroke, 1, true) then
                 LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
-                lastKey = nil
+
               -- troubleshooting
-              elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, key, 1, true) then
+              elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, keystroke, 1, true) then
                 local statusCode = FocusInfo.getStatusCode()
                 if statusCode > 1 then
                   LrTasks.startAsyncTask(function()
                     LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
                   end)
-                  lastKey = nil
                 end
               -- check log
-              elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, key, 1, true) then
+              elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, keystroke, 1, true) then
                 if prefs.loggingLevel ~= "NONE" then
                   openFileInApp(Log.getFileName())
                 end
-                lastKey = nil
               end
+              -- Close
+              elseif string.find(FocusPointPrefs.kbdShortcutsClose, keystroke, 1, true)
+              or (MAC_ENV and keystroke == ".") then
+                LrDialogs.stopModalWithResult(view, "ok")
             end
             return true
           end,
         }
+        props.clicked = false
         userResponse = LrDialogs.presentModalDialog {
           title = "Focus-Points (Version " .. getPluginVersion() .. ")",
           contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdHandler),
@@ -245,8 +317,8 @@ local function showDialog()
             f:push_button {
               title = buttonPrevImage,
             enabled = #selectedPhotos > 1,
-            tooltip = "Load previous image from selection.\nKeyboard shortcut: '-' or 'P'",
-            action = (function(button)
+              tooltip = "Load previous image from selection (-)",
+              action = function(button)
                 -- Prevent multiple executions - known LrC SDK quirk!
                 if props.clicked then return end
                 props.clicked = true
@@ -255,17 +327,45 @@ local function showDialog()
                 current =  (current - 2) % #selectedPhotos + 1
                 LrDialogs.stopModalWithResult(button, "previous")
               end
-            end)
+              end
           },
           f:spacer { width = 20 },    -- space before the file name
           f:static_text{
             title = getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")",
             },
+            f:spacer { width = 0 },    -- space before the pick/reject flags
+            f:static_text {
+              title = string.char(0xE2, 0x9C, 0x94),
+              text_color = LrColor(0, 0.66, 0),
+              font = "<system/bold>",
+              tooltip = "Flag as Pick (P)",
+              mouse_down = function()
+                local flag = LrSelection.getFlag()
+                if LrSelection.getFlag() == 1 then   -- pick
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsPick()
+                end
+              end,
+            },
+            f:static_text {
+              title = string.char(0xE2, 0x9D, 0x8C),
+              text_color = LrColor("red"),
+              font = "<system/bold>",
+              tooltip = "Set as Rejected (X)",
+              mouse_down = function()
+                if LrSelection.getFlag() == -1 then  -- reject
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsReject()
+                end
+              end,
+            },
             f:spacer { width = 20 },    -- space before the next button
             f:push_button {
               title = buttonNextImage,
             enabled = #selectedPhotos > 1,
-            tooltip = "Load next image from selection\nKeyboard shortcut: space bar, '+' or 'N'",
+              tooltip = "Load next image from selection (Space bar, +)",
             action = function(button)
                 -- Prevent multiple executions - known LrC SDK quirk!
                 if props.clicked then return end
@@ -277,19 +377,33 @@ local function showDialog()
               end
             end
             },
+            f:spacer { width = 100 },
+            f:picture {
+              value = _PLUGIN:resourceId("assets/icons/kofi.png")
+            },
+            f:spacer { width = 5 },
+            f:static_text {
+              title = "Support me on Ko-fi !",
+              text_color = LrColor("blue"),
+              tooltip = "Click to make a donation on Ko-fi",
+              immediate = true,
+              mouse_down = function(_view)
+                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlKofi) end)
+              end,
+            },
           f:spacer{fill_horizontal = 1},
           f:static_text {
             title = "User Manual " .. string.char(0xF0, 0x9F, 0x94, 0x97),
             text_color = LrColor("blue"),
-            tooltip = "Click to open user documentation\nKeyboard shortcut: 'U' or 'M'",
+              tooltip = "Click to open user documentation (M)",
             immediate = true,
             mouse_down = function(_view)
               LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
             end,
           },
-        f:spacer { width = 20 },    -- space before 'Exit' button
+            f:spacer { width = 20 },    -- space before 'Close' button
         },
-          actionVerb = "Exit",
+          actionVerb = "Close",
           cancelVerb = "< exclude >",
         }
         -- Proceed to selected photo

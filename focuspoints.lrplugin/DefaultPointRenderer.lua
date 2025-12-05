@@ -44,7 +44,7 @@ DefaultPointRenderer.funcGetAfInfo   = nil
 -- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
 --]]
 function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDisplayHeight)
-  -- local prefs = LrPrefs.prefsForPlugin( nil )
+
   local fpTable = DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
   local viewFactory = LrView.osFactory()
 
@@ -98,7 +98,6 @@ end
 --   useSmallIcons
 --]]
 function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
---  local metaData = ExifUtils.readMetaDataAsTable(photo)
 
   local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local userRotation, userMirroring = DefaultPointRenderer.getUserRotationAndMirroring(photo)
@@ -188,7 +187,7 @@ function DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDi
   end
 
   FocusInfo.manualFocusUsed = DefaultPointRenderer.funcManualFocusUsed(photo, DefaultDelegates.metaData)
-  if FocusInfo.manualFocusUsed then
+  if FocusInfo.manualFocusUsed and not prefs.processMfInfo then
     Log.logWarn("DefaultPointRenderer", "Manual focus mode used, no autofocus points recorded")
     return nil
   end
