@@ -191,8 +191,8 @@ local function showDialog()
           --[[
             Use the validate() function to interpret user keystrokes as shortcuts
             BUT, attention: for each keystoke, validate() is called twice!!
-            1. “Preview” validation — non-committal check, to preview the proposed change of text
-            2. “Commit”  validation — actual update, to commit the change in the UI
+            1. "Preview" validation - non-committal check, to preview the proposed change of text
+            2. "Commit"  validation - actual update, to commit the change in the UI
             3. Having two phases is pointless, because 'text' is the same and function result doesn't make a difference
             => need to detect "Preview" vs "Commit" and skip one if this, otherwise shortcuts will be executed twice
                e.g. 'next' will go the next but one, 'prev' to the penultimate image.
