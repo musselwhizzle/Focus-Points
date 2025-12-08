@@ -127,7 +127,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
         if focusFrameSize then
           local w, h = focusFrameSize:match("^(%d+)x(%d+)$")
           Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s, w=%s, h=%s]",
-            math.floor(x), math.floor(y)), w, h)
+            math.floor(x), math.floor(y), w, h))
           result = DefaultPointRenderer.createFocusFrame(x, y, w, h)
         else
           Log.logInfo("Sony", string.format("Focus point detected at [x=%s, y=%s]",
