@@ -46,7 +46,7 @@ DefaultPointRenderer.funcGetAfInfo   = nil
 function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDisplayHeight)
 
   local fpTable = DefaultPointRenderer.prepareRendering(photo, photoDisplayWidth, photoDisplayHeight)
-  local viewFactory = LrView.osFactory()
+  local f = LrView.osFactory()
 
   local photoView, overlayViews
 
@@ -55,16 +55,16 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
   if WIN_ENV then
     local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
     MogrifyUtils.drawFocusPoints(photo,fpTable)
-    photoView = viewFactory:view {
-      viewFactory:picture {
-        width  = photoDisplayWidth,
+    photoView = f:view {
+      f:picture {
+        width = photoDisplayWidth,
         height = photoDisplayHeight,
         value = fileName,
       },
     }
   else
     -- create base view, i.e. only the image
-    local imageView = viewFactory:catalog_photo {
+    local imageView = f:catalog_photo {
       width = photoDisplayWidth,
       height = photoDisplayHeight,
       photo = photo,
@@ -74,7 +74,7 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
 
     if overlayViews then
       -- create compound view incl. overlays
-      photoView = viewFactory:view {
+      photoView = f:view {
         imageView, overlayViews,
         place = 'overlapping',
       }
@@ -82,6 +82,10 @@ function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDis
       -- no overlays, just display the image
       photoView = imageView
     end
+  end
+
+  photoView.mouse_down = function()
+    return true
   end
 
   return photoView
@@ -387,10 +391,10 @@ function DefaultPointRenderer.createPointView(x, y, rotation, horizontalMirrorin
 
   Log.logDebug("createPointView", "fileName: " .. fileName)
 
-  local viewFactory = LrView.osFactory()
+  local f = LrView.osFactory()
 
-  local view = viewFactory:view {
-    viewFactory:picture {
+  local view = f:view {
+    f:picture {
       value = _PLUGIN:resourceId(fileName)
     },
     margin_left = x - anchorX,

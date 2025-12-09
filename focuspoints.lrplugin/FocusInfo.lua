@@ -107,7 +107,7 @@ FocusInfo.status = {
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
-local linkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
+local utfLinkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
 
 --[[
   @@public FocusInfo.initialize()
@@ -167,9 +167,25 @@ end
 function FocusInfo.addRow(key, value)
   local f = LrView.osFactory()
   return f:row {
-    f:column{ f:static_text{ title = key .. ":", font="<system>", alignment="left"  }},
-    f:spacer{ fill_horizontal = 1},
-    f:column{ f:static_text{ title = value,      font="<system>", alignment="right" }}
+    f:column {
+      f:static_text{
+        title = key .. ":",
+        font="<system>",
+        alignment="left",
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
+      }
+    },
+    f:spacer{ fill_horizontal = 1 },
+    f:column{
+      f:static_text{
+        title = value,
+        font="<system>",
+        alignment="right",
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
+      },
+    },
   }
 end
 
@@ -214,11 +230,14 @@ end
 --]]
 function FocusInfo.errorMessage(message)
   local f = LrView.osFactory()
-  return f:column{
-    f:static_text{
+  return f:column {
+    f:static_text {
       title = message,
-      text_color=LrColor("red"),
-      font="<system/bold>"}
+      text_color = LrColor("red"),
+      font = "<system/bold>",
+      mouse_down = function() return true end,
+      mouse_up   = function() return true end,
+    }
   }
 end
 
@@ -261,6 +280,8 @@ function FocusInfo.statusMessage(statusCode)
         title      = FocusInfo.status[statusCode].message,
         text_color = FocusInfo.status[statusCode].color,
         tooltip    = FocusInfo.status[statusCode].tooltip,
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
       }
     }
   else
@@ -269,10 +290,12 @@ function FocusInfo.statusMessage(statusCode)
         title      = FocusInfo.status[statusCode].message,
         text_color = FocusInfo.status[statusCode].color,
         tooltip    = FocusInfo.status[statusCode].tooltip
-                     .. "\nClick " .. linkSymbol .. " to open troubleshooting information or press '?'",
+                     .. "\nClick " .. utfLinkSymbol .. " to open troubleshooting information or press '?'",
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
       },
       f:static_text {
-        title = linkSymbol,
+        title = utfLinkSymbol,
         text_color = LrColor(0, 0.25, 1),
         tooltip = "Open troubleshooting information\nKeyboard shortcut: '?'",
         immediate = true,
@@ -302,7 +325,7 @@ function FocusInfo.pluginStatus()
     updateMessage =
       f:row {
         f:static_text {
-          title = "Update available " .. string.char(0xF0, 0x9F, 0x94, 0x97),
+          title = "Update available " .. utfLinkSymbol,
           text_color=LrColor("blue"), font="<system>",
           tooltip = "Click to open update release notes",
           immediate = true,
@@ -326,13 +349,19 @@ function FocusInfo.pluginStatus()
   -- Compose status message
   local statusMsg
   if Log.errorsEncountered then
-    statusMsg = f:static_text {title = "Errors encountered", text_color=LrColor("red"), font="<system>"}
+    statusMsg = f:static_text {
+                  title = "Errors encountered", text_color=LrColor("red"), font="<system>",
+                  mouse_down = function() return true end, mouse_up = function() return true end }
   elseif Log.warningsEncountered then
-    statusMsg = f:static_text {title = "Warnings encountered", text_color=LrColor("orange"), font="<system>"}
+    statusMsg = f:static_text {
+                  title = "Warnings encountered", text_color=LrColor("orange"), font="<system>",
+                  mouse_down = function() return true end, mouse_up = function() return true end }
   else
     if (prefs.loggingLevel ~= "AUTO") and (prefs.loggingLevel ~= "NONE") and Log.fileExists() then
       -- if user wants an extended log this should be easily accessible
-      statusMsg = f:static_text {title = "Logging information collected", font="<system>"}
+      statusMsg = f:static_text {
+                    title = "Logging information collected", font="<system>",
+                    mouse_down = function() return true end, mouse_up = function() return true end }
     else
       if prefs.checkForUpdates and FocusPointPrefs.updateAvailable() then
         return
@@ -353,7 +382,8 @@ function FocusInfo.pluginStatus()
           f:group_box {title = "Plug-in status:  ", fill = 1, font = "<system/bold>",
               f:row {statusMsg},
               f:row{
-                f:static_text {title = 'Turn on logging "Auto" for more details', font="<system>"}
+                f:static_text {title = 'Turn on logging "Auto" for more details', font="<system>",
+                               mouse_down = function() return true end, mouse_up = function() return true end }
               },
              updateMessage,
           },

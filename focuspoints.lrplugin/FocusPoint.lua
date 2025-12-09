@@ -24,7 +24,6 @@ local LrPrefs = import "LrPrefs"
 local LrColor           = import "LrColor"
 local LrHttp            = import "LrHttp"
 local LrSystemInfo      = import "LrSystemInfo"
-local LrSelection       = import "LrSelection"
 
 require "FocusPointPrefs"
 require "FocusPointDialog"
@@ -50,10 +49,21 @@ local function showDialog()
     local done
     local prefs = LrPrefs.prefsForPlugin( nil )
     local props = LrBinding.makePropertyTable(context)
-    local buttonNextImage = "Next image " .. string.char(0xe2, 0x96, 0xb6)
-    local buttonPrevImage = string.char(0xe2, 0x97, 0x80) .. " Previous image"
-    local runningLR5 = (LrApplication.versionTable().major == 5)
+    local LR5 = (LrApplication.versionTable().major == 5)
 
+    -- special Unicode characters used as replacement for icons
+    local utfLargeSquare           = string.char(0xe2, 0xac, 0x9b)
+    local utfRightPointingTriangle = string.char(0xe2, 0x96, 0xb6)
+    local utfLeftPointingTriangle  = string.char(0xe2, 0x97, 0x80)
+    local utfLinkSymbol            = string.char(0xF0, 0x9F, 0x94, 0x97)
+    local utfCheckMark             = string.char(0xE2, 0x9C, 0x94)
+    local utfCrossMark             = string.char(0xE2, 0x9D, 0x8C)
+    local buttonNextImage = "Next image " .. utfRightPointingTriangle
+    local buttonPrevImage =  utfLeftPointingTriangle .. " Previous image"
+    local LrSelection
+    if not LR5 then
+      LrSelection = import "LrSelection"
+    end
     -- To avoid nil pointer errors in case of "dirty" installation (copy new over old files)
     FocusPointPrefs.InitializePrefs(prefs)
     -- Initialize logging, log system level information
@@ -74,7 +84,7 @@ local function showDialog()
     -- if launched in Develop module switch to Library to enforce that a preview of the image is available
     -- must switch to loupe view because only in this view previews will be rendered
     -- perform module switch as early as possible to give Library time to create a preview if none exists
-    if WIN_ENV and not runningLR5 then
+    if WIN_ENV and not LR5 then
       local done
       LrTasks.startAsyncTask(function()
         local LrApplicationView = import 'LrApplicationView'
@@ -197,6 +207,18 @@ local function showDialog()
             => need to detect "Preview" vs "Commit" and skip one if this, otherwise shortcuts will be executed twice
                e.g. 'next' will go the next but one, 'prev' to the penultimate image.
               --]]
+            local function gotoNextPhoto()
+              if #selectedPhotos > 1 then
+                current = (current % #selectedPhotos) + 1
+                LrDialogs.stopModalWithResult(view, "next")
+              end
+            end
+            local function gotoPrevPhoto()
+              if #selectedPhotos > 1 then
+                current =  (current - 2) % #selectedPhotos + 1
+                LrDialogs.stopModalWithResult(view, "previous")
+              end
+            end
             if text == previewText then
               -- call for "Commit" validation -> exit (because shortcut has already been processed in "Preview")
               Log.logDebug("FocusPoint",
@@ -215,72 +237,64 @@ local function showDialog()
 
               -- next image
               if string.find(FocusPointPrefs.kbdShortcutsNext, keystroke, 1, true) then
-                if #selectedPhotos > 1 then
-                  current = (current % #selectedPhotos) + 1
-                  LrDialogs.stopModalWithResult(view, "next")
-                end
+                gotoNextPhoto()
 
               -- previous image
               elseif string.find(FocusPointPrefs.kbdShortcutsPrev, keystroke, 1, true) then
-                if #selectedPhotos > 1 then
-                  current =  (current - 2) % #selectedPhotos + 1
-                  LrDialogs.stopModalWithResult(view, "previous")
-                end
+                gotoPrevPhoto()
+
               -- Flag/pick image
-              elseif string.find(FocusPointPrefs.kbdShortcutsFlag, keystroke, 1, true) then
-                if LrSelection.getFlag() == 1 then   -- pick
+              elseif string.find(FocusPointPrefs.kbdShortcutsFlag, keystroke, 1, true) and not LR5 then
+                if LrSelection.getFlag() == 1 then
                   LrSelection.removeFlag()
                 else
                   LrSelection.flagAsPick()
                 end
-              -- Flag/pick image and go to next image
-              elseif string.find(FocusPointPrefs.kbdShortcutsFlagNext, keystroke, 1, true) then
-                if LrSelection.getFlag() == 1 then   -- pick
-                  LrSelection.removeFlag()
-                else
-                  LrSelection.flagAsPick()
+                if string.find(FocusPointPrefs.kbdShortcutsFlagNext, keystroke, 1, true) then
+                  gotoNextPhoto()
                 end
-                if #selectedPhotos > 1 then
-                  current = (current % #selectedPhotos) + 1
-                  LrDialogs.stopModalWithResult(view, "next")
-                end
+
               -- Unflag image
-              elseif string.find(FocusPointPrefs.kbdShortcutsUnflag, keystroke, 1, true) then
+              elseif string.find(FocusPointPrefs.kbdShortcutsUnflag, keystroke, 1, true) and not LR5 then
                 LrSelection.removeFlag()
-              -- Unflag image and go to next image
-              elseif string.find(FocusPointPrefs.kbdShortcutsUnflagNext, keystroke, 1, true) then
-                LrSelection.removeFlag()
-                if #selectedPhotos > 1 then
-                  current = (current % #selectedPhotos) + 1
-                  LrDialogs.stopModalWithResult(view, "next")
+                if string.find(FocusPointPrefs.kbdShortcutsUnflagNext, keystroke, 1, true) then
+                  gotoNextPhoto()
                 end
               -- Reject image
-              elseif string.find(FocusPointPrefs.kbdShortcutsReject, keystroke, 1, true) then
+              elseif string.find(FocusPointPrefs.kbdShortcutsReject, keystroke, 1, true) and not LR5 then
                 if LrSelection.getFlag() == -1 then   -- reject
                   LrSelection.removeFlag()
                 else
                   LrSelection.flagAsReject()
                 end
-              -- Reject image and go to next image
-              elseif string.find(FocusPointPrefs.kbdShortcutsRejectNext, keystroke, 1, true) then
-                if LrSelection.getFlag() == -1 then   -- reject
-                  LrSelection.removeFlag()
-                else
-                  LrSelection.flagAsReject()
+                if string.find(FocusPointPrefs.kbdShortcutsRejectNext, keystroke, 1, true) then
+                  gotoNextPhoto()
                 end
-                if #selectedPhotos > 1 then
-                  current = (current % #selectedPhotos) + 1
-                  LrDialogs.stopModalWithResult(view, "next")
-                end
+
               -- Set rating 0, 1-5 stars
-              elseif string.find(FocusPointPrefs.kbdShortcutsSetRating, keystroke, 1, true) then
-                LrSelection.setRating(keystroke)
+              elseif string.find(FocusPointPrefs.kbdShortcutsSetRating, keystroke, 1, true) and not LR5 then
+                local p = string.find(FocusPointPrefs.kbdShortcutsSetRating, keystroke, 1, true)
+                if p >= 11 then p = p -1 end   --because § occupies two bytes
+                local r = (p - 1) % 6
+                  Log.logDebug("FocusPoint",
+                    string.format("Set rating: p=%s, r=%s", p, r))
+                local rating = LrSelection.getRating()
+                if rating == r then r = 0 end   -- clear existing rating
+                LrSelection.setRating(r)
+                if p > 6 then
+                  gotoNextPhoto()
+                end
               -- Set color label 6-9 (red, yellow, green, blue)
-              elseif string.find(FocusPointPrefs.kbdShortcutsSetColor, keystroke, 1, true) then
-                if     keystroke == '6' then LrSelection.toggleRedLabel()
-                elseif keystroke == '7' then LrSelection.toggleYellowLabel()
-                elseif keystroke == '8' then LrSelection.toggleGreenLabel()
-                elseif keystroke == '9' then LrSelection.toggleBlueLabel()
+              elseif string.find(FocusPointPrefs.kbdShortcutsSetColor, keystroke, 1, true) and not LR5 then
+                local p = string.find(FocusPointPrefs.kbdShortcutsSetColor, keystroke, 1, true)
+                local c = ((p - 1) % 4) + 6
+                if     c == 6 then LrSelection.toggleRedLabel()
+                elseif c == 7 then LrSelection.toggleYellowLabel()
+                elseif c == 8 then LrSelection.toggleGreenLabel()
+                elseif c == 9 then LrSelection.toggleBlueLabel()
+                end
+                if p > 4 then
+                  gotoNextPhoto()
                 end
               -- open user manual
               elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, keystroke, 1, true) then
@@ -299,11 +313,12 @@ local function showDialog()
                 if prefs.loggingLevel ~= "NONE" then
                   openFileInApp(Log.getFileName())
                 end
-              end
+
               -- Close
               elseif string.find(FocusPointPrefs.kbdShortcutsClose, keystroke, 1, true)
               or (MAC_ENV and keystroke == ".") then
                 LrDialogs.stopModalWithResult(view, "ok")
+              end
             end
             return true
           end,
@@ -313,6 +328,7 @@ local function showDialog()
           title = "Focus-Points (Version " .. getPluginVersion() .. ")",
           contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdHandler),
           accessoryView = f:row {
+            margin_left = 0,
             spacing = 0,     -- removes uniform spacing; we control it manually
             f:push_button {
               title = buttonPrevImage,
@@ -329,39 +345,12 @@ local function showDialog()
               end
               end
           },
-          f:spacer { width = 20 },    -- space before the file name
+            f:spacer { width = 10 },    -- space before the file name
           f:static_text{
             title = getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")",
             },
-            f:spacer { width = 0 },    -- space before the pick/reject flags
-            f:static_text {
-              title = string.char(0xE2, 0x9C, 0x94),
-              text_color = LrColor(0, 0.66, 0),
-              font = "<system/bold>",
-              tooltip = "Flag as Pick (P)",
-              mouse_down = function()
-                local flag = LrSelection.getFlag()
-                if LrSelection.getFlag() == 1 then   -- pick
-                  LrSelection.removeFlag()
-                else
-                  LrSelection.flagAsPick()
-                end
-              end,
-            },
-            f:static_text {
-              title = string.char(0xE2, 0x9D, 0x8C),
-              text_color = LrColor("red"),
-              font = "<system/bold>",
-              tooltip = "Set as Rejected (X)",
-              mouse_down = function()
-                if LrSelection.getFlag() == -1 then  -- reject
-                  LrSelection.removeFlag()
-                else
-                  LrSelection.flagAsReject()
-                end
-              end,
-            },
-            f:spacer { width = 20 },    -- space before the next button
+
+            f:spacer { width = 10 },    -- space before the next button
             f:push_button {
               title = buttonNextImage,
             enabled = #selectedPhotos > 1,
@@ -377,13 +366,129 @@ local function showDialog()
               end
             end
             },
-            f:spacer { width = 100 },
+            f:spacer { width = 30 },    -- space before the pick/reject flags
+            f:static_text {
+              title = utfCheckMark,
+              text_color = LrColor(0, 0.66, 0),
+              font = "<system/bold>",
+              tooltip = "Flag as Pick (P)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                if LrSelection.getFlag() == 1 then   -- pick
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsPick()
+                end
+              end,
+            },
+            f:static_text {
+              title = utfCrossMark,
+              text_color = LrColor("red"),
+              font = "<system/bold>",
+              tooltip = "Set as Rejected (X)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                if LrSelection.getFlag() == -1 then  -- reject
+                  LrSelection.removeFlag()
+                else
+                  LrSelection.flagAsReject()
+                end
+              end,
+            },
+            f:spacer { width = 10 },    -- space before the rating controls
+            f:static_text {
+              title = '1',
+              tooltip = "Set rating (1)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.setRating(1)
+              end,
+            },
+            f:static_text {
+              title = '2',
+              tooltip = "Set rating (2)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.setRating(2)
+              end,
+            },
+            f:static_text {
+              title = '3',
+              tooltip = "Set rating (3)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.setRating(3)
+              end,
+            },
+            f:static_text {
+              title = '4',
+              tooltip = "Set rating (4)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.setRating(4)
+              end,
+            },
+            f:static_text {
+              title = '5',
+              tooltip = "Set rating (5)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.setRating(5)
+              end,
+            },
+            f:spacer { width = 10 },    -- space before the color controls
+            f:static_text {
+              title = utfLargeSquare,
+              text_color = LrColor(240/255, 80/255, 80/255),
+              tooltip = "Set red label (6)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.toggleRedLabel()
+              end,
+            },
+            f:static_text {
+              title = utfLargeSquare,
+              text_color = LrColor(240/255, 230/255, 0),
+              tooltip = "Set yellow label (7)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.toggleYellowLabel()
+              end,
+            },
+            f:static_text {
+              title = utfLargeSquare,
+              text_color = LrColor(90/255, 200/255, 75/255),
+              tooltip = "Set green label (8)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.toggleGreenLabel()
+              end,
+            },
+            f:static_text {
+              title = utfLargeSquare,
+              text_color = LrColor(70/255, 135/255, 230/255),
+              tooltip = "Set blue label (9)",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.toggleBlueLabel()
+              end,
+            },
+            f:static_text {
+              title = utfLargeSquare,
+              text_color = LrColor(120/255, 80/255, 255/255),
+              tooltip = "Set purple label",
+              enabled = not runningLR5,
+              mouse_down = function()
+                LrSelection.togglePurpleLabel()
+              end,
+            },
+            f:spacer { width = 50 },
             f:picture {
               value = _PLUGIN:resourceId("assets/icons/kofi.png")
             },
             f:spacer { width = 5 },
             f:static_text {
-              title = "Support me on Ko-fi !",
+              title = "Buy me a coffee! " .. utfLinkSymbol,
               text_color = LrColor("blue"),
               tooltip = "Click to make a donation on Ko-fi",
               immediate = true,
@@ -391,9 +496,10 @@ local function showDialog()
                 LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlKofi) end)
               end,
             },
+          f:spacer { width = 20 },
           f:spacer{fill_horizontal = 1},
           f:static_text {
-            title = "User Manual " .. string.char(0xF0, 0x9F, 0x94, 0x97),
+            title = "User Manual " .. utfLinkSymbol,
             text_color = LrColor("blue"),
               tooltip = "Click to open user documentation (M)",
             immediate = true,
