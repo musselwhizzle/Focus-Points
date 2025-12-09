@@ -60,7 +60,6 @@ PanasonicDelegates.metaKeySequenceNumber              = "Sequence Number"
 -- Relevant metadata values
 PanasonicDelegates.metaValueOn                        = "On"
 PanasonicDelegates.metaValueOff                       = "Off"
-PanasonicDelegates.metaKeyAFPointNotFound             = "4.194e+06 4.194e+06"
 PanasonicDelegates.metaKeyAfPointPositionPattern      = "0(%.%d+) 0(%.%d+)"
 PanasonicDelegates.metaKeyAfAreaSizePattern           = "([%d%.]+)%s+([%d%.]+)"
 
@@ -83,16 +82,9 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
 
   local focusPoint = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyAfPointPosition)
   if focusPoint then
-    if focusPoint == PanasonicDelegates.metaKeyAFPointNotFound then
-      Log.logWarn("Panasonic",
-        string.format("Tag '%s' has 'AF Point not found' value: '%s'",
-          PanasonicDelegates.metaKeyAfPointPosition, PanasonicDelegates.metaKeyAFPointNotFound))
-      return nil
-    else
-      Log.logInfo("Panasonic",
-        string.format("Tag '%s' found: '%s'",
-          PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
-    end
+    Log.logInfo("Panasonic",
+      string.format("Tag '%s' found: '%s'",
+        PanasonicDelegates.metaKeyAfPointPosition, focusPoint))
   else
     -- no focus points found - handled on upper layers
     Log.logWarn("Panasonic",
