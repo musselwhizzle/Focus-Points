@@ -14,7 +14,8 @@
   limitations under the License.
 --]]
 
-require 'FocusPointPrefs'
+
+local FocusPointPrefs = require 'FocusPointPrefs'
 
 return {
   sectionsForBottomOfDialog = FocusPointPrefs.genSectionsForBottomOfDialog,

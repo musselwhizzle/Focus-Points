@@ -13,21 +13,23 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
-local LrView      = import "LrView"
-local LrPrefs     = import "LrPrefs"
-local LrShell     = import "LrShell"
-local LrTasks     = import "LrTasks"
-local LrColor     = import "LrColor"
-local LrFileUtils = import "LrFileUtils"
-local LrDialogs   = import "LrDialogs"
-local LrHttp      = import "LrHttp"
-
-local bind = LrView.bind
-
-require "Log"
-
+local LrApplication   = import 'LrApplication'
+local LrColor         = import 'LrColor'
+local LrDialogs       = import 'LrDialogs'
+local LrFileUtils     = import 'LrFileUtils'
+local LrHttp          = import 'LrHttp'
+local LrPrefs         = import 'LrPrefs'
+local LrShell         = import 'LrShell'
+local LrTasks         = import 'LrTasks'
+local LrView          = import 'LrView'
+local KeyboardLayout  = require 'KeyboardLayout'
+local Log             = require 'Log'
 
 FocusPointPrefs = {}
+
+local LR5 = (LrApplication.versionTable().major == 5)
+local bind = LrView.bind
+
 
 FocusPointPrefs.displayScaleFactor = 0.0
 
@@ -51,18 +53,14 @@ FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Poi
 FocusPointPrefs.urlKofi            = "https://ko-fi.com/focuspoints"
 
 -- Keyboard shortcut definitions
-FocusPointPrefs.kbdShortcutsPrev            = "-"
+FocusPointPrefs.kbdShortcutsPrev            = "-<"
 FocusPointPrefs.kbdShortcutsNext            = " +"
-FocusPointPrefs.kbdShortcutsFlag            = "pP"
-FocusPointPrefs.kbdShortcutsUnflag          = "uU"
-FocusPointPrefs.kbdShortcutsReject          = "xX"
-FocusPointPrefs.kbdShortcutsFlagNext        = "P"
+FocusPointPrefs.kbdShortcutsPick            = "p"
+FocusPointPrefs.kbdShortcutsUnflag          = "u"
+FocusPointPrefs.kbdShortcutsReject          = "x"
+FocusPointPrefs.kbdShortcutsPickNext        = "P"
 FocusPointPrefs.kbdShortcutsUnflagNext      = "U"
 FocusPointPrefs.kbdShortcutsRejectNext      = "X"
-FocusPointPrefs.kbdShortcutsSetRating       = '012345=!"§$%'
-FocusPointPrefs.kbdShortcutsSetRatingNext   = '=!"§$%'
-FocusPointPrefs.kbdShortcutsSetColor        = "6789&/()"
-FocusPointPrefs.kbdShortcutsSetColorNext    = "&/()"
 FocusPointPrefs.kbdShortcutsCheckLog        = "lL"
 FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
 FocusPointPrefs.kbdShortcutsUserManual      = "mM"
@@ -74,15 +72,17 @@ FocusPointPrefs.kbdShortcutsClose           = "cC"
   Initialize preferences at first run after installation of plugin
 --]]
 function FocusPointPrefs.InitializePrefs(prefs)
-
   -- Set any undefined properties to their default values
-  if not prefs.screenScaling      then	prefs.screenScaling   = 0 end
-  if not prefs.focusBoxSize       then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
-  if not prefs.focusBoxColor      then	prefs.focusBoxColor   = "red"    end
-  if not prefs.processMfInfo      then  prefs.processMfInfo   = false    end
-  if not prefs.loggingLevel       then	prefs.loggingLevel    = "AUTO"   end
-  if not prefs.latestVersion      then	prefs.latestVersion   = _PLUGIN.version end
-  if prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
+  if not prefs.screenScaling          then	prefs.screenScaling   = 0 end
+  if not prefs.focusBoxSize           then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
+  if not prefs.focusBoxColor          then	prefs.focusBoxColor   = "red"    end
+  if     prefs.taggingControls == nil then  prefs.taggingControls = true     end
+  if     prefs.keyboardLayout == nil  then  prefs.keyboardLayout  = KeyboardLayout.autoDetectLayout end
+  if not prefs.processMfInfo == nil   then  prefs.processMfInfo   = false    end
+  if not prefs.loggingLevel           then	prefs.loggingLevel    = "AUTO"   end
+  if not prefs.latestVersion          then	prefs.latestVersion   = _PLUGIN.version end
+  if     prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
+
   -- get the latest plugin version for update checks
   FocusPointPrefs.getLatestVersion()
 end
@@ -96,7 +96,7 @@ function FocusPointPrefs.setDisplayScaleFactor()
     if prefs.screenScaling ~= 0 then
       FocusPointPrefs.displayScaleFactor = prefs.screenScaling
     else
-      FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
+      FocusPointPrefs.displayScaleFactor = Utils.getWinScalingFactor()
     end
   else
     -- just to be safe, normally, this branch should never be executed
@@ -201,11 +201,13 @@ end
 
 
 --[[
-  @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table viewFactory, p )
+  @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table f, p )
   -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
 --]]
-function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
+function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
   local prefs = LrPrefs.prefsForPlugin( nil )
+
+  -- local props = LrBinding.makePropertyTable(context)
 
   -- Set the defaults
   FocusPointPrefs.InitializePrefs(prefs)
@@ -214,29 +216,29 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
   local updateMessage
   if FocusPointPrefs.updateAvailable() then
     updateMessage =
-      viewFactory:row {
-        viewFactory:static_text {title = "Update available!", text_color=LrColor("red")},
-        viewFactory:spacer{fill_horizontal = 1},
-        viewFactory:push_button {
+      f:row {
+        f:static_text {title = "Update available!", text_color=LrColor("red")},
+        f:spacer{fill_horizontal = 1},
+        f:push_button {
           title = "Open URL",
           action = function() LrHttp.openUrlInBrowser( FocusPointPrefs.latestReleaseURL ) end,
         },
       }
   else
-    updateMessage = viewFactory:static_text{ title = "" }
+    updateMessage = f:static_text{ title = "" }
   end
 
   -- Width of the drop-down lists in px, to make the naming aligned across rows
   local dropDownWidth = LrView.share('-Medium-')
 
-  local scalingSection = {}
-  if WIN_ENV then
-    scalingSection = {
+  local function sectionScreenScaling()
+    if MAC_ENV then return nil end
+    return {
       title = "Screen Scaling",
-      viewFactory:row {
+      f:row {
         bind_to_object = prefs,
-        spacing = viewFactory:control_spacing(),
-        viewFactory:popup_menu {
+        spacing = f:control_spacing(),
+        f:popup_menu {
           title = "Scaling",
           value = bind ("screenScaling"),
           width = dropDownWidth,
@@ -250,21 +252,69 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
             { title = "250%", value = 0.4  },
           }
         },
-        viewFactory:static_text {
+        f:static_text {
           title = 'Select "Auto" for same display scale factor as on Windows OS (Display Settings -> Scale)'
         }
       },
     }
   end
 
+
+  local function sectionUserInterface()
+
+--[[ props.keyboardLayout is your existing property
+    props.enableCustomFields = (prefs.keyboardLayout == "Custom")
+
+    props:addObserver("keyboardLayout", function(_, _, newValue)
+        props.enableCustomFields = (newValue == "Custom")
+    end)
+--]]
+
+    if LR5 then return nil end
+    return {
+      title = "User Interface",
+      f:row {
+        bind_to_object = prefs,
+--      spacing = f:control_spacing(),
+
+        f:popup_menu {
+          title = "taggingControls",
+          value = bind ("taggingControls"),
+          width = dropDownWidth,
+          items = {
+            { title = "On",  value = true  },
+            { title = "Off", value = false },
+          }
+        },
+        f:static_text {
+          title = 'Enable controls for flagging, rating and coloring the photo (mouse and keyboard)'
+        },
+      },
+      f:row {
+        bind_to_object = prefs,
+        f:popup_menu {
+          title = "keyboardLayout",
+          value = bind ("keyboardLayout"),
+          width = dropDownWidth,
+          items = KeyboardLayout.buildDropdownItems(),
+        },
+        f:static_text {
+            title = 'Layout of used keyboard. Information required to process rating and coloring keyboard shortcuts'
+        },
+      },
+    }
+  end
+
+
   return {
-    scalingSection,
+    sectionScreenScaling(),
+    sectionUserInterface(),
     {
       title = "Viewing Options",
-      viewFactory:row {
+      f:row {
         bind_to_object = prefs,
-        spacing = viewFactory:control_spacing(),
-        viewFactory:popup_menu {
+        spacing = f:control_spacing(),
+        f:popup_menu {
           title = "focusBoxColor",
           value = bind("focusBoxColor"),
           width = dropDownWidth,
@@ -274,13 +324,13 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
             { title = "Blue", value = "blue" },
           }
         },
-        viewFactory:static_text {
+        f:static_text {
           title = 'Color for in-focus points',
         },
       },
-      viewFactory:row {
+      f:row {
         bind_to_object = prefs,
-        viewFactory:popup_menu {
+        f:popup_menu {
           title = "focusBoxSize",
           value = bind("focusBoxSize"),
           width = dropDownWidth,
@@ -290,7 +340,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
             { title = "Large", value = FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeLarge] },
           }
         },
-        viewFactory:static_text {
+        f:static_text {
           title = "  Size of focus box for 'focus pixel' points ",
         },
       },
@@ -298,10 +348,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
 
     {
       title = "Processing Options",
-      viewFactory:row {
+      f:row {
         bind_to_object = prefs,
-        spacing = viewFactory:control_spacing(),
-        viewFactory:popup_menu {
+--        spacing = f:control_spacing(),
+        f:popup_menu {
           title = "processMfInfo",
           value = bind ("processMfInfo"),
           width = dropDownWidth,
@@ -310,7 +360,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
             { title = "Off", value = false },
           }
         },
-        viewFactory:static_text {
+        f:static_text {
           title = 'Process focus information for images taken with manual focus (MF)',
         },
       },
@@ -318,10 +368,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
 
     {
       title = "Logging",
-      viewFactory:row {
+      f:row {
         bind_to_object = prefs,
-        spacing = viewFactory:control_spacing(),
-        viewFactory:popup_menu {
+        spacing = f:control_spacing(),
+        f:popup_menu {
           title = "Logging level",
           value = bind ('loggingLevel'),
           width = dropDownWidth,
@@ -335,15 +385,15 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
             { title = "None",  value = "NONE"  },
           }
         },
-        viewFactory:static_text {
+        f:static_text {
           title = 'Level of information to be logged (Recommended: "Auto")'
         },
-        viewFactory:static_text {
+        f:static_text {
           title = 'Plugin log:',
           alignment = 'right',
           fill_horizontal = 1,
         },
-        viewFactory:push_button {
+        f:push_button {
           title = "Show file",
           action = function()
             local logFileName = Log.getFileName()
@@ -359,53 +409,53 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
     {
       title = "Updates",
       bind_to_object = prefs,
-      spacing = viewFactory:control_spacing(),
-      viewFactory:row {
-        viewFactory:checkbox {
+      spacing = f:control_spacing(),
+      f:row {
+        f:checkbox {
           title = 'Display message when updates are available',
           value = bind('checkForUpdates')
         },
-        viewFactory:spacer{fill_horizontal = 1},
+        f:spacer{fill_horizontal = 1},
         updateMessage,
       },
     },
     {
       title = "Acknowledgements",
-      viewFactory:row {
+      f:row {
         fill_horizontal = 1,
-        viewFactory:column {
+        f:column {
           fill_horizontal = 1,
-          viewFactory:static_text {
+          f:static_text {
             font = "<system/bold>",
             title = 'ImageMagick Studio LLC'
           },
-          viewFactory:spacer{ height = 5 },
-          viewFactory:static_text {
+          f:spacer{ height = 5 },
+          f:static_text {
             title = 'This plugin uses ImageMagick mogrify'
           }
         },
-        viewFactory:column {
-          viewFactory:static_text {
+        f:column {
+          f:static_text {
             title = "https://imagemagick.org/index.php"
           },
         },
       },
-      viewFactory:spacer{fill_horizontal = 1},
-      viewFactory:row {
+      f:spacer{fill_horizontal = 1},
+      f:row {
         fill_horizontal = 1,
-        viewFactory:column {
+        f:column {
           fill_horizontal = 1,
-          viewFactory:static_text {
+          f:static_text {
             font = "<system/bold>",
             title = 'ExifTool'
           },
-          viewFactory:spacer{ height = 5 },
-          viewFactory:static_text {
+          f:spacer{ height = 5 },
+          f:static_text {
             title = "This plugin relies on Phil Harvey's ExifTool to read and decode metadata"
           }
         },
-        viewFactory:column {
-          viewFactory:static_text {
+        f:column {
+          f:static_text {
             title = "https://exiftool.org/"
           },
         },
@@ -413,3 +463,6 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( viewFactory, _p )
     }
   }
 end
+
+
+return FocusPointPrefs

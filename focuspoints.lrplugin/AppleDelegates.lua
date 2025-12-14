@@ -19,11 +19,9 @@
   the camera is Apple (iPhone, iPad)
 --]]
 
-local LrView = import "LrView"
-
-require "Utils"
-require "Log"
-
+local LrView = import  'LrView'
+local Utils  = require 'Utils'
+local Log    = require 'Log'
 
 AppleDelegates = {}
 
@@ -97,7 +95,7 @@ function AppleDelegates.getAfPoints(photo, metaData)
         string.format("Focus point tag '%s' found: '%s'",
           AppleDelegates.metaKeySubjectArea, subjectAreaStr))
 
-      local subjectArea = split(subjectAreaStr, ", ")
+      local subjectArea = Utils.split(subjectAreaStr, ", ")
       if subjectArea and #subjectArea == 4 then
         local x = subjectArea[1] * xScale
         local y = subjectArea[2] * yScale
@@ -288,3 +286,6 @@ function AppleDelegates.getFocusInfo(_photo, props, metaData)
   }
   return focusInfo
 end
+
+
+return AppleDelegates

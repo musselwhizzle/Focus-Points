@@ -18,20 +18,20 @@
   Factory for creating the focus point renderer and getting the focus points.
 --]]
 
-require "DefaultPointRenderer"
-require "PointsUtils"
-require "DefaultDelegates"
-require "CanonDelegates"
-require "FujifilmDelegates"
-require "NikonDelegates"
-require "NikonDuplicates"
-require "OlympusDelegates"
-require "PanasonicDelegates"
-require "AppleDelegates"
-require "PentaxDelegates"
-require "SonyDelegates"
-require "ExifUtils"
-require "Log"
+require 'AppleDelegates'
+require 'CanonDelegates'
+require 'DefaultDelegates'
+require 'DefaultPointRenderer'
+require 'ExifUtils'
+require 'FujifilmDelegates'
+require 'Log'
+require 'NikonDelegates'
+require 'NikonDuplicates'
+require 'OlympusDelegates'
+require 'PanasonicDelegates'
+require 'PentaxDelegates'
+require 'PointsUtils'
+require 'SonyDelegates'
 
 
 PointsRendererFactory = {}
@@ -180,3 +180,6 @@ function PointsRendererFactory.createRenderer(photo)
 
   return DefaultPointRenderer
 end
+
+
+return PointsRendererFactory

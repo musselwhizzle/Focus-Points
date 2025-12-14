@@ -14,11 +14,9 @@
   limitations under the License.
 --]]
 
-local LrView = import 'LrView'
-
-require "Utils"
-require "Log"
-
+local LrView = import  'LrView'
+local Log    = require 'Log'
+local Utils  = require 'Utils'
 
 FocusPointDialog = {}
 
@@ -34,7 +32,7 @@ function FocusPointDialog.calculatePhotoDimens(photo)
 
   -- Retrieve photo dimensions
   local dimens = photo:getFormattedMetadata("croppedDimensions")
-  local w, h = parseDimens(dimens)
+  local w, h = Utils.parseDimens(dimens)
   Log.logInfo("FocusPointDialog", string.format(
     "Image: %s (%s x %s)", photo:getFormattedMetadata('fileName'), w, h))
 
@@ -104,3 +102,6 @@ function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdHandler)
   return myView
 
 end
+
+
+return FocusPointDialog

@@ -14,9 +14,9 @@
   limitations under the License.
 --]]
 
-local LrPrefs = import "LrPrefs"
+local LrPrefs = import 'LrPrefs'
 
-require "FocusPointPrefs"
+FocusPointPrefs = require 'FocusPointPrefs'
 
 -- To avoid nil pointer errors in case of "dirty" update installation (copy new over old files)
 FocusPointPrefs.InitializePrefs(LrPrefs.prefsForPlugin(nil))

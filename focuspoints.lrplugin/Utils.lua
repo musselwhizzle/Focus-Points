@@ -15,17 +15,15 @@
 --]]
 
 
-local LrPathUtils = import 'LrPathUtils'
-local LrFileUtils = import 'LrFileUtils'
-local LrStringUtils = import "LrStringUtils"
-local LrShell = import "LrShell"
-local LrTasks = import "LrTasks"
-local LrUUID = import "LrUUID"
+local LrFileUtils   = import 'LrFileUtils'
+local LrPathUtils   = import 'LrPathUtils'
+local LrShell       = import 'LrShell'
+local LrStringUtils = import 'LrStringUtils'
+local LrTasks       = import 'LrTasks'
+local LrUUID        = import 'LrUUID'
+local Log           = require 'Log'
 
--- require "FocusPointPrefs"
--- require "FocusPointDialog"
-require "Info"
-require "Log"
+Utils = {}
 
 
 --[[--------------------------------------------------------------------------------------------------------------------
@@ -38,7 +36,7 @@ require "Log"
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function splitToKeyValue(str, delim)
+function Utils.splitToKeyValue(str, delim)
   if str == nil then return nil end
   local index = string.find(str, delim)
   if index == nil then
@@ -56,7 +54,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function splitoriginal(str, delim)
+function Utils.splitoriginal(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -67,7 +65,7 @@ function splitoriginal(str, delim)
   return t
 end
 
-function split(str, delimiters)
+function Utils.split(str, delimiters)
   -- Build a pattern that matches any sequence of characters
   -- that are not one of the delimiters.
   -- This is an extension to the original split function that supported a single delimiter
@@ -86,7 +84,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function splitTrim(str, delim)
+function Utils.splitTrim(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -102,7 +100,7 @@ end
  @str  the string to split
  @delim the character used for splitting the string
 --]]
-function stringToKeyValue(str, delim)
+function Utils.stringToKeyValue(str, delim)
   if str == nil then return nil end
   local index = string.find(str, delim)
   if index == nil then
@@ -119,7 +117,7 @@ end
  @str  the string to split into words
  @delim the character used for splitting the string
 --]]
-function get_nth_Word(str, n, delimiter)
+function Utils.get_nth_Word(str, n, delimiter)
     delimiter = delimiter or ";" -- Default to semicolon if not provided
     local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
     local count = 0
@@ -138,7 +136,7 @@ end
 -- @param maxLen Maximum line length.
 -- @param delimiters A table of delimiters (e.g., { " ", "-", "/" }).
 -- @return A string wrapped with line breaks (`\n`).
-function wrapText(input, delimiters, maxLen)
+function Utils.wrapText(input, delimiters, maxLen)
   if not input then return "" end
   -- Escape delimiters for pattern use
   local delimSet = {}
@@ -181,7 +179,7 @@ end
 -- Parses a string in the form of "(width)x(height)"" and returns width and height
 -- strDimens - string to be parsed
 --]]
-function parseDimens(strDimens)
+function Utils.parseDimens(strDimens)
   local index = string.find(strDimens, "x")
   if index == nil then return nil end
   local w = string.sub(strDimens, 0, index-1)
@@ -200,7 +198,7 @@ end
 -- table - table to search inside
 -- val - value to search for
 --]]
-function arrayKeyOf(table, val)
+function Utils.arrayKeyOf(table, val)
   for k,v in pairs(table) do
     if v == val then
       return k
@@ -211,11 +209,11 @@ end
 
 
 --[[
-  @@public string getTempFileName()
+  @@public string Utils.getTempFileName()
   ----
   Create new UUID name for a temporary file
 --]]
-function getTempFileName()
+function Utils.getTempFileName()
   local fileName = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
   return fileName
 end
@@ -225,7 +223,7 @@ end
 -- Open filename in associated application as per file extension
 -- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
 --]]
-function openFileInApp(filename)
+function Utils.openFileInApp(filename)
   if WIN_ENV then
     LrShell.openFilesInApp({""}, filename)
   else
@@ -234,10 +232,10 @@ function openFileInApp(filename)
 end
 
 --[[
-  @@public string getPhotoFileName(table)
+  @@public string Utils.getPhotoFileName(table)
   Retrieves name of current photo, used by centralized error handling
 --]]
-function getPhotoFileName(photo)
+function Utils.getPhotoFileName(photo)
   if not photo then
     photo = FocusPointDialog.currentPhoto
   end
@@ -252,19 +250,19 @@ end
   ----
   Retrieves the plugin version number as string
 --]]
-function getPluginVersion()
+function Utils.getPluginVersion()
   return require 'Info.lua'.VERSION.display
 end
 
 
 --[[
-  @@public int getWinScalingFactor()
+  @@public int Utils.getWinScalingFactor()
   ----
   Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
   Returns display scaling level as factor (100/scale_in_percent)
 --]]
-function getWinScalingFactor()
-  local output = getTempFileName()
+function Utils.getWinScalingFactor()
+  local output = Utils.getTempFileName()
   local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
   local result
 
@@ -278,7 +276,7 @@ function getWinScalingFactor()
   local regOutputStr = "^"
   local dpiValue, scale
   for line in string.gmatch(regOutput, ("[^\r\n]+")) do
-    local item = split(line, " ")
+    local item = Utils.split(line, " ")
     if item and #item >= 3 then
       if item[1] == "AppliedDPI" and item[2] == "REG_DWORD" then
         dpiValue = item[3]
@@ -307,70 +305,4 @@ function getWinScalingFactor()
 end
 
 
---[[ Initial approach to implement update check. Superseded by LrHttp.get(version.txt_URL)
---   Keep this code as commented out block until http method has been proven reliable.
---
-function updateExists() -- Method using 'curl'
-  local output = getTempFileName()
-  local singleQuoteWrap = '\'"\'"\''
-  local cmd, result, url
-  local Info = require 'Info.lua'
-
-  if WIN_ENV then
-    -- windows needs " around the entire command and then " around each path
-    cmd = "curl.exe -I " .. FocusPointPrefs.latestReleaseURL .. " > " .. output .. "\""
-  else
-    cmd = "curl -I " .. FocusPointPrefs.latestReleaseURL .. " > '" .. output .. "'"
-  end
-
-  -- Call curl.exe to get 'latest' resolved to 'tags/vX.Y.ZZZ'
-  local rc = LrTasks.execute(cmd)
-  if (rc == 0) then
-    -- Parse curl output to find the resolved URL
-    local curlOutput = LrFileUtils.readFile(output)
-    for line in string.gmatch(curlOutput, ("[^\r\n]+")) do
-      local item = split(line, " ")
-      if item and #item >= 2 then
-        if string.lower(item[1]) == "location:" then
-          url = LrStringUtils.trimWhitespace(item[2])
-          Log.logDebug("ExifUtils", "Update check, URL retrieved for latest release -> " .. url)
-          local major, minor, revision = url:match("v(%d+)%.(%d+)%.(%d+)")
-          if major and minor and revision then
-            -- we have a valid version number from the URL
-            local pluginVersion = Info.VERSION
-            if tonumber(major) > pluginVersion.major-1 then
-              result = true
-            elseif tonumber(major) == pluginVersion.major then
-              if  tonumber(minor) > pluginVersion.minor then
-                result = true
-              elseif tonumber(minor) == pluginVersion.minor then
-                result = tonumber(revision) > pluginVersion.revision
-              end
-            end
-          else
-            Log.logWarn("Utils", "Update check failed, no valid combination of major, minor and revision number")
-          end
-          break
-        end
-      end
-    end
-    if not url then
-      Log.logWarn("Utils", "Update check command failed, URL of tagged release not found")
-    end
-  else
-    Log.logWarn("Utils", "Update check command failed (rc=" .. rc ..") : " .. cmd)
-  end
-
-  -- Log info message
-  if result then
-    Log.logInfo("System", "Update available for plugin -> " .. url)
-  end
-
-  -- Clean up: remove the temp file
-  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
-    Log.logWarn("Utils", "Unable to delete curl output file " .. output)
-  end
-
-  return result
-end
---]]
+return Utils

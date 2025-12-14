@@ -17,24 +17,10 @@
 --[[
   A collection of delegate functions to be passed into the DefaultPointRenderer when
   the camera is Panasonic
-
-  Assume that focus point metadata look like:
-
-    AF Point Position               : 0.5 0.5
-
-
-    Where:
-        AF Point Position appears to be location of AF point from upper left corner (X%, Y%)
-
-  2017-01-06 - MJ - Test for 'AF Point Position' in Metadata, assume it's good if found
-                    Add basic errorhandling if not found
 --]]
 
-local LrView   = import 'LrView'
-
-require "Utils"
-require "Log"
-
+local LrView = import  'LrView'
+local Log    = require 'Log'
 
 PanasonicDelegates = {}
 
@@ -93,8 +79,8 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   end
 
   -- extract (x,y) point values (rational numbers in range 0..1)
-  local focusX = get_nth_Word(focusPoint, 1, " ")
-  local focusY = get_nth_Word(focusPoint, 2, " ")
+  local focusX = Utils.get_nth_Word(focusPoint, 1, " ")
+  local focusY = Utils.get_nth_Word(focusPoint, 2, " ")
   if not (focusX and focusY) then
     Log.logError("Panasonic",
       string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
@@ -147,7 +133,7 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
         local thumbheight = 320 * tonumber(orgPhotoHeight) / tonumber(orgPhotoWidth)
         local xScale = tonumber(orgPhotoWidth)  / thumbwidth
         local yScale = tonumber(orgPhotoHeight) / thumbheight
-        local coordinatesTable = split(coordinatesStr, " ")
+        local coordinatesTable = Utils.split(coordinatesStr, " ")
           local x = coordinatesTable[1] * xScale
           local y = coordinatesTable[2] * yScale
           local w = coordinatesTable[3] * xScale
@@ -328,3 +314,6 @@ function PanasonicDelegates.getFocusInfo(_photo, props, metaData)
       }
   return focusInfo
 end
+
+
+return PanasonicDelegates

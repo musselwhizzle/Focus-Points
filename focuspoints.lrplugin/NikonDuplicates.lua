@@ -46,3 +46,5 @@ NikonDuplicates["nikon z 7_2"] = "nikon z 7"
 NikonDuplicates["nikon z 8"]   = "nikon z 9"
 
 NikonDuplicates["nikon z fc"]  = "nikon z 30"
+
+return NikonDuplicates

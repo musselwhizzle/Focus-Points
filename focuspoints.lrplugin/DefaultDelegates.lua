@@ -18,10 +18,6 @@
   A collection of delegate functions to be passed into the DefaultPointRenderer.
 --]]
 
-require "Utils"
-require "Log"
-
-
 DefaultDelegates = {}
 
 DefaultDelegates.metaData             = nil
@@ -118,3 +114,5 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
 }
+
+return DefaultDelegates

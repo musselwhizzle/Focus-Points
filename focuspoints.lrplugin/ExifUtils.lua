@@ -14,15 +14,13 @@
   limitations under the License.
 --]]
 
-local LrTasks       = import 'LrTasks'
+local LrErrors      = import 'LrErrors'
 local LrFileUtils   = import 'LrFileUtils'
 local LrPathUtils   = import 'LrPathUtils'
-local LrStringUtils = import "LrStringUtils"
-local LrErrors      = import "LrErrors"
-
-require "Utils"
-require "Log"
-
+local LrStringUtils = import 'LrStringUtils'
+local LrTasks       = import 'LrTasks'
+local Log           = require 'Log'
+local Utils         = require 'Utils'
 
 ExifUtils = {}
 
@@ -36,7 +34,7 @@ exiftoolWindows    = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftoolWindows    = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
 exiftoolConfigFile = LrPathUtils.child( _PLUGIN.path, "ExifTool.config" )
 
-metaDataFile = getTempFileName()
+metaDataFile = Utils.getTempFileName()
 
 
 function ExifUtils.getMetaDataFile()
@@ -84,7 +82,7 @@ function ExifUtils.readMetaData(targetPhoto)
     local errorText = "FATAL error: unable to read photo metadata (ExifTool rc=" .. rc .. ")"
     Log.logError("ExifUtils", errorText)
     LrErrors.throwUserError(
-      string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
+      string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
   else
     local fileInfo = LrFileUtils.readFile(metaDataFile)
     return fileInfo
@@ -169,7 +167,7 @@ end
 --]]
 function ExifUtils.getBinaryValue(photo, key)
   local path = photo:getRawMetadata("path")
-  local output = getTempFileName()
+  local output = Utils.getTempFileName()
   local singleQuoteWrap = '\'"\'"\''
   local cmd, result
 
@@ -219,11 +217,11 @@ function ExifUtils.decodeXmpMWGRegions(result, metaData)
   local regionTypeStr = ExifUtils.findValue(metaData, "Region Type")
   if regionTypeStr then
     -- Region scheme present, decode individual tags
-    local regionType          = split(regionTypeStr, ", ")
-    local regionAreaX         = split(ExifUtils.findValue(metaData, "Region Area X"), ", ")
-    local regionAreaY         = split(ExifUtils.findValue(metaData, "Region Area Y"), ", ")
-    local regionAreaW         = split(ExifUtils.findValue(metaData, "Region Area W"), ", ")
-    local regionAreaH         = split(ExifUtils.findValue(metaData, "Region Area H"), ", ")
+    local regionType          = Utils.split(regionTypeStr, ", ")
+    local regionAreaX         = Utils.split(ExifUtils.findValue(metaData, "Region Area X"), ", ")
+    local regionAreaY         = Utils.split(ExifUtils.findValue(metaData, "Region Area Y"), ", ")
+    local regionAreaW         = Utils.split(ExifUtils.findValue(metaData, "Region Area W"), ", ")
+    local regionAreaH         = Utils.split(ExifUtils.findValue(metaData, "Region Area H"), ", ")
     local regionAppliedToDimW = ExifUtils.findValue(metaData, "Region Applied To Dimensions W")
     local regionAppliedToDimH = ExifUtils.findValue(metaData, "Region Applied To Dimensions H")
 
@@ -269,3 +267,6 @@ function ExifUtils.decodeXmpMWGRegions(result, metaData)
   end
   return focusDetected
 end
+
+
+return ExifUtils

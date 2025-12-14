@@ -21,11 +21,8 @@
 
 local LrStringUtils = import 'LrStringUtils'
 local LrView        = import 'LrView'
-
-require "FocusPointPrefs"
-require "FocusPointDialog"
-require "Utils"
-require "Log"
+local Utils         = require 'Utils'
+local Log           = require 'Log'
 
 
 FujifilmDelegates = {}
@@ -85,7 +82,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   end
 
   local x, y
-  local values = split(focusPoint, " ")
+  local values = Utils.split(focusPoint, " ")
   if values then
     x = LrStringUtils.trimWhitespace(values[1])
     y = LrStringUtils.trimWhitespace(values[2])
@@ -121,7 +118,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   if detectedFaces ~= nil and detectedFaces ~= "0" then
     local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FacesPositions)
     if coordinatesStr ~= nil then
-      local coordinatesTable = split(coordinatesStr, " ")
+      local coordinatesTable = Utils.split(coordinatesStr, " ")
       if coordinatesTable then
         for i=1, detectedFaces, 1 do
           local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
@@ -149,7 +146,7 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   -- Subject detection
   local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FaceElementPositions)
   if coordinatesStr ~= nil then
-    local coordinatesTable = split(coordinatesStr, " ")
+    local coordinatesTable = Utils.split(coordinatesStr, " ")
     if coordinatesTable ~= nil then
       local objectCount = #(coordinatesTable) / 4
       for i=1, objectCount, 1 do
@@ -178,10 +175,10 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local cropsizeStr = ExifUtils.findValue(metaData,  "Crop Size")
   local croptopleftStr = ExifUtils.findValue(metaData, "Crop Top Left")
   if cropsizeStr ~= nil then
-    local cropsizeTable = split(cropsizeStr, " ")
+    local cropsizeTable = Utils.split(cropsizeStr, " ")
     if cropsizeTable ~= nil then
       if croptopleftStr ~= nil then
-        local croptopleftTable = split(croptopleftStr, " ")
+        local croptopleftTable = Utils.split(croptopleftStr, " ")
         if croptopleftTable ~= nil then
           local x1 = croptopleftTable[1] * xScale
           local y1 = croptopleftTable[2] * yScale
@@ -242,8 +239,8 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
 
     -- wrap values as required
-    if key == FujifilmDelegates.metaKeyImageStabilization then props[key] = wrapText(props[key], {';'}, FocusInfo.maxValueLen) end
-    if key == FujifilmDelegates.FaceElementTypes          then props[key] = wrapText(props[key], {','}, FocusInfo.maxValueLen) end
+    if key == FujifilmDelegates.metaKeyImageStabilization then props[key] = Utils.wrapText(props[key], {';'}, FocusInfo.maxValueLen) end
+    if key == FujifilmDelegates.FaceElementTypes          then props[key] = Utils.wrapText(props[key], {','}, FocusInfo.maxValueLen) end
 
     -- compose the row to be added
     local result = FocusInfo.addRow(title, props[key])
@@ -402,3 +399,6 @@ function FujifilmDelegates.getFocusInfo(_photo, props, metaData)
       }
   return focusInfo
 end
+
+
+return FujifilmDelegates

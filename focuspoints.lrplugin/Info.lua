@@ -30,7 +30,7 @@ return {
 
     {
       title = "Show Metadata",
-      file = "ShowMetadata.lua",
+      file = "Metadata.lua",
       enabledWhen = "photosSelected"
     },
   },
@@ -46,12 +46,12 @@ return {
 
     {
       title = "Show Metadata",
-      file = "ShowMetadata.lua",
+      file = "Metadata.lua",
       enabledWhen = "photosSelected"
     },
   },
 
-	VERSION = { major=3, minor=2, revision=0, build=9001, display="3.2 PRE 1" },
+	VERSION = { major=3, minor=2, revision=0, build=9002, display="3.2 PRE 2" },
 
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 

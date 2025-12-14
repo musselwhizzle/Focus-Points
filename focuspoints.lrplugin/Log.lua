@@ -15,15 +15,13 @@
 --]]
 
 
-local LrApplication = import 'LrApplication'
-local LrPathUtils = import 'LrPathUtils'
-local LrFileUtils = import 'LrFileUtils'
-local LrLogger = import 'LrLogger'
-local LrPrefs = import "LrPrefs"
-local LrSystemInfo = import "LrSystemInfo"
-
-require "Info"
-
+local LrApplication   = import 'LrApplication'
+local LrFileUtils     = import 'LrFileUtils'
+local LrLogger        = import 'LrLogger'
+local LrPathUtils     = import 'LrPathUtils'
+local LrPrefs         = import 'LrPrefs'
+local LrSystemInfo    = import 'LrSystemInfo'
+local KeyboardLayout = require 'KeyboardLayout'
 
 Log = {}
 
@@ -181,8 +179,13 @@ function Log.sysInfo()
   Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
   Log.logInfo("System", string.format(
           "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
-            getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
+            Utils.getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
             osName, LrSystemInfo.osVersion()))
+  if prefs.keyboardLayout then
+    Log.logInfo(
+      "System",
+      "Keyboard layout (user setting): '" .. KeyboardLayout.layoutById[prefs.keyboardLayout].label .. "'")
+  end
 end
 
 --[[
@@ -226,3 +229,5 @@ function Log.initialize()
   Log.sysInfo()
 end
 
+
+return Log

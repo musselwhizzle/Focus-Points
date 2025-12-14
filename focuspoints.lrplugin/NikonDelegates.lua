@@ -19,11 +19,9 @@
   the camera is Nikon
 --]]
 
-local LrView = import 'LrView'
-
-require "Utils"
-require "Log"
-
+local LrView = import  'LrView'
+local Utils  = require 'Utils'
+local Log    = require 'Log'
 
 NikonDelegates = {}
 
@@ -179,20 +177,20 @@ function NikonDelegates.getPDAfPoints(metaData)
   -- According to AFInfo version and AFAreaMode, fetch the right focus point(s) to display
   if (afInfoVersion ~= "0101") then
     -- AFPointsUsed is what NX Studio uses for all Nikon DSLR and Mirrorless cameras
-    focusPointsTable = split(afPointsUsed,  ",")
+    focusPointsTable = Utils.split(afPointsUsed,  ",")
     logKeyStatus(NikonDelegates.metaKeyAfPointsUsed, afPointsUsed)
   else
     -- for whatever reason, the logic for D5, D500, D7500, D850 differs from all other models
     -- depending on the AFAreaMode, choose the relevant AFPoint tag that NX Studio uses to display focus points
-    if afAreaMode and arrayKeyOf({"single", "group", "dynamic" }, afAreaMode) then
-      focusPointsTable = split(afPointsSelected, ",")
+    if afAreaMode and Utils.arrayKeyOf({"single", "group", "dynamic" }, afAreaMode) then
+      focusPointsTable = Utils.split(afPointsSelected, ",")
       logKeyStatus(NikonDelegates.metaKeyAfPointsSelected, afPointsSelected)
-    elseif arrayKeyOf({"3D-tracking", "auto" }, afAreaMode) then
+    elseif Utils.arrayKeyOf({"3D-tracking", "auto" }, afAreaMode) then
       if afPointsInFocus then
-        focusPointsTable = split(afPointsInFocus,  ",")
+        focusPointsTable = Utils.split(afPointsInFocus,  ",")
         logKeyStatus(NikonDelegates.metaKeyAfPointsInFocus, afPointsInFocus)
       else
-        focusPointsTable = split(afPointsSelected,  ",")
+        focusPointsTable = Utils.split(afPointsSelected,  ",")
         logKeyStatus(NikonDelegates.metaKeyAfPointsSelected, afPointsSelected)
       end
     else
@@ -203,7 +201,7 @@ function NikonDelegates.getPDAfPoints(metaData)
 
   -- Store PrimaryAFPoint separately from other focus points (except for 'group area')
   if afPrimaryPoint and (afAreaMode and (afAreaMode ~= "group")) then
-    primaryPoint = split(NikonDelegates.normalizeFocusPointName(afPrimaryPoint),  ",")
+    primaryPoint = Utils.split(NikonDelegates.normalizeFocusPointName(afPrimaryPoint),  ",")
   end
 
   -- if PDAF points have been found, read the mapping file
@@ -245,8 +243,8 @@ function NikonDelegates.getPDAfPoints(metaData)
   if (string.sub(DefaultDelegates.cameraModel, 1, 7) == "nikon d") and (fpSchema ~= "-81") then
     -- however, we only do this for DSLRs to visualize the limited AF point coverage of the frame
     for key, _ in pairs(DefaultDelegates.focusPointsMap) do
-      if not ((focusPointsTable and arrayKeyOf(focusPointsTable, key)) or
-              (primaryPoint     and arrayKeyOf(primaryPoint,     key))) then
+      if not ((focusPointsTable and Utils.arrayKeyOf(focusPointsTable, key)) or
+              (primaryPoint     and Utils.arrayKeyOf(primaryPoint,     key))) then
         table.insert(inactivePointsTable, key)
       end
     end
@@ -640,3 +638,6 @@ function NikonDelegates.getFocusInfo(_photo, props, metaData)
       }
   return focusInfo
 end
+
+
+return NikonDelegates
