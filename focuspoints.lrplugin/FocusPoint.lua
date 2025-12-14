@@ -26,11 +26,11 @@ local LrTasks               = import "LrTasks"
 local LrView                = import "LrView"
 local FocusInfo             = require "FocusInfo"
 local FocusPointDialog      = require "FocusPointDialog"
-local FocusPointPrefs       = require "FocusPointPrefs"
 local Log                   = require "Log"
 local PointsRendererFactory = require "PointsRendererFactory"
 local Utf8                  = require "Utf8"
 
+require "FocusPointPrefs"
 
 local function showDialog()
 
