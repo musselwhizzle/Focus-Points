@@ -18,7 +18,14 @@
   Definition of supported keyboard layouts:
   The plugin needs to know which characters are produced when pressing a shifted/unshifted digit key.
   This is required to parse and execute the keyboard shortcuts for rating (0-5) and color (6-9).
+---------------------------------------------------------------------------------------------------]]
 
+local LrDialogs   = import  'LrDialogs'
+local Utf8        = require 'Utf8'
+
+KeyboardLayout = {}
+
+--[[-----------------------------------------------------------------------------------------------
   !! Further layouts can be added to this table without the need to modify the code
      for the new layout to be recognized and handled !!
 ---------------------------------------------------------------------------------------------------]]
@@ -183,10 +190,6 @@ local KeyboardLayouts = {
   Functions to access the relevant keyboard layout data
 ---------------------------------------------------------------------------------------------------]]
 
-local LrDialogs   = import 'LrDialogs'
-local Utf8        = require 'Utf8'
-
-KeyboardLayout = {}
 
 -- Build dictionary: layoutId → layoutEntry
 KeyboardLayout.layoutById = {}

@@ -14,23 +14,23 @@
   limitations under the License.
 --]]
 
-local LrApplication         = import "LrApplication"
-local LrBinding = import "LrBinding"
-local LrColor           = import "LrColor"
-local LrDialogs             = import "LrDialogs"
-local LrFunctionContext     = import "LrFunctionContext"
-local LrHttp            = import "LrHttp"
-local LrPrefs               = import "LrPrefs"
-local LrSystemInfo      = import "LrSystemInfo"
-local LrTasks               = import "LrTasks"
-local LrView                = import "LrView"
-local FocusInfo             = require "FocusInfo"
-local FocusPointDialog      = require "FocusPointDialog"
-local Log                   = require "Log"
-local PointsRendererFactory = require "PointsRendererFactory"
-local Utf8                  = require "Utf8"
+local LrApplication         = import  'LrApplication'
+local LrBinding             = import  'LrBinding'
+local LrColor               = import  'LrColor'
+local LrDialogs             = import  'LrDialogs'
+local LrFunctionContext     = import  'LrFunctionContext'
+local LrHttp                = import  'LrHttp'
+local LrPrefs               = import  'LrPrefs'
+local LrSystemInfo          = import  'LrSystemInfo'
+local LrTasks               = import  'LrTasks'
+local LrView                = import  'LrView'
+local FocusInfo             = require 'FocusInfo'
+local FocusPointDialog      = require 'FocusPointDialog'
+local FocusPointPrefs       = require 'FocusPointPrefs'
+local Log                   = require 'Log'
+local PointsRendererFactory = require 'PointsRendererFactory'
+local Utf8                  = require 'Utf8'
 
-require "FocusPointPrefs"
 
 local function showDialog()
 

@@ -24,6 +24,7 @@ local LrTasks         = import 'LrTasks'
 local LrView          = import 'LrView'
 local KeyboardLayout  = require 'KeyboardLayout'
 local Log             = require 'Log'
+local Utils           = require 'Utils'
 
 FocusPointPrefs = {}
 
@@ -207,8 +208,6 @@ end
 function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
-  -- local props = LrBinding.makePropertyTable(context)
-
   -- Set the defaults
   FocusPointPrefs.InitializePrefs(prefs)
 
@@ -232,7 +231,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
   local dropDownWidth = LrView.share('-Medium-')
 
   local function sectionScreenScaling()
-    if MAC_ENV then return nil end
+    if MAC_ENV then return {} end
     return {
       title = "Screen Scaling",
       f:row {
@@ -262,15 +261,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
 
   local function sectionUserInterface()
 
---[[ props.keyboardLayout is your existing property
-    props.enableCustomFields = (prefs.keyboardLayout == "Custom")
-
-    props:addObserver("keyboardLayout", function(_, _, newValue)
-        props.enableCustomFields = (newValue == "Custom")
-    end)
---]]
-
-    if LR5 then return nil end
+    if LR5 then return {} end
     return {
       title = "User Interface",
       f:row {
@@ -465,4 +456,4 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
 end
 
 
--- return FocusPointPrefs
+return FocusPointPrefs

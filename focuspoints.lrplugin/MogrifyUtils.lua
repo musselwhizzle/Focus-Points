@@ -14,13 +14,13 @@
   limitations under the License.
 --]]
 
-local LrErrors    = import 'LrErrors'
-local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
-local LrPrefs     = import "LrPrefs"
-local LrTasks     = import 'LrTasks'
-local Utils       = require "Utils"
-local Log         = require "Log"
+local LrFileUtils = import  'LrFileUtils'
+local LrErrors    = import  'LrErrors'
+local LrPathUtils = import  'LrPathUtils'
+local LrPrefs     = import  'LrPrefs'
+local LrTasks     = import  'LrTasks'
+local Utils       = require 'Utils'
+local Log         = require 'Log'
 
 
 MogrifyUtils = { }    -- class

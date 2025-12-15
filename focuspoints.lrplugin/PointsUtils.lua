@@ -14,11 +14,11 @@
   limitations under the License.
 --]]
 
-local LrFileUtils   = import 'LrFileUtils'
-local LrPathUtils   = import 'LrPathUtils'
-local LrStringUtils = import 'LrStringUtils'
-local Utils         = import require 'Utils'
-local Log           = import require 'Log'
+local LrFileUtils   = import  'LrFileUtils'
+local LrPathUtils   = import  'LrPathUtils'
+local LrStringUtils = import  'LrStringUtils'
+local Utils         = require 'Utils'
+local Log           = require 'Log'
 
 PointsUtils = {}
 

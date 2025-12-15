@@ -19,9 +19,9 @@
   the camera is Olympus or OM Digital Solutions
 --]]
 
-local LrView = import 'LrView'
-local Utils  = require "Utils"
-local Log    = require "Log"
+local LrView = import  'LrView'
+local Utils  = require 'Utils'
+local Log    = require 'Log'
 
 OlympusDelegates = {}
 

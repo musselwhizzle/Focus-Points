@@ -14,11 +14,11 @@
   limitations under the License.
 --]]
 
-local LrErrors      = import 'LrErrors'
-local LrFileUtils   = import 'LrFileUtils'
-local LrPathUtils   = import 'LrPathUtils'
-local LrStringUtils = import 'LrStringUtils'
-local LrTasks       = import 'LrTasks'
+local LrErrors      = import  'LrErrors'
+local LrFileUtils   = import  'LrFileUtils'
+local LrPathUtils   = import  'LrPathUtils'
+local LrStringUtils = import  'LrStringUtils'
+local LrTasks       = import  'LrTasks'
 local Log           = require 'Log'
 local Utils         = require 'Utils'
 

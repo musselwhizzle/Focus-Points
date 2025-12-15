@@ -19,8 +19,8 @@
   the camera is Fuji
 --]]
 
-local LrStringUtils = import 'LrStringUtils'
-local LrView        = import 'LrView'
+local LrStringUtils = import  'LrStringUtils'
+local LrView        = import  'LrView'
 local Utils         = require 'Utils'
 local Log           = require 'Log'
 

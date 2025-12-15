@@ -15,12 +15,12 @@
 --]]
 
 
-local LrFileUtils   = import 'LrFileUtils'
-local LrPathUtils   = import 'LrPathUtils'
-local LrShell       = import 'LrShell'
-local LrStringUtils = import 'LrStringUtils'
-local LrTasks       = import 'LrTasks'
-local LrUUID        = import 'LrUUID'
+local LrFileUtils   = import  'LrFileUtils'
+local LrPathUtils   = import  'LrPathUtils'
+local LrShell       = import  'LrShell'
+local LrStringUtils = import  'LrStringUtils'
+local LrTasks       = import  'LrTasks'
+local LrUUID        = import  'LrUUID'
 local Log           = require 'Log'
 
 Utils = {}

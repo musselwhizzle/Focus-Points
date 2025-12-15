@@ -18,11 +18,11 @@
   This object is responsible for creating the textual info view next to focus point display.
 --]]
 
-local LrColor              = import 'LrColor'
-local LrHttp               = import 'LrHttp'
-local LrPrefs              = import 'LrPrefs'
-local LrTasks              = import 'LrTasks'
-local LrView               = import 'LrView'
+local LrColor              = import  'LrColor'
+local LrHttp               = import  'LrHttp'
+local LrPrefs              = import  'LrPrefs'
+local LrTasks              = import  'LrTasks'
+local LrView               = import  'LrView'
 local DefaultPointRenderer = require 'DefaultPointRenderer'
 local Log                  = require 'Log'
 

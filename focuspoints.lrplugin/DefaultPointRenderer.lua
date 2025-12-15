@@ -20,9 +20,9 @@
   PointsRendererFactory.
 --]]
 
-local LrApplication = import 'LrApplication'
-local LrPrefs       = import 'LrPrefs'
-local LrView        = import 'LrView'
+local LrApplication = import  'LrApplication'
+local LrPrefs       = import  'LrPrefs'
+local LrView        = import  'LrView'
 local a             = require 'affine'
 local ExifUtils     = require 'ExifUtils'
 local Log           = require 'Log'

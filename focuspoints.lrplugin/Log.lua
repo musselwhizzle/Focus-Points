@@ -15,13 +15,13 @@
 --]]
 
 
-local LrApplication   = import 'LrApplication'
-local LrFileUtils     = import 'LrFileUtils'
-local LrLogger        = import 'LrLogger'
-local LrPathUtils     = import 'LrPathUtils'
-local LrPrefs         = import 'LrPrefs'
-local LrSystemInfo    = import 'LrSystemInfo'
-local KeyboardLayout = require 'KeyboardLayout'
+local LrApplication   = import  'LrApplication'
+local LrFileUtils     = import  'LrFileUtils'
+local LrLogger        = import  'LrLogger'
+local LrPathUtils     = import  'LrPathUtils'
+local LrPrefs         = import  'LrPrefs'
+local LrSystemInfo    = import  'LrSystemInfo'
+local KeyboardLayout  = require 'KeyboardLayout'
 
 Log = {}
 

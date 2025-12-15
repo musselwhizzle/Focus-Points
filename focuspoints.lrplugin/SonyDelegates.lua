@@ -19,7 +19,7 @@
   the camera is Sony
 --]]
 
-local LrStringUtils = import "LrStringUtils"
+local LrStringUtils = import  'LrStringUtils'
 local LrView        = import  'LrView'
 local Utils         = require 'Utils'
 local Log           = require 'Log'
