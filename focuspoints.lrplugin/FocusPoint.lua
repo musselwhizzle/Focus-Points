@@ -107,6 +107,17 @@ local function showDialog()
       end
       return current
     end
+    local function needSyncWithFilmStrip()
+      local result = false
+      local activePhoto = catalog:getTargetPhoto()
+      if targetPhoto ~= activePhoto then
+        -- plugin and film strip are out of sync (e.g. after a shift-digit shortcut operation)
+        -- -> make the film strip's photo the 'next' one for the plugin
+        targetPhoto = activePhoto
+        result = true
+      end
+      return result
+    end
     local function nextPhoto()
       -- Advance to the next photo of user selection or film strip (if only a single image was selected)
       local function nextPhotoOfSelection()
@@ -334,7 +345,6 @@ local function showDialog()
                 -- Pick photo
                 if string.find(FocusPointPrefs.kbdShortcutsPick, char, 1, true) then
                   LrSelection.flagAsPick()
-                  return
 
                 -- Pick photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsPickNext, char, 1, true) then
@@ -343,12 +353,16 @@ local function showDialog()
 
                 -- Reject photo
                 elseif string.find(FocusPointPrefs.kbdShortcutsReject, char, 1, true) then
+                  if LrSelection.getFlag() ~= -1 then   -- reject
                   LrSelection.flagAsReject()
+                  end
                   return
 
                 -- Reject photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsRejectNext, char, 1, true) then
+                  if LrSelection.getFlag() ~= -1 then   -- reject
                   LrSelection.flagAsReject()
+                  end
                   LrDialogs.stopModalWithResult(view, "next")
                 -- Unflag photo
                 elseif string.find(FocusPointPrefs.kbdShortcutsUnflag, char, 1, true) then
@@ -368,11 +382,7 @@ local function showDialog()
                 if digit then
                   if digit <= 5 then
                     -- Rating
-                    if digit == LrSelection.getRating() then
-                      LrSelection.setRating(0)
-                else
                       LrSelection.setRating(digit)
-                end
                   else
                     -- Coloring
                     if     digit == 6 then LrSelection.toggleRedLabel()
@@ -383,6 +393,8 @@ local function showDialog()
                   end
                   if shifted then
                     LrDialogs.stopModalWithResult(view, "next")
+                  elseif needSyncWithFilmStrip() then
+                    LrDialogs.stopModalWithResult(view, "sync")
                   else
                     return
                 end

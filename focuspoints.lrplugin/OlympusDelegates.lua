@@ -62,6 +62,7 @@ OlympusDelegates.metaKeyDriveMode                = "Drive Mode"
 OlympusDelegates.metaKeyStackedImage             = "Stacked Image Custom"
 OlympusDelegates.metaKeyImageStabilization       = "Image Stabilization"
 OlympusDelegates.metaKeyDigitalZoomRatio         = "Digital Zoom Ratio"
+OlympusDelegates.metaKeyBodyFirmwareVersion      = "Body Firmware Version"
 
 -- Relevant metadata values
 OlympusDelegates.metaKeyAfPointSelectedPattern   = "%((%d+)%%,(%d+)"
@@ -782,6 +783,7 @@ function OlympusDelegates.getShootingInfo(_photo, props, metaData)
     OlympusDelegates.addInfo("Drive Mode",            OlympusDelegates.metaKeyDriveMode,           props, metaData),
     OlympusDelegates.addInfo("Image Stabilization",   OlympusDelegates.metaKeyImageStabilization,  props, metaData),
     OlympusDelegates.addInfo("Stacked Image",         OlympusDelegates.metaKeyStackedImage,        props, metaData),
+    OlympusDelegates.addInfo("Body Firmware Version", OlympusDelegates.metaKeyBodyFirmwareVersion, props, metaData),
   }
   return shootingInfo
 end
