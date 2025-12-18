@@ -20,17 +20,18 @@
   PointsRendererFactory.
 --]]
 
-local LrApplication = import  'LrApplication'
-local LrPrefs       = import  'LrPrefs'
-local LrView        = import  'LrView'
-local a             = require 'affine'
-local ExifUtils     = require 'ExifUtils'
-local Log           = require 'Log'
-local MogrifyUtils  = require 'MogrifyUtils'
+local LrView = import 'LrView'
+local LrApplication = import 'LrApplication'
+local LrPrefs = import 'LrPrefs'
 
-DefaultPointRenderer = {}
+require "MogrifyUtils"
+require "Log"
+require "ExifUtils"
+a = require "affine"
 
 local prefs = LrPrefs.prefsForPlugin( nil )
+
+DefaultPointRenderer = {}
 
 --[[ the factory will set these delegate methods with the appropriate function depending upon the camera --]]
 DefaultPointRenderer.funcGetAfPoints = nil
@@ -411,8 +412,8 @@ end
 -- - cropWidth, cropHeight - cropped dimensions in unrotated position
 --]]
 function DefaultPointRenderer.getNormalizedDimensions(photo)
-  local originalWidth, originalHeight = Utils.parseDimens(photo:getFormattedMetadata("dimensions"))
-  local cropWidth, cropHeight = Utils.parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+  local originalWidth, originalHeight = parseDimens(photo:getFormattedMetadata("dimensions"))
+  local cropWidth, cropHeight = parseDimens(photo:getFormattedMetadata("croppedDimensions"))
   local userRotation = DefaultPointRenderer.getUserRotationAndMirroring(photo)
 
   if userRotation == 90 or userRotation == -90 or originalWidth < originalHeight then
@@ -480,7 +481,7 @@ end
 --]]
 function DefaultPointRenderer.getShotOrientation(photo, metaData)
   local dimens = photo:getFormattedMetadata("dimensions")
-  local orgPhotoW, orgPhotoH = Utils.parseDimens(dimens) -- original dimension before any cropping
+  local orgPhotoW, orgPhotoH = parseDimens(dimens) -- original dimension before any cropping
 
   local metaOrientation = ExifUtils.findValue(metaData, "Orientation")
   if not metaOrientation then
@@ -534,6 +535,3 @@ function DefaultPointRenderer.createFocusFrame(x, y, w, h)
     }
   }
 end
-
-
-return DefaultPointRenderer

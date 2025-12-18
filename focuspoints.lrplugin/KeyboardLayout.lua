@@ -20,9 +20,10 @@
   This is required to parse and execute the keyboard shortcuts for rating (0-5) and color (6-9).
 ---------------------------------------------------------------------------------------------------]]
 
-local LrDialogs   = import  'LrDialogs'
-local Utf8        = require 'Utf8'
+-- Required Lua definitions
+require 'Utf8.lua'
 
+-- This module
 KeyboardLayout = {}
 
 --[[-----------------------------------------------------------------------------------------------
@@ -277,4 +278,4 @@ function KeyboardLayout.mapTypedCharToDigit(char, layoutId)
 end
 
 
-return KeyboardLayout
+-- return KeyboardLayout

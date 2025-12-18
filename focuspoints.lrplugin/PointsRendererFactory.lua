@@ -180,6 +180,3 @@ function PointsRendererFactory.createRenderer(photo)
 
   return DefaultPointRenderer
 end
-
-
-return PointsRendererFactory

@@ -15,15 +15,15 @@
 --]]
 
 
-local LrFileUtils   = import  'LrFileUtils'
-local LrPathUtils   = import  'LrPathUtils'
-local LrShell       = import  'LrShell'
-local LrStringUtils = import  'LrStringUtils'
-local LrTasks       = import  'LrTasks'
-local LrUUID        = import  'LrUUID'
-local Log           = require 'Log'
+local LrPathUtils = import 'LrPathUtils'
+local LrFileUtils = import 'LrFileUtils'
+local LrStringUtils = import "LrStringUtils"
+local LrShell = import "LrShell"
+local LrTasks = import "LrTasks"
+local LrUUID = import "LrUUID"
 
-Utils = {}
+require "Info"
+require "Log"
 
 
 --[[--------------------------------------------------------------------------------------------------------------------
@@ -36,7 +36,7 @@ Utils = {}
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function Utils.splitToKeyValue(str, delim)
+function splitToKeyValue(str, delim)
   if str == nil then return nil end
   local index = string.find(str, delim)
   if index == nil then
@@ -54,7 +54,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function Utils.splitoriginal(str, delim)
+function splitoriginal(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -65,7 +65,7 @@ function Utils.splitoriginal(str, delim)
   return t
 end
 
-function Utils.split(str, delimiters)
+function split(str, delimiters)
   -- Build a pattern that matches any sequence of characters
   -- that are not one of the delimiters.
   -- This is an extension to the original split function that supported a single delimiter
@@ -84,7 +84,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function Utils.splitTrim(str, delim)
+function splitTrim(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -100,7 +100,7 @@ end
  @str  the string to split
  @delim the character used for splitting the string
 --]]
-function Utils.stringToKeyValue(str, delim)
+function stringToKeyValue(str, delim)
   if str == nil then return nil end
   local index = string.find(str, delim)
   if index == nil then
@@ -117,7 +117,7 @@ end
  @str  the string to split into words
  @delim the character used for splitting the string
 --]]
-function Utils.get_nth_Word(str, n, delimiter)
+function get_nth_Word(str, n, delimiter)
     delimiter = delimiter or ";" -- Default to semicolon if not provided
     local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
     local count = 0
@@ -136,7 +136,7 @@ end
 -- @param maxLen Maximum line length.
 -- @param delimiters A table of delimiters (e.g., { " ", "-", "/" }).
 -- @return A string wrapped with line breaks (`\n`).
-function Utils.wrapText(input, delimiters, maxLen)
+function wrapText(input, delimiters, maxLen)
   if not input then return "" end
   -- Escape delimiters for pattern use
   local delimSet = {}
@@ -179,7 +179,7 @@ end
 -- Parses a string in the form of "(width)x(height)"" and returns width and height
 -- strDimens - string to be parsed
 --]]
-function Utils.parseDimens(strDimens)
+function parseDimens(strDimens)
   local index = string.find(strDimens, "x")
   if index == nil then return nil end
   local w = string.sub(strDimens, 0, index-1)
@@ -198,7 +198,7 @@ end
 -- table - table to search inside
 -- val - value to search for
 --]]
-function Utils.arrayKeyOf(table, val)
+function arrayKeyOf(table, val)
   for k,v in pairs(table) do
     if v == val then
       return k
@@ -209,11 +209,11 @@ end
 
 
 --[[
-  @@public string Utils.getTempFileName()
+  @@public string getTempFileName()
   ----
   Create new UUID name for a temporary file
 --]]
-function Utils.getTempFileName()
+function getTempFileName()
   local fileName = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
   return fileName
 end
@@ -223,7 +223,7 @@ end
 -- Open filename in associated application as per file extension
 -- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
 --]]
-function Utils.openFileInApp(filename)
+function openFileInApp(filename)
   if WIN_ENV then
     LrShell.openFilesInApp({""}, filename)
   else
@@ -232,10 +232,10 @@ function Utils.openFileInApp(filename)
 end
 
 --[[
-  @@public string Utils.getPhotoFileName(table)
+  @@public string getPhotoFileName(table)
   Retrieves name of current photo, used by centralized error handling
 --]]
-function Utils.getPhotoFileName(photo)
+function getPhotoFileName(photo)
   if not photo then
     photo = FocusPointDialog.currentPhoto
   end
@@ -250,19 +250,19 @@ end
   ----
   Retrieves the plugin version number as string
 --]]
-function Utils.getPluginVersion()
+function getPluginVersion()
   return require 'Info.lua'.VERSION.display
 end
 
 
 --[[
-  @@public int Utils.getWinScalingFactor()
+  @@public int getWinScalingFactor()
   ----
   Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
   Returns display scaling level as factor (100/scale_in_percent)
 --]]
-function Utils.getWinScalingFactor()
-  local output = Utils.getTempFileName()
+function getWinScalingFactor()
+  local output = getTempFileName()
   local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
   local result
 
@@ -276,7 +276,7 @@ function Utils.getWinScalingFactor()
   local regOutputStr = "^"
   local dpiValue, scale
   for line in string.gmatch(regOutput, ("[^\r\n]+")) do
-    local item = Utils.split(line, " ")
+    local item = split(line, " ")
     if item and #item >= 3 then
       if item[1] == "AppliedDPI" and item[2] == "REG_DWORD" then
         dpiValue = item[3]
@@ -303,6 +303,3 @@ function Utils.getWinScalingFactor()
 
   return result
 end
-
-
-return Utils

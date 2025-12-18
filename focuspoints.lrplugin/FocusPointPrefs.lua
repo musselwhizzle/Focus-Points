@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
+-- Imported LR namespaces
 local LrApplication   = import 'LrApplication'
 local LrColor         = import 'LrColor'
 local LrDialogs       = import 'LrDialogs'
@@ -22,10 +23,14 @@ local LrPrefs         = import 'LrPrefs'
 local LrShell         = import 'LrShell'
 local LrTasks         = import 'LrTasks'
 local LrView          = import 'LrView'
+--[[ Required Lua definitions
 local KeyboardLayout  = require 'KeyboardLayout'
 local Log             = require 'Log'
 local Utils           = require 'Utils'
+--]]
 
+require 'KeyboardLayout'
+-- This module
 FocusPointPrefs = {}
 
 local LR5 = (LrApplication.versionTable().major == 5)
@@ -97,7 +102,7 @@ function FocusPointPrefs.setDisplayScaleFactor()
     if prefs.screenScaling ~= 0 then
       FocusPointPrefs.displayScaleFactor = prefs.screenScaling
     else
-      FocusPointPrefs.displayScaleFactor = Utils.getWinScalingFactor()
+      FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
     end
   else
     -- just to be safe, normally, this branch should never be executed
@@ -266,7 +271,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
       title = "User Interface",
       f:row {
         bind_to_object = prefs,
---      spacing = f:control_spacing(),
+        spacing = f:control_spacing(),
 
         f:popup_menu {
           title = "taggingControls",
@@ -451,9 +456,9 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           },
         },
       },
-    }
+    },
   }
 end
 
 
-return FocusPointPrefs
+

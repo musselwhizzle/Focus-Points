@@ -14,18 +14,19 @@
   limitations under the License.
 --]]
 
+local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication     = import 'LrApplication'
 local LrDialogs         = import 'LrDialogs'
-local LrFileUtils       = import 'LrFileUtils'
-local LrFunctionContext = import 'LrFunctionContext'
-local LrPrefs           = import  'LrPrefs'
-local LrStringUtils     = import  'LrStringUtils'
 local LrTasks           = import 'LrTasks'
-local ExifUtils         = require 'ExifUtils'
-local FocusPointPrefs   = require 'FocusPointPrefs'
-local Log               = require 'Log'
-local MetadataDialog    = require 'MetadataDialog'
-local Utils             = require 'Utils'
+local LrFileUtils       = import 'LrFileUtils'
+local LrStringUtils     = import "LrStringUtils"
+local LrPrefs           = import "LrPrefs"
+
+require 'FocusPointPrefs'
+require 'MetaDataDialog'
+require 'ExifUtils'
+require 'Utils'
+require 'Log'
 
 
 --[[
@@ -84,12 +85,12 @@ local function showDialog()
 
         LrTasks.sleep(0)
 
-        local result = MetadataDialog.showDialog(targetPhoto, column1, column2, column1Length, column2Length, numLines)
+        local result = showMetadataDialog(targetPhoto, column1, column2, column1Length, column2Length, numLines)
 
         -- Check whether dialog has been left by pressing "Open as text"
         if result == "other" then
           -- if so, open metadata file in default application (and keep it)
-          Utils.openFileInApp(ExifUtils.getMetaDataFile())
+          openFileInApp(ExifUtils.getMetaDataFile())
         else
           -- otherwise remove the temp file
           LrFileUtils.delete(metaDataFile)

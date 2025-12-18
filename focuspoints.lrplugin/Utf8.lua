@@ -14,8 +14,8 @@
   limitations under the License.
 --]]
 
-
-local Utf8 = {}
+-- This module
+Utf8 = {}
 
 -----------------------------------------------------------------------
 -- Fast lookup for UTF-8 leading byte → sequence length
@@ -164,4 +164,4 @@ function Utf8.next_char(s, i)
 end
 
 
-return Utf8
+-- return Utf8

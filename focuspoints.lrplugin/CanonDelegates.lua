@@ -19,9 +19,11 @@
   the camera is Canon
 --]]
 
-local LrView = import  'LrView'
-local Utils  = require 'Utils'
-local Log    = require 'Log'
+local LrView = import "LrView"
+
+require "Utils"
+require "Log"
+
 
 CanonDelegates = {}
 
@@ -119,12 +121,12 @@ function CanonDelegates.getAfPoints(photo, metaData)
   if afPointWidths == nil then
     afPointWidths = {}
   else
-    afPointWidths = Utils.split(afPointWidths, " ")
+    afPointWidths = split(afPointWidths, " ")
   end
   if afPointHeights == nil then
     afPointHeights = {}
   else
-    afPointHeights = Utils.split(afPointHeights, " ")
+    afPointHeights = split(afPointHeights, " ")
   end
 
   local afAreaXPositions = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfAreaXPositions)
@@ -136,19 +138,19 @@ function CanonDelegates.getAfPoints(photo, metaData)
     return nil
   end
 
-  afAreaXPositions = Utils.split(afAreaXPositions, " ")
-  afAreaYPositions = Utils.split(afAreaYPositions, " ")
+  afAreaXPositions = split(afAreaXPositions, " ")
+  afAreaYPositions = split(afAreaYPositions, " ")
 
   local afPointsSelected -- = ExifUtils.findFirstMatchingValue(metaData, { "AF Points Selected" }) DPP doesn't display these!
   if afPointsSelected then
-    afPointsSelected = Utils.split(afPointsSelected, ",")
+    afPointsSelected = split(afPointsSelected, ",")
   else
     afPointsSelected = {}
   end
 
   local afPointsInFocus = ExifUtils.findValue(metaData, CanonDelegates.metaKeyAfPointsInFocus)
   if afPointsInFocus then
-    afPointsInFocus = Utils.split(afPointsInFocus, ",")
+    afPointsInFocus = split(afPointsInFocus, ",")
     Log.logInfo("Canon",
       string.format("Focus point tag '%s' found: '%s'", CanonDelegates.metaKeyAfPointsInFocus, afPointsInFocus))
   else
@@ -194,8 +196,8 @@ function CanonDelegates.getAfPoints(photo, metaData)
       -- we won't display the grid for mirrorless
       pointType = DefaultDelegates.POINTTYPE_AF_INACTIVE
     end
-    local isInFocus = Utils.arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
-    local isSelected = Utils.arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
+    local isInFocus = arrayKeyOf(afPointsInFocus, tostring(key - 1)) ~= nil     -- 0 index based array by Canon
+    local isSelected = arrayKeyOf(afPointsSelected, tostring(key - 1)) ~= nil
     if isInFocus then
       pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
       FocusInfo.focusPointsDetected = true
@@ -451,6 +453,3 @@ function CanonDelegates.getFocusInfo(_photo, props, metaData)
       }
   return focusInfo
 end
-
-
-return CanonDelegates

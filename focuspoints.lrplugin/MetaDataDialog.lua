@@ -14,19 +14,21 @@
   limitations under the License.
 --]]
 
-local LrSystemInfo      = import 'LrSystemInfo'
+local LrSystemInfo = import 'LrSystemInfo'
 local LrFunctionContext = import 'LrFunctionContext'
-local LrDialogs         = import 'LrDialogs'
-local LrView            = import 'LrView'
-local LrBinding         = import 'LrBinding'
+local LrDialogs = import 'LrDialogs'
+local LrView = import 'LrView'
+local LrBinding = import 'LrBinding'
 
-MetadataDialog = {}
+require "Utils"
+require "Log"
 
-function MetadataDialog.showDialog(photo, column1, column2, column1Length, column2Length, numLines)
+
+function showMetadataDialog(photo, column1, column2, column1Length, column2Length, numLines)
 
   local result
 
-  LrFunctionContext.callWithContext("showDialog", function(context)
+  LrFunctionContext.callWithContext("showMetaDataDialog", function(context)
 
     local f = LrView.osFactory()
     local properties = LrBinding.makePropertyTable( context ) -- make a table
@@ -214,6 +216,3 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
   return result
 
 end
-
-
-return MetadataDialog

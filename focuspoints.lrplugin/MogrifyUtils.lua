@@ -14,13 +14,14 @@
   limitations under the License.
 --]]
 
-local LrFileUtils = import  'LrFileUtils'
-local LrErrors    = import  'LrErrors'
-local LrPathUtils = import  'LrPathUtils'
-local LrPrefs     = import  'LrPrefs'
-local LrTasks     = import  'LrTasks'
-local Utils       = require 'Utils'
-local Log         = require 'Log'
+local LrFileUtils = import 'LrFileUtils'
+local LrPathUtils = import 'LrPathUtils'
+local LrErrors = import 'LrErrors'
+local LrTasks = import 'LrTasks'
+local LrPrefs = import "LrPrefs"
+
+require "Utils"
+require "Log"
 
 
 MogrifyUtils = { }    -- class
@@ -68,7 +69,7 @@ local function mogrifyExecute(photo, params, script)
     Log.logError("Mogrify", 'Error calling: ' .. cmdline .. ", return code " .. rc)
     LrErrors.throwUserError(string.format(
      "%s\n\nFATAL error calling 'mogrify.exe' (rc=%s)\nPlease check logfile",
-      Utils.getPhotoFileName(photo), rc))
+      getPhotoFileName(photo), rc))
   end
   if script then
     if prefs.loggingLevel ~= "DEBUG" then
@@ -110,7 +111,7 @@ local function exportToDisk(photo, xSize, ySize)
       local errorText = "FATAL error: Lightroom preview for image not available"
       Log.logError('Mogrify', errorText)
       LrErrors.throwUserError(
-        string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
+        string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
@@ -128,7 +129,7 @@ local function exportToDisk(photo, xSize, ySize)
                                         fileName, errorCode)
         Log.logError('Mogrify', errorText)
         LrErrors.throwUserError(
-          string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
+          string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
       else
         Log.logInfo('Mogrify', "Image exported to " .. fileName )
       end
@@ -256,7 +257,7 @@ end
 -- Creates a temporay script file for Magick. Returns the name of the temp file
 --]]
 function createMagickScript(photo, params)
-  local scriptName = Utils.getTempFileName()
+  local scriptName = getTempFileName()
 
   local success, _errorCode = pcall(function()
     local file = io.open(scriptName, "w")
@@ -271,7 +272,7 @@ function createMagickScript(photo, params)
     local errorText = 'FATAL error creating script file ' .. scriptName
     Log.logError('Mogrify', errorText)
     LrErrors.throwUserError(
-      string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
+      string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
   end
   return scriptName
 end
@@ -288,6 +289,3 @@ function MogrifyUtils.cleanup()
     end
   end
 end
-
-
-return MogrifyUtils

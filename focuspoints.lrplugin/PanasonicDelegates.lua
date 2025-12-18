@@ -17,10 +17,18 @@
 --[[
   A collection of delegate functions to be passed into the DefaultPointRenderer when
   the camera is Panasonic
+
+
+
+
+
 --]]
 
-local LrView = import  'LrView'
-local Log    = require 'Log'
+local LrView   = import 'LrView'
+
+require "Utils"
+require "Log"
+
 
 PanasonicDelegates = {}
 
@@ -28,7 +36,7 @@ PanasonicDelegates = {}
 PanasonicDelegates.metaKeyAfInfoSection = "Panasonic Exif Version"
 
 -- AF-relevant tags
-PanasonicDelegates.metaKeyAfFocusMode                 = "Focus Mode"
+PanasonicDelegates.metaKeyFocusMode                   = "Focus Mode"
 PanasonicDelegates.metaKeyAfAreaMode                  = "AF Area Mode"
 PanasonicDelegates.metaKeyAfPointPosition             = "AF Point Position"
 PanasonicDelegates.metaKeyAFAreaSize                  = "AF Area Size"
@@ -79,8 +87,8 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
   end
 
   -- extract (x,y) point values (rational numbers in range 0..1)
-  local focusX = Utils.get_nth_Word(focusPoint, 1, " ")
-  local focusY = Utils.get_nth_Word(focusPoint, 2, " ")
+  local focusX = get_nth_Word(focusPoint, 1, " ")
+  local focusY = get_nth_Word(focusPoint, 2, " ")
   if not (focusX and focusY) then
     Log.logError("Panasonic",
       string.format('Could not extract (x,y) coordinates from "%s" tag', PanasonicDelegates.metaKeyAfPointPosition))
@@ -133,7 +141,7 @@ function PanasonicDelegates.getAfPoints(photo, metaData)
         local thumbheight = 320 * tonumber(orgPhotoHeight) / tonumber(orgPhotoWidth)
         local xScale = tonumber(orgPhotoWidth)  / thumbwidth
         local yScale = tonumber(orgPhotoHeight) / thumbheight
-        local coordinatesTable = Utils.split(coordinatesStr, " ")
+        local coordinatesTable = split(coordinatesStr, " ")
           local x = coordinatesTable[1] * xScale
           local y = coordinatesTable[2] * yScale
           local w = coordinatesTable[3] * xScale
@@ -259,7 +267,7 @@ end
   Returns whether manual focus has been used on the given photo
 --]]
 function PanasonicDelegates.manualFocusUsed(_photo, metaData)
-  local focusMode = ExifUtils.findValue(metaData, PentaxDelegates.metaKeyFocusMode)
+  local focusMode = ExifUtils.findValue(metaData, PanasonicDelegates.metaKeyFocusMode)
   return (focusMode == "Manual")
 end
 
@@ -307,13 +315,10 @@ function PanasonicDelegates.getFocusInfo(_photo, props, metaData)
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      PanasonicDelegates.addInfo("Focus Mode",        PanasonicDelegates.metaKeyAfFocusMode       , props, metaData),
+      PanasonicDelegates.addInfo("Focus Mode",        PanasonicDelegates.metaKeyFocusMode         , props, metaData),
       PanasonicDelegates.addInfo("AF Area Mode",      PanasonicDelegates.metaKeyAfAreaMode        , props, metaData),
       PanasonicDelegates.addInfo("Subject Detection", PanasonicDelegates.metaKeyAfSubjectDetection, props, metaData),
       PanasonicDelegates.addInfo("Faces Detected",    PanasonicDelegates.metaKeyAfFacesDetected   , props, metaData)
       }
   return focusInfo
 end
-
-
-return PanasonicDelegates

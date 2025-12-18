@@ -18,13 +18,15 @@
   This object is responsible for creating the textual info view next to focus point display.
 --]]
 
-local LrColor              = import  'LrColor'
-local LrHttp               = import  'LrHttp'
-local LrPrefs              = import  'LrPrefs'
-local LrTasks              = import  'LrTasks'
-local LrView               = import  'LrView'
-local DefaultPointRenderer = require 'DefaultPointRenderer'
-local Log                  = require 'Log'
+local LrView  = import "LrView"
+local LrColor = import "LrColor"
+local LrPrefs = import "LrPrefs"
+local LrHttp  = import "LrHttp"
+local LrTasks = import "LrTasks"
+
+require "DefaultPointRenderer"
+require "Log"
+
 
 FocusInfo = {}
 
@@ -395,10 +397,10 @@ function FocusInfo.pluginStatus()
                 statusMsg,
                 f:spacer{fill_horizontal = 1},
                 f:push_button {
-                  title = "Check Log",
+                  title = "Check log",
                   tooltip = "Click to open log file.\nKeyboard shortcut: 'L'",
                   font = "<system>",
-                  action = function() Utils.openFileInApp(Log.getFileName()) end,
+                  action = function() openFileInApp(Log.getFileName()) end,
                 },
               },
               updateMessage,
@@ -511,6 +513,3 @@ function FocusInfo.createInfoView(photo, props)
   }
   return infoView
 end
-
-
-return FocusInfo

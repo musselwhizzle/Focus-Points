@@ -19,9 +19,13 @@
   the camera is Olympus or OM Digital Solutions
 --]]
 
-local LrView = import  'LrView'
-local Utils  = require 'Utils'
-local Log    = require 'Log'
+local LrView   = import 'LrView'
+
+require "FocusPointPrefs"
+require "FocusPointDialog"
+require "Utils"
+require "Log"
+
 
 OlympusDelegates = {}
 
@@ -124,7 +128,7 @@ function getOMDSAfPoints(photo, metaData)
 
   local function isSubjectDetection()
   -- returns true if the photo has been captured using subject tracking
-    return Utils.get_nth_Word(
+    return get_nth_Word(
       ExifUtils.findValue(metaData, OlympusDelegates.metaKeySubjectTrackingMode),1,";")  ~= "Off"
   end
 
@@ -173,9 +177,9 @@ function getOMDSAfPoints(photo, metaData)
     local subjectDetectArea   = findValue(metaData, OlympusDelegates.metaKeySubjectDetectArea)
     local subjectDetectDetail = findValue(metaData, OlympusDelegates.metaKeySubjectDetectDetail)
 
-    subjectDetectFrameSize = Utils.split(subjectDetectFrameSize, " ")
-    subjectDetectArea      = Utils.split(subjectDetectArea     , " ")
-    subjectDetectDetail    = Utils.split(subjectDetectDetail   , " ")
+    subjectDetectFrameSize = split(subjectDetectFrameSize, " ")
+    subjectDetectArea      = split(subjectDetectArea     , " ")
+    subjectDetectDetail    = split(subjectDetectDetail   , " ")
 
     if subjectDetectArea[3] ~= "0" and subjectDetectArea[4] ~= "0" then
       -- area has width and heigth -> add frame to visualize detected subject
@@ -206,9 +210,9 @@ function getOMDSAfPoints(photo, metaData)
 
     local areasIdentical = (afFocusArea == afSelectedArea)
 
-    afFrameSize    = Utils.split(afFrameSize   , " ")
-    afFocusArea    = Utils.split(afFocusArea   , " ")
-    afSelectedArea = Utils.split(afSelectedArea, " ")
+    afFrameSize    = split(afFrameSize   , " ")
+    afFocusArea    = split(afFocusArea   , " ")
+    afSelectedArea = split(afSelectedArea, " ")
 
     if afSelectedArea[3] ~= "0" and afSelectedArea[4] ~= "0" then
       -- #TODO review comment
@@ -262,8 +266,8 @@ function getOMDSAfPoints(photo, metaData)
     if focusPoint and (focusPoint ~= "") and (focusPoint ~= "0 0") and (focusPoint ~= "undef undef undef undef") then
 
       -- extract (x,y) point values (rational numbers in range 0..1)
-      local focusX = Utils.get_nth_Word(focusPoint, 1, " ")
-      local focusY = Utils.get_nth_Word(focusPoint, 2, " ")
+      local focusX = get_nth_Word(focusPoint, 1, " ")
+      local focusY = get_nth_Word(focusPoint, 2, " ")
 
       -- transform the values into pixels
       local x = math.floor(tonumber(orgPhotoWidth)  * tonumber(focusX))
@@ -336,8 +340,8 @@ function getOlympusAfPoints(photo, metaData)
       end
     else
       -- extract (x,y) point values (rational numbers in range 0..1)
-      focusX = Utils.get_nth_Word(focusPoint, 1, " ")
-      focusY = Utils.get_nth_Word(focusPoint, 2, " ")
+      focusX = get_nth_Word(focusPoint, 1, " ")
+      focusY = get_nth_Word(focusPoint, 2, " ")
     end
 
     if not (focusX and focusY) then
@@ -462,8 +466,8 @@ function OlympusDelegates.addFaces(photo, metaData, pointsTable)
 
   -- Let's see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
   -- (a, b, c) are the numbers of detected faces in each of the 2 supported sets of face detect area
-  local detectedFaces = Utils.split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFacesDetected), " ")
-  local maxFaces      = Utils.split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyMaxFaces), " ")
+  local detectedFaces = split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFacesDetected), " ")
+  local maxFaces      = split(ExifUtils.findValue(metaData, OlympusDelegates.metaKeyMaxFaces), " ")
 
   local faceDetectArea
   if detectedFaces and ((detectedFaces[1] ~= "0") or (detectedFaces[2] ~= "0")) then
@@ -471,12 +475,12 @@ function OlympusDelegates.addFaces(photo, metaData, pointsTable)
 
     local faceDetectFrameCrop = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFaceDetectFrameCrop)
     if faceDetectFrameCrop then
-      faceDetectFrameCrop = Utils.split(faceDetectFrameCrop, " ")
+      faceDetectFrameCrop = split(faceDetectFrameCrop, " ")
     end
 
     local faceDetectFrameSize = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFaceDetectFrameSize)
     if faceDetectFrameSize then
-      faceDetectFrameSize = Utils.split(faceDetectFrameSize, " ")
+      faceDetectFrameSize = split(faceDetectFrameSize, " ")
     end
 
     faceDetectArea = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyFaceDetectArea)
@@ -489,7 +493,7 @@ function OlympusDelegates.addFaces(photo, metaData, pointsTable)
     end
 
     if faceDetectArea then
-      faceDetectArea = Utils.split(faceDetectArea, " ")
+      faceDetectArea = split (faceDetectArea, " ")
 
       -- Loop over FaceDetectArea to construct the face detect face frames
       -- Format of FaceDetectArea:
@@ -566,13 +570,13 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
     elseif (title == "Release Priority") then
       -- special case: AFPointDetails. Extract ReleasePriority portion
       if value then
-        props[key] = Utils.get_nth_Word(value, 7, ";")
+        props[key] = get_nth_Word(value, 7, ";")
       end
 
     elseif (title == "Eye Priority") then
       -- special case: AFPointDetails. Extract EyePriority portion
       if value then
-        props[key] = Utils.get_nth_Word(value, 4, ";")
+        props[key] = get_nth_Word(value, 4, ";")
         if not OlympusDelegates.facesDetected then
           props[key] = ExifUtils.metaValueNA
         end
@@ -595,7 +599,7 @@ function OlympusDelegates.addInfo(title, key, props, metaData)
   populateInfo(key)
 
   -- Check if there is (meaningful) content to add
-  if not props[key] or Utils.arrayKeyOf({"N/A", "Off", "No"}, props[key]) then
+  if not props[key] or arrayKeyOf({"N/A", "Off", "No"}, props[key]) then
     -- we won't display any "empty" entries - return empty row
     return FocusInfo.emptyRow()
   end
@@ -663,7 +667,7 @@ end
 function OlympusDelegates.getFaceDetectInfo(metaData)
   local afPointDetails = ExifUtils.findValue(metaData, OlympusDelegates.metaKeyAfPointDetails)
   if afPointDetails then
-    afPointDetails = Utils.splitTrim(afPointDetails, ";")
+    afPointDetails = splitTrim(afPointDetails, ";")
     if #afPointDetails >= 4 then
       return afPointDetails[2] .. "; " .. afPointDetails[4]
     else
@@ -681,7 +685,7 @@ end
 --]]
 function OlympusDelegates.getFocusMode(focusModeValue)
 
-  local f = Utils.splitTrim(focusModeValue:gsub(", Imager AF", ""), ";,")
+  local f = splitTrim(focusModeValue:gsub(", Imager AF", ""), ";,")
   if f and #f > 1 then
     local m = f[2]
     if (m == "MF") then
@@ -811,6 +815,3 @@ function OlympusDelegates.getFocusInfo(_photo, props, metaData)
       }
   return focusInfo
 end
-
-
-return OlympusDelegates

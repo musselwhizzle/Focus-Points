@@ -14,22 +14,23 @@
   limitations under the License.
 --]]
 
+local LrFunctionContext = import 'LrFunctionContext'
 local LrApplication         = import  'LrApplication'
+local LrDialogs         = import 'LrDialogs'
+local LrView            = import 'LrView'
+local LrTasks           = import 'LrTasks'
 local LrBinding             = import  'LrBinding'
+local LrPrefs           = import 'LrPrefs'
 local LrColor               = import  'LrColor'
-local LrDialogs             = import  'LrDialogs'
-local LrFunctionContext     = import  'LrFunctionContext'
 local LrHttp                = import  'LrHttp'
-local LrPrefs               = import  'LrPrefs'
 local LrSystemInfo          = import  'LrSystemInfo'
-local LrTasks               = import  'LrTasks'
-local LrView                = import  'LrView'
-local FocusInfo             = require 'FocusInfo'
-local FocusPointDialog      = require 'FocusPointDialog'
-local FocusPointPrefs       = require 'FocusPointPrefs'
-local Log                   = require 'Log'
-local PointsRendererFactory = require 'PointsRendererFactory'
-local Utf8                  = require 'Utf8'
+
+require 'FocusPointPrefs'
+require 'FocusPointDialog'
+require 'FocusInfo'
+require 'PointsRendererFactory'
+require 'Log'
+require 'Utils'
 
 
 local function showDialog()
@@ -268,7 +269,7 @@ local function showDialog()
       -- a fatal error has occured for the current image: ask user whether to "Exit" the plugin
       -- or "Continue" with the next image in multi-image mode (which means repeat in single-image mode)
       if errorMsg then
-        userResponse = LrDialogs.confirm(errorMsg, Utils.getPhotoFileName(), "Continue", "Stop")
+        userResponse = LrDialogs.confirm(errorMsg, getPhotoFileName(), "Continue", "Stop")
         if userResponse == "cancel" then
           -- Stop plugin operation
           return
@@ -425,7 +426,7 @@ local function showDialog()
               -- check log
               elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, char, 1, true) then
                 if prefs.loggingLevel ~= "NONE" then
-                  Utils.openFileInApp(Log.getFileName())
+                  openFileInApp(Log.getFileName())
                 end
 
               -- Close
@@ -439,9 +440,9 @@ local function showDialog()
         local function fileNameDisplay()
           local s
           if #selectedPhotos > 1 then
-            s = Utils.getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")"
+            s = getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")"
           else
-            s = Utils.getPhotoFileName(targetPhoto)
+            s = getPhotoFileName(targetPhoto)
           end
           return s
         end
@@ -630,7 +631,7 @@ local function showDialog()
           }
         end
         userResponse = LrDialogs.presentModalDialog {
-          title = "Focus-Points (Version " .. Utils.getPluginVersion() .. ")",
+          title = "Focus-Points (Version " .. getPluginVersion() .. ")",
           contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdShortcutHandler()),
           accessoryView = f:row {
             margin_left = 0,

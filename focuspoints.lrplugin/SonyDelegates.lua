@@ -19,10 +19,11 @@
   the camera is Sony
 --]]
 
-local LrStringUtils = import  'LrStringUtils'
-local LrView        = import  'LrView'
-local Utils         = require 'Utils'
-local Log           = require 'Log'
+local LrStringUtils = import "LrStringUtils"
+local LrView = import "LrView"
+require "Utils"
+require "Log"
+
 
 SonyDelegates = {}
 
@@ -104,7 +105,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
     Log.logInfo("Sony",
       string.format("Focus point tag '%s' found", SonyDelegates.metaKeyAfFocusLocation))
 
-    local values = Utils.split(focusPoint, " ")
+    local values = split(focusPoint, " ")
     local imageWidth = LrStringUtils.trimWhitespace(values[1])
     local imageHeight = LrStringUtils.trimWhitespace(values[2])
 
@@ -162,7 +163,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
       local pdafDimensionsStr = ExifUtils.findValue(metaData, SonyDelegates.metaKeyAfFocalPlaneAFPointArea)
       if pdafDimensionsStr then
 
-        local pdafDimensions = Utils.split(pdafDimensionsStr, " ")
+        local pdafDimensions = split(pdafDimensionsStr, " ")
         local pdafWidth  = LrStringUtils.trimWhitespace(pdafDimensions[1])
         local pdafHeight = LrStringUtils.trimWhitespace(pdafDimensions[2])
         if pdafWidth and pdafHeight then
@@ -172,7 +173,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
                     metaData, string.format(SonyDelegates.metaKeyAfFocalPlaneAFPointLocation, i))
 
             if pdafPointStr then
-              local pdafPoint = Utils.split(pdafPointStr, " ")
+              local pdafPoint = split(pdafPointStr, " ")
               local pdafX = LrStringUtils.trimWhitespace(pdafPoint[1])
               local pdafY = LrStringUtils.trimWhitespace(pdafPoint[2])
               if pdafX and pdafY then
@@ -235,7 +236,7 @@ function SonyDelegates.getAfPoints(photo, metaData)
         -- format as per https://exiftool.org/TagNames/Sony.html:
         -- scaled to return the top, left, height and width of detected face,
         -- with coordinates relative to the full-sized unrotated image and increasing Y downwards)
-        local coordinatesTable = Utils.split(coordinatesStr, " ")
+        local coordinatesTable = split(coordinatesStr, " ")
         local w = coordinatesTable[3]
         local h = coordinatesTable[4]
         local x = coordinatesTable[2] + w/2
@@ -344,15 +345,15 @@ function SonyDelegates.modelSupported(model)
   -- Removing the series name leaves the model ID, e.g. '6400'
   local modelID = string.sub(model, #series+1)
 
-  if Utils.arrayKeyOf({"nex", "slt"}, string.sub(series, 1, 3)) then
+  if arrayKeyOf({"nex", "slt"}, string.sub(series, 1, 3)) then
     -- NEX and SLT models are not supported
     return false
   elseif series == "dsc-rx" then
     -- RX series supported with RX10M2, RX100M4 and later models
-    return not Utils.arrayKeyOf({"1", "10", "100", "100m2", "100m3"}, modelID)
+    return not arrayKeyOf({"1", "10", "100", "100m2", "100m3"}, modelID)
   elseif series == "ilce-" then
     -- Alpha supported with α6100, α7 III / α7R III  and later models
-    return not Utils.arrayKeyOf({"6000", "7", "7m2", "7r", "7rm2"}, modelID)
+    return not arrayKeyOf({"6000", "7", "7m2", "7r", "7rm2"}, modelID)
   end
   return true
 end
@@ -443,6 +444,3 @@ function SonyDelegates.getFocusInfo(_photo, props, metaData)
       }
   return focusInfo
 end
-
-
-return SonyDelegates

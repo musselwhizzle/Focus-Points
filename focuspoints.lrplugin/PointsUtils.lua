@@ -14,11 +14,13 @@
   limitations under the License.
 --]]
 
-local LrFileUtils   = import  'LrFileUtils'
-local LrPathUtils   = import  'LrPathUtils'
-local LrStringUtils = import  'LrStringUtils'
-local Utils         = require 'Utils'
-local Log           = require 'Log'
+local LrFileUtils = import 'LrFileUtils'
+local LrPathUtils = import 'LrPathUtils'
+local LrStringUtils = import "LrStringUtils"
+
+require "Utils"
+require "Log"
+
 
 PointsUtils = {}
 
@@ -50,7 +52,7 @@ function PointsUtils.readIntoTable(folder, filename)
   for i in string.gmatch(data, "[^\\\n]+") do
     -- skip comment lines
     if i:match("^%s*%-%-") == nil then
-      local p = Utils.splitToKeyValue(i, "=")
+      local p = splitToKeyValue(i, "=")
       if p ~= nil then
 
         -- variable or focus point name
@@ -62,7 +64,7 @@ function PointsUtils.readIntoTable(folder, filename)
         value = string.gsub(value, "{", "")
         value = string.gsub(value, "}", "")
         value = LrStringUtils.trimWhitespace(p.value)
-        local dataPoints = Utils.splitTrim(value, ",")
+        local dataPoints = splitTrim(value, ",")
 
         -- parse the single value items: x, y, [h, w]
         local points = {}
@@ -95,6 +97,3 @@ function PointsUtils.readIntoTable(folder, filename)
   end
   return focusPoints, focusPointDimens, fullSizeDimens
 end
-
-
-return PointsUtils
