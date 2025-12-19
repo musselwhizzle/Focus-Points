@@ -13,6 +13,7 @@
   See the License for the specific language governing permissions and
   limitations under the License.
 --]]
+
 -- Imported LR namespaces
 local LrApplication   = import 'LrApplication'
 local LrColor         = import 'LrColor'
@@ -23,13 +24,9 @@ local LrPrefs         = import 'LrPrefs'
 local LrShell         = import 'LrShell'
 local LrTasks         = import 'LrTasks'
 local LrView          = import 'LrView'
---[[ Required Lua definitions
-local KeyboardLayout  = require 'KeyboardLayout'
-local Log             = require 'Log'
-local Utils           = require 'Utils'
---]]
 
 require 'KeyboardLayout'
+
 -- This module
 FocusPointPrefs = {}
 
@@ -48,6 +45,11 @@ FocusPointPrefs.focusBoxSizeMedium = 2
 FocusPointPrefs.focusBoxSizeLarge  = 3
 FocusPointPrefs.initfocusBoxSize   = FocusPointPrefs.focusBoxSizeMedium
 
+-- Settings for keybopard shortcut input field
+FocusPointPrefs.kbdInputInvisible  = 0
+FocusPointPrefs.kbdInputSmall      = 1
+FocusPointPrefs.kbdInputRegular    = 2
+
 -- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
@@ -56,6 +58,7 @@ FocusPointPrefs.isUpdateAvailable  = nil
 -- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
 FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
+FocusPointPrefs.urlkbdShortcuts    = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md#keyboard-shortcuts"
 FocusPointPrefs.urlKofi            = "https://ko-fi.com/focuspoints"
 
 -- Keyboard shortcut definitions
@@ -88,6 +91,8 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.loggingLevel           then	prefs.loggingLevel    = "AUTO"   end
   if not prefs.latestVersion          then	prefs.latestVersion   = _PLUGIN.version end
   if     prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
+  if     prefs.keyboardInput == nil   then  prefs.keyboardInput = FocusPointPrefs.kbdInputReguar
+  end
 
   -- get the latest plugin version for update checks
   FocusPointPrefs.getLatestVersion()
@@ -262,17 +267,14 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
       },
     }
   end
-
-
   local function sectionUserInterface()
-
     if LR5 then return {} end
-    return {
+    return
+    {
       title = "User Interface",
       f:row {
         bind_to_object = prefs,
         spacing = f:control_spacing(),
-
         f:popup_menu {
           title = "taggingControls",
           value = bind ("taggingControls"),
@@ -283,11 +285,12 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           }
         },
         f:static_text {
-          title = 'Enable controls for flagging, rating and coloring the photo (mouse and keyboard)'
+          title = 'Enable controls for flagging, rating and coloring a photo (mouse and keyboard)'
         },
       },
       f:row {
         bind_to_object = prefs,
+        spacing = f:control_spacing(),
         f:popup_menu {
           title = "keyboardLayout",
           value = bind ("keyboardLayout"),
@@ -295,16 +298,30 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           items = KeyboardLayout.buildDropdownItems(),
         },
         f:static_text {
-            title = 'Layout of used keyboard. Information required to process rating and coloring keyboard shortcuts'
+            title = 'Keyboard layout. Required to process shortcuts 0..9 for rating and coloring'
+        },
+      },
+      f:row {
+        bind_to_object = prefs,
+        spacing = f:control_spacing(),
+        f:popup_menu {
+          title = "keyboardInput",
+          value = bind ("keyboardInput"),
+          width = dropDownWidth,
+          items = {
+            { title = "Invisible",  value = FocusPointPrefs.kbdInputInvisible },
+            { title = "Small",      value = FocusPointPrefs.kbdInputSmall     },
+            { title = "Regular",    value = FocusPointPrefs.kbdInputRegular   },
+          }
+        },
+        f:static_text {
+            title = 'Appearance of text input field for keyboard shortcuts'
         },
       },
     }
   end
-
-
-  return {
-    sectionScreenScaling(),
-    sectionUserInterface(),
+  local function sectionViewingOptions()
+    return
     {
       title = "Viewing Options",
       f:row {
@@ -340,13 +357,15 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           title = "  Size of focus box for 'focus pixel' points ",
         },
       },
-    },
-
+    }
+  end
+  local function sectionProcessingOptions()
+    return
     {
       title = "Processing Options",
       f:row {
         bind_to_object = prefs,
---        spacing = f:control_spacing(),
+        spacing = f:control_spacing(),
         f:popup_menu {
           title = "processMfInfo",
           value = bind ("processMfInfo"),
@@ -360,8 +379,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           title = 'Process focus information for images taken with manual focus (MF)',
         },
       },
-    },
-
+    }
+  end
+  local function sectionLogging()
+    return
     {
       title = "Logging",
       f:row {
@@ -401,7 +422,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           end,
         },
       },
-    },
+    }
+  end
+  local function sectionUpdates()
+    return
     {
       title = "Updates",
       bind_to_object = prefs,
@@ -414,7 +438,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
         f:spacer{fill_horizontal = 1},
         updateMessage,
       },
-    },
+    }
+  end
+  local function sectionAcknowledgements()
+    return
     {
       title = "Acknowledgements",
       f:row {
@@ -456,9 +483,16 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           },
         },
       },
-    },
+    }
+  end
+
+  return {
+    sectionScreenScaling(),
+    sectionUserInterface(),
+    sectionViewingOptions(),
+    sectionProcessingOptions(),
+    sectionLogging(),
+    sectionUpdates(),
+    sectionAcknowledgements(),
   }
 end
-
-
-

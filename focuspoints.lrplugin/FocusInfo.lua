@@ -297,7 +297,7 @@ function FocusInfo.statusMessage(statusCode)
       f:static_text {
         title = utfLinkSymbol,
         text_color = LrColor(0, 0.25, 1),
-        tooltip = "Open troubleshooting information\nKeyboard shortcut: '?'",
+        tooltip = "Open troubleshooting information (?)",
         immediate = true,
         mouse_down = function(_view)
           LrTasks.startAsyncTask(function()
@@ -398,7 +398,7 @@ function FocusInfo.pluginStatus()
                 f:spacer{fill_horizontal = 1},
                 f:push_button {
                   title = "Check log",
-                  tooltip = "Click to open log file.\nKeyboard shortcut: 'L'",
+                  tooltip = "Click to open log file (L)",
                   font = "<system>",
                   action = function() openFileInApp(Log.getFileName()) end,
                 },

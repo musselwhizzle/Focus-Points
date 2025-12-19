@@ -289,15 +289,29 @@ local function showDialog()
         Log.logInfo("FocusPoint", "Present dialog and information")
 
 
+        local function inputFieldWidth()
+          if     prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible then return 1
+          elseif prefs.keyboardInput == FocusPointPrefs.kbdInputSmall     then return 25
+          else                                                                 return 100
+          end
+        end
 
+        local function inputFieldHeight()
+          if prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible then
+            return 1  -- minimum height in px
+          else
+            return nil -- automatic
+          end
+        end
+        local function kbdShortcutInputField()
         local f = LrView.osFactory()
-        local function kbdShortcutHandler()
 
         local previewText  = ""
         props.shortcutText = ""
           return f:edit_field {
           value = LrView.bind('shortcutText', props),
-          width  = 1, height = 1,   -- set tiny dimensions to make the field invisible
+            width = inputFieldWidth(),
+            height = inputFieldHeight(),
           border_enabled = false, -- optionally suppress borders
           immediate = true,
           validate = function(view, text)
@@ -313,18 +327,18 @@ local function showDialog()
             if text == previewText then
               -- call for "Commit" validation -> exit (because shortcut has already been processed in "Preview")
               Log.logDebug("FocusPoint",
-                string.format("kbdHandler: Commit called with '%s'. Preview '%s'", text, previewText))
+                  string.format("Shortcut input: Commit called with '%s'. Preview '%s'", text, previewText))
               previewText = ""  -- reset for next Preview
               return true
             else
               -- call for "Preview" validation -> save text and process
               Log.logDebug("FocusPoint",
-                  string.format("kbdHandler: Preview called with '%s'. Preview '%s'", text, previewText))
+                    string.format("Shortcut input: Preview called with '%s'. Preview '%s'", text, previewText))
               previewText = text
             end
               -- Get the most recently entered character
               local char = Utf8.last_char(text)
-              Log.logDebug("FocusPoint", string.format("kbdHandler: c = '%s'", char))
+              Log.logDebug("FocusPoint", string.format("Shortcut input: c = '%s'", char))
               if not char or char == "" then return false end
               --------------------------------------------------------------------------------------
               -- Parse character and perform designated operation if it is a shortcut
@@ -346,7 +360,7 @@ local function showDialog()
                 -- Pick photo
                 if string.find(FocusPointPrefs.kbdShortcutsPick, char, 1, true) then
                   LrSelection.flagAsPick()
-
+                  return true  -- done
                 -- Pick photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsPickNext, char, 1, true) then
                   LrSelection.flagAsPick()
@@ -357,7 +371,7 @@ local function showDialog()
                   if LrSelection.getFlag() ~= -1 then   -- reject
                   LrSelection.flagAsReject()
                   end
-                  return
+                  return true  -- done
 
                 -- Reject photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsRejectNext, char, 1, true) then
@@ -368,7 +382,7 @@ local function showDialog()
                 -- Unflag photo
                 elseif string.find(FocusPointPrefs.kbdShortcutsUnflag, char, 1, true) then
                 LrSelection.removeFlag()
-                  return
+                  return true  -- done
                 -- Unflag photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsUnflagNext, char, 1, true) then
                   LrSelection.removeFlag()
@@ -397,8 +411,8 @@ local function showDialog()
                   elseif needSyncWithFilmStrip() then
                     LrDialogs.stopModalWithResult(view, "sync")
                   else
-                    return
                 end
+                  return true  -- done
                 end
                 end
               --------------------------------------------------------------------------------------
@@ -408,13 +422,15 @@ local function showDialog()
               -- Next image
               if string.find(FocusPointPrefs.kbdShortcutsNext, char, 1, true) then
                 LrDialogs.stopModalWithResult(view, "next")
+              return true  -- done
               -- Previous image
               elseif string.find(FocusPointPrefs.kbdShortcutsPrev, char, 1, true) then
                 LrDialogs.stopModalWithResult(view, "previous")
+              return true  -- done
               -- open user manual
               elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, char, 1, true) then
                 LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
-
+              return true  -- done
               -- troubleshooting
               elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, char, 1, true) then
                 local statusCode = FocusInfo.getStatusCode()
@@ -423,20 +439,55 @@ local function showDialog()
                     LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
                   end)
                 end
+              return true  -- done
               -- check log
               elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, char, 1, true) then
                 if prefs.loggingLevel ~= "NONE" then
                   openFileInApp(Log.getFileName())
                 end
-
+              return true  -- done
               -- Close
               elseif string.find(FocusPointPrefs.kbdShortcutsClose, char, 1, true)
               or (MAC_ENV and char == ".") then
                 LrDialogs.stopModalWithResult(view, "ok")
               end
+            -- always return true; in case of false the entire text is displayed in red color if visible
+            return true
+          end,
+          }
+        end
+        local function kbdShortcutInput()
+          local f = LrView.osFactory()
+          if prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible
+          or prefs.keyboardInput == FocusPointPrefs.kbdInputSmall then
+            -- display only the input field
+            return f:row {
+              kbdShortcutInputField()
+            }
+          else
+            return f:row{
+              -- display the input field and text label as explanation
+              spacing = 0,
+              kbdShortcutInputField(),
+              f:static_text{
+                title = " <- Input for",
+                font  = "<system/small>",
+              },
+              f:static_text {
+                title = "keyboard shortcuts " .. utfLinkSymbol,
+                font  = "<system/small>",
+                tooltip = "Learn how to use the plugin's keyboard shortcuts and familiarize yourself with its limitations and restrictions",
+                text_color = LrColor(0, 0.25, 1),
+                immediate = true,
+                mouse_down = function(_view)
+                  LrTasks.startAsyncTask(function()
+                    LrHttp.openUrlInBrowser(FocusPointPrefs.urlkbdShortcuts)
+                  end)
             end,
+              },
           }
             end
+        end
         local function fileNameDisplay()
           local s
           if #selectedPhotos > 1 then
@@ -447,6 +498,7 @@ local function showDialog()
           return s
         end
         local function navigationControls()
+          local f = LrView.osFactory()
         props.clicked = false
           return f:row {
             margin = 0,
@@ -484,6 +536,7 @@ local function showDialog()
           }
         end
         local function taggingControls()
+          local f = LrView.osFactory()
           local function setRating (rating)
             if rating == LrSelection.getRating() then
               -- clear existing rating
@@ -602,6 +655,7 @@ local function showDialog()
           }
         end
         local function miscControls()
+          local f = LrView.osFactory()
           return f:row{
             spacing = 0,
             f:picture {
@@ -630,9 +684,10 @@ local function showDialog()
           },
           }
         end
+        local f = LrView.osFactory()
         userResponse = LrDialogs.presentModalDialog {
           title = "Focus-Points (Version " .. getPluginVersion() .. ")",
-          contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdShortcutHandler()),
+          contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdShortcutInput()),
           accessoryView = f:row {
             margin_left = 0,
             spacing = 0,     -- removes uniform spacing; we control it manually

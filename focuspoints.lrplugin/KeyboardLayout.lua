@@ -20,6 +20,8 @@
   This is required to parse and execute the keyboard shortcuts for rating (0-5) and color (6-9).
 ---------------------------------------------------------------------------------------------------]]
 
+local LrDialogs = import 'LrDialogs'
+
 -- Required Lua definitions
 require 'Utf8.lua'
 
@@ -221,16 +223,21 @@ end
 
 function KeyboardLayout.mapTypedCharToDigit(char, layoutId)
 
+  local errorMsg =
+    "Keyboard layout not specified",
+    "This is required for proper handling of shifted '0'-'9' keystrokes.\n\n" ..
+    "Go to Plug-in Manager > Plugin Settings > User Interface to set your keyboard layout!"
+
   if not layoutId then
-    LrDialogs.message(
-      "Keyboard layout not specified",
-      "This is required for proper handling of shifted '0'-'9' keystrokes.\n\n" ..
-      "Go to Plug-in Manager > Plugin Settings > User Interface to set your keyboard layout!")
+    -- user has not chosen keyboard layout yet in plugin settings
+    LrDialogs.message(errorMsg)
     return nil, nil
   end
 
   local layout = KeyboardLayout.layoutById[layoutId]
   if not layout then
+    -- sanity check to make sure we have a valid layout to work with
+    LrDialogs.message(errorMsg)
     return nil, nil
   end
 

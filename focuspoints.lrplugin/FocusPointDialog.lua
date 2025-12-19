@@ -74,33 +74,18 @@ function FocusPointDialog.calculatePhotoDimens(photo)
 end
 
 
-function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdHandler)
-  local myView
+function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdShortcutInput)
   local f = LrView.osFactory()
 
-  -- view for photo with focus point visualization
-  local column1 = f:column {
-    photoView
+  return f:view {
+    f:column {
+       f:row {
+         kbdShortcutInput,
+       },
+       f:row {
+         f:column { photoView },
+         f:column { fill_vertical = 1, infoView },
+       }
+    }
   }
-
-  -- view for textual information on image, shooting and focus information
-  if infoView ~= nil then
-    local column2 = f:column { fill_vertical = 1,
-      infoView,
-    }
-    local row = f:row {
-      kbdHandler, column1, column2
-    }
-    myView = f:view {
-      row,
-    }
-  else
-    -- if infoView is not (yet) supported for a specific make, only include the photoView
-    myView = f:view {
-      column1,
-    }
-  end
-
-  return myView
-
 end
