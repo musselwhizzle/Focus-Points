@@ -316,30 +316,57 @@ The tag `CameraSettingsVersion` has not been found which means that this file do
 
 ### Keyboard Shortcuts
 
-To simplify the operation of the plugin, a number of keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse:
+To simplify the operation of the plugin, keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse:
 
-| Action                           | Keyboard shortcuts    |
-|----------------------------------|-----------------------|
-| Previous image                   | `-`, `P`              |
-| Next image                       | `+`, `N`, `space bar` |
-| Open User Manual                 | `U`, `M`              |
-| Open Troubleshooting Information | `?`, `H`              |
-| Open Log File                    | `L`                   |
-| Exit                             | `X`                   |
-
+| Action                                      | Keyboard shortcuts |
+|---------------------------------------------|--------------------|
+| **Navigation**                              |                    | 
+| Previous image                              | `-`, `<`           |
+| Next image                                  | `+`, `Spacebar`    |
+| **Flagging**                                |                    |
+| Flag photo as a pick                        | `P`                |
+| Flag photo as a pick and go to next photo   | `Shift`+`P`        |
+| Flag photo as a reject                      | `X`                |
+| Flag photo as a reject and go to next photo | `Shift`+`X`        |
+| Unflag photo                                | `U`                |
+| Unflag photo and go to next photo           | `Shift`+`U`        |
+| **Rating**                                  |                    |
+| Set star rating                             | `1`-`5`            |
+| Set star rating and go to next photo        | `Shift`+`1`-`5`    |
+| **Color**                                   |                    |
+| Assign a red label                          | `6`                |
+| Assign a yellow label                       | `7`                |
+| Assign a green label                        | `8`                |
+| Assign a blue label                         | `9`                |
+| Assign a color label and go to next photo   | `Shift`+`6`-`9`    |
+| **Miscelleanous**                           |                    |
+| Open User Manual                            | `M`                |
+| Open Troubleshooting Information (Help)     | `?`, `H`           |
+| Check Log                                   | `L`                |
+| Close                                       | `C `               |
 <br>
-Technical note:
 
-Since the Lightroom SDK does not support native keyboard event handling in modal dialogs, a "trick" is used to implement keyboard shortcuts. This trick has some **limitations**, so it is described here for better understanding.
+**IMPORTANT Technical Note:**
 
-The only SDK view control that allows capturing keyboard input is `edit_field`. The plugin uses an invisible `edit_field` control to capture keyboard input. The plugin checks if the typed character matches a keyboard shortcut and triggers the appropriate action if it does.<br>
+The Lightroom SDK does not support the native handling of keyboard events in modal dialogs, so the plugin uses a "trick" to implement keyboard shortcuts. This approach has certain limitations, which are described here for a better understanding.
 
-The function that captures keyboard input is only called when the text in `edit_field` changes.<br>
-**Arrow keys, Esc, Return, etc. do not change text input, so the choice of hotkeys is limited to text (i.e. printable ASCII characters).**
+The plugin cannot recognize key codes; it can only work with text input. It uses an 'edit_field' control to capture keyboard input and check whether the last character typed matches a keyboard shortcut. If it does, the appropriate action is triggered. 
 
-For this trick to work, `edit_field` must always have the focus. This is the case as long as the **user does not move the focus to another button using the Tab or Shift-Tab key**.
-<br><br>
+**Arrow keys, Function keys, Esc, Return, etc. do not change text input, so the choice of hotkeys is limited to text (i.e. printable ASCII characters).**
+ 
+In V3.1, the text input field was invisible to the user; in V3.2 this is changed.
 
+While it is easily possible to perform operations using keyboard shortcuts and the mouse simultaneously for the same image on Windows, this does not work seamlessly on macOS. As soon as a control is clicked on macOS, the text input field loses focus. This means that any further keyboard input will not be recognized unless the user clicks on the input field again to make it the active control.
+
+To introduce transparency and intuitively instruct the user on how to proceed with keyboard shortcuts after losing focus, the text input field is now visible by default:
+
+<img src="../screens/OM System 21.jpg" alt="Basic Operation 6" style="width: 850px;"/>
+
+You can configure the size of the text input field, including the labelling, in the plugin settings.
+
+
+
+<br><br>                               
 
 ### 2.4 Metadata Viewer
 The plugin also features a Metadata Viewer with live search:
