@@ -36,6 +36,14 @@ local bind = LrView.bind
 
 FocusPointPrefs.displayScaleFactor = 0.0
 
+-- Size options for plugin window
+FocusPointPrefs.windowSizeXXL      = 0.8
+FocusPointPrefs.windowSizeXL       = 0.7
+FocusPointPrefs.windowSizeL        = 0.6
+FocusPointPrefs.windowSizeM        = 0.5
+FocusPointPrefs.windowSizeS        = 0.4
+
+
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
 
@@ -83,6 +91,7 @@ FocusPointPrefs.kbdShortcutsClose           = "cC"
 function FocusPointPrefs.InitializePrefs(prefs)
   -- Set any undefined properties to their default values
   if not prefs.screenScaling          then	prefs.screenScaling   = 0 end
+  if not prefs.windowSize             then  prefs.windowSize      = FocusPointPrefs.windowSizeL end
   if not prefs.focusBoxSize           then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor          then	prefs.focusBoxColor   = "red"    end
   if     prefs.taggingControls == nil then  prefs.taggingControls = true     end
@@ -123,6 +132,14 @@ function FocusPointPrefs.getDisplayScaleFactor()
     FocusPointPrefs.setDisplayScaleFactor()
   end
   return FocusPointPrefs.displayScaleFactor
+end
+
+
+--[[ #TODO Documentation!
+--]]
+function FocusPointPrefs.getWindowSize()
+  local prefs = LrPrefs.prefsForPlugin( nil )
+  return prefs.windowSize
 end
 
 
@@ -272,6 +289,26 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
     return
     {
       title = "User Interface",
+      f:row {
+        bind_to_object = prefs,
+        spacing = f:control_spacing(),
+        f:popup_menu {
+          title = "Window size",
+          value = bind ("windowSize"),
+          width = dropDownWidth,
+          items = {
+            { title = "XXL", value = FocusPointPrefs.windowSizeXXL },
+            { title = "XL",  value = FocusPointPrefs.windowSizeXL  },
+            { title = "L",   value = FocusPointPrefs.windowSizeL   },
+            { title = "M",   value = FocusPointPrefs.windowSizeM   },
+            { title = "S",   value = FocusPointPrefs.windowSizeS   },
+
+          }
+        },
+        f:static_text {
+          title = 'Size of plugin window'
+        }
+      },
       f:row {
         bind_to_object = prefs,
         spacing = f:control_spacing(),

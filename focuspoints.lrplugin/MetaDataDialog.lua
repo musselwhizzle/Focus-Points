@@ -35,8 +35,9 @@ function showMetadataDialog(photo, column1, column2, column1Length, column2Lengt
     local delimiter = "\r"  -- carriage return; used to separate individual entries in column1 and column2 strings
 
     local appWidth, appHeight = LrSystemInfo.appWindowSize()
-    local contentWidth  = appWidth  * .4
-    local contentHeight = appHeight * .7
+    local windowSize = FocusPointPrefs.getWindowSize()
+    local contentHeight = appHeight * windowSize
+    local contentWidth  = appWidth  * windowSize * 0.5
 
     if WIN_ENV then
       local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()

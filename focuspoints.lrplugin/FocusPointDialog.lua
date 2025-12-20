@@ -18,7 +18,7 @@ local LrView = import 'LrView'
 
 require "Utils"
 require "Log"
-
+require "FocusPointPrefs"
 
 FocusPointDialog = {}
 
@@ -42,8 +42,9 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   FocusPointDialog.PhotoWidth  = w
   FocusPointDialog.PhotoHeight = h
 
-  local contentWidth  = FocusPointDialog.AppWidth  * .8
-  local contentHeight = FocusPointDialog.AppHeight * .8
+  local windowSize = FocusPointPrefs.getWindowSize()
+  local contentWidth  = FocusPointDialog.AppWidth  * windowSize
+  local contentHeight = FocusPointDialog.AppHeight * windowSize
 
   if WIN_ENV then
     local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
