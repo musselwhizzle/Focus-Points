@@ -18,23 +18,22 @@
   Factory for creating the focus point renderer and getting the focus points.
 --]]
 
-require 'AppleDelegates'
-require 'CanonDelegates'
-require 'DefaultDelegates'
-require 'DefaultPointRenderer'
-require 'ExifUtils'
-require 'FujifilmDelegates'
-require 'Log'
-require 'NikonDelegates'
-require 'NikonDuplicates'
-require 'OlympusDelegates'
-require 'PanasonicDelegates'
-require 'PentaxDelegates'
-require 'PointsUtils'
-require 'SonyDelegates'
+-- Required Lua definitions
+local AppleDelegates           = require 'AppleDelegates'
+local CanonDelegates           = require 'CanonDelegates'
+local DefaultDelegates         = require 'DefaultDelegates'
+local DefaultPointRenderer     = require 'DefaultPointRenderer'
+local FujifilmDelegates        = require 'FujifilmDelegates'
+local Log                      = require 'Log'
+local NikonDelegates           = require 'NikonDelegates'
+local NikonDuplicates          = require 'NikonDuplicates'
+local OlympusDelegates         = require 'OlympusDelegates'
+local PanasonicDelegates       = require 'PanasonicDelegates'
+local PentaxDelegates          = require 'PentaxDelegates'
+local SonyDelegates            = require 'SonyDelegates'
 
-
-PointsRendererFactory = {}
+-- This module
+local PointsRendererFactory = {}
 
 function PointsRendererFactory.createRenderer(photo)
 
@@ -59,7 +58,7 @@ function PointsRendererFactory.createRenderer(photo)
   if (string.find(cameraMake, "ricoh imaging company", 1, true)
           or (string.find(cameraMake, "pentax", 1, true) and cameraMake ~= "pentax")
           -- since K-3, tested with K-3, K-1, K-1 Mark II. cameraMake is too unspecific, therefor we test against cameraModel as well
-          or (string.find(cameraMake, "ricoh", 1, true))) then -- @FIXME and string.find(cameraModel, "pentax", 1, true))) then
+          or (string.find(cameraMake, "ricoh", 1, true))) then
     cameraMake = "pentax"
     mapped = true
   end
@@ -116,18 +115,18 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultPointRenderer.funcMakerNotesFound = FujifilmDelegates.makerNotesFound
     DefaultPointRenderer.funcManualFocusUsed = FujifilmDelegates.manualFocusUsed
     DefaultPointRenderer.funcGetAfPoints     = FujifilmDelegates.getAfPoints
-    DefaultPointRenderer.funcGetImageInfo    = FujifilmDelegates.getImageInfo 
+    DefaultPointRenderer.funcGetImageInfo    = FujifilmDelegates.getImageInfo
     DefaultPointRenderer.funcGetShootingInfo = FujifilmDelegates.getShootingInfo
-    DefaultPointRenderer.funcGetFocusInfo    = FujifilmDelegates.getFocusInfo 
-                                                                              
+    DefaultPointRenderer.funcGetFocusInfo    = FujifilmDelegates.getFocusInfo
+
   elseif (cameraMake == "nikon corporation"  ) then
     DefaultPointRenderer.funcModelSupported  = NikonDelegates.modelSupported
     DefaultPointRenderer.funcMakerNotesFound = NikonDelegates.makerNotesFound
     DefaultPointRenderer.funcManualFocusUsed = NikonDelegates.manualFocusUsed
-    DefaultPointRenderer.funcGetAfPoints     = NikonDelegates.getAfPoints     
-    DefaultPointRenderer.funcGetImageInfo    = NikonDelegates.getImageInfo    
+    DefaultPointRenderer.funcGetAfPoints     = NikonDelegates.getAfPoints
+    DefaultPointRenderer.funcGetImageInfo    = NikonDelegates.getImageInfo
     DefaultPointRenderer.funcGetShootingInfo = NikonDelegates.getShootingInfo
-    DefaultPointRenderer.funcGetFocusInfo    = NikonDelegates.getFocusInfo    
+    DefaultPointRenderer.funcGetFocusInfo    = NikonDelegates.getFocusInfo
 
   elseif (cameraMake == "olympus") then
     DefaultPointRenderer.funcModelSupported  = OlympusDelegates.modelSupported
@@ -172,11 +171,11 @@ function PointsRendererFactory.createRenderer(photo)
     DefaultPointRenderer.funcManualFocusUsed = nil
     DefaultPointRenderer.funcGetAfPoints     = nil
     DefaultPointRenderer.funcGetImageInfo    = nil
-    DefaultPointRenderer.funcGetShootingInfo   = nil
+    DefaultPointRenderer.funcGetShootingInfo = nil
     DefaultPointRenderer.funcGetFocusInfo    = nil
   end
 
-  DefaultDelegates.metaData = ExifUtils.readMetaDataAsTable(photo)
-
   return DefaultPointRenderer
 end
+
+return PointsRendererFactory

@@ -14,17 +14,17 @@
   limitations under the License.
 --]]
 
+-- Imported LR namespaces
+local LrPathUtils      = import  'LrPathUtils'
+local LrShell          = import  'LrShell'
+local LrStringUtils    = import  'LrStringUtils'
+local LrUUID           = import  'LrUUID'
 
-local LrPathUtils = import 'LrPathUtils'
-local LrFileUtils = import 'LrFileUtils'
-local LrStringUtils = import "LrStringUtils"
-local LrShell = import "LrShell"
-local LrTasks = import "LrTasks"
-local LrUUID = import "LrUUID"
+-- Required Lua definitions
+local GlobalDefs       = require 'GlobalDefs'
 
-require "Info"
-require "Log"
-
+-- This module
+local Utils = {}
 
 --[[--------------------------------------------------------------------------------------------------------------------
    Utilities for string handling
@@ -36,7 +36,7 @@ require "Log"
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function splitToKeyValue(str, delim)
+function Utils.splitToKeyValue(str, delim)
   if str == nil then return nil end
   local index = string.find(str, delim)
   if index == nil then
@@ -54,7 +54,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function splitoriginal(str, delim)
+function Utils.splitoriginal(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -65,7 +65,7 @@ function splitoriginal(str, delim)
   return t
 end
 
-function split(str, delimiters)
+function Utils.split(str, delimiters)
   -- Build a pattern that matches any sequence of characters
   -- that are not one of the delimiters.
   -- This is an extension to the original split function that supported a single delimiter
@@ -84,7 +84,7 @@ end
 -- str - string to be broken into pieces
 -- delim - delimiter
 --]]
-function splitTrim(str, delim)
+function Utils.splitTrim(str, delim)
   if str == nil then return nil end
   local t = {}
   local i = 1
@@ -100,7 +100,7 @@ end
  @str  the string to split
  @delim the character used for splitting the string
 --]]
-function stringToKeyValue(str, delim)
+function Utils.stringToKeyValue(str, delim)
   if str == nil then return nil end
   local index = string.find(str, delim)
   if index == nil then
@@ -117,7 +117,7 @@ end
  @str  the string to split into words
  @delim the character used for splitting the string
 --]]
-function get_nth_Word(str, n, delimiter)
+function Utils.get_nth_Word(str, n, delimiter)
     delimiter = delimiter or ";" -- Default to semicolon if not provided
     local pattern = "([^" .. delimiter .. "]+)" -- Dynamic delimiter pattern
     local count = 0
@@ -130,13 +130,12 @@ function get_nth_Word(str, n, delimiter)
     return nil -- Return nil if n is out of range
 end
 
-
 --- Wrap a string to a specified line length using multiple delimiters.
 -- @param input The input string to wrap.
 -- @param maxLen Maximum line length.
 -- @param delimiters A table of delimiters (e.g., { " ", "-", "/" }).
 -- @return A string wrapped with line breaks (`\n`).
-function wrapText(input, delimiters, maxLen)
+function Utils.wrapText(input, delimiters, maxLen)
   if not input then return "" end
   -- Escape delimiters for pattern use
   local delimSet = {}
@@ -174,12 +173,11 @@ function wrapText(input, delimiters, maxLen)
   return table.concat(lines, "\n")
 end
 
-
 --[[
 -- Parses a string in the form of "(width)x(height)"" and returns width and height
 -- strDimens - string to be parsed
 --]]
-function parseDimens(strDimens)
+function Utils.parseDimens(strDimens)
   local index = string.find(strDimens, "x")
   if index == nil then return nil end
   local w = string.sub(strDimens, 0, index-1)
@@ -198,7 +196,7 @@ end
 -- table - table to search inside
 -- val - value to search for
 --]]
-function arrayKeyOf(table, val)
+function Utils.arrayKeyOf(table, val)
   for k,v in pairs(table) do
     if v == val then
       return k
@@ -207,23 +205,21 @@ function arrayKeyOf(table, val)
   return nil
 end
 
-
 --[[
-  @@public string getTempFileName()
+  @@public string Utils.getTempFileName()
   ----
   Create new UUID name for a temporary file
 --]]
-function getTempFileName()
+function Utils.getTempFileName()
   local fileName = LrPathUtils.child(LrPathUtils.getStandardFilePath("temp"), LrUUID.generateUUID() .. ".txt")
   return fileName
 end
-
 
 --[[
 -- Open filename in associated application as per file extension
 -- https://community.adobe.com/t5/lightroom-classic/developing-a-publish-plugin-some-api-questions/m-p/11643928#M214559
 --]]
-function openFileInApp(filename)
+function Utils.openFileInApp(filename)
   if WIN_ENV then
     LrShell.openFilesInApp({""}, filename)
   else
@@ -232,74 +228,25 @@ function openFileInApp(filename)
 end
 
 --[[
-  @@public string getPhotoFileName(table)
+  @@public string Utils.getPhotoFileName(table)
   Retrieves name of current photo, used by centralized error handling
 --]]
-function getPhotoFileName(photo)
+function Utils.getPhotoFileName(photo)
   if not photo then
-    photo = FocusPointDialog.currentPhoto
+    photo = GlobalDefs.currentPhoto
   end
   if photo then
     return photo:getFormattedMetadata( "fileName" )
   end
 end
 
-
 --[[
   @@public string getPluginVersion()
   ----
   Retrieves the plugin version number as string
 --]]
-function getPluginVersion()
+function Utils.getPluginVersion()
   return require 'Info.lua'.VERSION.display
 end
 
-
---[[
-  @@public int getWinScalingFactor()
-  ----
-  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
-  Returns display scaling level as factor (100/scale_in_percent)
---]]
-function getWinScalingFactor()
-  local output = getTempFileName()
-  local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
-  local result
-
-  -- Query registry value by calling REG.EXE
-  local rc = LrTasks.execute(cmd)
-  Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
-  Log.logDebug("Utils", "REG command: " .. cmd .. ", rc=" .. rc)
-
-  -- Read redirected stdout from temp file and find the line that starts with "AppliedDPI"
-  local regOutput = LrFileUtils.readFile(output)
-  local regOutputStr = "^"
-  local dpiValue, scale
-  for line in string.gmatch(regOutput, ("[^\r\n]+")) do
-    local item = split(line, " ")
-    if item and #item >= 3 then
-      if item[1] == "AppliedDPI" and item[2] == "REG_DWORD" then
-        dpiValue = item[3]
-        scale = math.floor(tonumber(dpiValue) * 100/96 + 0.5)
-      end
-    end
-    regOutputStr = regOutputStr .. line .. "^"
-  end
-  Log.logDebug("Utils", "REG output: " .. regOutputStr)
-
-  -- Set and log the result
-  if dpiValue then
-    result = 100 / scale
-    Log.logDebug("Utils", string.format("DPI scaling level %s = %sdpi ~ %s%%", dpiValue, tonumber(dpiValue), scale))
-  else
-    result = 100 / 125
-    Log.logWarn("Utils", "Unable to retrieve Windows scaling level, using 125% instead")
-  end
-
-  -- Clean up: remove the temp file
-  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
-    Log.logWarn("Utils", "Unable to delete REG output file " .. output)
-  end
-
-  return result
-end
+return Utils

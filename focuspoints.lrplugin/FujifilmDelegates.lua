@@ -19,73 +19,77 @@
   the camera is Fuji
 --]]
 
-local LrStringUtils = import 'LrStringUtils'
-local LrView        = import 'LrView'
+-- Imported LR namespaces
+local LrStringUtils        = import  'LrStringUtils'
+local LrView               = import  'LrView'
 
-require "FocusPointPrefs"
-require "FocusPointDialog"
-require "Utils"
-require "Log"
+-- Required Lua definitions
+local DefaultDelegates     = require 'DefaultDelegates'
+local DefaultPointRenderer = require 'DefaultPointRenderer'
+local ExifUtils            = require 'ExifUtils'
+local FocusInfo            = require 'FocusInfo'
+local Log                  = require 'Log'
+local Utils                = require 'Utils'
 
-
-FujifilmDelegates = {}
+-- This module
+local FujifilmDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 -- Note: The very first Fujifilm makernotes entry is "Version", but using a text-based approach
 --       to read ExifTool output this term is too generic. "Internal Serial Number" is a better choice.
-FujifilmDelegates.metaKeyAfInfoSection               = "Internal Serial Number"
+local metaKeyAfInfoSection               = "Internal Serial Number"
 
 -- AF-relevant tags
-FujifilmDelegates.metaKeyExifImageWidth              = "Exif Image Width"
-FujifilmDelegates.metaKeyExifImageHeight             = "Exif Image Height"
-FujifilmDelegates.metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
-FujifilmDelegates.metaKeyAfMode                      = {"AF Area Mode", "AF Mode" }
-FujifilmDelegates.metaKeyAfAreaPointSize             = "AF Area Point Size"
-FujifilmDelegates.metaKeyAfAreaZoneSize              = "AF Area Zone Size"
-FujifilmDelegates.metaKeyFocusPixel                  = "Focus Pixel"
-FujifilmDelegates.metaKeyAfSPriority                 = "AF-S Priority"
-FujifilmDelegates.metaKeyAfCPriority                 = "AF-C Priority"
-FujifilmDelegates.metaKeyFocusWarning                = "Focus Warning"
-FujifilmDelegates.FacesDetected                      = "Faces Detected"
-FujifilmDelegates.FacesPositions                     = "Faces Positions"
-FujifilmDelegates.FaceElementTypes                   = "Face Element Types"
-FujifilmDelegates.FaceElementPositions               = "Face Element Positions"
-FujifilmDelegates.metaKeyPreAf                       = "Pre AF"
-FujifilmDelegates.metaKeyAfCSetting                  = "AF-C Setting"
-FujifilmDelegates.metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivity"
-FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
-FujifilmDelegates.metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
+local metaKeyExifImageWidth              = "Exif Image Width"
+local metaKeyExifImageHeight             = "Exif Image Height"
+local metaKeyFocusMode                   = {"Focus Mode 2", "Focus Mode" }
+local metaKeyAfMode                      = {"AF Area Mode", "AF Mode" }
+local metaKeyAfAreaPointSize             = "AF Area Point Size"
+local metaKeyAfAreaZoneSize              = "AF Area Zone Size"
+local metaKeyFocusPixel                  = "Focus Pixel"
+local metaKeyAfSPriority                 = "AF-S Priority"
+local metaKeyAfCPriority                 = "AF-C Priority"
+local metaKeyFocusWarning                = "Focus Warning"
+local FacesDetected                      = "Faces Detected"
+local FacesPositions                     = "Faces Positions"
+local FaceElementTypes                   = "Face Element Types"
+local FaceElementPositions               = "Face Element Positions"
+local metaKeyPreAf                       = "Pre AF"
+local metaKeyAfCSetting                  = "AF-C Setting"
+local metaKeyAfCTrackingSensitivity      = "AF-C Tracking Sensitivity"
+local metaKeyAfCSpeedTrackingSensitivity = "AF-C Speed Tracking Sensitivity"
+local metaKeyAfCZoneAreaSwitching        = "AF-C Zone Area Switching"
 
 -- Image and Shooting Information relevant tags
-FujifilmDelegates.metaKeyCropMode                    = "Crop Mode"
-FujifilmDelegates.metaKeyDriveMode                   = "Drive Mode"
-FujifilmDelegates.metaKeyDriveSpeed                  = "Drive Speed"
-FujifilmDelegates.metaKeySequenceNumber              = "Sequence Number"
-FujifilmDelegates.metaKeyImageStabilization          = "Image Stabilization"
+local metaKeyCropMode                    = "Crop Mode"
+local metaKeyDriveMode                   = "Drive Mode"
+local metaKeyDriveSpeed                  = "Drive Speed"
+local metaKeySequenceNumber              = "Sequence Number"
+local metaKeyImageStabilization          = "Image Stabilization"
 
 -- To control output of AF-C relevant settings
-FujifilmDelegates.focusMode                          = ""
+local focusMode                          = ""
 
 --[[
-  @@public table FujiFilmDelegates.getAfPoints(table photo, table metaData)
+  @@public table getAfPoints(table photo, table metadata)
   ----
   Get the autofocus points from metadata
 --]]
-function FujifilmDelegates.getAfPoints(photo, metaData)
+function FujifilmDelegates.getAfPoints(photo, metadata)
 
   -- Search EXIF for the focus point key
-  local focusPoint = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyFocusPixel)
+  local focusPoint = ExifUtils.findValue(metadata, metaKeyFocusPixel)
   if focusPoint then
     Log.logInfo("Fujifilm",
-      string.format("Focus point tag '%s' found", FujifilmDelegates.metaKeyFocusPixel, focusPoint))
+      string.format("Focus point tag '%s' found", metaKeyFocusPixel, focusPoint))
   else
     Log.logError("Fujifilm",
-      string.format("Focus point tag '%s' not found", FujifilmDelegates.metaKeyFocusPixel))
+      string.format("Focus point tag '%s' not found", metaKeyFocusPixel))
     return nil
   end
 
   local x, y
-  local values = split(focusPoint, " ")
+  local values = Utils.split(focusPoint, " ")
   if values then
     x = LrStringUtils.trimWhitespace(values[1])
     y = LrStringUtils.trimWhitespace(values[2])
@@ -95,12 +99,12 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
     return nil
   end
 
-  local imageWidth  = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageWidth)
-  local imageHeight = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyExifImageHeight)
+  local imageWidth  = ExifUtils.findValue(metadata, metaKeyExifImageWidth)
+  local imageHeight = ExifUtils.findValue(metadata, metaKeyExifImageHeight)
   if imageWidth == nil or imageHeight == nil then
     Log.logError("Fujifilm",
       string.format("No valid information on image width/height. Relevant tags '%s' / '%s' not found",
-        FujifilmDelegates.metaKeyExifImageWidth, FujifilmDelegates.metaKeyExifImageHeight))
+        metaKeyExifImageWidth, metaKeyExifImageHeight))
     Log.logWarn("Fujifilm", FocusInfo.msgImageFileNotOoc)
     FocusInfo.makerNotesFound = false
     return nil
@@ -117,11 +121,11 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   local result = DefaultPointRenderer.createFocusFrame(x*xScale, y*yScale)
 
   -- Let see if we have detected faces
-  local detectedFaces = ExifUtils.findValue(metaData, FujifilmDelegates.FacesDetected)
+  local detectedFaces = ExifUtils.findValue(metadata, FacesDetected)
   if detectedFaces ~= nil and detectedFaces ~= "0" then
-    local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FacesPositions)
+    local coordinatesStr = ExifUtils.findValue(metadata, FacesPositions)
     if coordinatesStr ~= nil then
-      local coordinatesTable = split(coordinatesStr, " ")
+      local coordinatesTable = Utils.split(coordinatesStr, " ")
       if coordinatesTable then
         for i=1, detectedFaces, 1 do
           local x1 = coordinatesTable[4 * (i-1) + 1] * xScale
@@ -147,9 +151,9 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   (23rd August 2022)
 --]]
   -- Subject detection
-  local coordinatesStr = ExifUtils.findValue(metaData, FujifilmDelegates.FaceElementPositions)
+  local coordinatesStr = ExifUtils.findValue(metadata, FaceElementPositions)
   if coordinatesStr ~= nil then
-    local coordinatesTable = split(coordinatesStr, " ")
+    local coordinatesTable = Utils.split(coordinatesStr, " ")
     if coordinatesTable ~= nil then
       local objectCount = #(coordinatesTable) / 4
       for i=1, objectCount, 1 do
@@ -175,13 +179,13 @@ function FujifilmDelegates.getAfPoints(photo, metaData)
   (8th April 2024)
 --]]
   -- Digital Tele-converter crop area
-  local cropsizeStr = ExifUtils.findValue(metaData,  "Crop Size")
-  local croptopleftStr = ExifUtils.findValue(metaData, "Crop Top Left")
+  local cropsizeStr = ExifUtils.findValue(metadata,  "Crop Size")
+  local croptopleftStr = ExifUtils.findValue(metadata, "Crop Top Left")
   if cropsizeStr ~= nil then
-    local cropsizeTable = split(cropsizeStr, " ")
+    local cropsizeTable = Utils.split(cropsizeStr, " ")
     if cropsizeTable ~= nil then
       if croptopleftStr ~= nil then
-        local croptopleftTable = split(croptopleftStr, " ")
+        local croptopleftTable = Utils.split(croptopleftStr, " ")
         if croptopleftTable ~= nil then
           local x1 = croptopleftTable[1] * xScale
           local y1 = croptopleftTable[2] * yScale
@@ -208,21 +212,21 @@ end
 ----------------------------------------------------------------------------------------------------------------------]]
 
 --[[
-  @@public table FujifilmDelegates.addInfo(string title, string key, table props, table metaData)
+  @@public table addInfo(string title, string key, table props, table metadata)
   ----
   Creates the view element for an item to add to a info section and creates/populates the corresponding property
 --]]
-function FujifilmDelegates.addInfo(title, key, props, metaData)
+local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
   -- Helper function to create and populate the property corresponding to metadata key
   local function populateInfo(key)
     local value
     if type(key) == "string" then
-      value = ExifUtils.findValue(metaData, key)
+      value = ExifUtils.findValue(metadata, key)
     else
       -- type(key) == "table"
-      value = ExifUtils.findFirstMatchingValue(metaData, key)
+      value = ExifUtils.findFirstMatchingValue(metadata, key)
     end
     if (value == nil) then
       props[key] = ExifUtils.metaValueNA
@@ -242,8 +246,8 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
   if props[key] and props[key] ~= ExifUtils.metaValueNA then
 
     -- wrap values as required
-    if key == FujifilmDelegates.metaKeyImageStabilization then props[key] = wrapText(props[key], {';'}, FocusInfo.maxValueLen) end
-    if key == FujifilmDelegates.FaceElementTypes          then props[key] = wrapText(props[key], {','}, FocusInfo.maxValueLen) end
+    if key == metaKeyImageStabilization then props[key] = Utils.wrapText(props[key], {';'}, FocusInfo.maxValueLen) end
+    if key == FaceElementTypes          then props[key] = Utils.wrapText(props[key], {','}, FocusInfo.maxValueLen) end
 
     -- compose the row to be added
     local result = FocusInfo.addRow(title, props[key])
@@ -252,38 +256,38 @@ function FujifilmDelegates.addInfo(title, key, props, metaData)
     if (props[key] == "AF-C") then
       return f:column{
         fill = 1, spacing = 2, result,
-        FujifilmDelegates.addInfo("AF-C Priority", FujifilmDelegates.metaKeyAfCPriority, props, metaData) }
+        addInfo("AF-C Priority", metaKeyAfCPriority, props, metadata) }
 
     elseif (props[key] == "AF-S") then
       return f:column{
         fill = 1, spacing = 2, result,
-        FujifilmDelegates.addInfo("AF-S Priority", FujifilmDelegates.metaKeyAfSPriority, props, metaData) }
+        addInfo("AF-S Priority", metaKeyAfSPriority, props, metadata) }
 
-    elseif key == FujifilmDelegates.metaKeyAfMode and props[key] == "Single Point" then
+    elseif key == metaKeyAfMode and props[key] == "Single Point" then
       return f:column{
         fill = 1, spacing = 2, result,
-        FujifilmDelegates.addInfo("AF Area Point Size", FujifilmDelegates.metaKeyAfAreaPointSize, props, metaData) }
+        addInfo("AF Area Point Size", metaKeyAfAreaPointSize, props, metadata) }
 
-    elseif key == FujifilmDelegates.metaKeyAfMode and props[key] == "Zone" then
+    elseif key == metaKeyAfMode and props[key] == "Zone" then
       return f:column{
         fill = 1, spacing = 2, result,
-        FujifilmDelegates.addInfo("AF Area Zone Size", FujifilmDelegates.metaKeyAfAreaZoneSize, props, metaData) }
+        addInfo("AF Area Zone Size", metaKeyAfAreaZoneSize, props, metadata) }
 
-    elseif key == FujifilmDelegates.metaKeyDriveSpeed then
+    elseif key == metaKeyDriveSpeed then
       return f:column{
         fill = 1, spacing = 2, result,
-        FujifilmDelegates.addInfo("Sequence Number", FujifilmDelegates.metaKeySequenceNumber, props, metaData) }
+        addInfo("Sequence Number", metaKeySequenceNumber, props, metadata) }
 
-    elseif ((key == FujifilmDelegates.metaKeyAfCSetting) or
-            (key == FujifilmDelegates.metaKeyAfCTrackingSensitivity) or
-            (key == FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity) or
-            (key == FujifilmDelegates.metaKeyAfCZoneAreaSwitching))
-                and FujifilmDelegates.focusMode ~= "AF-C" then
+    elseif ((key == metaKeyAfCSetting) or
+            (key == metaKeyAfCTrackingSensitivity) or
+            (key == metaKeyAfCSpeedTrackingSensitivity) or
+            (key == metaKeyAfCZoneAreaSwitching))
+                and focusMode ~= "AF-C" then
       -- these settings are not relevant for focus modes than AF-C
       return FocusInfo.emptyRow()
 
-    elseif key == FujifilmDelegates.FacesDetected and props[key] == "0"
-        or key == FujifilmDelegates.metaKeyPreAf  and props[key] == "Off" then
+    elseif key == FacesDetected and props[key] == "0"
+        or key == metaKeyPreAf  and props[key] == "Off" then
       -- omit tags with irrelevant values
       return FocusInfo.emptyRow()
 
@@ -299,7 +303,7 @@ end
 
 
 --[[
-  @@public boolean FujifilmDelegates.modelSupported(string model)
+  @@public boolean modelSupported(string model)
   ----
   Returns whether the given camera model is supported or not
 --]]
@@ -311,28 +315,28 @@ end
 
 
 --[[
-  @@public boolean FujifilmDelegates.makerNotesFound(table photo, table metaData)
+  @@public boolean makerNotesFound(table photo, table metadata)
   ----
   Returns whether the current photo has metadata with makernotes AF information included
 --]]
-function FujifilmDelegates.makerNotesFound(_photo, metaData)
-  local result = ExifUtils.findValue(metaData, FujifilmDelegates.metaKeyAfInfoSection)
+function FujifilmDelegates.makerNotesFound(_photo, metadata)
+  local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
     Log.logWarn("Fujifilm",
-      string.format("Tag '%s' not found", FujifilmDelegates.metaKeyAfInfoSection))
+      string.format("Tag '%s' not found", metaKeyAfInfoSection))
   end
   return (result ~= nil)
 end
 
 
 --[[
-  @@public boolean FujifilmDelegates.manualFocusUsed(table photo, table metaData)
+  @@public boolean manualFocusUsed(table photo, table metadata)
   ----
   Returns whether manual focus has been used on the given photo
 --]]
-function FujifilmDelegates.manualFocusUsed(_photo, metaData)
-  local focusMode, key = ExifUtils.findFirstMatchingValue(metaData, FujifilmDelegates.metaKeyFocusMode)
-  FujifilmDelegates.focusMode = focusMode
+function FujifilmDelegates.manualFocusUsed(_photo, metadata)
+  local focusMode, key = ExifUtils.findFirstMatchingValue(metadata, metaKeyFocusMode)
+  focusMode = focusMode
   Log.logInfo("Fujifilm",
     string.format("Tag '%s' found: %s", key, focusMode))
   return (focusMode == "Manual" or focusMode == "AF-M")
@@ -340,28 +344,28 @@ end
 
 
 --[[
-  @@public table function FujifilmDelegates.getImageInfo(table photo, table props, table metaData)
+  @@public table function getImageInfo(table photo, table props, table metadata)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
   -- if any, otherwise return an empty column
 --]]
-function FujifilmDelegates.getImageInfo(_photo, props, metaData)
+function FujifilmDelegates.getImageInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local imageInfo
   imageInfo = f:column {
     fill = 1,
     spacing = 2,
-    FujifilmDelegates.addInfo("Crop mode", FujifilmDelegates.metaKeyCropMode, props, metaData),
+    addInfo("Crop mode", metaKeyCropMode, props, metadata),
   }
   return imageInfo
 end
 
 
 --[[
-  @@public table function FujifilmDelegates.getShootingInfo(table photo, table props, table metaData)
+  @@public table function getShootingInfo(table photo, table props, table metadata)
   -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
   -- if any, otherwise return an empty column
 --]]
-function FujifilmDelegates.getShootingInfo(_photo, props, metaData)
+function FujifilmDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
   -- append maker specific entries to the "Shooting Information" section
@@ -369,36 +373,39 @@ function FujifilmDelegates.getShootingInfo(_photo, props, metaData)
     fill = 1,
     spacing = 2,
 
-    FujifilmDelegates.addInfo("Image Stabilization", FujifilmDelegates.metaKeyImageStabilization, props, metaData),
-    FujifilmDelegates.addInfo("Drive Mode", FujifilmDelegates.metaKeyDriveMode, props, metaData),
-    FujifilmDelegates.addInfo("Drive Speed", FujifilmDelegates.metaKeyDriveSpeed, props, metaData),
+    addInfo("Image Stabilization", metaKeyImageStabilization, props, metadata),
+    addInfo("Drive Mode", metaKeyDriveMode, props, metadata),
+    addInfo("Drive Speed", metaKeyDriveSpeed, props, metadata),
   }
   return shootingInfo
 end
 
 
 --[[
-  @@public table FujifilmDelegates.getFocusInfo(table photo, table info, table metaData)
+  @@public table getFocusInfo(table photo, table info, table metadata)
   ----
   Constructs and returns the view to display the items in the "Focus Information" group
 --]]
-function FujifilmDelegates.getFocusInfo(_photo, props, metaData)
+function FujifilmDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
   -- Create the "Focus Information" section
   local focusInfo = f:column {
       fill = 1,
       spacing = 2,
-      FujifilmDelegates.addInfo("Focus Mode",                    FujifilmDelegates.metaKeyFocusMode                    , props, metaData),
-      FujifilmDelegates.addInfo("AF Mode",                       FujifilmDelegates.metaKeyAfMode                       , props, metaData),
-      FujifilmDelegates.addInfo("Focus Warning",                 FujifilmDelegates.metaKeyFocusWarning                 , props, metaData),
-      FujifilmDelegates.addInfo("Pre AF",                        FujifilmDelegates.metaKeyPreAf                        , props, metaData),
-      FujifilmDelegates.addInfo("Faces Detected",                FujifilmDelegates.FacesDetected                       , props, metaData),
-      FujifilmDelegates.addInfo("Subject Element Types",         FujifilmDelegates.FaceElementTypes                    , props, metaData),
-      FujifilmDelegates.addInfo("AF-C Setting",                  FujifilmDelegates.metaKeyAfCSetting                   , props, metaData),
-      FujifilmDelegates.addInfo("- Tracking Sensitivity",        FujifilmDelegates.metaKeyAfCTrackingSensitivity       , props, metaData),
-      FujifilmDelegates.addInfo("- Speed Tracking Sensitivity",  FujifilmDelegates.metaKeyAfCSpeedTrackingSensitivity  , props, metaData),
-      FujifilmDelegates.addInfo("- Zone Area Switching",         FujifilmDelegates.metaKeyAfCZoneAreaSwitching         , props, metaData),
+      addInfo("Focus Mode",                    metaKeyFocusMode                    , props, metadata),
+      addInfo("AF Mode",                       metaKeyAfMode                       , props, metadata),
+      addInfo("Focus Warning",                 metaKeyFocusWarning                 , props, metadata),
+      addInfo("Pre AF",                        metaKeyPreAf                        , props, metadata),
+      addInfo("Faces Detected",                FacesDetected                       , props, metadata),
+      addInfo("Subject Element Types",         FaceElementTypes                    , props, metadata),
+      addInfo("AF-C Setting",                  metaKeyAfCSetting                   , props, metadata),
+      addInfo("- Tracking Sensitivity",        metaKeyAfCTrackingSensitivity       , props, metadata),
+      addInfo("- Speed Tracking Sensitivity",  metaKeyAfCSpeedTrackingSensitivity  , props, metadata),
+      addInfo("- Zone Area Switching",         metaKeyAfCZoneAreaSwitching         , props, metadata),
       }
   return focusInfo
 end
+
+
+return FujifilmDelegates

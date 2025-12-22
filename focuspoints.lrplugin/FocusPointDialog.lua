@@ -14,37 +14,32 @@
   limitations under the License.
 --]]
 
-local LrView = import 'LrView'
+-- Imported LR namespaces
+local LrSystemInfo     = import  'LrSystemInfo'
+local LrView           = import  'LrView'
 
-require "Utils"
-require "Log"
-require "FocusPointPrefs"
+-- Required Lua definitions
+local FocusPointPrefs  = require 'FocusPointPrefs'
+local GlobalDefs       = require 'GlobalDefs'
+local Log              = require 'Log'
+local Utils            = require 'Utils'
 
-FocusPointDialog = {}
+-- This module
+local FocusPointDialog = {}
 
-FocusPointDialog.PhotoWidth  = 0
-FocusPointDialog.PhotoHeight = 0
-FocusPointDialog.AppWidth    = 0
-FocusPointDialog.AppHeight   = 0
-
-FocusPointDialog.currentPhoto = nil
-
+GlobalDefs.currentPhoto = nil
 
 function FocusPointDialog.calculatePhotoDimens(photo)
 
   -- Retrieve photo dimensions
   local dimens = photo:getFormattedMetadata("croppedDimensions")
-  local w, h = parseDimens(dimens)
+  local w, h = Utils.parseDimens(dimens)
   Log.logInfo("FocusPointDialog", string.format(
     "Image: %s (%s x %s)", photo:getFormattedMetadata('fileName'), w, h))
 
-  -- Store for use with drawing variable sized focus boxes around 'focus pixels'
-  FocusPointDialog.PhotoWidth  = w
-  FocusPointDialog.PhotoHeight = h
-
   local windowSize = FocusPointPrefs.getWindowSize()
-  local contentWidth  = FocusPointDialog.AppWidth  * windowSize
-  local contentHeight = FocusPointDialog.AppHeight * windowSize
+  local contentWidth  = GlobalDefs.appWidth  * windowSize
+  local contentHeight = GlobalDefs.appHeight * windowSize
 
   if WIN_ENV then
     local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
@@ -52,8 +47,8 @@ function FocusPointDialog.calculatePhotoDimens(photo)
     contentHeight = contentHeight * scalingLevel
   end
   
-  local photoWidth
-  local photoHeight
+  local photoWidth = 0
+  local photoHeight = 0
   if (w > h) then
     photoWidth = math.min(  (w), contentWidth)
     photoHeight = h/w * photoWidth
@@ -74,7 +69,6 @@ function FocusPointDialog.calculatePhotoDimens(photo)
 
 end
 
-
 function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdShortcutInput)
   local f = LrView.osFactory()
 
@@ -90,3 +84,5 @@ function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdShortcutI
     }
   }
 end
+
+return FocusPointDialog

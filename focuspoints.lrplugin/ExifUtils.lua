@@ -14,43 +14,45 @@
   limitations under the License.
 --]]
 
-local LrTasks       = import 'LrTasks'
-local LrFileUtils   = import 'LrFileUtils'
-local LrPathUtils   = import 'LrPathUtils'
-local LrStringUtils = import "LrStringUtils"
-local LrErrors      = import "LrErrors"
+-- Imported LR namespaces
+local LrErrors          = import  'LrErrors'
+local LrFileUtils       = import  'LrFileUtils'
+local LrPathUtils       = import  'LrPathUtils'
+local LrStringUtils     = import  'LrStringUtils'
+local LrTasks           = import  'LrTasks'
 
-require "Utils"
-require "Log"
+-- Required Lua definitions
+local DefaultDelegates  = require 'DefaultDelegates'
+local Log               = require 'Log'
+local Utils             = require 'Utils'
 
-
-ExifUtils = {}
+-- This module
+local ExifUtils = {}
 
 ExifUtils.metaValueNA = "N/A"
 
-exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
+local exiftool = LrPathUtils.child( _PLUGIN.path, "bin" )
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 exiftool = LrPathUtils.child(exiftool, "exiftool")
 
-exiftoolWindows    = LrPathUtils.child( _PLUGIN.path, "bin" )
-exiftoolWindows    = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
-exiftoolConfigFile = LrPathUtils.child( _PLUGIN.path, "ExifTool.config" )
+local exiftoolWindows = LrPathUtils.child( _PLUGIN.path, "bin" )
+exiftoolWindows       = LrPathUtils.child(exiftoolWindows, "exiftool.exe")
 
-metaDataFile = getTempFileName()
+local exiftoolConfigFile = LrPathUtils.child( _PLUGIN.path, "ExifTool.config" )
+
+local metadataFile = Utils.getTempFileName()
 
 
-function ExifUtils.getMetaDataFile()
-  return metaDataFile
+function ExifUtils.getMetadataFile()
+  return metadataFile
 end
-
 
 function ExifUtils.filterInput(str)
   local result = string.gsub(str, "[^a-zA-Z0-9 ,\\./;'\\<>\\?:\\\"\\{\\}\\|!@#\\$%\\^\\&\\*\\(\\)_\\+\\=-\\[\\]~`]", "?");
   return result
 end
 
-
-function ExifUtils.getExifCmd(targetPhoto)
+local function getExifCmd(targetPhoto)
   local path = targetPhoto:getRawMetadata("path")
   local singleQuoteWrap = '\'"\'"\''
   local options = '-a -u -sort --XMP-crs:all --XMP-crss:all'
@@ -58,53 +60,51 @@ function ExifUtils.getExifCmd(targetPhoto)
   if WIN_ENV then
     -- windows needs " around the entire command and then " around each path
     -- example: ""C:\Users\Joshua\Desktop\Focus Points\focuspoints.lrdevplugin\bin\exiftool.exe" -a -u -sort "C:\Users\Joshua\Desktop\DSC_4636.NEF" > "C:\Users\Joshua\Desktop\DSC_4636-metadata.txt""
---  cmd = '""' .. exiftoolWindows .. '"' .. config ..  '"' .. exiftoolConfigFile .. '"' .. options .. '"'.. path .. '" > "' .. metaDataFile .. '""'
+--  cmd = '""' .. exiftoolWindows .. '"' .. config ..  '"' .. exiftoolConfigFile .. '"' .. options .. '"'.. path .. '" > "' .. metadataFile .. '""'
     cmd = string.format(
       '""%s" -config "%s" %s "%s" > "%s""',
-      exiftoolWindows, exiftoolConfigFile, options, path, metaDataFile)
+      exiftoolWindows, exiftoolConfigFile, options, path, metadataFile)
   else
     exiftool           = string.gsub(exiftool,           "'", singleQuoteWrap)
     exiftoolConfigFile = string.gsub(exiftoolConfigFile, "'", singleQuoteWrap)
     path               = string.gsub(path,               "'", singleQuoteWrap)
---  cmd = "'".. exiftool .. "'" .. options .. "'" .. path .. "' > '" .. metaDataFile .. "'"
+--  cmd = "'".. exiftool .. "'" .. options .. "'" .. path .. "' > '" .. metadataFile .. "'"
     cmd = string.format(
       "'%s' -config '%s' %s '%s' > '%s'",
-      exiftool, exiftoolConfigFile, options, path, metaDataFile)
+      exiftool, exiftoolConfigFile, options, path, metadataFile)
   end
 
-  return cmd, metaDataFile
+  return cmd, metadataFile
 end
 
-
-function ExifUtils.readMetaData(targetPhoto)
-  local cmd, metaDataFile = ExifUtils.getExifCmd(targetPhoto)
+function ExifUtils.readMetadata(targetPhoto)
+  local cmd, metadataFile = getExifCmd(targetPhoto)
   local rc = LrTasks.execute(cmd)
   Log.logDebug("ExifUtils", "ExifTool command: " .. cmd)
   if rc ~= 0 then
     local errorText = "FATAL error: unable to read photo metadata (ExifTool rc=" .. rc .. ")"
     Log.logError("ExifUtils", errorText)
     LrErrors.throwUserError(
-      string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
+      string.format("%s\n\n%s", Utils.getPhotoFileName(targetPhoto), errorText))
   else
-    local fileInfo = LrFileUtils.readFile(metaDataFile)
+    local fileInfo = LrFileUtils.readFile(metadataFile)
     return fileInfo
   end
 end
 
-
 --[[
--- Transforms the output of ExifUtils.readMetaData and returns a key/value lua Table
+-- Transforms the output of ExifUtils.readMetadata and returns a key/value lua Table
 -- targetPhoto - LrPhoto to extract the Exif from
 --]]
-function ExifUtils.readMetaDataAsTable(targetPhoto)
-  local metaData = ExifUtils.readMetaData(targetPhoto)
-  if metaData == nil then
+function ExifUtils.readMetadataAsTable(targetPhoto)
+  local metadata = ExifUtils.readMetadata(targetPhoto)
+  if metadata == nil then
     return nil
   end
 
   local parsedTable = {}
 
-  for keyword, value in string.gmatch(metaData, "([^\:]+)\:([^\r\n]*)\r?\n") do
+  for keyword, value in string.gmatch(metadata, "([^\:]+)\:([^\r\n]*)\r?\n") do
     keyword = LrStringUtils.trimWhitespace(keyword)
     value = LrStringUtils.trimWhitespace(value)
     parsedTable[keyword] = value
@@ -114,17 +114,16 @@ function ExifUtils.readMetaDataAsTable(targetPhoto)
   return parsedTable
 end
 
-
 --[[
--- Returns the value of "key" within the metaDataTable table
+-- Returns the value of "key" within the metadataTable table
 -- Ignores nil and "(none)" and "n/a" as valid values
--- metaDataTable - the medaData key/value table
+-- metadataTable - the metadata key/value table
 -- key - the tag name to be searched for
 -- return value of the tag
 --]]
-function ExifUtils.findValue(metaDataTable, key)
+function ExifUtils.findValue(metadataTable, key)
   if key then
-    for k, v in pairs(metaDataTable) do
+    for k, v in pairs(metadataTable) do
       -- search for exact match
       if (k == key) then
         -- even though we don't return them as a result, we'll log (none) and n/a entries
@@ -140,17 +139,16 @@ function ExifUtils.findValue(metaDataTable, key)
   return nil
 end
 
-
--- Returns the first value of "keys" that could be found within the metaDataTable table
+-- Returns the first value of "keys" that could be found within the metadataTable table
 -- Ignores nil and "(none)" as valid values
--- metaData - the medaData key/value table
+-- metadata - the metadata key/value table
 -- keys - the keys to be search for in order of importance
 -- return 1. value of the first key match, 2. which key was used
 --]]
-function ExifUtils.findFirstMatchingValue(metaData, keys)
+function ExifUtils.findFirstMatchingValue(metadata, keys)
   local exifValue
   for key, value in pairs(keys) do          -- value in the keys table is the current exif keyword to be searched
-    exifValue = metaData[value]
+    exifValue = metadata[value]
     if exifValue and (string.lower(exifValue) ~= "(none)") and (string.lower(exifValue) ~= "n/a") then
       Log.logDebug("ExifUtils", "Searching for " .. value .. " -> " .. exifValue)
       return exifValue, keys[key]
@@ -160,7 +158,6 @@ function ExifUtils.findFirstMatchingValue(metaData, keys)
   return nil
 end
 
-
 --[[
   @@public boolean function getBinaryValue(table photo, string key)
   Retrieves the value for an EXIF tag in binary mode.
@@ -169,7 +166,7 @@ end
 --]]
 function ExifUtils.getBinaryValue(photo, key)
   local path = photo:getRawMetadata("path")
-  local output = getTempFileName()
+  local output = Utils.getTempFileName()
   local singleQuoteWrap = '\'"\'"\''
   local cmd, result
 
@@ -203,29 +200,28 @@ function ExifUtils.getBinaryValue(photo, key)
   return result
 end
 
-
 --[[
-  @@public boolean function ExifUtils.decodeXmpMWGRegions(table result, table metaData)
+  @@public boolean function ExifUtils.decodeXmpMWGRegions(table result, table metadata)
   ----
   Decodes a region scheme according to XMP MWG specification.
-  Tags are expected in "metaData" table
+  Tags are expected in "metadata" table
   Returns whether regions have been found. Areas to be visualized are returnd "result" focus points table.
 --]]
-function ExifUtils.decodeXmpMWGRegions(result, metaData)
+function ExifUtils.decodeXmpMWGRegions(result, metadata)
 
   local focusDetected = false
 
   -- Region detection
-  local regionTypeStr = ExifUtils.findValue(metaData, "Region Type")
+  local regionTypeStr = ExifUtils.findValue(metadata, "Region Type")
   if regionTypeStr then
     -- Region scheme present, decode individual tags
-    local regionType          = split(regionTypeStr, ", ")
-    local regionAreaX         = split(ExifUtils.findValue(metaData, "Region Area X"), ", ")
-    local regionAreaY         = split(ExifUtils.findValue(metaData, "Region Area Y"), ", ")
-    local regionAreaW         = split(ExifUtils.findValue(metaData, "Region Area W"), ", ")
-    local regionAreaH         = split(ExifUtils.findValue(metaData, "Region Area H"), ", ")
-    local regionAppliedToDimW = ExifUtils.findValue(metaData, "Region Applied To Dimensions W")
-    local regionAppliedToDimH = ExifUtils.findValue(metaData, "Region Applied To Dimensions H")
+    local regionType          = Utils.split(regionTypeStr, ", ")
+    local regionAreaX         = Utils.split(ExifUtils.findValue(metadata, "Region Area X"), ", ")
+    local regionAreaY         = Utils.split(ExifUtils.findValue(metadata, "Region Area Y"), ", ")
+    local regionAreaW         = Utils.split(ExifUtils.findValue(metadata, "Region Area W"), ", ")
+    local regionAreaH         = Utils.split(ExifUtils.findValue(metadata, "Region Area H"), ", ")
+    local regionAppliedToDimW = ExifUtils.findValue(metadata, "Region Applied To Dimensions W")
+    local regionAppliedToDimH = ExifUtils.findValue(metadata, "Region Applied To Dimensions H")
 
     if (regionType and regionAreaX and regionAreaY and regionAreaW and regionAreaH) then
       for i=1, #regionType, 1 do
@@ -269,3 +265,5 @@ function ExifUtils.decodeXmpMWGRegions(result, metaData)
   end
   return focusDetected
 end
+
+return ExifUtils

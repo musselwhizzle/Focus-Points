@@ -20,13 +20,14 @@
   This is required to parse and execute the keyboard shortcuts for rating (0-5) and color (6-9).
 ---------------------------------------------------------------------------------------------------]]
 
+-- Imported LR namespaces
 local LrDialogs = import 'LrDialogs'
 
 -- Required Lua definitions
-require 'Utf8.lua'
+local Utf8      = require 'Utf8'
 
 -- This module
-KeyboardLayout = {}
+local KeyboardLayout = {}
 
 --[[-----------------------------------------------------------------------------------------------
   !! Further layouts can be added to this table without the need to modify the code
@@ -193,7 +194,6 @@ local KeyboardLayouts = {
   Functions to access the relevant keyboard layout data
 ---------------------------------------------------------------------------------------------------]]
 
-
 -- Build dictionary: layoutId → layoutEntry
 KeyboardLayout.layoutById = {}
 for _, t in ipairs(KeyboardLayouts) do
@@ -284,5 +284,4 @@ function KeyboardLayout.mapTypedCharToDigit(char, layoutId)
   return nil, nil
 end
 
-
--- return KeyboardLayout
+return KeyboardLayout

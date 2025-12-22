@@ -14,26 +14,26 @@
   limitations under the License.
 --]]
 
-local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
-local LrErrors = import 'LrErrors'
-local LrTasks = import 'LrTasks'
-local LrPrefs = import "LrPrefs"
+-- Imported LR namespaces
+local LrFileUtils = import  'LrFileUtils'
+local LrErrors    = import  'LrErrors'
+local LrPathUtils = import  'LrPathUtils'
+local LrPrefs     = import  'LrPrefs'
+local LrTasks     = import  'LrTasks'
 
-require "Utils"
-require "Log"
+-- Required Lua definitions
+local Log         = require 'Log'
+local Utils       = require 'Utils'
 
-
-MogrifyUtils = { }    -- class
+-- This module
+local MogrifyUtils = { }    -- class
 
 local fileName
 local mogrifyPath
 local resizeParams
 
-local prefs = LrPrefs.prefsForPlugin( nil )
-
 -- Map base colors for focus box to specific color tones to be used by Mogrify
-MogrifyUtils.colorMap = {
+local colorMap = {
   red     = "red",
   green   = "green1",
   blue    = "blue",
@@ -43,6 +43,30 @@ MogrifyUtils.colorMap = {
   black   = "black",
   orange  = "orange",
 }
+
+--[[
+-- Creates a temporay script file for Magick. Returns the name of the temp file
+--]]
+local function createMagickScript(photo, params)
+  local scriptName = Utils.getTempFileName()
+
+  local success, _errorCode = pcall(function()
+    local file = io.open(scriptName, "w")
+    if file then
+      file:write('-read \"' .. fileName .. '\"', "\n")
+      file:write(params, "\n")
+      file:write('-write \"' .. fileName .. '\"', "\n")
+      file:close()
+    end
+  end)
+  if not success then
+    local errorText = 'FATAL error creating script file ' .. scriptName
+    Log.logError('Mogrify', errorText)
+    LrErrors.throwUserError(
+      string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
+  end
+  return scriptName
+end
 
 --[[
 -- Call mogrify with 'params'
@@ -69,9 +93,10 @@ local function mogrifyExecute(photo, params, script)
     Log.logError("Mogrify", 'Error calling: ' .. cmdline .. ", return code " .. rc)
     LrErrors.throwUserError(string.format(
      "%s\n\nFATAL error calling 'mogrify.exe' (rc=%s)\nPlease check logfile",
-      getPhotoFileName(photo), rc))
+      Utils.getPhotoFileName(photo), rc))
   end
   if script then
+    local prefs = LrPrefs.prefsForPlugin( nil )
     if prefs.loggingLevel ~= "DEBUG" then
       -- keep temporary script file for log level DEBUG
       if LrFileUtils.exists(scriptName) and not LrFileUtils.delete(scriptName) then
@@ -81,7 +106,6 @@ local function mogrifyExecute(photo, params, script)
   end
 
 end
-
 
 --[[
 -- Export the catalog photo to disk
@@ -111,7 +135,7 @@ local function exportToDisk(photo, xSize, ySize)
       local errorText = "FATAL error: Lightroom preview for image not available"
       Log.logError('Mogrify', errorText)
       LrErrors.throwUserError(
-        string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
+        string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
     else
       local leafName = LrPathUtils.leafName( orgPath )
       local leafWOExt = LrPathUtils.removeExtension( leafName )
@@ -129,7 +153,7 @@ local function exportToDisk(photo, xSize, ySize)
                                         fileName, errorCode)
         Log.logError('Mogrify', errorText)
         LrErrors.throwUserError(
-          string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
+          string.format("%s\n\n%s", Utils.getPhotoFileName(photo), errorText))
       else
         Log.logInfo('Mogrify', "Image exported to " .. fileName )
       end
@@ -150,7 +174,6 @@ local function mogrifyResize(_photo, xSize, ySize)
   resizeParams = '-resize ' .. math.floor(xSize) .. 'x' .. math.floor(ySize) .. ' '
 end
 
-
 --[[
 -- Get color and strokewith from the icon name
 --]]
@@ -162,13 +185,14 @@ local function mapIconToStrokewidthAndColor(name)
   end
   -- color:
   -- if filename contains color placeholder, fill with user-defined color setting
+  local prefs = LrPrefs.prefsForPlugin( nil )
   local nameWithColor = string.format(name, prefs.focusBoxColor, "0")
   local color = string.match(nameWithColor, 'assets/imgs/corner/(%a+)/.*')
   if not color then
     color = string.match(nameWithColor, 'assets/imgs/center/(%a+)/.*')
   end
   -- map base color to Mogrify specific tone
-  color = MogrifyUtils.colorMap[color]
+  color = colorMap[color]
   return sw, color
 end
 
@@ -224,7 +248,6 @@ local function buildDrawParams(focuspointsTable)
   end
 end
 
-
 --[[
 -- Create a temprory disk impage for the given Lightroom catalog photo.
 -- photo: Lr catalog photo
@@ -236,7 +259,6 @@ function MogrifyUtils.createDiskImage(photo, xSize, ySize)
   mogrifyResize(photo, xSize, ySize)
   return fileName
 end
-
 
 --[[
 -- Draw the focus poins bases on focuspointsTable (see 'DefaultPointRenderer.prepareRendering' for adescription of the table)
@@ -252,32 +274,6 @@ function MogrifyUtils.drawFocusPoints(photo, focuspointsTable)
   end
 end
 
-
---[[
--- Creates a temporay script file for Magick. Returns the name of the temp file
---]]
-function createMagickScript(photo, params)
-  local scriptName = getTempFileName()
-
-  local success, _errorCode = pcall(function()
-    local file = io.open(scriptName, "w")
-    if file then
-      file:write('-read \"' .. fileName .. '\"', "\n")
-      file:write(params, "\n")
-      file:write('-write \"' .. fileName .. '\"', "\n")
-      file:close()
-    end
-  end)
-  if not success then
-    local errorText = 'FATAL error creating script file ' .. scriptName
-    Log.logError('Mogrify', errorText)
-    LrErrors.throwUserError(
-      string.format("%s\n\n%s", getPhotoFileName(photo), errorText))
-  end
-  return scriptName
-end
-
-
 --[[
 -- Deletes the temporary file (created by 'MogrifyUtils.exportToDisk')
 --]]
@@ -289,3 +285,5 @@ function MogrifyUtils.cleanup()
     end
   end
 end
+
+return MogrifyUtils

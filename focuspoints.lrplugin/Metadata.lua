@@ -14,20 +14,93 @@
   limitations under the License.
 --]]
 
-local LrFunctionContext = import 'LrFunctionContext'
-local LrApplication     = import 'LrApplication'
-local LrDialogs         = import 'LrDialogs'
-local LrTasks           = import 'LrTasks'
-local LrFileUtils       = import 'LrFileUtils'
-local LrStringUtils     = import "LrStringUtils"
-local LrPrefs           = import "LrPrefs"
+-- Imported LR namespaces
+local LrApplication     = import  'LrApplication'
+local LrDialogs         = import  'LrDialogs'
+local LrFileUtils       = import  'LrFileUtils'
+local LrFunctionContext = import  'LrFunctionContext'
+local LrPrefs           = import  'LrPrefs'
+local LrStringUtils     = import  'LrStringUtils'
+local LrTasks           = import  'LrTasks'
 
-require 'FocusPointPrefs'
-require 'MetaDataDialog'
-require 'ExifUtils'
-require 'Utils'
-require 'Log'
+-- Required Lua definitions
+local ExifUtils         = require 'ExifUtils'
+local FocusPointPrefs   = require 'FocusPointPrefs'
+local Log               = require 'Log'
+local MetadataDialog    = require 'MetadataDialog'
+local Utils             = require 'Utils'
 
+--[[
+  @@public table function splitForColumns(table metadata)
+  ----
+  Parses ExifTool's text output to fill a table with two columns, representing the labels and values
+  Returns table with two columns label/value
+--]]
+local function createParts(metadata)
+  local parts = {}
+  local num = 1;
+
+  local function createPart(label, value)
+    local p = {}
+    p.label = LrStringUtils.trimWhitespace(label)
+    p.value = LrStringUtils.trimWhitespace(value)
+    Log.logFull("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
+    return p
+  end
+
+  for label, value in string.gmatch(metadata, "([^\:]+)\:([^\r\n]*)\r?\n") do
+    parts[num] = createPart(label, value)
+    num = num+1
+  end
+  return parts
+end
+
+--[[
+  @@public table, table, int, int, int, function splitForColumns(table metadata)
+  ----
+  Post-process the metadata table with labels and values
+  to pass each column as a string to the scrolled view element of the dialog.
+  Returns labels, values, maxLabelLength, maxValueLength, numOfLines
+--]]
+local function splitForColumns(metadata)
+
+  local parts = createParts(metadata)
+  local labels = ""
+  local values = ""
+  local maxLabelLength = 0
+  local maxValueLength = 0
+  local numOfLines = 0
+  local limitValueLength = 255  -- to avoid super-long value strings that whill slow down display
+
+  for k in pairs(parts) do
+    local l = parts[k].label
+    local v = parts[k].value
+    if not l then l = "" end
+    if not v then v = "" end
+
+    -- limit length of a displayed value string, indicate spillover by dots
+    -- the original entry can still be examined by opening the metadata txt file in editor
+    if string.len(v) > limitValueLength then
+       v = LrStringUtils.truncate(v, limitValueLength) .. "[...]"
+    end
+
+    maxLabelLength = math.max(maxLabelLength, string.len(l))
+    maxValueLength = math.max(maxValueLength, string.len(v))
+    numOfLines = numOfLines + 1
+
+    labels = labels .. l .. "\r"
+    values = values .. v .. "\r"
+  end
+
+  Log.logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
+  Log.logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
+  Log.logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
+  Log.logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
+  Log.logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
+
+  return labels, values, maxLabelLength, maxValueLength, numOfLines
+
+end
 
 --[[
   @@public void function showDialog()
@@ -76,103 +149,29 @@ local function showDialog()
             }
             dialogScope:setIndeterminate()
 
-            local metaData = ExifUtils.readMetaData(targetPhoto)
-            metaData = ExifUtils.filterInput(metaData)
-            column1, column2, column1Length, column2Length, numLines = splitForColumns(metaData)
+            local metadata = ExifUtils.readMetadata(targetPhoto)
+            metadata = ExifUtils.filterInput(metadata)
+            column1, column2, column1Length, column2Length, numLines = splitForColumns(metadata)
 
             dialogScope:done()
           end)
 
         LrTasks.sleep(0)
 
-        local result = showMetadataDialog(targetPhoto, column1, column2, column1Length, column2Length, numLines)
+        local result = MetadataDialog.showDialog(targetPhoto, column1, column2, column1Length, column2Length, numLines)
 
         -- Check whether dialog has been left by pressing "Open as text"
+        local metadataFile = ExifUtils.getMetadataFile()
         if result == "other" then
           -- if so, open metadata file in default application (and keep it)
-          openFileInApp(ExifUtils.getMetaDataFile())
+          Utils.openFileInApp(metadataFile)
         else
           -- otherwise remove the temp file
-          LrFileUtils.delete(metaDataFile)
+          LrFileUtils.delete(metadataFile)
         end
       end)
     end)
   end)
 end
-
-
---[[
-  @@public table, table, int, int, int, function splitForColumns(table metaData)
-  ----
-  Post-process the metadata table with labels and values
-  to pass each column as a string to the scrolled view element of the dialog.
-  Returns labels, values, maxLabelLength, maxValueLength, numOfLines
---]]
-function splitForColumns(metaData)
-
-  local parts = createParts(metaData)
-  local labels = ""
-  local values = ""
-  local maxLabelLength = 0
-  local maxValueLength = 0
-  local numOfLines = 0
-  local limitValueLength = 255  -- to avoid super-long value strings that whill slow down display
-
-  for k in pairs(parts) do
-    local l = parts[k].label
-    local v = parts[k].value
-    if not l then l = "" end
-    if not v then v = "" end
-
-    -- limit length of a displayed value string, indicate spillover by dots
-    -- the original entry can still be examined by opening the metadata txt file in editor
-    if string.len(v) > limitValueLength then
-       v = LrStringUtils.truncate(v, limitValueLength) .. "[...]"
-    end
-
-    maxLabelLength = math.max(maxLabelLength, string.len(l))
-    maxValueLength = math.max(maxValueLength, string.len(v))
-    numOfLines = numOfLines + 1
-
-    labels = labels .. l .. "\r"
-    values = values .. v .. "\r"
-  end
-
-  Log.logDebug("ShowMetadata", "splitForColumns: Labels: " .. labels)
-  Log.logDebug("ShowMetadata", "splitForColumns: Values: " .. values)
-  Log.logDebug("ShowMetadata", "splitForColumns: maxLabelLength: " .. maxLabelLength)
-  Log.logDebug("ShowMetadata", "splitForColumns: maxValueLength: " .. maxValueLength)
-  Log.logDebug("ShowMetadata", "splitForColumns: numOfLines: " .. numOfLines)
-
-  return labels, values, maxLabelLength, maxValueLength, numOfLines
-
-end
-
-
---[[
-  @@public table function splitForColumns(table metaData)
-  ----
-  Parses ExifTool's text output to fill a table with two columns, representing the labels and values
-  Returns table with two columns label/value
---]]
-function createParts(metaData)
-  local parts = {}
-  local num = 1;
-
-  local function createPart(label, value)
-    local p = {}
-    p.label = LrStringUtils.trimWhitespace(label)
-    p.value = LrStringUtils.trimWhitespace(value)
-    Log.logFull("ShowMetadata", "Parsed '" .. p.label .. "' = '" .. p.value .. "'")
-    return p
-  end
-
-  for label, value in string.gmatch(metaData, "([^\:]+)\:([^\r\n]*)\r?\n") do
-    parts[num] = createPart(label, value)
-    num = num+1
-  end
-  return parts
-end
-
 
 LrTasks.startAsyncTask( showDialog )

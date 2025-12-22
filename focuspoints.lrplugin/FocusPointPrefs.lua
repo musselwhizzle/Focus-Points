@@ -15,24 +15,25 @@
 --]]
 
 -- Imported LR namespaces
-local LrApplication   = import 'LrApplication'
-local LrColor         = import 'LrColor'
-local LrDialogs       = import 'LrDialogs'
-local LrFileUtils     = import 'LrFileUtils'
-local LrHttp          = import 'LrHttp'
-local LrPrefs         = import 'LrPrefs'
-local LrShell         = import 'LrShell'
-local LrTasks         = import 'LrTasks'
-local LrView          = import 'LrView'
+local LrApplication   = import  'LrApplication'
+local LrColor         = import  'LrColor'
+local LrDialogs       = import  'LrDialogs'
+local LrFileUtils     = import  'LrFileUtils'
+local LrHttp          = import  'LrHttp'
+local LrPrefs         = import  'LrPrefs'
+local LrShell         = import  'LrShell'
+local LrTasks         = import  'LrTasks'
+local LrView          = import  'LrView'
 
-require 'KeyboardLayout'
+local KeyboardLayout  = require 'KeyboardLayout'
+local Log             = require 'Log'
+local Utils           = require 'Utils'
 
 -- This module
-FocusPointPrefs = {}
+local FocusPointPrefs = {}
 
 local LR5 = (LrApplication.versionTable().major == 5)
 local bind = LrView.bind
-
 
 FocusPointPrefs.displayScaleFactor = 0.0
 
@@ -42,7 +43,6 @@ FocusPointPrefs.windowSizeXL       = 0.7
 FocusPointPrefs.windowSizeL        = 0.6
 FocusPointPrefs.windowSizeM        = 0.5
 FocusPointPrefs.windowSizeS        = 0.4
-
 
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
@@ -100,13 +100,61 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.loggingLevel           then	prefs.loggingLevel    = "AUTO"   end
   if not prefs.latestVersion          then	prefs.latestVersion   = _PLUGIN.version end
   if     prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
-  if     prefs.keyboardInput == nil   then  prefs.keyboardInput = FocusPointPrefs.kbdInputReguar
+  if     prefs.keyboardInput == nil   then  prefs.keyboardInput   = FocusPointPrefs.kbdInputReguar
   end
 
   -- get the latest plugin version for update checks
   FocusPointPrefs.getLatestVersion()
 end
 
+--[[
+  @@public int FocusPointPrefs.getWinScalingFactor()
+  ----
+  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
+  Returns display scaling level as factor (100/scale_in_percent)
+--]]
+local function getWinScalingFactor()
+  local output = Utils.getTempFileName()
+  local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
+  local result
+
+  -- Query registry value by calling REG.EXE
+  local rc = LrTasks.execute(cmd)
+  Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
+  Log.logDebug("Utils", "REG command: " .. cmd .. ", rc=" .. rc)
+
+  -- Read redirected stdout from temp file and find the line that starts with "AppliedDPI"
+  local regOutput = LrFileUtils.readFile(output)
+  local regOutputStr = "^"
+  local dpiValue, scale
+  for line in string.gmatch(regOutput, ("[^\r\n]+")) do
+    local item = Utils.split(line, " ")
+    if item and #item >= 3 then
+      if item[1] == "AppliedDPI" and item[2] == "REG_DWORD" then
+        dpiValue = item[3]
+        scale = math.floor(tonumber(dpiValue) * 100/96 + 0.5)
+      end
+    end
+    regOutputStr = regOutputStr .. line .. "^"
+  end
+  Log.logDebug("Utils", "REG output: " .. regOutputStr)
+
+  -- Set and log the result
+  if dpiValue then
+    result = 100 / scale
+    Log.logDebug("Utils", string.format("DPI scaling level %s = %sdpi ~ %s%%", dpiValue, tonumber(dpiValue), scale))
+  else
+    result = 100 / 125
+    Log.logWarn("Utils", "Unable to retrieve Windows scaling level, using 125% instead")
+  end
+
+  -- Clean up: remove the temp file
+  if LrFileUtils.exists(output) and not LrFileUtils.delete(output) then
+    Log.logWarn("Utils", "Unable to delete REG output file " .. output)
+  end
+
+  return result
+end
 
 --[[ #TODO Documentation!
 --]]
@@ -124,7 +172,6 @@ function FocusPointPrefs.setDisplayScaleFactor()
   end
 end
 
-
 --[[ #TODO Documentation!
 --]]
 function FocusPointPrefs.getDisplayScaleFactor()
@@ -134,14 +181,12 @@ function FocusPointPrefs.getDisplayScaleFactor()
   return FocusPointPrefs.displayScaleFactor
 end
 
-
 --[[ #TODO Documentation!
 --]]
 function FocusPointPrefs.getWindowSize()
   local prefs = LrPrefs.prefsForPlugin( nil )
   return prefs.windowSize
 end
-
 
 --[[
   @@public void FocusPointPrefs.getLatestVersion()
@@ -163,7 +208,6 @@ function FocusPointPrefs.getLatestVersion()
   end)
 end
 
-
 --[[
   @@public string FocusPointPrefs.latestVersion()
   ----
@@ -178,7 +222,6 @@ function FocusPointPrefs.latestVersion()
   end
 end
 
-
 --[[
   @@public boolean FocusPointPrefs.updateAvailable()
   Checks whether an updated version of the plug-in is available
@@ -186,7 +229,7 @@ end
 --]]
 function FocusPointPrefs.updateAvailable()
   local prefs = LrPrefs.prefsForPlugin( nil )
-  local Info = require 'Info.lua'
+  local Info = require 'Info'
   local result = false
 
   if FocusPointPrefs.isUpdateAvailable == nil then
@@ -227,7 +270,6 @@ function FocusPointPrefs.updateAvailable()
   return FocusPointPrefs.isUpdateAvailable
 end
 
-
 --[[
   @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table f, p )
   -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
@@ -255,10 +297,10 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
   end
 
   -- Width of the drop-down lists in px, to make the naming aligned across rows
-  local dropDownWidth = LrView.share('-Medium-')
+  local dropDownWidth = 75
 
   local function sectionScreenScaling()
-    if MAC_ENV then return {} end
+    if not WIN_ENV then return {} end
     return {
       title = "Screen Scaling",
       f:row {
@@ -285,9 +327,43 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
     }
   end
   local function sectionUserInterface()
-    if LR5 then return {} end
-    return
-    {
+    local function taggingControlsSetting()
+      if LR5 then return f:control_spacing{} end  -- return empty space
+      return
+        f:row {
+          bind_to_object = prefs,
+          spacing = f:control_spacing(),
+          f:popup_menu {
+            title = "taggingControls",
+            value = bind ("taggingControls"),
+            width = dropDownWidth,
+            items = {
+              { title = "On",  value = true  },
+              { title = "Off", value = false },
+            }
+          },
+          f:static_text {
+            title = 'Enable controls for flagging, rating and coloring a photo (mouse and keyboard)'
+          },
+        }
+    end
+    local function keyboardLayoutSetting()
+      if LR5 then return f:control_spacing{} end  -- return empty space
+      return f:row {
+        bind_to_object = prefs,
+        spacing = f:control_spacing(),
+        f:popup_menu {
+          title = "keyboardLayout",
+          value = bind ("keyboardLayout"),
+          width = dropDownWidth,
+          items = KeyboardLayout.buildDropdownItems(),
+        },
+        f:static_text {
+          title = 'Keyboard layout. Required to process shortcuts 0..9 for rating and coloring'
+        },
+      }
+    end
+    return {
       title = "User Interface",
       f:row {
         bind_to_object = prefs,
@@ -302,41 +378,11 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
             { title = "L",   value = FocusPointPrefs.windowSizeL   },
             { title = "M",   value = FocusPointPrefs.windowSizeM   },
             { title = "S",   value = FocusPointPrefs.windowSizeS   },
-
           }
         },
         f:static_text {
           title = 'Size of plugin window'
         }
-      },
-      f:row {
-        bind_to_object = prefs,
-        spacing = f:control_spacing(),
-        f:popup_menu {
-          title = "taggingControls",
-          value = bind ("taggingControls"),
-          width = dropDownWidth,
-          items = {
-            { title = "On",  value = true  },
-            { title = "Off", value = false },
-          }
-        },
-        f:static_text {
-          title = 'Enable controls for flagging, rating and coloring a photo (mouse and keyboard)'
-        },
-      },
-      f:row {
-        bind_to_object = prefs,
-        spacing = f:control_spacing(),
-        f:popup_menu {
-          title = "keyboardLayout",
-          value = bind ("keyboardLayout"),
-          width = dropDownWidth,
-          items = KeyboardLayout.buildDropdownItems(),
-        },
-        f:static_text {
-            title = 'Keyboard layout. Required to process shortcuts 0..9 for rating and coloring'
-        },
       },
       f:row {
         bind_to_object = prefs,
@@ -355,6 +401,8 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
             title = 'Appearance of text input field for keyboard shortcuts'
         },
       },
+      taggingControlsSetting(),   -- empty for LR5
+      keyboardLayoutSetting(),    -- empty for LR5
     }
   end
   local function sectionViewingOptions()
@@ -533,3 +581,5 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
     sectionAcknowledgements(),
   }
 end
+
+return FocusPointPrefs

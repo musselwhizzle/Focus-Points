@@ -14,23 +14,30 @@
   limitations under the License.
 --]]
 
-local LrFunctionContext = import 'LrFunctionContext'
+-- Imported LR namespaces
 local LrApplication         = import  'LrApplication'
-local LrDialogs         = import 'LrDialogs'
-local LrView            = import 'LrView'
-local LrTasks           = import 'LrTasks'
+local LrApplicationView    -- import only for SDK 7.4 and later
 local LrBinding             = import  'LrBinding'
-local LrPrefs           = import 'LrPrefs'
 local LrColor               = import  'LrColor'
+local LrDialogs             = import  'LrDialogs'
+local LrFunctionContext     = import  'LrFunctionContext'
 local LrHttp                = import  'LrHttp'
-local LrSystemInfo          = import  'LrSystemInfo'
+local LrPrefs               = import  'LrPrefs'
+local LrTasks               = import  'LrTasks'
+local LrView                = import  'LrView'
+local LrSelection          -- import only for SDK 6.0 and later
 
-require 'FocusPointPrefs'
-require 'FocusPointDialog'
-require 'FocusInfo'
-require 'PointsRendererFactory'
-require 'Log'
-require 'Utils'
+-- Required Lua definitions
+local ExifUtils             = require 'ExifUtils'
+local FocusInfo             = require 'FocusInfo'
+local FocusPointDialog      = require 'FocusPointDialog'
+local FocusPointPrefs       = require 'FocusPointPrefs'
+local GlobalDefs            = require 'GlobalDefs'
+local KeyboardLayout        = require 'KeyboardLayout'
+local Log                   = require 'Log'
+local PointsRendererFactory = require 'PointsRendererFactory'
+local Utf8                  = require 'Utf8'
+local Utils                 = require 'Utils'
 
 
 local function showDialog()
@@ -43,12 +50,14 @@ local function showDialog()
     local photoView, infoView
     local dialogScope
     local rendererTable
+    local metadata
     local switchedToLibrary
     local userResponse
     local exitPlugin
     local prefs = LrPrefs.prefsForPlugin( nil )
     local props = LrBinding.makePropertyTable(context)
-    local LR5 = (LrApplication.versionTable().major == 5) -- or true -- simulate running on LR5
+    local LR5 = (LrApplication.versionTable().major == 5) -- or true -- to simulate running on LR5
+    local LrC = (LrApplication.versionTable().major >= 8) -- or true -- to simulate running on LR < 7.4
 
     -- special Unicode characters used as replacement for icons
     local utfRightPointingTriangle = string.char(0xe2, 0x96, 0xb6)
@@ -68,7 +77,7 @@ local function showDialog()
     local utfGreenLargeSquare      = string.char(0xf0, 0x9f, 0x9f, 0xa9)
     local utfBlueLargeSquare       = string.char(0xf0, 0x9f, 0x9f, 0xa6)
     local utfPurpleLargeSquare     = string.char(0xf0, 0x9f, 0x9f, 0xaa)
-    local buttonNextImage          = "Next image " .. utfRightPointingTriangle
+    local buttonNextImage = "Next image " .. utfRightPointingTriangle
     local buttonPreviousImage      =  utfLeftPointingTriangle .. " Previous image"
     local taggingSymbols = {
       checkMark   = { WIN = utfHeavyCheckMark,   MAC = utfWhiteHeavyCheckMark },
@@ -84,6 +93,7 @@ local function showDialog()
       colorBlue   = { WIN = utfBlackLargeSquare, MAC = utfBlueLargeSquare     },
       colorPurple = { WIN = utfBlackLargeSquare, MAC = utfPurpleLargeSquare   },
     }
+
     local function taggingSymbol(key, overridePlatform)
       local platform = WIN_ENV and "WIN" or "MAC"
       local os = overridePlatform or platform
@@ -91,17 +101,32 @@ local function showDialog()
       if not entry then return "#" end
       return entry[os]
     end
-    local LrSelection
-    if not LR5 then
-      LrSelection = import "LrSelection"
+
+    local function logAppInfo()
+      -- Extend logfile header with application level information
+      if FocusPointPrefs.updateAvailable() then
+        Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
+      end
+      if WIN_ENV then
+        Log.logInfo("System", "Display scaling level " ..
+                math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
+      end
+      Log.logInfo("System", string.format(
+       "Application window size: %s x %s. Plugin window size: %sx",
+          GlobalDefs.appWidth, GlobalDefs.appHeight, prefs.windowSize))
     end
+
     -- Get the active photo plus additionally selected photos
     local targetPhoto    = catalog:getTargetPhoto()
     local selectedPhotos = catalog:getTargetPhotos()
-    local function getPositionInSelection(targetPhoto, selectedPhotos)
-      -- Find the index 'current' of the target photo in set of selectedPhotos
-      for i, photo in ipairs(selectedPhotos) do
-        if photo == targetPhoto then
+
+    -- LrSelection namespace is supported only in SDK 6.0
+    if not LR5 then LrSelection = import "LrSelection" end
+
+    local function getPositionInSelection(target, selected)
+      -- Find 'current' index of 'target' photo in 'selected' photos
+      for i, photo in ipairs(selected) do
+        if photo == target then
          current = i
          break
         end
@@ -135,14 +160,6 @@ local function showDialog()
           -- Advance to the next photo in film strip
           LrSelection.nextPhoto()
           targetPhoto = catalog:getTargetPhoto()
---[[
-          -- at the end of film strip jump to first photo on 'next'
-          if targetPhoto == activePhoto then
-            -- end of film strip -> jump to start
-            LrSelection.selectFirstPhoto()
-            targetPhoto = catalog:getTargetPhoto()
-          end
---]]
         end
       end
       if #selectedPhotos > 1 then
@@ -186,19 +203,16 @@ local function showDialog()
 
     end
 
-    -- Retrieve dimensions of application window before opening the progress window to workaround LR5 SDK issue
-    FocusPointDialog.AppWidth, FocusPointDialog.AppHeight = LrSystemInfo.appWindowSize()
-
     -- Log applicaton level information (includes scale factor and app window size)
-    Log.appInfo()
+    logAppInfo()
     -- only on WIN (issue #199):
     -- if launched in Develop module switch to Library to enforce that a preview of the image is available
     -- must switch to loupe view because only in this view previews will be rendered
     -- perform module switch as early as possible to give Library time to create a preview if none exists
-    if WIN_ENV and not LR5 then
+    if WIN_ENV and LrC then
       local done
       LrTasks.startAsyncTask(function()
-        local LrApplicationView = import 'LrApplicationView'
+        LrApplicationView = import 'LrApplicationView'
         local moduleName = LrApplicationView.getCurrentModuleName()
         if moduleName == "develop" then
           LrApplicationView.switchToModule("library")
@@ -223,7 +237,7 @@ local function showDialog()
       Log.resetErrorsWarnings()
 
       -- Save link to current photo, eg. as supplementary information in user messages
-      FocusPointDialog.currentPhoto = targetPhoto
+      GlobalDefs.currentPhoto = targetPhoto
 
       -- Make the current photo the only selected one:
       -- otherwise potential flagging operations will apply to all selected photos
@@ -244,8 +258,9 @@ local function showDialog()
           rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
 
           if rendererTable then
-            photoView = rendererTable.createPhotoView(targetPhoto, photoW, photoH)
-            infoView  = FocusInfo.createInfoView (targetPhoto, props)
+            metadata  = ExifUtils.readMetadataAsTable(targetPhoto)
+            photoView = rendererTable.createPhotoView(targetPhoto, photoW, photoH, metadata)
+            infoView  = rendererTable.createInfoView (targetPhoto, props, metadata)
             if not (photoView and infoView) then
               errorMsg = "Internal error: Unable to create main window"
             end
@@ -269,7 +284,7 @@ local function showDialog()
       -- a fatal error has occured for the current image: ask user whether to "Exit" the plugin
       -- or "Continue" with the next image in multi-image mode (which means repeat in single-image mode)
       if errorMsg then
-        userResponse = LrDialogs.confirm(errorMsg, getPhotoFileName(), "Continue", "Stop")
+        userResponse = LrDialogs.confirm(errorMsg, Utils.getPhotoFileName(), "Continue", "Stop")
         if userResponse == "cancel" then
           -- Stop plugin operation
           return
@@ -288,7 +303,6 @@ local function showDialog()
         -- Open main window
         Log.logInfo("FocusPoint", "Present dialog and information")
 
-
         local function inputFieldWidth()
           if     prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible then return 1
           elseif prefs.keyboardInput == FocusPointPrefs.kbdInputSmall     then return 25
@@ -303,39 +317,40 @@ local function showDialog()
             return nil -- automatic
           end
         end
-        local function kbdShortcutInputField()
-        local f = LrView.osFactory()
 
-        local previewText  = ""
-        props.shortcutText = ""
+        local function kbdShortcutInputField()
+          local f = LrView.osFactory()
+          local previewText  = ""
+          props.shortcutText = ""
           return f:edit_field {
-          value = LrView.bind('shortcutText', props),
+            value = LrView.bind('shortcutText', props),
             width = inputFieldWidth(),
             height = inputFieldHeight(),
-          border_enabled = false, -- optionally suppress borders
-          immediate = true,
-          validate = function(view, text)
-          --[[
-            Use the validate() function to interpret user keystrokes as shortcuts
-            BUT, attention: for each keystoke, validate() is called twice!!
-            1. "Preview" validation - non-committal check, to preview the proposed change of text
-            2. "Commit"  validation - actual update, to commit the change in the UI
-            3. Having two phases is pointless, because 'text' is the same and function result doesn't make a difference
-            => need to detect "Preview" vs "Commit" and skip one if this, otherwise shortcuts will be executed twice
-                   e.g. 'next' will go the next but one, 'previous' to the penultimate image.
+            border_enabled = false, -- optionally suppress borders
+            immediate = true,
+            validate = function(view, text)
+              --[[
+                Use the validate() function to interpret user keystrokes as shortcuts
+                BUT, attention: for each keystoke, validate() is called twice!!
+                1. "Preview" validation - non-committal check, to preview the proposed change of text
+                2. "Commit"  validation - actual update, to commit the change in the UI
+                3. Having two phases is pointless, because 'text' is the same and function result doesn't make a difference
+                => need to detect "Preview" vs "Commit" and skip one if this, otherwise shortcuts will be executed twice
+                       e.g. 'next' will go the next but one, 'previous' to the penultimate image.
               --]]
-            if text == previewText then
-              -- call for "Commit" validation -> exit (because shortcut has already been processed in "Preview")
-              Log.logDebug("FocusPoint",
+              if text == previewText then
+                -- call for "Commit" validation -> exit (because shortcut has already been processed in "Preview")
+                Log.logDebug("FocusPoint",
                   string.format("Shortcut input: Commit called with '%s'. Preview '%s'", text, previewText))
-              previewText = ""  -- reset for next Preview
-              return true
-            else
-              -- call for "Preview" validation -> save text and process
-              Log.logDebug("FocusPoint",
+                previewText = ""  -- reset for next Preview
+                return true
+              else
+                -- call for "Preview" validation -> save text and process
+                Log.logDebug("FocusPoint",
                     string.format("Shortcut input: Preview called with '%s'. Preview '%s'", text, previewText))
-              previewText = text
-            end
+                previewText = text
+              end
+
               -- Get the most recently entered character
               local char = Utf8.last_char(text)
               Log.logDebug("FocusPoint", string.format("Shortcut input: c = '%s'", char))
@@ -365,23 +380,21 @@ local function showDialog()
                 elseif string.find(FocusPointPrefs.kbdShortcutsPickNext, char, 1, true) then
                   LrSelection.flagAsPick()
                   LrDialogs.stopModalWithResult(view, "next")
-
                 -- Reject photo
                 elseif string.find(FocusPointPrefs.kbdShortcutsReject, char, 1, true) then
                   if LrSelection.getFlag() ~= -1 then   -- reject
-                  LrSelection.flagAsReject()
+                    LrSelection.flagAsReject()
                   end
                   return true  -- done
-
                 -- Reject photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsRejectNext, char, 1, true) then
                   if LrSelection.getFlag() ~= -1 then   -- reject
-                  LrSelection.flagAsReject()
+                    LrSelection.flagAsReject()
                   end
                   LrDialogs.stopModalWithResult(view, "next")
                 -- Unflag photo
                 elseif string.find(FocusPointPrefs.kbdShortcutsUnflag, char, 1, true) then
-                LrSelection.removeFlag()
+                  LrSelection.removeFlag()
                   return true  -- done
                 -- Unflag photo and advance to next
                 elseif string.find(FocusPointPrefs.kbdShortcutsUnflagNext, char, 1, true) then
@@ -397,65 +410,67 @@ local function showDialog()
                 if digit then
                   if digit <= 5 then
                     -- Rating
-                      LrSelection.setRating(digit)
+                    LrSelection.setRating(digit)
                   else
                     -- Coloring
                     if     digit == 6 then LrSelection.toggleRedLabel()
                     elseif digit == 7 then LrSelection.toggleYellowLabel()
                     elseif digit == 8 then LrSelection.toggleGreenLabel()
                     elseif digit == 9 then LrSelection.toggleBlueLabel()
-                end
+                    end
                   end
                   if shifted then
                     LrDialogs.stopModalWithResult(view, "next")
                   elseif needSyncWithFilmStrip() then
                     LrDialogs.stopModalWithResult(view, "sync")
                   else
-                end
+                  end
                   return true  -- done
                 end
-                end
-              --------------------------------------------------------------------------------------
-              -- Parse character and perform designated operation if it is a shortcut
-              -- Basic operations: Next, Previous, User Manual, Troubleshooting, Check Log, Close
-              --------------------------------------------------------------------------------------
-              -- Next image
-              if string.find(FocusPointPrefs.kbdShortcutsNext, char, 1, true) then
-                LrDialogs.stopModalWithResult(view, "next")
-              return true  -- done
-              -- Previous image
-              elseif string.find(FocusPointPrefs.kbdShortcutsPrev, char, 1, true) then
-                LrDialogs.stopModalWithResult(view, "previous")
-              return true  -- done
-              -- open user manual
-              elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, char, 1, true) then
-                LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
-              return true  -- done
-              -- troubleshooting
-              elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, char, 1, true) then
-                local statusCode = FocusInfo.getStatusCode()
-                if statusCode > 1 then
-                  LrTasks.startAsyncTask(function()
-                    LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
-                  end)
-                end
-              return true  -- done
-              -- check log
-              elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, char, 1, true) then
-                if prefs.loggingLevel ~= "NONE" then
-                  openFileInApp(Log.getFileName())
-                end
-              return true  -- done
-              -- Close
-              elseif string.find(FocusPointPrefs.kbdShortcutsClose, char, 1, true)
-              or (MAC_ENV and char == ".") then
-                LrDialogs.stopModalWithResult(view, "ok")
               end
+
+            --------------------------------------------------------------------------------------
+            -- Parse character and perform designated operation if it is a shortcut
+            -- Basic operations: Next, Previous, User Manual, Troubleshooting, Check Log, Close
+            --------------------------------------------------------------------------------------
+            -- Next image
+            if string.find(FocusPointPrefs.kbdShortcutsNext, char, 1, true) then
+              LrDialogs.stopModalWithResult(view, "next")
+              return true  -- done
+            -- Previous image
+            elseif string.find(FocusPointPrefs.kbdShortcutsPrev, char, 1, true) then
+              LrDialogs.stopModalWithResult(view, "previous")
+              return true  -- done
+            -- Open user manual
+            elseif string.find(FocusPointPrefs.kbdShortcutsUserManual, char, 1, true) then
+              LrTasks.startAsyncTask(function() LrHttp.openUrlInBrowser(FocusPointPrefs.urlUserManual) end)
+              return true  -- done
+            -- Troubleshooting
+            elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, char, 1, true) then
+              local statusCode = FocusInfo.getStatusCode()
+              if statusCode > 1 then
+                LrTasks.startAsyncTask(function()
+                  LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
+                end)
+              end
+              return true  -- done
+            -- Check log
+            elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, char, 1, true) then
+              if prefs.loggingLevel ~= "NONE" then
+                Utils.openFileInApp(Log.getFileName())
+              end
+              return true  -- done
+            -- Close
+            elseif string.find(FocusPointPrefs.kbdShortcutsClose, char, 1, true)
+            or (MAC_ENV and char == ".") then
+              LrDialogs.stopModalWithResult(view, "ok")
+            end
             -- always return true; in case of false the entire text is displayed in red color if visible
             return true
           end,
           }
         end
+
         local function kbdShortcutInput()
           local f = LrView.osFactory()
           if prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible
@@ -483,23 +498,25 @@ local function showDialog()
                   LrTasks.startAsyncTask(function()
                     LrHttp.openUrlInBrowser(FocusPointPrefs.urlkbdShortcuts)
                   end)
-            end,
+                end,
               },
-          }
-            end
+            }
+          end
         end
+
         local function fileNameDisplay()
           local s
           if #selectedPhotos > 1 then
-            s = getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")"
+            s = Utils.getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")"
           else
-            s = getPhotoFileName(targetPhoto)
+            s = Utils.getPhotoFileName(targetPhoto)
           end
           return s
         end
+
         local function navigationControls()
           local f = LrView.osFactory()
-        props.clicked = false
+          props.clicked = false
           return f:row {
             margin = 0,
             spacing = 0,     -- removes uniform spacing; we control it manually
@@ -535,8 +552,10 @@ local function showDialog()
             },
           }
         end
+
         local function taggingControls()
           local f = LrView.osFactory()
+
           local function setRating (rating)
             if rating == LrSelection.getRating() then
               -- clear existing rating
@@ -654,8 +673,10 @@ local function showDialog()
             },
           }
         end
+
         local function miscControls()
           local f = LrView.osFactory()
+
           return f:row{
             spacing = 0,
             f:picture {
@@ -684,9 +705,10 @@ local function showDialog()
           },
           }
         end
+
         local f = LrView.osFactory()
         userResponse = LrDialogs.presentModalDialog {
-          title = "Focus-Points (Version " .. getPluginVersion() .. ")",
+          title = "Focus-Points (Version " .. Utils.getPluginVersion() .. ")",
           contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdShortcutInput()),
           accessoryView = f:row {
             margin_left = 0,
@@ -717,7 +739,7 @@ local function showDialog()
       -- Clean log for next photo if in AUTO mode
       if not exitPlugin and prefs.loggingLevel == "AUTO" then
         Log.initialize()
-        Log.appInfo()
+        logAppInfo()
       end
     until exitPlugin
 
@@ -727,7 +749,7 @@ local function showDialog()
     end
     -- Return to Develop modul if the plugin has been started from there
     if WIN_ENV and switchedToLibrary then
-      import 'LrApplicationView'.switchToModule("develop")
+      LrApplicationView.switchToModule("develop")
     end
 
   end)

@@ -14,30 +14,33 @@
   limitations under the License.
 --]]
 
-local LrSystemInfo = import 'LrSystemInfo'
-local LrFunctionContext = import 'LrFunctionContext'
-local LrDialogs = import 'LrDialogs'
-local LrView = import 'LrView'
-local LrBinding = import 'LrBinding'
+-- Imported LR namespaces
+local LrSystemInfo      = import  'LrSystemInfo'
+local LrFunctionContext = import  'LrFunctionContext'
+local LrDialogs         = import  'LrDialogs'
+local LrView            = import  'LrView'
+local LrBinding         = import  'LrBinding'
 
-require "Utils"
-require "Log"
+-- Required Lua definitions
+local FocusPointPrefs   = require 'FocusPointPrefs'
+local GlobalDefs        = require 'GlobalDefs'
 
+-- This module
+local MetadataDialog = {}
 
-function showMetadataDialog(photo, column1, column2, column1Length, column2Length, numLines)
+function MetadataDialog.showDialog(photo, column1, column2, column1Length, column2Length, numLines)
 
   local result
 
-  LrFunctionContext.callWithContext("showMetaDataDialog", function(context)
+  LrFunctionContext.callWithContext("showMetadataDialog", function(context)
 
     local f = LrView.osFactory()
     local properties = LrBinding.makePropertyTable( context ) -- make a table
     local delimiter = "\r"  -- carriage return; used to separate individual entries in column1 and column2 strings
 
-    local appWidth, appHeight = LrSystemInfo.appWindowSize()
     local windowSize = FocusPointPrefs.getWindowSize()
-    local contentHeight = appHeight * windowSize
-    local contentWidth  = appWidth  * windowSize * 0.5
+    local contentHeight = GlobalDefs.appHeight * windowSize
+    local contentWidth  = GlobalDefs.appWidth  * windowSize * 0.5
 
     if WIN_ENV then
       local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
@@ -215,5 +218,6 @@ function showMetadataDialog(photo, column1, column2, column1Length, column2Lengt
   end)
 
   return result
-
 end
+
+return MetadataDialog
