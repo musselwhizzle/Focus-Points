@@ -1,249 +1,110 @@
-# Focus Points
+# Focus Points – V3.2 Prelease
+
+### Current version: [V3.2 PRE 4 updated December xx, 2025](https://github.com/capricorn8/Focus-Points/releases/tag/v3.2_pre4)
+
+This document describes the new features and changes in V3.2.<br>
+Unless stated otherwise, the latest official version (**V3.1**) of the [README](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md) document continues to serve as an overview of the plugin's features and how they operate.
+
+New features introduced in V3.2: 
+
+- [Tagging (flagging, rating and coloring) of photos within the plugin UI](#tagging-of-photos-within-the plugin-UI)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302)
+- [Film strip navigation](#film-strip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314)
+- [Customizable plugin window size](#customizable-plugin-window-size)&nbsp;&nbsp;[#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
+- [Buy the developer a coffee](#buy-the-developer-a-coffee)&nbsp;&nbsp;[#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
+
+Screenshot of user interface with new tagging controls, shortcut input field and "coffee" link :
+
+<img src="screens/README%20V3.2%20UI.jpg" alt="Screenshot" style="width: 800px;"/>
+
+Screenshot of plugin settings page with new `User Interface` section:
+
+<img src="screens/README V3.2%20Settings.jpg" alt="Screenshot" style="width: 600px;"/>
 
 
-A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
-- Show which focus point was active when the picture was taken <sup>2</sup>
-- Display user-selected autofocus points/area <sup>3,4</sup>
-- Visualize faces and subjects detected by the camera <sup>3,5</sup> 
-- Display (EXIF) metadata of the selected image 
+### Tagging of photos within the plugin UI
 
-<sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
-<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](#supported-cameras).<br>
-<sup>3</sup> Depending on the presence of metadata. 
-<sup>4</sup> Currently supported for Pentax and OM System.      
-<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
+Users for whom focus point accuracy is critical when selecting shots now have the ability to flag, reject, rate or color images directly within the plugin. The user interface has been updated to include the relevant controls: 
 
+Windows:
+<img src="screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/>
 
-To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
+macOS:
+ <img src="screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/>
 
-**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.2.zip)** or see detailed **[installation instructions](#installation)**.
+Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard-shortcuts) as in Lightroom. Pressing the Shift key during tagging moves the plugin to the next photo.
 
-If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
+**Notes / Restrictions:**
 
-<br>
-
-<img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
-
-
-<br>
-
-## Current Release
-
-## V3.1.2 updated November 6, 2025
-
-### New features and changes in V3.1.x:
-
-* **Camera support**
-  * Pentax:
-    * Redesign of Pentax support [#269](https://github.com/musselwhizzle/Focus-Points/issues/269)
-    * Visualization of selected and in-focus CAF points (LiveView) [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)
-    * Focus point display for Pentax K-3 III [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
-    * Face detection for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
-    * Display status of Pentax AF-related camera settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
-  * Olympus/OM
-    * Indicate use of digital zoom factor [#253](https://github.com/musselwhizzle/Focus-Points/issues/253)
-  * OM System: 
-    * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
-    * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
-  * Olympus: 
-    * Support entire Olympus E-System [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
-  * Nikon
-    * Support Nikon Z5 II [#286](https://github.com/musselwhizzle/Focus-Points/issues/286)
-  * Ricoh: 
-    * Support Ricoh GR III / IIIx / IV models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
-  * Sony:
-    * Visualization of focus points considering `FocusFrameSize` tag on newer α bodies [part of #176](https://github.com/musselwhizzle/Focus-Points/issues/176)   
-  * Canon
-    * Improved display of Canon focus information [#285](https://github.com/musselwhizzle/Focus-Points/issues/285) 
-
-
-* **User interface**
-  * Usability improvements:
-    * Consistent layout of controls in single and multi-image operation modes [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
-    * Improved user interaction when no focus points can be found [#272](https://github.com/musselwhizzle/Focus-Points/issues/272)
-    * Keyboard shortcuts for plugin operation  [#271](https://github.com/musselwhizzle/Focus-Points/issues/271)
-  * Metadata display:
-    * Display effective focal length for images captured in crop mode [#252](https://github.com/musselwhizzle/Focus-Points/issues/252)
- 
-     
-* **Bugfixes**
-  * Center dot is missing for 'focus pixel' points on macOS [#294](https://github.com/musselwhizzle/Focus-Points/issues/294)
-  * Internal error (macOS) or crippled error message (Windows) for photo where the image file is missing on disk [#296](https://github.com/musselwhizzle/Focus-Points/issues/296)
-  * Support Ricoh GR III / IIIx HDF (High Diffusion Filter) models [#300](https://github.com/musselwhizzle/Focus-Points/issues/300)
-
-
-* **Other**
-  * Keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
-  * User documentation reworked
-  * Includes ExifTool 13.41 (Nov. 05, 2025)
-
-
-* **Supported cameras:**
-[See here for full list](#supported-cameras).
-
-<br>
-
-## Installation
-
-**Installation steps**
-
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.2.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
-
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br>
-
-3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br>
-
-4. Open Lightroom and go to `File → Plug-in Manager`.<br>
-_Windows_: Click the `Add` button and select the plugin.<br>
-_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.
-
-Once the plugin has been installed, choose one or more photos and select:
-* `Library → Plug-in Extras → Show Focus Point`, or  
-* `File → Plug-in Extras → Show Focus Point`
-
-See [How to use a keyboard shortcut to run the plugin](docs/Focus%20Points.md#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
-
-If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
-
-<br>
-
-## Supported AF Points
-
-
-The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in [User Interface](docs/Focus%20Points.md#user-interface).
-
-|                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                               |
-|:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
-|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                        |
-| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera |
-|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                |   
-|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup>      |   
-|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |  
-|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
-
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
-
-
-On macOS, the focus point display of title photo looks like this:
-
-<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
-
-
-Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, cameras from Canon and Nikon do not store any information on face or subject recognition (at least as far as is known), so visualization is not possible. 
-
-See [chapter 3](docs/Focus%20Points.md#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
-
-<br>
-
-## Metadata viewer
-
-The plugin also features a metadata viewer with live search: 
+- Although the plugin allows you to set a photo's flag status, rating and color label, these settings are **not** reflected in the plugin's user interface. Any changes to the flag status, rating or color will be acknowledged immediately with a standard message in Lightroom Classic, and these changes will be reflected in the filmstrip for the selected photo. It is recommended that you adjust the sizes of the plugin window and Lightroom's filmstrip when using tagging, so that both are visible at the same time.
+<br><br>
+- Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input. See xxx.<br>
+The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.
+<br><br>
+<img src="screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
+<br><br>
   
-* `Library → Plug-in Extras → Show Metadata`, or  
-* `File → Plug-in Extras → Show Metadata`
-
-The Metadata Viewer is useful for viewing information that is neither visible in Lightroom's Metadata panel nor in the Information pane of the focus windows. The information is retrieved directly from the image file on disk, giving a complete picture of the metadata written by the camera. Metadata can be filtered by key or value. The filter accepts pattern matching with common 'magic characters':
-
- | Char  | <div align="left">Meaning</div>                | 
- |:-----:|------------------------------------------------|
- |   .   | any character                                  | 
- |   +   | one or more repetitions of previous character  |
- |   *   | zero or more repetitions of previous character |                                            
- |   ^   | start of line/string                           |
- |   $   | end of line/string                             |              
+- The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
 
 
-<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
+### Film strip navigation
+You no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. When the plugin is opened on a single photo, you can use the navigation controls (`Next image` and `Previous image`), or the corresponding keyboard shortcuts, to advance to the next or previous photo in the film strip. 
 
-<br>
-
-## Supported Cameras
-
-* Canon
-  * Mirrorless: entire R-series
-  * DSLR: all EOS models after 2004 (starting with EOS-1D Mark II)
-  * Compact: Powershot models after 2004
-
- 
-* Nikon
-  * Mirrorless: entire Z-series
-  * DSLR: all D models with 39 or more autofocus points (from D3/D300 in 2007 to D6/D780 in 2020)
-  * Compact: CoolPix models not supported
-
-  
-* Sony
-  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
-  * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
-  * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
-  * Face detection
-  
-
-* Fuji
-  * Mirroless: X-series (from X100 in 2011 up to X-H2S today), GFX-series
-  * Compact: FinePix models after 2007  
-  * Face and subject detection
+Running the plugin on a selection of multiple photos is still possible.
 
 
-* Olympus / OM System
-  * DSLR: entire E-series
-  * Mirrorless: entire E-M series, OM-1, OM-3, OM-5
-  * Olympus: Face detection
-  * OM System: Face and subject detection
+### Customizable plugin window size
+
+V3.2 introduces a "Size of plugin window" option, that is valid for both macOS and Windows*. A new setting has been added to the 'User Interface' menu that allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S.
+
+In the Focus Point dialog, this setting corresponds to 80% (XXL) to 40% (S), in increments of 10%, of the size of the Lightroom application window used to display the photo. Please note that the text pane to the right of the photo and the bottom row of user controls are not included in this percentage.
+
+<img src="screens/WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
+
+In the Metadata Viewer, this setting determines the height or half the width of the dialog window.
+
+* Windows users already had the option to adjust the size of the focus points window using the screen scaling option specific to Windows. This setting remains as it is.
 
 
-* Panasonic
-  * Mirrorless: entire LUMIX G and S series
-  * Compact: FZ, TZ/ZS, LX series - models after 2008
-  * Face detection
-  
 
-* Pentax 
-  * DSLR: all models with 11 or more autofocus points (from *istD in 2003 to K-3 III Mono in 2023)
-  * Face detection
-  
+### Keyboard Shortcuts
 
-* Ricoh
-  * GR III, GR IIIx, GR IV
-  * Face detection
+Several new keyboard shortcuts have been introduced to support photo tagging (flagging, rating, and color labeling). These shortcuts are identical to those used in Lightroom.
+
+Some shortcuts in V3.1 have been changed to avoid collision with Lightroom tagging shortcuts. Previously, 'p' was used for 'preview', 'x' for 'exit', and 'u' for 'user manual'. Instead of 'Exit', the plugin will now close using the 'Close' button (shortcut 'C').
 
 
-* Apple
-  * iPhone (starting from at least iPhone 5)
-  * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
+| Action                                      | Keyboard shortcuts |
+|---------------------------------------------|--------------------|
+| **Navigation**                              |                    | 
+| Previous image                              | `-`, `<`           |
+| Next image                                  | `+`, `Spacebar`    |
+| **Flagging**                                |                    |
+| Flag photo as a pick                        | `P`                |
+| Flag photo as a pick and go to next photo   | `Shift`+`P`        |
+| Flag photo as a reject                      | `X`                |
+| Flag photo as a reject and go to next photo | `Shift`+`X`        |
+| Unflag photo                                | `U`                |
+| Unflag photo and go to next photo           | `Shift`+`U`        |
+| **Rating**                                  |                    |
+| Set star rating                             | `1`-`5`            |
+| Set star rating and go to next photo        | `Shift`+`1`-`5`    |
+| **Color**                                   |                    |
+| Assign a red label                          | `6`                |
+| Assign a yellow label                       | `7`                |
+| Assign a green label                        | `8`                |
+| Assign a blue label                         | `9`                |
+| Assign a color label and go to next photo   | `Shift`+`6`-`9`    |
+| **Miscelleanous**                           |                    |
+| Open User Manual                            | `M`                |
+| Open Troubleshooting Information (Help)     | `?`, `H`           |
+| Check Log                                   | `L`                |
+| Close                                       | `C `               |
 
-<br>
+
+### Buy the developer a coffee
+Several of you have asked how you can show your appreciation for the work I have done to significantly improve the plugin over the past year or so. If you care about this issue, you can now show your [support via Ko-fi](https://ko-fi.com/focuspoints)*. Simply click the link next to the coffee cup.
+
+*Ko-fi is a well-established service that enables users to support creators through voluntary donations.
+Payments are processed securely via PayPal or credit/debit card, and no account or subscription is required.
 
 
-## Contributing as a Developer
-
-Please see the [Contributing.md](Contributing.md) file before being any new work.
-
-## Special Thanks
-
-There's been a lot of man-hours put into this effort so far. All volunteer. So help me in thanking the individuals who have worked hard on this. First off, thanks for Phil Harvey for providing the 3rd party library ExifTool. The following is a list of the individual contributors on this project. These guys have fixed bugs, added camera support, added face detection, added support for your iphone, and many other cool features. (If you are a dev, and I've missed you, please feel free to update this file or add your real name):
-
-rderimay, philmoz, project802, jandhollander, DeziderMesko, StefLedof, roguephysicist, ropma, capricorn8 (Karsten Gieselmann)
-
-<a href="https://github.com/musselwhizzle/Focus-Points/graphs/contributors">Full list can be seen here.</a>
-
-## Licenses
-
-    Copyright 2016 Whizzbang Inc.
-
-    Licensed under the Apache License, Version 2.0 (the "License");
-    you may not use this file except in compliance with the License.
-    You may obtain a copy of the License at
-
-       http://www.apache.org/licenses/LICENSE-2.0
-
-    Unless required by applicable law or agreed to in writing, software
-    distributed under the License is distributed on an "AS IS" BASIS,
-    WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-    See the License for the specific language governing permissions and
-    limitations under the License.
-
-This plugin contains code from AutoHotkey (GPLv2).
-See [LICENSE.txt](focuspoints.lrplugin/ahk/License.txt) for details.
