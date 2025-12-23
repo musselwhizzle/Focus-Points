@@ -7,7 +7,7 @@ Unless stated otherwise, the latest official version (**V3.1**) of the [README](
 
 New features introduced in V3.2: 
 
-- [Tagging (flagging, rating and coloring) of photos within the plugin UI](#tagging-of-photos-within-the plugin-UI)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302)
+- [Tagging (flagging, rating and coloring) of photos within the plugin UI](#tagging-of-photos)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302)
 - [Film strip navigation](#film-strip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314)
 - [Customizable plugin window size](#customizable-plugin-window-size)&nbsp;&nbsp;[#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
 - [Buy the developer a coffee](#buy-the-developer-a-coffee)&nbsp;&nbsp;[#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
@@ -21,7 +21,7 @@ Screenshot of plugin settings page with new `User Interface` section:
 <img src="screens/README V3.2%20Settings.jpg" alt="Screenshot" style="width: 600px;"/>
 
 
-### Tagging of photos within the plugin UI
+### Tagging of photos
 
 Users for whom focus point accuracy is critical when selecting shots now have the ability to flag, reject, rate or color images directly within the plugin. The user interface has been updated to include the relevant controls: 
 
@@ -58,7 +58,7 @@ V3.2 introduces a "Size of plugin window" option, that is valid for both macOS a
 
 In the Focus Point dialog, this setting corresponds to 80% (XXL) to 40% (S), in increments of 10%, of the size of the Lightroom application window used to display the photo. Please note that the text pane to the right of the photo and the bottom row of user controls are not included in this percentage.
 
-<img src="screens/WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="screens/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
 
 In the Metadata Viewer, this setting determines the height or half the width of the dialog window.
 
