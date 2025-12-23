@@ -18,13 +18,8 @@
   A collection of delegate functions to be passed into the DefaultPointRenderer.
 --]]
 
-require "Utils"
-require "Log"
-
-
-DefaultDelegates = {}
-
-DefaultDelegates.metaData             = nil
+-- This module
+local DefaultDelegates = {}
 
 DefaultDelegates.cameraMake           = nil
 DefaultDelegates.cameraModel          = nil
@@ -118,3 +113,5 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
 }
+
+return DefaultDelegates

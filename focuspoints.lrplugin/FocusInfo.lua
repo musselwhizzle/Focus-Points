@@ -18,56 +18,47 @@
   This object is responsible for creating the textual info view next to focus point display.
 --]]
 
-local LrView  = import "LrView"
-local LrColor = import "LrColor"
-local LrPrefs = import "LrPrefs"
-local LrHttp  = import "LrHttp"
-local LrTasks = import "LrTasks"
+-- Imported LR namespaces
+local LrColor              = import  'LrColor'
+local LrHttp               = import  'LrHttp'
+local LrPrefs              = import  'LrPrefs'
+local LrTasks              = import  'LrTasks'
+local LrView               = import  'LrView'
 
-require "DefaultPointRenderer"
-require "Log"
+-- Required Lua definitions
+local ExifUtils            = require 'ExifUtils'
+local FocusPointPrefs      = require 'FocusPointPrefs'
+local Log                  = require 'Log'
+local Utils                = require 'Utils'
 
+-- This module
+local FocusInfo = {}
 
-FocusInfo = {}
+-- Exported variables
 
-FocusInfo.maxValueLen               = 30        -- longer texts for values will be wrapped across multiple lines
+FocusInfo.maxValueLen                   = 30        -- longer texts for values will be wrapped across multiple lines
 
-FocusInfo.missingMetadata           = false
-FocusInfo.cameraMakerSupported      = false
-FocusInfo.cameraModelSupported      = false
-FocusInfo.makerNotesFound           = false
-FocusInfo.manualFocusUsed           = false
-FocusInfo.focusPointsDetected       = false
-FocusInfo.severeErrorEncountered    = false
+FocusInfo.missingMetadata               = false
+FocusInfo.cameraMakerSupported          = false
+FocusInfo.cameraModelSupported          = false
+FocusInfo.makerNotesFound               = false
+FocusInfo.manualFocusUsed               = false
+FocusInfo.focusPointsDetected           = false
+FocusInfo.severeErrorEncountered        = false
 
-FocusInfo.cropMode                  = false
+FocusInfo.msgImageFileNotOoc            = "Image file not created in-camera"
 
-FocusInfo.metaKeyFileName           = "fileName"
-FocusInfo.metaKeyDimensions         = "dimensions"
-FocusInfo.metaKeyCroppedDimensions  = "croppedDimensions"
-FocusInfo.metaKeyDateTimeOriginal   = "dateTimeOriginal"
-FocusInfo.metaKeyCameraMake         = "cameraMake"
-FocusInfo.metaKeyCameraModel        = "cameraModel"
-FocusInfo.metaKeyLens               = "lens"
-FocusInfo.metaKeyFocalLength        = "focalLength"
-FocusInfo.metaKeyFocalLength35mm    = "focalLength35mm"
-FocusInfo.metaKeyExposure           = "exposure"
-FocusInfo.metaKeyIsoSpeedRating     = "isoSpeedRating"
-FocusInfo.metaKeyExposureBias       = "exposureBias"
-FocusInfo.metaKeyExposureProgram    = "exposureProgram"
-FocusInfo.metaKeyMeteringMode       = "meteringMode"
+FocusInfo.cropMode                      = false
 
-FocusInfo.msgImageFileNotOoc        = "Image file was not created in-camera but modified by an application"
-
-FocusInfo.statusFocusPointsDetected    = 1
-FocusInfo.statusNoFocusPointsRecorded  = 2
-FocusInfo.statusManualFocusUsed        = 3
-FocusInfo.statusMakerNotesNotFound     = 4
-FocusInfo.statusModelNotSupported      = 5
-FocusInfo.statusMakerNotSupported      = 6
-FocusInfo.statusMissingMetadata        = 7
-FocusInfo.statusSevereErrorEncountered = 8
-FocusInfo.statusUndefined              = 255
+FocusInfo.statusFocusPointsDetected     =   1
+FocusInfo.statusNoFocusPointsRecorded   =   2
+FocusInfo.statusManualFocusUsed         =   3
+FocusInfo.statusMakerNotesNotFound      =   4
+FocusInfo.statusModelNotSupported       =   5
+FocusInfo.statusMakerNotSupported       =   6
+FocusInfo.statusMissingMetadata         =   7
+FocusInfo.statusSevereErrorEncountered  =   8
+FocusInfo.statusUndefined               = 255
 
 FocusInfo.status = {
     {  message = "Focus points detected",
@@ -104,10 +95,30 @@ FocusInfo.status = {
        link    = "#Severe-error-encountered" },
 }
 
+-- Local variables
+
+local makerImageInfo                = nil
+local makerShootingInfo             = nil
+local makerFocusInfo                = nil
+
+local metaKeyFileName               = "fileName"
+local metaKeyDimensions             = "dimensions"
+local metaKeyCroppedDimensions      = "croppedDimensions"
+local metaKeyDateTimeOriginal       = "dateTimeOriginal"
+local metaKeyCameraMake             = "cameraMake"
+local metaKeyCameraModel            = "cameraModel"
+local metaKeyLens                   = "lens"
+local metaKeyFocalLength            = "focalLength"
+local metaKeyFocalLength35mm        = "focalLength35mm"
+local metaKeyExposure               = "exposure"
+local metaKeyIsoSpeedRating         = "isoSpeedRating"
+local metaKeyExposureBias           = "exposureBias"
+local metaKeyExposureProgram        = "exposureProgram"
+local metaKeyMeteringMode           = "meteringMode"
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
-local linkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
+local utfLinkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
 
 --[[
   @@public FocusInfo.initialize()
@@ -115,49 +126,32 @@ local linkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
    Reset variables that control certain aspects of the info section generation
 --]]
 function FocusInfo.initialize()
-  FocusInfo.cropMode               = false
   FocusInfo.focusPointsDetected    = false
   FocusInfo.severeErrorEncountered = false
+  FocusInfo.cropMode               = false
+
+  makerImageInfo         = nil
+  makerShootingInfo      = nil
+  makerFocusInfo         = nil
 end
 
-
 --[[
-  @@public table, table, table FocusInfo.getMakerInfo(table photo, table props)
-   ----
+  @@local table, table, table getMakerInfo(table photo, table props)
+   ---- @TODO
    For each of the three view sections (image, settings, focus) collect maker specific information:
    - specific information on image and shooting information will be appended to generic information
    - focus information will be completely filled as there is no generic focus information
    Result:  imageInfo, shootingInfo, focusInfo
 --]]
-function FocusInfo.getMakerInfo(photo, props)
-
-  -- get maker specific image information, if any
-  local imageInfo
-  if (DefaultPointRenderer.funcGetImageInfo ~= nil) then
-    imageInfo = DefaultPointRenderer.funcGetImageInfo(photo, props, DefaultDelegates.metaData)
+local function getMakerInfo(photo, props, metadata, funcGetMakerInfo)
+  local makerInfo
+  if funcGetMakerInfo ~= nil then
+    makerInfo = funcGetMakerInfo(photo, props, metadata)
   else
-    imageInfo = FocusInfo.emptyRow()
+    makerInfo = FocusInfo.emptyRow()
   end
-
-  -- get maker specific shooting information, if any
-  local shootingInfo
-  if (DefaultPointRenderer.funcGetShootingInfo ~= nil) then
-    shootingInfo = DefaultPointRenderer.funcGetShootingInfo(photo, props, DefaultDelegates.metaData)
-  else
-    shootingInfo = FocusInfo.emptyRow()
-  end
-
-  -- get focus information which is always maker specific
-  local focusInfo
-  if (DefaultPointRenderer.funcGetFocusInfo ~= nil) then
-    focusInfo = DefaultPointRenderer.funcGetFocusInfo(photo, props, DefaultDelegates.metaData)
-  else
-    focusInfo = FocusInfo.emptyRow()
-  end
-
-  return imageInfo, shootingInfo, focusInfo
+  return makerInfo
 end
-
 
 --[[
   @@public table FocusInfo.addRow(key, value)
@@ -167,12 +161,27 @@ end
 function FocusInfo.addRow(key, value)
   local f = LrView.osFactory()
   return f:row {
-    f:column{ f:static_text{ title = key .. ":", font="<system>", alignment="left"  }},
-    f:spacer{ fill_horizontal = 1},
-    f:column{ f:static_text{ title = value,      font="<system>", alignment="right" }}
+    f:column {
+      f:static_text{
+        title = key .. ":",
+        font="<system>",
+        alignment="left",
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
+      }
+    },
+    f:spacer{ fill_horizontal = 1 },
+    f:column{
+      f:static_text{
+        title = value,
+        font="<system>",
+        alignment="right",
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
+      },
+    },
   }
 end
-
 
 --[[
   @@public table FocusInfo.emptyRow()
@@ -184,7 +193,6 @@ function FocusInfo.emptyRow()
   return f:control_spacing{}
 end
 
-
 --[[
   @@public table FocusInfo.addSpace()
   ----
@@ -194,7 +202,6 @@ function FocusInfo.addSpace()
   local f = LrView.osFactory()
   return f:spacer{height = 2}
 end
-
 
 --[[
   @@public table FocusInfo.addSeparator()
@@ -206,7 +213,6 @@ function FocusInfo.addSeparator()
   return f:separator{ fill_horizontal = 1 }
 end
 
-
 --[[
   @@public table FocusInfo.errorMessage(string errorMessage)
   ----
@@ -214,14 +220,16 @@ end
 --]]
 function FocusInfo.errorMessage(message)
   local f = LrView.osFactory()
-  return f:column{
-    f:static_text{
+  return f:column {
+    f:static_text {
       title = message,
-      text_color=LrColor("red"),
-      font="<system/bold>"}
+      text_color = LrColor("red"),
+      font = "<system/bold>",
+      mouse_down = function() return true end,
+      mouse_up   = function() return true end,
+    }
   }
 end
-
 
 --[[
   @@ public int FocusInfo.getStatusCode()
@@ -243,7 +251,6 @@ function FocusInfo.getStatusCode()
   return statusCode
 end
 
-
 --[[
   @@ public table FocusInfo.statusMessage(int statusCode)
   -- Returns a view element with a message stating whether focus points have been found or not or if errors have occured
@@ -261,6 +268,8 @@ function FocusInfo.statusMessage(statusCode)
         title      = FocusInfo.status[statusCode].message,
         text_color = FocusInfo.status[statusCode].color,
         tooltip    = FocusInfo.status[statusCode].tooltip,
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
       }
     }
   else
@@ -269,12 +278,14 @@ function FocusInfo.statusMessage(statusCode)
         title      = FocusInfo.status[statusCode].message,
         text_color = FocusInfo.status[statusCode].color,
         tooltip    = FocusInfo.status[statusCode].tooltip
-                     .. "\nClick " .. linkSymbol .. " to open troubleshooting information or press '?'",
+                     .. "\nClick " .. utfLinkSymbol .. " to open troubleshooting information or press '?'",
+        mouse_down = function() return true end,
+        mouse_up   = function() return true end,
       },
       f:static_text {
-        title = linkSymbol,
+        title = utfLinkSymbol,
         text_color = LrColor(0, 0.25, 1),
-        tooltip = "Open troubleshooting information\nKeyboard shortcut: '?'",
+        tooltip = "Open troubleshooting information (?)",
         immediate = true,
         mouse_down = function(_view)
           LrTasks.startAsyncTask(function()
@@ -285,7 +296,6 @@ function FocusInfo.statusMessage(statusCode)
     }
   end
 end
-
 
 --[[
   @@ public table FocusInfo.pluginStatus()
@@ -302,7 +312,7 @@ function FocusInfo.pluginStatus()
     updateMessage =
       f:row {
         f:static_text {
-          title = "Update available " .. string.char(0xF0, 0x9F, 0x94, 0x97),
+          title = "Update available " .. utfLinkSymbol,
           text_color=LrColor("blue"), font="<system>",
           tooltip = "Click to open update release notes",
           immediate = true,
@@ -326,13 +336,19 @@ function FocusInfo.pluginStatus()
   -- Compose status message
   local statusMsg
   if Log.errorsEncountered then
-    statusMsg = f:static_text {title = "Errors encountered", text_color=LrColor("red"), font="<system>"}
+    statusMsg = f:static_text {
+                  title = "Errors encountered", text_color=LrColor("red"), font="<system>",
+                  mouse_down = function() return true end, mouse_up = function() return true end }
   elseif Log.warningsEncountered then
-    statusMsg = f:static_text {title = "Warnings encountered", text_color=LrColor("orange"), font="<system>"}
+    statusMsg = f:static_text {
+                  title = "Warnings encountered", text_color=LrColor("orange"), font="<system>",
+                  mouse_down = function() return true end, mouse_up = function() return true end }
   else
     if (prefs.loggingLevel ~= "AUTO") and (prefs.loggingLevel ~= "NONE") and Log.fileExists() then
       -- if user wants an extended log this should be easily accessible
-      statusMsg = f:static_text {title = "Logging information collected", font="<system>"}
+      statusMsg = f:static_text {
+                    title = "Logging information collected", font="<system>",
+                    mouse_down = function() return true end, mouse_up = function() return true end }
     else
       if prefs.checkForUpdates and FocusPointPrefs.updateAvailable() then
         return
@@ -353,7 +369,8 @@ function FocusInfo.pluginStatus()
           f:group_box {title = "Plug-in status:  ", fill = 1, font = "<system/bold>",
               f:row {statusMsg},
               f:row{
-                f:static_text {title = 'Turn on logging "Auto" for more details', font="<system>"}
+                f:static_text {title = 'Turn on logging "Auto" for more details', font="<system>",
+                               mouse_down = function() return true end, mouse_up = function() return true end }
               },
              updateMessage,
           },
@@ -368,9 +385,9 @@ function FocusInfo.pluginStatus()
                 f:spacer{fill_horizontal = 1},
                 f:push_button {
                   title = "Check log",
-                  tooltip = "Click to open log file.\nKeyboard shortcut: 'L'",
+                  tooltip = "Click to open log file (L)",
                   font = "<system>",
-                  action = function() openFileInApp(Log.getFileName()) end,
+                  action = function() Utils.openFileInApp(Log.getFileName()) end,
                 },
               },
               updateMessage,
@@ -378,7 +395,6 @@ function FocusInfo.pluginStatus()
       }
   end
 end
-
 
 --[[
   @@ public table FocusInfo.addInfo(title, key, photo, props)
@@ -408,7 +424,7 @@ function FocusInfo.addInfo(title, key, photo, props)
     return FocusInfo.emptyRow()
   end
 
-  if (key == FocusInfo.metaKeyFocalLength35mm) and not FocusInfo.cropMode then
+  if (key == metaKeyFocalLength35mm) and not FocusInfo.cropMode then
     -- we will only display this entry for FF bodies used in DX or APS-C mode
     return FocusInfo.emptyRow()
   end
@@ -422,10 +438,12 @@ end
   ----
   Creates the content of information column view container
 --]]
-function FocusInfo.createInfoView(photo, props)
+function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, funcGetShootingInfo, funcGetFocusInfo)
   local f = LrView.osFactory()
 
-  local imageInfo, shootingInfo, focusInfo = FocusInfo.getMakerInfo(photo, props)
+  local imageInfo    = getMakerInfo(photo, props, metadata, funcGetImageInfo)
+  local shootingInfo = getMakerInfo(photo, props, metadata, funcGetShootingInfo)
+  local focusInfo    = getMakerInfo(photo, props, metadata, funcGetFocusInfo)
 
   -- for manually focused images there will be only a summary message
   local statusCode = FocusInfo.getStatusCode()
@@ -449,26 +467,26 @@ function FocusInfo.createInfoView(photo, props)
       f:column { fill = 1, spacing = 2,
           f:group_box { title = "Image Information", fill = 1, font = "<system/bold>",
               f:column {fill = 1, spacing = 2,
-                  FocusInfo.addInfo("Filename"         , FocusInfo.metaKeyFileName, photo, props),
-                  FocusInfo.addInfo("Capture Date/Time", FocusInfo.metaKeyDateTimeOriginal, photo, props),
-                  FocusInfo.addInfo("Original Size"    , FocusInfo.metaKeyDimensions, photo, props),
-                  FocusInfo.addInfo("Current Size"     , FocusInfo.metaKeyCroppedDimensions, photo, props),
+                  FocusInfo.addInfo("Filename"               , metaKeyFileName, photo, props),
+                  FocusInfo.addInfo("Capture Date/Time"      , metaKeyDateTimeOriginal, photo, props),
+                  FocusInfo.addInfo("Original Size"          , metaKeyDimensions, photo, props),
+                  FocusInfo.addInfo("Current Size"           , metaKeyCroppedDimensions, photo, props),
                   imageInfo
               },
           },
           f:spacer { height = 20 },
           f:group_box { title = "Shooting Information", fill = 1, font = "<system/bold>",
               f:column {fill = 1, fill_vertical = 0, spacing = 2,
-                  FocusInfo.addInfo("Make"             , FocusInfo.metaKeyCameraMake, photo, props),
-                  FocusInfo.addInfo("Model"            , FocusInfo.metaKeyCameraModel, photo, props),
-                  FocusInfo.addInfo("Lens"             , FocusInfo.metaKeyLens, photo, props),
-                  FocusInfo.addInfo("Focal Length"     , FocusInfo.metaKeyFocalLength, photo, props),
-                  FocusInfo.addInfo("FL Equivalent Crop Mode", FocusInfo.metaKeyFocalLength35mm, photo, props),
-                  FocusInfo.addInfo("Exposure"         , FocusInfo.metaKeyExposure, photo, props),
-                  FocusInfo.addInfo("ISO"              , FocusInfo.metaKeyIsoSpeedRating, photo, props),
-                  FocusInfo.addInfo("Exposure Bias"    , FocusInfo.metaKeyExposureBias, photo, props),
-                  FocusInfo.addInfo("Exposure Program" , FocusInfo.metaKeyExposureProgram, photo, props),
-                  FocusInfo.addInfo("Metering Mode"    , FocusInfo.metaKeyMeteringMode, photo, props),
+                  FocusInfo.addInfo("Make"                   , metaKeyCameraMake, photo, props),
+                  FocusInfo.addInfo("Model"                  , metaKeyCameraModel, photo, props),
+                  FocusInfo.addInfo("Lens"                   , metaKeyLens, photo, props),
+                  FocusInfo.addInfo("Focal Length"           , metaKeyFocalLength, photo, props),
+                  FocusInfo.addInfo("FL Equivalent Crop Mode", metaKeyFocalLength35mm, photo, props),
+                  FocusInfo.addInfo("Exposure"               , metaKeyExposure, photo, props),
+                  FocusInfo.addInfo("ISO"                    , metaKeyIsoSpeedRating, photo, props),
+                  FocusInfo.addInfo("Exposure Bias"          , metaKeyExposureBias, photo, props),
+                  FocusInfo.addInfo("Exposure Program"       , metaKeyExposureProgram, photo, props),
+                  FocusInfo.addInfo("Metering Mode"          , metaKeyMeteringMode, photo, props),
                   shootingInfo
              },
           },
@@ -483,3 +501,5 @@ function FocusInfo.createInfoView(photo, props)
   }
   return infoView
 end
+
+return FocusInfo

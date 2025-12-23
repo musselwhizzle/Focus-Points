@@ -14,27 +14,28 @@
   limitations under the License.
 --]]
 
+-- Imported LR namespaces
+local LrApplication    = import  'LrApplication'
+local LrFileUtils      = import  'LrFileUtils'
+local LrLogger         = import  'LrLogger'
+local LrPathUtils      = import  'LrPathUtils'
+local LrPrefs          = import  'LrPrefs'
+local LrSystemInfo     = import  'LrSystemInfo'
 
-local LrApplication = import 'LrApplication'
-local LrPathUtils = import 'LrPathUtils'
-local LrFileUtils = import 'LrFileUtils'
-local LrLogger = import 'LrLogger'
-local LrPrefs = import "LrPrefs"
-local LrSystemInfo = import "LrSystemInfo"
-
-require "Info"
+-- Required Lua definitions
+local KeyboardLayout   = require 'KeyboardLayout'
+local Utils            = require 'Utils'
 
 
-Log = {}
+-- This module
+local Log = {}
 
-Log.logName  = "FocusPoints"
-Log.logger    = LrLogger(Log.logName)
-Log.logger:enable("logfile")
+local logName   = "FocusPoints"
+local logger    = LrLogger(logName)
+logger:enable("logfile")
 
 Log.warningsEncountered = nil
 Log.errorsEncountered   = nil
-
-local prefs = LrPrefs.prefsForPlugin( nil )
 
 --[[----------------------------------------------------------------------------
 -- Use the SDK's LrLogger infrastructure to log the plugin's execution to the
@@ -70,6 +71,7 @@ local function doLog(level, group, message)
   }
 
   -- Looking for the prefs
+  local prefs = LrPrefs.prefsForPlugin( nil )
   if prefs.loggingLevel == nil or levels[prefs.loggingLevel] == nil then
     prefs.loggingLevel = "AUTO"
   end
@@ -85,13 +87,13 @@ local function doLog(level, group, message)
 
   local str = string.format("%20s | %s", string.upper(string.sub(group, 1, 20)), message)
   if level == "ERROR" then
-    Log.logger:error(str)
+    logger:error(str)
   elseif level == "WARN" then
-    Log.logger:warn(str)
+    logger:warn(str)
   elseif level == "INFO" then
-    Log.logger:info(str)
+    logger:info(str)
   else
-    Log.logger:debug(str)
+    logger:debug(str)
   end
 end
 
@@ -116,7 +118,6 @@ function Log.logError(group, message)
   doLog("ERROR", group, message)
   Log.errorsEncountered = true
 end
-
 
 --[[
   @@public string Log.getFileName()
@@ -146,15 +147,13 @@ function Log.getFileName()
         logFolder = "/Library/Logs/Adobe/Lightroom/LrClassicLogs/"
     end
   end
-  Log.fileName = LrPathUtils.child(userHome, LrPathUtils.child(logFolder, Log.logName .. ".log"))
+  Log.fileName = LrPathUtils.child(userHome, LrPathUtils.child(logFolder, logName .. ".log"))
   return Log.fileName
 end
-
 
 function Log.fileExists()
   return LrFileUtils.exists(Log.getFileName())
 end
-
 
 function Log.delete()
   -- delete / reset log
@@ -166,14 +165,13 @@ function Log.delete()
   end
 end
 
-
 --[[
   @@public void Log.sysInfo()
   ----
   Output logfile header with system level information. Cqlled during Log.initialize()
 --]]
 function Log.sysInfo()
-
+  local prefs = LrPrefs.prefsForPlugin( nil )
   local osName = ""
   if not WIN_ENV then
     osName = "macOS "
@@ -181,28 +179,14 @@ function Log.sysInfo()
   Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
   Log.logInfo("System", string.format(
           "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
-            getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
+            Utils.getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
             osName, LrSystemInfo.osVersion()))
-end
-
---[[
-  @@public void Log.appInfo()
-  ----
-  Extend logfile header with application level information. Needs to be called separately.
---]]
-function Log.appInfo()
-
-  if FocusPointPrefs.updateAvailable() then
-    Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
+  if prefs.keyboardLayout then
+    Log.logInfo(
+      "System",
+      "Keyboard layout (user setting): '" .. KeyboardLayout.layoutById[prefs.keyboardLayout].label .. "'")
   end
-  if WIN_ENV then
-    Log.logInfo("System", "Display scaling level " ..
-            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
-  end
-  Log.logInfo("System", string.format(
-    "Application window size: %s x %s", FocusPointDialog.AppWidth, FocusPointDialog.AppHeight))
 end
-
 
 --[[
   @@public void Log.resetErrorsWarnings()
@@ -213,7 +197,6 @@ function Log.resetErrorsWarnings()
   Log.warningsEncountered = nil
   Log.errorsEncountered   = nil
 end
-
 
 --[[
   @@public void Log.initialize()
@@ -226,3 +209,4 @@ function Log.initialize()
   Log.sysInfo()
 end
 
+return Log
