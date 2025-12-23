@@ -1,6 +1,6 @@
 # Focus Points – V3.2 Prelease
 
-### Current version: [V3.2 PRE 4 updated December xx, 2025](https://github.com/capricorn8/Focus-Points/releases/tag/v3.2_pre4)
+### Current version: V3.2 PRE 4 updated December xx, 2025
 
 This document describes the new features and changes in V3.2.<br>
 Unless stated otherwise, the latest official version (**V3.1**) of the [README](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md) document continues to serve as an overview of the plugin's features and how they operate.
