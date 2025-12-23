@@ -3,13 +3,15 @@
 ### Current version: [V3.2 PRE 4 updated December xx, 2025](https://github.com/capricorn8/Focus-Points/releases/tag/v3.2_pre4)
 
 This document describes the new features and changes in V3.2.<br>
-Unless stated otherwise, the latest official version (**V3.1**) of the [README](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md) document continues to serve as an overview of the plugin's features and how they operate.
+
+Unless stated otherwise, the latest official version (V3.1) of the [README](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md) document continues to serve as an overview of the plugin's features and how they operate. The user manual will be updated to include V3.2 content at the time of its public release. 
 
 New features introduced in V3.2: 
 
-- [Tagging (flagging, rating and coloring) of photos within the plugin UI](#tagging-of-photos)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302)
-- [Film strip navigation](#film-strip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314)
+- [Tagging (Flagging, Rating and Coloring) of photos within the pugin UI](#tagging-of-photos)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302) (not for LR5)
+- [Filmstrip Navigation](#filmstrip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314) (not for LR5)
 - [Customizable plugin window size](#customizable-plugin-window-size)&nbsp;&nbsp;[#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
+- [Introduction of visible input field for keyboard shortcuts](#introduction-of-visible-input-field-for-keyboard-shortcuts)&nbsp;&nbsp;[#321](https://github.com/musselwhizzle/Focus-Points/issues/321)
 - [Buy the developer a coffee](#buy-the-developer-a-coffee)&nbsp;&nbsp;[#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
 
 Screenshot of user interface with new tagging controls, shortcut input field and "coffee" link :
@@ -45,11 +47,19 @@ The keyboard layout can be configured in the `User Interface` section. The prede
   
 - The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
 
+- The display of tagging controls and related keyboard shortcut operation can be disabled in the plugin settings, under section `User Interface`.  
 
-### Film strip navigation
-You no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. When the plugin is opened on a single photo, you can use the navigation controls (`Next image` and `Previous image`), or the corresponding keyboard shortcuts, to advance to the next or previous photo in the film strip. 
+- Note: Tagging features use the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, these features is not available on LR5.7 (which is still in use by a few plugin users!).
+
+
+
+### Filmstrip Navigation
+You no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos.<br> 
+The plugin now supports next and previous function when run on a single image (the current one). `Next image` will advance to the next photo in the filmstrip, and `Previous image` will advance to the previous photo in the filmstrip. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
 
 Running the plugin on a selection of multiple photos is still possible.
+
+Note: Filmstrip navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
 
 
 ### Customizable plugin window size
@@ -65,6 +75,27 @@ In the Metadata Viewer, this setting determines the height or half the width of 
 * Windows users already had the option to adjust the size of the focus points window using the screen scaling option specific to Windows. This setting remains as it is.
 
 
+### Introduction of visible input field for keyboard shortcuts
+
+Due to limitations in the LR SDK, the plugin can only work with text input and cannot recognize key codes. Keyboard shortcuts entered by the user, such as 'P' for 'Set as Pick' or '+' for 'Previous Image', are collected as text in a designated input field. If the character entered corresponds to a defined shortcut, the related action is performed. This works fine as long as the focus is on the input field.
+
+In Windows, only pressing the Tab key or clicking on the photo will remove the focus from the input field. As a result, further keyboard input will not be recognized. Mouse operation does not remove the focus.
+
+On macOS, clicking on any control (button, link text or tagging icon) takes focus away from the input field. With the large number of new controls in V3.2, it is not possible to perform operations using keyboard shortcuts and the mouse simultaneously for the same image.
+
+n V3.1, the text input field for keyboard shortcuts was invisible. The user could not understand why keyboard shortcuts stopped working when focus was removed from the input field by mouse operation. As the LR SDK offers no option to focus on a specific control, the input field must be refocused by the user.
+
+To make this procedure more transparent and intuitive, the text input field is now visible by default:
+
+<img src="screens/README%20TextInputField.jpg" alt="Screenshot" style="width: 600px;"/>
+
+Users who find the new control disturbing can customize its appearance in the plugin settings:
+
+<img src="screens/README%20TextInputSetting.jpg" alt="Screenshot" style="width: 600px;"/>
+
+- Invisible. This is self-explaining
+- Small. A narrow input field without labelling
+- Regular. An input field that can display a minimum of 10 characters, along with a label containing a link to the 'Keyboard Shortcuts' section of the user manual.
 
 ### Keyboard Shortcuts
 
