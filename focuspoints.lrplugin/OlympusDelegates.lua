@@ -28,6 +28,7 @@ local DefaultPointRenderer = require 'DefaultPointRenderer'
 local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
+local strict               = require 'strict'
 local Utils                = require 'Utils'
 
 -- This module

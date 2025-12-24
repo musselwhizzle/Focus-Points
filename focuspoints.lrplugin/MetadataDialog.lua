@@ -24,6 +24,7 @@ local LrBinding         = import  'LrBinding'
 -- Required Lua definitions
 local FocusPointPrefs   = require 'FocusPointPrefs'
 local GlobalDefs        = require 'GlobalDefs'
+local strict            = require 'strict'
 
 -- This module
 local MetadataDialog = {}

@@ -27,6 +27,7 @@ local LrView          = import  'LrView'
 
 local KeyboardLayout  = require 'KeyboardLayout'
 local Log             = require 'Log'
+local strict          = require 'strict'
 local Utils           = require 'Utils'
 
 -- This module

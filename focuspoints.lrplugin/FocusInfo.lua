@@ -26,9 +26,11 @@ local LrTasks              = import  'LrTasks'
 local LrView               = import  'LrView'
 
 -- Required Lua definitions
+                             require 'strict'
 local ExifUtils            = require 'ExifUtils'
 local FocusPointPrefs      = require 'FocusPointPrefs'
 local Log                  = require 'Log'
+local strict               = require 'strict'
 local Utils                = require 'Utils'
 
 -- This module

@@ -36,6 +36,7 @@ local GlobalDefs            = require 'GlobalDefs'
 local KeyboardLayout        = require 'KeyboardLayout'
 local Log                   = require 'Log'
 local PointsRendererFactory = require 'PointsRendererFactory'
+local strict                = require 'strict'
 local Utf8                  = require 'Utf8'
 local Utils                 = require 'Utils'
 
@@ -303,6 +304,13 @@ local function showDialog()
         -- Open main window
         Log.logInfo("FocusPoint", "Present dialog and information")
 
+        -- Output profiling results, if profiling was active
+        if GlobalDefs.DEBUG then
+          local Profiler = require('Profiler')
+          if Profiler.ProfilerActive then
+            Log.logInfo("Profiling", Profiler.sortResults(Debug.profileResults ()))
+          end
+        end
         local function inputFieldWidth()
           if     prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible then return 1
           elseif prefs.keyboardInput == FocusPointPrefs.kbdInputSmall     then return 25

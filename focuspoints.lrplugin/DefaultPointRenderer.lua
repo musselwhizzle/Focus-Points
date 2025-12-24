@@ -26,6 +26,7 @@ local LrPrefs          = import  'LrPrefs'
 local LrView           = import  'LrView'
 
 -- Required Lua definitions
+                         require 'strict'
 local a                = require 'affine'
 local DefaultDelegates = require 'DefaultDelegates'
 local ExifUtils        = require 'ExifUtils'
@@ -34,6 +35,7 @@ local FocusPointPrefs  = require 'FocusPointPrefs'
 local GlobalDefs       = require 'GlobalDefs'
 local Log              = require 'Log'
 local MogrifyUtils     = require 'MogrifyUtils'
+local strict           = require 'strict'
 local Utils            = require 'Utils'
 
 -- This module

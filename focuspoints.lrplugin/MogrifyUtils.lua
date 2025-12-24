@@ -23,6 +23,7 @@ local LrTasks     = import  'LrTasks'
 
 -- Required Lua definitions
 local Log         = require 'Log'
+local strict      = require 'strict'
 local Utils       = require 'Utils'
 
 -- This module

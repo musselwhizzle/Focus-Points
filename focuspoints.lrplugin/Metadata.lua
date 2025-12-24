@@ -28,6 +28,7 @@ local ExifUtils         = require 'ExifUtils'
 local FocusPointPrefs   = require 'FocusPointPrefs'
 local Log               = require 'Log'
 local MetadataDialog    = require 'MetadataDialog'
+local strict            = require 'strict'
 local Utils             = require 'Utils'
 
 --[[
