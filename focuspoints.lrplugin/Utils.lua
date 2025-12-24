@@ -22,6 +22,7 @@ local LrUUID           = import  'LrUUID'
 
 -- Required Lua definitions
 local GlobalDefs       = require 'GlobalDefs'
+local strict           = require 'strict'
 
 -- This module
 local Utils = {}

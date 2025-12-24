@@ -22,8 +22,10 @@ local LrStringUtils     = import  'LrStringUtils'
 local LrTasks           = import  'LrTasks'
 
 -- Required Lua definitions
+                          require 'strict'
 local DefaultDelegates  = require 'DefaultDelegates'
 local Log               = require 'Log'
+local strict            = require 'strict'
 local Utils             = require 'Utils'
 
 -- This module

@@ -22,6 +22,7 @@ local LrView           = import  'LrView'
 local FocusPointPrefs  = require 'FocusPointPrefs'
 local GlobalDefs       = require 'GlobalDefs'
 local Log              = require 'Log'
+local strict           = require 'strict'
 local Utils            = require 'Utils'
 
 -- This module

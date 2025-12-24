@@ -19,18 +19,19 @@
 --]]
 
 -- Required Lua definitions
-local AppleDelegates           = require 'AppleDelegates'
-local CanonDelegates           = require 'CanonDelegates'
-local DefaultDelegates         = require 'DefaultDelegates'
-local DefaultPointRenderer     = require 'DefaultPointRenderer'
-local FujifilmDelegates        = require 'FujifilmDelegates'
-local Log                      = require 'Log'
-local NikonDelegates           = require 'NikonDelegates'
-local NikonDuplicates          = require 'NikonDuplicates'
-local OlympusDelegates         = require 'OlympusDelegates'
-local PanasonicDelegates       = require 'PanasonicDelegates'
-local PentaxDelegates          = require 'PentaxDelegates'
-local SonyDelegates            = require 'SonyDelegates'
+local AppleDelegates       = require 'AppleDelegates'
+local CanonDelegates       = require 'CanonDelegates'
+local DefaultDelegates     = require 'DefaultDelegates'
+local DefaultPointRenderer = require 'DefaultPointRenderer'
+local FujifilmDelegates    = require 'FujifilmDelegates'
+local Log                  = require 'Log'
+local NikonDelegates       = require 'NikonDelegates'
+local NikonDuplicates      = require 'NikonDuplicates'
+local OlympusDelegates     = require 'OlympusDelegates'
+local PanasonicDelegates   = require 'PanasonicDelegates'
+local PentaxDelegates      = require 'PentaxDelegates'
+local SonyDelegates        = require 'SonyDelegates'
+local strict               = require 'strict'
 
 -- This module
 local PointsRendererFactory = {}

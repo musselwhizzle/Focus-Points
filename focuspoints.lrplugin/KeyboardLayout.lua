@@ -24,6 +24,7 @@
 local LrDialogs = import 'LrDialogs'
 
 -- Required Lua definitions
+local strict    = require 'strict'
 local Utf8      = require 'Utf8'
 
 -- This module

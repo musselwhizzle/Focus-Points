@@ -27,7 +27,9 @@ GlobalDefs.currentPhoto = ""
 
 -- Store LR windows size WxH at time of start
 -- Workaround for LR5 SDK issue, which changes appWindowSize to size of progress window
-GlobalDefs.appWidth,
-GlobalDefs.appHeight    = LrSystemInfo.appWindowSize()
+GlobalDefs.appWidth, GlobalDefs.appHeight = LrSystemInfo.appWindowSize()
+
+-- Determines if the plugin is run in develop/debug mode
+GlobalDefs.DEBUG = _PLUGIN.path:sub (-12) == ".lrdevplugin"
 
 return GlobalDefs

@@ -24,6 +24,7 @@ local LrSystemInfo     = import  'LrSystemInfo'
 
 -- Required Lua definitions
 local KeyboardLayout   = require 'KeyboardLayout'
+local strict           = require 'strict'
 local Utils            = require 'Utils'
 
 

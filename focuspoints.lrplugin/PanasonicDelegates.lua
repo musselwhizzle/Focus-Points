@@ -20,15 +20,16 @@
 --]]
 
 -- Imported LR namespaces
-local LrView                   = import  'LrView'
+local LrView               = import  'LrView'
 
 -- Required Lua definitions
-local DefaultDelegates         = require 'DefaultDelegates'
-local DefaultPointRenderer     = require 'DefaultPointRenderer'
-local ExifUtils                = require 'ExifUtils'
-local FocusInfo                = require 'FocusInfo'
-local Log                      = require 'Log'
-local Utils                    = require 'Utils'
+local DefaultDelegates     = require 'DefaultDelegates'
+local DefaultPointRenderer = require 'DefaultPointRenderer'
+local ExifUtils            = require 'ExifUtils'
+local FocusInfo            = require 'FocusInfo'
+local Log                  = require 'Log'
+local strict               = require 'strict'
+local Utils                = require 'Utils'
 
 -- This module
 local PanasonicDelegates = {}
