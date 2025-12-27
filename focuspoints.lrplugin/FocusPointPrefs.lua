@@ -411,8 +411,8 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
         bind_to_object = prefs,
         spacing = f:control_spacing(),
         f:popup_menu {
-          title = "Window size",
-          value = bind ("windowSize"),
+          title = "pluginWindowScaling",
+          value = bind ("pluginWindowScaling"),
           width = dropDownWidth,
           items = {
             { title = "XXL", value = FocusPointPrefs.pluginWindowXXL },
