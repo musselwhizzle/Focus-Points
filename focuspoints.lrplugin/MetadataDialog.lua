@@ -50,7 +50,7 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
 
   local result
 
-  LrFunctionContext.callWithContext("showMetadataDialog", showErrors( function(context)
+  LrFunctionContext.callWithContext("showMetadataDialog", function(context)
 
     local bool_to_number={ [true]=1, [false]=0 }
 
@@ -258,7 +258,7 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
       contents = contents,
     }
 
-  end))
+  end)
 
   return result
 end
