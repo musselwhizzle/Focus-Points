@@ -14,20 +14,33 @@
   limitations under the License.
 --]]
 
---[[
-  A collection of delegate functions to be passed into the DefaultPointRenderer
-  for Pentax cameras.
+--[[----------------------------------------------------------------------------
+  PentaxDelegates.lua
 
-  2025 capricorn - fundamentally revised
+  Purpose of this module:
+  A collection of delegate functions to be passed into the DefaultPointRenderer when
+  the camera is Sony:
 
-       - added K-3iii (which required some upfront work to identify and decode the AFInfo tags for exiftool)
-         (link to be inserted)
-       - added CAF point details (which required some upfront work to identify and decode the AFInfo tags for exiftool)
-         https://exiftool.org/TagNames/Pentax.html#CAFPointInfo
-       - for quite a few models, eg. KP, K-70, K-S1, K-S2 identified and initiated necessary the changes in exiftool
-         to display proper AFPointsSelected and AFPointsInFocus information.
-       - added the two recent Ricoh GR models (since they share the same metadata 'Pentax' versions)
---]]
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+
+  History: 2025 capricorn - fundamentally revised
+
+  - added K-3iii (which required some upfront work to identify and decode the AFInfo tags for exiftool)
+    (link to be inserted)
+  - added CAF point details (which required some upfront work to identify and decode the AFInfo tags for exiftool)
+    https://exiftool.org/TagNames/Pentax.html#CAFPointInfo
+  - for quite a few models, eg. KP, K-70, K-S1, K-S2 identified and initiated necessary the changes in exiftool
+    to display proper AFPointsSelected and AFPointsInFocus information.
+  - added the two recent Ricoh GR models (since they share the same metadata 'Pentax' versions)
+
+------------------------------------------------------------------------------]]
+local PentaxDelegates = {}
 
 -- Imported LR namespaces
 local LrView               = import  'LrView'
@@ -39,11 +52,8 @@ local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
 local PointsUtils          = require 'PointsUtils'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 local Utils                = require 'Utils'
-
--- This module
-local PentaxDelegates = {}
 
 -- List of supported models is sorted by date / Pentax version
 -- to potentially support handling of changes in tag usage across models / Pentax versions
@@ -91,7 +101,6 @@ local metaKeyAFPointTracking      = "AFC Point Tracking"
 local metaKeyFirstFrameActionAFC  = "First Frame Action In AFC"
 local metaKeyActionAFCContinuous  = "Action In AFC Cont"
 
-
 -- Image and Shooting Information relevant tags
 local metaKeyExposureProgram      = "Exposure Program"
 local metaKeyPictureMode          = "Picture Mode"
@@ -102,7 +111,16 @@ local metaKeyShakeReduction       = "Shake Reduction"
 -- Relevant metadata values
 local metaValueFaceDetection      = "Face Detection"
 
+-- Forward references
+local getAfPointsPhase, getAfPointsContrast, getK3iiiAfPoints
 
+--[[----------------------------------------------------------------------------
+  private boolean
+  modelHasK3iiiAfInfo(string model)
+
+  Returns true if the specified camera model uses the new focus point format
+  and logic introduced with the K-3 Mark III.
+------------------------------------------------------------------------------]]
 local function modelHasK3iiiAfInfo(model)
   -- returns true for models launched after 2019 which have AFInfo data structure in metadata
   return (model == "pentax k-3 mark iii")
@@ -114,18 +132,58 @@ local function modelHasK3iiiAfInfo(model)
       or (model == "ricoh gr iv")
 end
 
---[[
-  @@table getK3iiiAfPoints(table photo, table metadata)
-  ----
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
+
+  Top level function used to retrieve the autofocus points from the metadata
+  of the photo. Gets the actual work done by
+  - getK3iiiAfPoints()     for K-3 III and similar models
+  - getAfPointsPhase()     for older models and photo taken with PDAF
+  - getAfPointsContrast()  for older models and photo taken with CAF
+------------------------------------------------------------------------------]]
+function PentaxDelegates.getAfPoints(photo, metadata)
+
+  local result
+  local focusMode = Utils.splitTrim(ExifUtils.findValue(metadata, metaKeyFocusMode), " ")
+
+  if not focusMode then
+    -- focus mode is essential information to control processing of AF info
+    Log.logError("Pentax",
+     string.format("Focus mode tag '%s' not found", metaKeyFocusMode))
+    FocusInfo.severeErrorEncountered = true
+    return nil
+  end
+
+  if modelHasK3iiiAfInfo(DefaultDelegates.cameraModel) then
+    -- for models launched after 2019 the handling of AF points is different
+    result = getK3iiiAfPoints(photo, metadata)
+  else
+    if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
+      -- Phase Detect AF modes
+      result = getAfPointsPhase(photo, metadata)
+    else
+      -- for all other modes assume Contrast AF (Live View)
+      result = getAfPointsContrast(photo, metadata)
+    end
+  end
+
+  return result
+end
+
+--[[----------------------------------------------------------------------------
+  private table
+  getK3iiiAfPoints(table photo, table metadata)
+
   Function to get the autofocus points for models launched after 2019
   These models have an AFInfo block that covers both PDAF and CAF information:
-  @Todo Insert link to exiftool page
-  Used for K-3 iii, K-3 iii mono, GR iii, GR iiix
+  https://exiftool.org/TagNames/Pentax.html#AFInfoK3III
+  Used for K-3 iii, K-3 iii mono, GR iii, GR iiix, GR iv
   -- photo:    the photo LR object
   -- metadata: the metadata as read by exiftool
   -- returns a table of focus points with basic properties (pointType, center coordinates, width, height)
---]]
-local function getK3iiiAfPoints(photo, metadata)
+------------------------------------------------------------------------------]]
+function getK3iiiAfPoints(photo, metadata)
 
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
@@ -285,15 +343,13 @@ local function getK3iiiAfPoints(photo, metadata)
   return result
 end
 
---[[
-  @@table getAfPointsPhase(table photo, table metadata)
-  ----
-  Function to get the phase detect autofocus points for models launched before 2019
-  -- photo:    the photo LR object
-  -- metadata: the metadata as read by exiftool
-  -- returns a table of focus points with basic properties (pointType, center coordinates, width, height)
---]]
-local function getAfPointsPhase(photo, metadata)
+--[[----------------------------------------------------------------------------
+  private table
+  getAfPointsPhase(table photo, table metadata)
+
+  Retrieve the phase detect autofocus points for models launched before 2019
+------------------------------------------------------------------------------]]
+function getAfPointsPhase(photo, metadata)
 
   local function fixCenter(points)
 -- helper function to unify the various names for center point
@@ -409,15 +465,14 @@ end
   return result
 end
 
---[[
-  @@table getAfPointsContrast(table photo, table metadata)
-  ----
-  Function to get the autofocus points and focus size of the camera when shot in Live View mode
-  -- photo:    the photo LR object
-  -- metadata: the metadata as read by exiftool
-  -- returns a table of focus points with basic properties (pointType, center coordinates, width, height)
---]]
-local function getAfPointsContrast(photo, metadata)
+--[[----------------------------------------------------------------------------
+  private table
+  getAfPointsContrast(table photo, table metadata)
+
+  Retrieve the contrast autofocus points for models launched before 2019
+  (photo taken in Live View mode)
+----------------------------------------------------------------------------]]
+function getAfPointsContrast(photo, metadata)
 
   local result = {
     pointTemplates = DefaultDelegates.pointTemplates,
@@ -619,55 +674,16 @@ local function getAfPointsContrast(photo, metadata)
   return result
 end
 
---[[
-  @@public table getAFPoints(table photo, table metadata)
-  ----
-  Top level function to get the autofocus points for 'photo' from 'metadata'
-  -- photo:    the photo LR object
-  -- metadata: the metadata as read by exiftool
-  -- returns a table of focus points with basic properties (pointType, center coordinates, width, height)
---]]
-function PentaxDelegates.getAfPoints(photo, metadata)
+--[[----------------------------------------------------------------------------
+  private string
+  focusingArea(string AFPointSelected)
 
-  local result
-  local focusMode = Utils.splitTrim(ExifUtils.findValue(metadata, metaKeyFocusMode), " ")
+  Determines the focusing area (or AF active area*) from the AFPointSelected tag.
+  Not used for K-3 iii and similar models !!
 
-  if not focusMode then
-    -- focus mode is essential information to control processing of AF info
-    Log.logError("Pentax",
-     string.format("Focus mode tag '%s' not found", metaKeyFocusMode))
-    FocusInfo.severeErrorEncountered = true
-    return nil
-  end
-
-  if modelHasK3iiiAfInfo(DefaultDelegates.cameraModel) then
-    -- for models launched after 2019 the handling of AF points is different
-    result = getK3iiiAfPoints(photo, metadata)
-  else
-    if focusMode[1] == "AF-A" or focusMode[1] == "AF-C" or focusMode[1] == "AF-S" then
-      -- Phase Detect AF modes
-      result = getAfPointsPhase(photo, metadata)
-    else
-      -- for all other modes assume Contrast AF (Live View)
-      result = getAfPointsContrast(photo, metadata)
-    end
-  end
-
-  return result
-end
-
-
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
-
---[[
-  @@public string focusingArea(AFPointSelected)
-  ----
-  Determines the focusing area (or AF active area) from AFPointSelected tag
-  according to the terminology of Pentax user manuals for K-1, K-3, KP, K-70, K-S2, K-S1 models
-  Not used for K-3 iii models !!
---]]
+  * Following the terminology of Pentax user manuals for the K-1, K-3,
+    KP, K-70, K-S2 and K-S1 models
+----------------------------------------------------------------------------]]
 local function focusingArea(AFPointSelected)
 
   local value = Utils.splitTrim(AFPointSelected,  ";")
@@ -692,11 +708,12 @@ local function focusingArea(AFPointSelected)
   return result
 end
 
---[[
-  @@public string getDriveMode(string driveModeValue)
-  ----
-  Extract the desired portions from DriveMode tag and format properly
---]]
+--[[----------------------------------------------------------------------------
+  private string
+  getDriveMode(string driveModeValue)
+
+  Extract the relevant details from the compound 'DriveMode' tag.
+------------------------------------------------------------------------------]]
 local function getDriveMode(driveModeValue)
   local result
   local v0 = Utils.get_nth_Word(driveModeValue, 1, ";")
@@ -724,11 +741,12 @@ local function getDriveMode(driveModeValue)
   return Utils.wrapText(result, {";"}, FocusInfo.maxValueLen)
 end
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Create view element for adding an item to the info section; creates and populates the corresponding view property
---]]
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
+
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -842,11 +860,12 @@ local function addInfo(title, key, props, metadata)
   return result
 end
 
---[[
-  @@public boolean modelSupported(string)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function PentaxDelegates.modelSupported(currentModel)
   local brand, model = string.match(string.lower(currentModel), "^(%a+)%s+(.*)")
   for _, m in ipairs(supportedModels) do
@@ -857,11 +876,12 @@ function PentaxDelegates.modelSupported(currentModel)
   return false
 end
 
---[[
-  @@public boolean makerNotesFound(table, table)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function PentaxDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -871,11 +891,12 @@ function PentaxDelegates.makerNotesFound(_photo, metadata)
   return result ~= nil
 end
 
---[[
-  @@public boolean manualFocusUsed(table, table)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function PentaxDelegates.manualFocusUsed(_photo, metadata)
   local focusMode = ExifUtils.findValue(metadata, metaKeyFocusMode)
   Log.logInfo("Pentax",
@@ -884,11 +905,13 @@ function PentaxDelegates.manualFocusUsed(_photo, metadata)
   return focusMode == "Manual"
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function PentaxDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -903,11 +926,13 @@ function PentaxDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function PentaxDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -927,4 +952,4 @@ function PentaxDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return PentaxDelegates
+return PentaxDelegates -- ok

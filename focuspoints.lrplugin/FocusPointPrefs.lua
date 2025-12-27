@@ -14,6 +14,16 @@
   limitations under the License.
 --]]
 
+--[[----------------------------------------------------------------------------
+  FocusPointPrefs.lua
+
+  Purpose of this module:
+  - Manages the plugin settings (storage, set, get)
+  - Central place for important plugin definitions (e.g. keyboard shortcuts, URLs)
+  - Provides the plugin settings dialog (called by LrPluginInfoProvider)
+------------------------------------------------------------------------------]]
+local FocusPointPrefs = {}
+
 -- Imported LR namespaces
 local LrApplication   = import  'LrApplication'
 local LrColor         = import  'LrColor'
@@ -25,25 +35,21 @@ local LrShell         = import  'LrShell'
 local LrTasks         = import  'LrTasks'
 local LrView          = import  'LrView'
 
+-- Required Lua definitions
+local Info            = require 'Info'
 local KeyboardLayout  = require 'KeyboardLayout'
 local Log             = require 'Log'
-local strict          = require 'strict'
+local _strict         = require 'strict'
 local Utils           = require 'Utils'
 
--- This module
-local FocusPointPrefs = {}
-
-local LR5 = (LrApplication.versionTable().major == 5)
-local bind = LrView.bind
-
-FocusPointPrefs.displayScaleFactor = 0.0
+-- Important plugin definitions and settings -----------------------------------
 
 -- Size options for plugin window
-FocusPointPrefs.windowSizeXXL      = 0.8
-FocusPointPrefs.windowSizeXL       = 0.7
-FocusPointPrefs.windowSizeL        = 0.6
-FocusPointPrefs.windowSizeM        = 0.5
-FocusPointPrefs.windowSizeS        = 0.4
+FocusPointPrefs.pluginWindowXXL    = 0.8
+FocusPointPrefs.pluginWindowXL     = 0.7
+FocusPointPrefs.pluginWindowL      = 0.6
+FocusPointPrefs.pluginWindowM      = 0.5
+FocusPointPrefs.pluginWindowS      = 0.4
 
 -- Scaling values for size of 'pixel focus' box, relative to focus point window size
 FocusPointPrefs.focusBoxSize = { 0, 0.04, 0.1 }
@@ -62,7 +68,6 @@ FocusPointPrefs.kbdInputRegular    = 2
 -- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
-FocusPointPrefs.isUpdateAvailable  = nil
 
 -- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
@@ -89,36 +94,48 @@ FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
 FocusPointPrefs.kbdShortcutsUserManual      = "mM"
 FocusPointPrefs.kbdShortcutsClose           = "cC"
 
---[[
-  @@public void FocusPointPrefs.InitializePrefs()
-  ----
-  Initialize preferences at first run after installation of plugin
---]]
+-- Local variables -------------------------------------------------------------
+
+local isUpdateAvailable
+local displayScaleFactor = 0.0
+local LR5 = (LrApplication.versionTable().major == 5)
+local bind = LrView.bind
+
+--[[----------------------------------------------------------------------------
+  public void
+  InitializePrefs()
+
+  Initialize preferences at first run after installation of plugin.
+  Makes sure that newly introduced settings have a defined value (and are not nil).
+------------------------------------------------------------------------------]]
 function FocusPointPrefs.InitializePrefs(prefs)
   -- Set any undefined properties to their default values
-  if not prefs.screenScaling          then	prefs.screenScaling   = 0 end
-  if not prefs.windowSize             then  prefs.windowSize      = FocusPointPrefs.windowSizeL end
-  if not prefs.focusBoxSize           then	prefs.focusBoxSize    = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
-  if not prefs.focusBoxColor          then	prefs.focusBoxColor   = "red"    end
-  if     prefs.taggingControls == nil then  prefs.taggingControls = true     end
-  if     prefs.keyboardLayout == nil  then  prefs.keyboardLayout  = KeyboardLayout.autoDetectLayout end
-  if not prefs.processMfInfo == nil   then  prefs.processMfInfo   = false    end
-  if not prefs.loggingLevel           then	prefs.loggingLevel    = "AUTO"   end
-  if not prefs.latestVersion          then	prefs.latestVersion   = _PLUGIN.version end
-  if     prefs.checkForUpdates == nil then	prefs.checkForUpdates = true     end   -- here we need a nil pointer check!!
-  if     prefs.keyboardInput == nil   then  prefs.keyboardInput   = FocusPointPrefs.kbdInputReguar
+  if not prefs.screenScaling           then	prefs.screenScaling       = 0 end
+  if not prefs.pluginWindowScaling     then prefs.pluginWindowScaling = FocusPointPrefs.pluginWindowL end
+  if     prefs.truncateLongText == nil then prefs.truncateLongText    = true     end
+  if not prefs.truncateLimit           then prefs.truncateLimit       = 32       end
+  if not prefs.focusBoxSize            then	prefs.focusBoxSize        = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
+  if not prefs.focusBoxColor           then	prefs.focusBoxColor       = "red"    end
+  if     prefs.taggingControls  == nil then prefs.taggingControls     = true     end
+  if     prefs.keyboardLayout   == nil then prefs.keyboardLayout        = KeyboardLayout.autoDetectLayout end
+  if not prefs.processMfInfo    == nil then prefs.processMfInfo       = false    end
+  if not prefs.loggingLevel            then	prefs.loggingLevel        = "AUTO"   end
+  if not prefs.latestVersion           then	prefs.latestVersion       = _PLUGIN.version end
+  if     prefs.checkForUpdates  == nil then	prefs.checkForUpdates     = true     end   -- here we need a nil pointer check!!
+  if     prefs.keyboardInput    == nil then prefs.keyboardInput       = FocusPointPrefs.kbdInputReguar
   end
-
   -- get the latest plugin version for update checks
-  FocusPointPrefs.getLatestVersion()
+  FocusPointPrefs.retrieveVersionOfLatestRelease()
 end
 
---[[
-  @@public int FocusPointPrefs.getWinScalingFactor()
-  ----
-  Retrieves Windows DPI scaling level registry key (HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI)
-  Returns display scaling level as factor (100/scale_in_percent)
---]]
+--[[----------------------------------------------------------------------------
+  public float
+  getWinScalingFactor()
+
+  Retrieves the Windows DPI scaling level registry key using the REG.EXE command:
+  HKEY_CURRENT_USER\Control Panel\Desktop\WindowMetrics, AppliedDPI
+  Returns the display scaling factor (100/scale_in_percent)
+------------------------------------------------------------------------------]]
 local function getWinScalingFactor()
   local output = Utils.getTempFileName()
   local cmd = "reg.exe query \"HKEY_CURRENT_USER\\Control Panel\\Desktop\\WindowMetrics\" -v AppliedDPI >\"" .. output .. "\""
@@ -162,64 +179,78 @@ local function getWinScalingFactor()
   return result
 end
 
---[[ #TODO Documentation!
---]]
+--[[----------------------------------------------------------------------------
+  public void
+  setDisplayScaleFactor()
+
+  Sets the displayScaleFactor to the value selected by the user in plugin settings.
+  If the 'Auto' option is selected, the Windows system value is retrieved and used.
+------------------------------------------------------------------------------]]
 function FocusPointPrefs.setDisplayScaleFactor()
   local prefs = LrPrefs.prefsForPlugin( nil )
   if WIN_ENV then
     if prefs.screenScaling ~= 0 then
-      FocusPointPrefs.displayScaleFactor = prefs.screenScaling
+      displayScaleFactor = prefs.screenScaling
     else
-      FocusPointPrefs.displayScaleFactor = getWinScalingFactor()
+      displayScaleFactor = getWinScalingFactor()
     end
   else
     -- just to be safe, normally, this branch should never be executed
-    FocusPointPrefs.displayScaleFactor = 1.0
+    displayScaleFactor = 1.0
   end
 end
 
---[[ #TODO Documentation!
---]]
+--[[----------------------------------------------------------------------------
+  public float
+  getDisplayScaleFactor()
+
+  Returns the current value of displayScaleFactor. In case of 'Auto' setting,
+  the system scaling factor is returned.
+------------------------------------------------------------------------------]]
 function FocusPointPrefs.getDisplayScaleFactor()
-  if FocusPointPrefs.displayScaleFactor == 0 then
+  if displayScaleFactor == 0 then
     FocusPointPrefs.setDisplayScaleFactor()
   end
-  return FocusPointPrefs.displayScaleFactor
+  return displayScaleFactor
 end
 
---[[ #TODO Documentation!
---]]
-function FocusPointPrefs.getWindowSize()
+--[[----------------------------------------------------------------------------
+  public float
+  getPluginWindowSize()
+
+  Returns the sizing factor for supported plugin window sizes S..XXL
+------------------------------------------------------------------------------]]
+function FocusPointPrefs.getPluginWindowSize()
   local prefs = LrPrefs.prefsForPlugin( nil )
-  return prefs.windowSize
+  return prefs.pluginWindowScaling
 end
 
---[[
-  @@public void FocusPointPrefs.getLatestVersion()
-  ----
-  Retrieves the version number of the latest plug-in release. Result is stored in global
-  variable 'prefs.latestVersion' for further use by the routines that deal with updates
---]]
-function FocusPointPrefs.getLatestVersion()
+--[[----------------------------------------------------------------------------
+  public string
+  retrieveVersionOfLatestRelease()
+
+  Retrieves the version number of the latest plug-in release. This information
+  is stored in a text file 'Version.txt' in the Github plugin folder.
+  The result is stored in 'prefs.latestVersion' for use by update-related routines.
+------------------------------------------------------------------------------]]
+function FocusPointPrefs.retrieveVersionOfLatestRelease()
   local prefs = LrPrefs.prefsForPlugin( nil )
   -- Need to execute this as a collaborative task
   LrTasks.startAsyncTask(function()
     local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
-    -- @TODO disable test code prior to release !!
-    -- latestVersionNumber = LrFileUtils.readFile( "L:\\Plugins\\focuspoints.lrdevplugin\\Version.txt" )
-    -- end of test code
     if latestVersionNumber then
       prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+")
     end
   end)
 end
 
---[[
-  @@public string FocusPointPrefs.latestVersion()
-  ----
-  Returns the version number of the latest plug-in release as a string eg. 'v3.5.12'
---]]
-function FocusPointPrefs.latestVersion()
+--[[----------------------------------------------------------------------------
+  public string
+  getlatestVersion()
+
+  Returns the version number of the latest plug-in release as a string eg. 'v3.1.3'
+------------------------------------------------------------------------------]]
+function FocusPointPrefs.getlatestVersion()
   local prefs = LrPrefs.prefsForPlugin( nil )
   if prefs.latestVersion then
     return prefs.latestVersion
@@ -228,17 +259,18 @@ function FocusPointPrefs.latestVersion()
   end
 end
 
---[[
-  @@public boolean FocusPointPrefs.updateAvailable()
+--[[----------------------------------------------------------------------------
+  public boolean
+  isUpdateAvailable()
+
   Checks whether an updated version of the plug-in is available
   Returns true if so, otherwise false
---]]
-function FocusPointPrefs.updateAvailable()
-  local prefs = LrPrefs.prefsForPlugin( nil )
-  local Info = require 'Info'
+------------------------------------------------------------------------------]]
+function FocusPointPrefs.isUpdateAvailable()
+  local prefs  = LrPrefs.prefsForPlugin( nil )
   local result = false
 
-  if FocusPointPrefs.isUpdateAvailable == nil then
+  if isUpdateAvailable == nil then
     -- information still empty, so determine its status
     if prefs.latestVersion then
       local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
@@ -271,15 +303,19 @@ function FocusPointPrefs.updateAvailable()
     else
       Log.logWarn("Utils", "Update check failed, unable to retrieve version info from website")
     end
-    FocusPointPrefs.isUpdateAvailable = result
+    isUpdateAvailable = result
   end
-  return FocusPointPrefs.isUpdateAvailable
+  return isUpdateAvailable
 end
 
---[[
-  @@public table FocusPointPrefs.genSectionsForBottomOfDialog( table f, p )
-  -- Called by Lightroom's Plugin Manager when loading the plugin; creates the plugin page with preferences
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  genSectionsForBottomOfDialog( table viewFactory, propertyTable )
+
+  Called by Lightroom's Plugin Manager when the plugin is loaded.
+  This creates the bottom section of the dialogue box on the plugin settings page.
+  This section contains the plugin-specific settings that the user can modify.
+------------------------------------------------------------------------------]]
 function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
   local prefs = LrPrefs.prefsForPlugin( nil )
 
@@ -288,7 +324,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
 
   -- Check for updates
   local updateMessage
-  if FocusPointPrefs.updateAvailable() then
+  if FocusPointPrefs.isUpdateAvailable() then
     updateMessage =
       f:row {
         f:static_text {title = "Update available!", text_color=LrColor("red")},
@@ -379,11 +415,11 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           value = bind ("windowSize"),
           width = dropDownWidth,
           items = {
-            { title = "XXL", value = FocusPointPrefs.windowSizeXXL },
-            { title = "XL",  value = FocusPointPrefs.windowSizeXL  },
-            { title = "L",   value = FocusPointPrefs.windowSizeL   },
-            { title = "M",   value = FocusPointPrefs.windowSizeM   },
-            { title = "S",   value = FocusPointPrefs.windowSizeS   },
+            { title = "XXL", value = FocusPointPrefs.pluginWindowXXL },
+            { title = "XL",  value = FocusPointPrefs.pluginWindowXL  },
+            { title = "L",   value = FocusPointPrefs.pluginWindowL   },
+            { title = "M",   value = FocusPointPrefs.pluginWindowM   },
+            { title = "S",   value = FocusPointPrefs.pluginWindowS   },
           }
         },
         f:static_text {
@@ -407,6 +443,33 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
             title = 'Appearance of text input field for keyboard shortcuts'
         },
       },
+      f:row {
+        bind_to_object = prefs,
+        spacing = f:control_spacing(),
+        f:popup_menu {
+          title = "truncateLongText",
+          value = bind ("truncateLongText"),
+          width = dropDownWidth,
+          items = {
+            { title = "On",  value = true  },
+            { title = "Off", value = false },
+          },
+        },
+        f:static_text {
+            title = 'Truncate or wrap long metadata value strings after'
+        },
+        f:edit_field {
+          value = bind ("truncateLimit"),
+          width_in_chars = 3,
+          min = 10,
+          max = 100,
+          precision = 0,
+        },
+        f:static_text {
+          title = 'characters',
+        },
+      },
+
       taggingControlsSetting(),   -- empty for LR5
       keyboardLayoutSetting(),    -- empty for LR5
     }
@@ -423,9 +486,9 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           value = bind("focusBoxColor"),
           width = dropDownWidth,
           items = {
-            { title = "Red", value = "red" },
+            { title = "Red",   value = "red" },
             { title = "Green", value = "green" },
-            { title = "Blue", value = "blue" },
+            { title = "Blue",  value = "blue" },
           }
         },
         f:static_text {
@@ -504,7 +567,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
         f:push_button {
           title = "Show file",
           action = function()
-            local logFileName = Log.getFileName()
+            local logFileName = Log.getLogFileName()
             if LrFileUtils.exists(logFileName)then
               LrShell.revealInShell(logFileName)
             else
@@ -588,4 +651,4 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
   }
 end
 
-return FocusPointPrefs
+return FocusPointPrefs -- ok

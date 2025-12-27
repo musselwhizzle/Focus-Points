@@ -14,9 +14,14 @@
   limitations under the License.
 --]]
 
---[[
-  Factory for creating the focus point renderer and getting the focus points.
---]]
+--[[----------------------------------------------------------------------------
+  Utils.lua
+
+  Purpose of this module:
+  Factory for creating the focus point renderer and getting the focus points
+  as well as camera maker specific information (image, shooting, focus)
+------------------------------------------------------------------------------]]
+local PointsRendererFactory = {}
 
 -- Required Lua definitions
 local AppleDelegates       = require 'AppleDelegates'
@@ -31,11 +36,25 @@ local OlympusDelegates     = require 'OlympusDelegates'
 local PanasonicDelegates   = require 'PanasonicDelegates'
 local PentaxDelegates      = require 'PentaxDelegates'
 local SonyDelegates        = require 'SonyDelegates'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 
--- This module
-local PointsRendererFactory = {}
+--[[----------------------------------------------------------------------------
+  public table renderer
+  createRenderer(table photo)
 
+  Based on camera maker and model, decide which Delegates module shall handle the
+  various functions required by DefaultPointRenderer
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+
+  Returns the DefaultPointRenderer to be used for the current photo.
+------------------------------------------------------------------------------]]
 function PointsRendererFactory.createRenderer(photo)
 
   local cameraMake = photo:getFormattedMetadata("cameraMake")
@@ -179,4 +198,4 @@ function PointsRendererFactory.createRenderer(photo)
   return DefaultPointRenderer
 end
 
-return PointsRendererFactory
+return PointsRendererFactory -- ok

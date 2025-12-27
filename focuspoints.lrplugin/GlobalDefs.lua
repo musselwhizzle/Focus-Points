@@ -14,16 +14,22 @@
   limitations under the License.
 --]]
 
---[[
-  Central place for global variables to support a hierarchical module structure w/o cyclic dependencies
---]]
+--[[----------------------------------------------------------------------------
+  GlobalDefs.lua
+
+  Purpose of this module:
+  Central place for global variables to support a clean, hierarchical structure
+  w/o cyclic dependencies between modules
+------------------------------------------------------------------------------]]
+local GlobalDefs = {}
 
 -- Imported LR namespaces
 local LrSystemInfo     = import  'LrSystemInfo'
 
-local GlobalDefs = {}
+-- Required Lua definitions
+local Info             = require 'Info'
 
-GlobalDefs.currentPhoto = ""
+GlobalDefs.currentPhoto = nil
 
 -- Store LR windows size WxH at time of start
 -- Workaround for LR5 SDK issue, which changes appWindowSize to size of progress window
@@ -32,4 +38,7 @@ GlobalDefs.appWidth, GlobalDefs.appHeight = LrSystemInfo.appWindowSize()
 -- Determines if the plugin is run in develop/debug mode
 GlobalDefs.DEBUG = _PLUGIN.path:sub (-12) == ".lrdevplugin"
 
-return GlobalDefs
+-- Version number of this plugin
+GlobalDefs.pluginVersion = Info.VERSION.display
+
+return GlobalDefs -- ok

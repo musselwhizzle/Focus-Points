@@ -14,10 +14,22 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  NikonDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Nikon
---]]
+  the camera is Nikon:
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local NikonDelegates = {}
 
 -- Imported LR namespaces
 local LrView           = import  'LrView'
@@ -30,9 +42,6 @@ local Log              = require 'Log'
 local PointsUtils      = require 'PointsUtils'
 local strict           = require 'strict'
 local Utils            = require 'Utils'
-
--- This module
-local NikonDelegates = {}
 
 local supportedModels = {
     "d3", "d3s", "d3x", "d4", "d4s", "d5", "d5s", "d6", "df",
@@ -50,27 +59,21 @@ local metaKeyAfAreaXPosition         = "AF Area X Position"
 local metaKeyAfAreaYPosition         = "AF Area Y Position"
 local metaKeyAfAreaWidth             = "AF Area Width"
 local metaKeyAfAreaHeight            = "AF Area Height"
-local metaKeyPhaseDetectAF           = "Phase Detect AF"
 local metaKeyAfAreaMode              = "AF Area Mode"
 local metaKeyAfPointsUsed            = "AF Points Used"
 local metaKeyAfPointsSelected        = "AF Points Selected"
 local metaKeyAfPointsInFocus         = "AF Points In Focus"
 local metaKeyAfPrimaryPoint          = "Primary AF Point"
-local metaKeyCropArea                = "Crop Area"
 local metaKeyFocusMode               = "Focus Mode"
 local metaKeyFocusResult             = "Focus Result"
 local metaKeyFocusPointSchema        = "Focus Point Schema"
-local metaKeyAfAreaMode              = "AF Area Mode"
 local metaKeySubjectDetection        = "Subject Detection"
 local metaKeyNumberOfFocusPoints     = "Number Of Focus Points"
-local metaKeyBlockShotAfResponse     = "Block Shot AF Response"
 local metaKeySubjectMotion           = "Subject Motion"
 local metaKey3DTrackingFaceDetection = "Three-D Tracking Face Detection"
 local metaKey3DTrackingWatchArea     = "Three-D Tracking Watch Area"
 local metaKeyAfActivation            = "AF Activation"
 local metaKeyAfDetectionMethod       = "AF Detection Method"
-local metaKeyContrastDetect          = "Contrast Detect AF"
-local metaKeyPhaseDetect             = "Phase Detect AF"
 local metaKeyFocusDistance           = "Focus Distance"
 local metaKeyDepthOfField            = "Depth Of Field"
 local metaKeyHyperfocalDistance      = "Hyperfocal Distance"
@@ -81,155 +84,40 @@ local metaKeyAfSPriority             = { "AF-S Priority Sel", "AF-S Priority Sel
 local metaKeyCropHiSpeed             = "Crop Hi Speed"
 local metaKeyShootingMode            = "Shooting Mode"
 
---[[
-  @@public string, int, int, int, int, int, int getCropType(string cropHiSpeedValue)
-  ----
-  Extracts cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight, crop_x0, crop_y0 values from cropHiSpeed tag
---]]
-local function getCropType(cropHiSpeedValue)
-  return string.match(
-    cropHiSpeedValue,"(.+) %((%d+)x(%d+) cropped to (%d+)x(%d+) at pixel (%d+),(%d+)%)")
-end
+-- Forward references
+local getPDAfPoints, getCAfPoints, applyPDAfCrop, applyCAFCrop,
+getCropType, addFocusPointsToResult, normalizeFocusPointName
 
---[[
-  @@public void applyCAFCrop((table focusPoints, table metadata)
-  ----
-  Function to consider changed dimensions of the original photo if it is was not taken in native format
-  (e.g. FX crop with a DX camera, 16:9 crop etc.) and focus information is present in CAF format
-  Cropping is considered by transformation of the focus point coordinates (which are relative to native format)
-  The CropHiSpeed tag has all the relevant information to do this
---]]
-local function applyCAFCrop(focusPoints, metadata)
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
 
-  local cropHiSpeed = ExifUtils.findValue(metadata, metaKeyCropHiSpeed)
+  Retrieve the autofocus points from the metadata of the photo.
+  Top level function. Check for presence of Contrast AF data first.
+  If not found go back to EXIF and fetch PDAF data
+------------------------------------------------------------------------------]]
+function NikonDelegates.getAfPoints(_photo, metadata)
 
-  if cropHiSpeed then
-    -- perform string comparisons in lower case
-    cropHiSpeed = string.lower(cropHiSpeed)
-    -- check if image has been taken in crop mode
-    if ((string.sub(cropHiSpeed, 1,3) == "off") or (string.find(cropHiSpeed, "uncropped"))) then
-      -- photo taken in native format - nothing to do
-      return
-    else
-      FocusInfo.cropMode = true
-      -- get crop dimensions
-      local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = getCropType(cropHiSpeed)
-      -- apply crop transformation on all entries in focusPointsMap
-     for _, point in pairs(focusPoints.points) do
-        point.x = point.x / nativeWidth  * croppedWidth
-        point.y = point.y / nativeHeight * croppedHeight
-        point.width  = point.width  * croppedWidth / nativeWidth
-        point.height = point.height * croppedHeight / nativeHeight
-      end
-    end
+  local result = getCAfPoints(metadata)
+  if not result then
+     -- if CAF is not present, check PDAF information
+    result = getPDAfPoints(metadata)
   end
-end
-
---[[
-  @@public void applyPDAfCrop((table focusPoints, table metadata)
-  ----
-  Function to consider changed dimensions of the original photo if it is was not taken in native format
-  (e.g. FX crop with a DX camera, 16:9 crop etc.) and focus information is present in PDAF format
-  Cropping is considered by transformation of the focus point coordinates (which are relative to native format)
-  The CropHiSpeed tag has all the relevant information to do this
---]]
-local function applyPDAfCrop(focusPoints, metadata)
-
-  local cropHiSpeed = ExifUtils.findValue(metadata, metaKeyCropHiSpeed)
-
-  if cropHiSpeed then
-    -- perform string comparisons in lower case
-    cropHiSpeed = string.lower(cropHiSpeed)
-    -- check if image has been taken in crop mode
-    if ((string.sub(cropHiSpeed, 1,3) == "off") or (string.find(cropHiSpeed, "uncropped"))) then
-      -- photo taken in native format - nothing to do
-      return
-    else
-      FocusInfo.cropMode = true
-      -- get crop dimensions
-      local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = getCropType(cropHiSpeed)
-      -- apply crop transformation on all entries in focusPointsMap
-     for _, point in pairs(focusPoints.points) do
-        point.x = point.x - (nativeWidth  - croppedWidth ) / 2
-        point.y = point.y - (nativeHeight - croppedHeight) / 2
-      end
-    end
+  if not result then
+    Log.logWarn("Nikon", "Did neither find information on CAF, nor on PDAF points")
   end
+  return result
 end
 
---[[
-  @@public string normalizeFocusPointName(string focusPoint)
-  ----
-  Removes the word "(Center)" from the center focus points.
-  This function is a remnant of the original implementation which used PrimaryAFPoint tag.
-  Actually, we don't use this tag anymore, anyway keeping (and using) this function does no harm
---]]
-local function normalizeFocusPointName(focusPoint)
-  local focusPointin = focusPoint
-  if focusPoint and focusPoint ~= "" then
-    if string.find(focusPoint, "Center") then
-      focusPoint = string.sub(focusPoint, 1, 2)
-    end
-    Log.logFull("Nikon", "focusPoint: " .. focusPointin .. ", normalized: " .. focusPoint)
-  end
-  return focusPoint
-end
+--[[----------------------------------------------------------------------------
+  private table getCAfPoints(table metadata)
 
---[[
-  @@public bool addFocusPointsToResult(table result, string focusPointType, table focusPointTable)
-  ----
-  Add the focus point coordinates/dimensions found to the table of focus points to be rendered in the next step
---]]
-local function addFocusPointsToResult(result, focusPointType, focusPointTable)
-  if focusPointTable then
-    for _,value in pairs(focusPointTable) do
-      local focusPointName = normalizeFocusPointName(value)
-      if not DefaultDelegates.focusPointsMap[focusPointName] then
-        local errorMsg = "AF-Point " .. focusPointName .. " could not be found in the mapping file."
-        Log.logError("Nikon", errorMsg)
-        -- continue with next value
-        FocusInfo.severeErrorEncountered = true
-      else
-        local x = DefaultDelegates.focusPointsMap[focusPointName][1]
-        local y = DefaultDelegates.focusPointsMap[focusPointName][2]
-        local w, h
-
-        -- use AF point specific dimensions for focus box if given
-        if (#DefaultDelegates.focusPointsMap[focusPointName] > 2) then
-          w = DefaultDelegates.focusPointsMap[focusPointName][3]
-          h = DefaultDelegates.focusPointsMap[focusPointName][4]
-        else
-          w = DefaultDelegates.focusPointDimen[1]
-          h = DefaultDelegates.focusPointDimen[2]
-        end
-
-        if focusPointType == DefaultDelegates.POINTTYPE_AF_FOCUS_BOX then
-          Log.logInfo("Nikon",string.format(
-            "Focus point detected at [x=%s, y=%s, w=%s, h=%s]", x, y, w, h))
-        end
-
-        table.insert(result.points, {
-          pointType = focusPointType,
-          x = x,
-          y = y,
-          width = w,
-          height = h
-        })
-      end
-    end
-  end
-  return true
-end
-
---[[
-  @@public table getCAfPoints(table metadata)
-  ----
-  Function to get the autofocus points and focus size of the camera when captured using Contrast AF
+  Retrieve the autofocus points used when the photo was captured using Contrast AF.
   - Main use case for mirrorless models (Z line)
   - when shot in liveview mode on DSLRs (D line)
-  returns typical points table
---]]
-local function getCAfPoints(metadata)
+  Returns points table
+------------------------------------------------------------------------------]]
+function getCAfPoints(metadata)
 
   local afAreaXPosition = ExifUtils.findValue(metadata, metaKeyAfAreaXPosition)
   local afAreaYPosition = ExifUtils.findValue(metadata, metaKeyAfAreaYPosition)
@@ -269,15 +157,15 @@ local function getCAfPoints(metadata)
   return result
 end
 
---[[
-  @@public table getPDAfPoints(table metadata)
-  ----
-  Function to get the autofocus points and focus size of the camera when captured using Phase Detect AF
+--[[----------------------------------------------------------------------------
+  private table getPDAfPoints(table metadata)
+
+  Retrieve the autofocus points used when the photo was captured using Phase Detect AF.
   - Main use case for DSLRs (D line)
   - Occurs also for Mirrorless (Z line) but less frequently
-  returns typical points table
---]]
-local function getPDAfPoints(metadata)
+  Returns points table
+------------------------------------------------------------------------------]]
+function getPDAfPoints(metadata)
 
   local function logKeyStatus(key, value)
     if value then
@@ -441,34 +329,161 @@ local function getPDAfPoints(metadata)
   return result
 end
 
---[[
-  @@public table getAfPoints(table photo, table metadata)
-  ----
-  Top level function to get the autofocus points from metadata
-  Check for presence of Contrast AF data first. If not found go back to EXIF and fetch PDAF data
---]]
-function NikonDelegates.getAfPoints(_photo, metadata)
+--[[----------------------------------------------------------------------------
+  private string, int, int, int, int, int, int
+  getCropType(string cropHiSpeedValue)
 
-  local result = getCAfPoints(metadata)
-  if not result then
-     -- if CAF is not present, check PDAF information
-    result = getPDAfPoints(metadata)
-  end
-  if not result then
-    Log.logWarn("Nikon", "Did neither find information on CAF, nor on PDAF points")
-  end
-  return result
+  Extract cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight,
+  crop_x0, crop_y0 values from cropHiSpeed tag.
+------------------------------------------------------------------------------]]
+function getCropType(cropHiSpeedValue)
+  return string.match(
+    cropHiSpeedValue,"(.+) %((%d+)x(%d+) cropped to (%d+)x(%d+) at pixel (%d+),(%d+)%)")
 end
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
+--[[----------------------------------------------------------------------------
+  private void
+  applyCAFCrop((table focusPoints, table metadata)
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Create view element for adding an item to the info section; creates and populates the corresponding view property
---]]
+  Consider the changed dimensions of the original photo if it was not taken in
+  its native format (e.g. an FX crop with a DX camera or a 16:9 crop), and if
+  focus information is present in the CAF format.
+  Cropping is achieved by transforming the focus point coordinates, which are
+  relative to the native format.
+  The CropHiSpeed tag has all the relevant information to do this
+------------------------------------------------------------------------------]]
+function applyCAFCrop(focusPoints, metadata)
+
+  local cropHiSpeed = ExifUtils.findValue(metadata, metaKeyCropHiSpeed)
+
+  if cropHiSpeed then
+    -- perform string comparisons in lower case
+    cropHiSpeed = string.lower(cropHiSpeed)
+    -- check if image has been taken in crop mode
+    if ((string.sub(cropHiSpeed, 1,3) == "off") or (string.find(cropHiSpeed, "uncropped"))) then
+      -- photo taken in native format - nothing to do
+      return
+    else
+      FocusInfo.cropMode = true
+      -- get crop dimensions
+      local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = getCropType(cropHiSpeed)
+      -- apply crop transformation on all entries in focusPointsMap
+     for _, point in pairs(focusPoints.points) do
+        point.x = point.x / nativeWidth  * croppedWidth
+        point.y = point.y / nativeHeight * croppedHeight
+        point.width  = point.width  * croppedWidth / nativeWidth
+        point.height = point.height * croppedHeight / nativeHeight
+      end
+    end
+  end
+end
+
+--[[----------------------------------------------------------------------------
+  private void
+  applyPDAFCrop((table focusPoints, table metadata)
+
+  Consider the changed dimensions of the original photo if it was not taken in
+  its native format (e.g. an FX crop with a DX camera or a 16:9 crop), and if
+  focus information is present in the PDAF format.
+  Cropping is achieved by transforming the focus point coordinates, which are
+  relative to the native format.
+  The CropHiSpeed tag has all the relevant information to do this
+------------------------------------------------------------------------------]]
+function applyPDAfCrop(focusPoints, metadata)
+
+  local cropHiSpeed = ExifUtils.findValue(metadata, metaKeyCropHiSpeed)
+
+  if cropHiSpeed then
+    -- perform string comparisons in lower case
+    cropHiSpeed = string.lower(cropHiSpeed)
+    -- check if image has been taken in crop mode
+    if ((string.sub(cropHiSpeed, 1,3) == "off") or (string.find(cropHiSpeed, "uncropped"))) then
+      -- photo taken in native format - nothing to do
+      return
+    else
+      FocusInfo.cropMode = true
+      -- get crop dimensions
+      local _cropType, nativeWidth, nativeHeight, croppedWidth, croppedHeight = getCropType(cropHiSpeed)
+      -- apply crop transformation on all entries in focusPointsMap
+     for _, point in pairs(focusPoints.points) do
+        point.x = point.x - (nativeWidth  - croppedWidth ) / 2
+        point.y = point.y - (nativeHeight - croppedHeight) / 2
+      end
+    end
+  end
+end
+
+--[[----------------------------------------------------------------------------
+  private string
+  normalizeFocusPointName(string focusPoint)
+
+  Remove the word "(Center)" from the center focus points.
+------------------------------------------------------------------------------]]
+function normalizeFocusPointName(focusPoint)
+  local focusPointin = focusPoint
+  if focusPoint and focusPoint ~= "" then
+    if string.find(focusPoint, "Center") then
+      focusPoint = string.sub(focusPoint, 1, 2)
+    end
+    Log.logFull("Nikon", "focusPoint: " .. focusPointin .. ", normalized: " .. focusPoint)
+  end
+  return focusPoint
+end
+
+--[[----------------------------------------------------------------------------
+  private boolean
+  addFocusPointsToResult(table result, string focusPointType, table focusPointTable)
+
+  Add the focus point coordinates/dimensions found to the table of focus points
+  to be rendered in the next step.
+------------------------------------------------------------------------------]]
+function addFocusPointsToResult(result, focusPointType, focusPointTable)
+  if focusPointTable then
+    for _,value in pairs(focusPointTable) do
+      local focusPointName = normalizeFocusPointName(value)
+      if not DefaultDelegates.focusPointsMap[focusPointName] then
+        local errorMsg = "AF-Point " .. focusPointName .. " could not be found in the mapping file."
+        Log.logError("Nikon", errorMsg)
+        -- continue with next value
+        FocusInfo.severeErrorEncountered = true
+      else
+        local x = DefaultDelegates.focusPointsMap[focusPointName][1]
+        local y = DefaultDelegates.focusPointsMap[focusPointName][2]
+        local w, h
+
+        -- use AF point specific dimensions for focus box if given
+        if (#DefaultDelegates.focusPointsMap[focusPointName] > 2) then
+          w = DefaultDelegates.focusPointsMap[focusPointName][3]
+          h = DefaultDelegates.focusPointsMap[focusPointName][4]
+        else
+          w = DefaultDelegates.focusPointDimen[1]
+          h = DefaultDelegates.focusPointDimen[2]
+        end
+
+        if focusPointType == DefaultDelegates.POINTTYPE_AF_FOCUS_BOX then
+          Log.logInfo("Nikon",string.format(
+            "Focus point detected at [x=%s, y=%s, w=%s, h=%s]", x, y, w, h))
+        end
+
+        table.insert(result.points, {
+          pointType = focusPointType,
+          x = x,
+          y = y,
+          width = w,
+          height = h
+        })
+      end
+    end
+  end
+  return true
+end
+
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
+
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -525,11 +540,12 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
---[[
-  @@public boolean modelSupported(string model)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function NikonDelegates.modelSupported(currentModel)
   local m = string.match(string.lower(currentModel), "nikon (.+)")
   for _, model in ipairs(supportedModels) do
@@ -540,11 +556,12 @@ function NikonDelegates.modelSupported(currentModel)
   return false
 end
 
---[[
-  @@public boolean makerNotesFound(table photo, table metadata)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function NikonDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -554,11 +571,12 @@ function NikonDelegates.makerNotesFound(_photo, metadata)
   return (result ~= nil)
 end
 
---[[
-  @@public boolean manualFocusUsed(table photo, table metadata)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function NikonDelegates.manualFocusUsed(_photo, metadata)
   local focusMode = ExifUtils.findValue(metadata, metaKeyFocusMode)
   Log.logInfo("Nikon",
@@ -567,11 +585,13 @@ function NikonDelegates.manualFocusUsed(_photo, metadata)
   return (focusMode == "Manual")
 end
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function NikonDelegates.getImageInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local imageInfo
@@ -583,11 +603,13 @@ function NikonDelegates.getImageInfo(_photo, props, metadata)
   return imageInfo
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function NikonDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -600,11 +622,13 @@ function NikonDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function NikonDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -631,4 +655,4 @@ function NikonDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return NikonDelegates
+return NikonDelegates -- ok

@@ -14,10 +14,22 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  OlympusDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer when
   the camera is Olympus or OM Digital Solutions
---]]
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local OlympusDelegates = {}
 
 -- Imported LR namespaces
 local LrView               = import  'LrView'
@@ -28,11 +40,8 @@ local DefaultPointRenderer = require 'DefaultPointRenderer'
 local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 local Utils                = require 'Utils'
-
--- This module
-local OlympusDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 local metaKeyAfInfoSection            = "Camera Settings Version"
@@ -82,112 +91,39 @@ local makerOMDS                       = "om digital solutions"
 
 local facesDetected
 
+-- Forward references
+local getOMDSAfPoints, getOlympusAfPoints, addFaces, findValue
 
-local function findValue(metadata, key)
-  local value = ExifUtils.findValue(metadata, key)
-  if value then
-    Log.logInfo("Olympus",
-      string.format("Tag '%s' found: '%s'",key, value))
-    return value
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
+
+  Top level function used to retrieve the autofocus points from the metadata
+  of the photo. Gets the actual work done by getOMDS/getOlympusAfPoints.
+------------------------------------------------------------------------------]]
+function OlympusDelegates.getAfPoints(photo, metadata)
+  local pointsTable
+
+  -- OM Digital Solution cameras support advanced metadata structures to detect focus areas/points
+  local cameraMake = string.lower(photo:getFormattedMetadata("cameraMake"))
+  if cameraMake == makerOMDS then
+    pointsTable = getOMDSAfPoints(photo, metadata)
   else
-    -- no focus points found - handled on upper layers
-    Log.logInfo("Olympus",
-      string.format("Tag '%s' not found", key))
-    return nil
+    pointsTable = getOlympusAfPoints(photo, metadata)
   end
+
+  return pointsTable
 end
 
---[[
-  @@public void addFaces(table photo, table metadata, table pointsTable)
-  ----
-  Add face detection frames to table with focus points/areas (which must not be nil!)
---]]
-local function addFaces(photo, metadata, pointsTable)
+--[[----------------------------------------------------------------------------
+  private table
+  getOMDSAfPoints(table photo, table metadata)
 
-  facesDetected = false
-
-  -- Sanity check
-  if not pointsTable then return end
-
-  -- Get photo dimensions for proper scaling of focus point
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-
-  -- Let's see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
-  -- (a, b, c) are the numbers of detected faces in each of the 2 supported sets of face detect area
-  local detectedFaces = Utils.split(ExifUtils.findValue(metadata, metaKeyFacesDetected), " ")
-  local maxFaces      = Utils.split(ExifUtils.findValue(metadata, metaKeyMaxFaces), " ")
-
-  local faceDetectArea
-  if detectedFaces and ((detectedFaces[1] ~= "0") or (detectedFaces[2] ~= "0")) then
-    -- Faces have been detected for this image, let's get the details
-
-    local faceDetectFrameCrop = ExifUtils.findValue(metadata, metaKeyFaceDetectFrameCrop)
-    if faceDetectFrameCrop then
-      faceDetectFrameCrop = Utils.split(faceDetectFrameCrop, " ")
-    end
-
-    local faceDetectFrameSize = ExifUtils.findValue(metadata, metaKeyFaceDetectFrameSize)
-    if faceDetectFrameSize then
-      faceDetectFrameSize = Utils.split(faceDetectFrameSize, " ")
-    end
-
-    faceDetectArea = ExifUtils.findValue(metadata, metaKeyFaceDetectArea)
-    if string.find(faceDetectArea, "Binary data") then
-      -- for some reason, exiftool.config has not been considered -> extra call to exiftool to read binary data
-      Log.logWarn("Olympus", string.format(
-        "Exiftool.config not found. Need extra call to ExifTool to retrieve binary data for '%s'",
-        metaKeyFaceDetectArea))
-      faceDetectArea = ExifUtils.getBinaryValue(photo, metaKeyFaceDetectArea)
-    end
-
-    if faceDetectArea then
-      faceDetectArea = Utils.split(faceDetectArea, " ")
-
-      -- Loop over FaceDetectArea to construct the face detect face frames
-      -- Format of FaceDetectArea:
-      -- 3 sets x 8 (=MaxFaces) tuples (x,y,h,r) where:
-      -- 'x' and 'y' give the coordinates, 'h' the size and 'r' the rotation angle of the face detect square
-      -- FaceDetectFrameCrop (x,y,w,h) gives x/y offset and width/height of the cropped face detect frame
-      local x,y, w, h
-      for i=1, 3, 1 do
-        if (detectedFaces[i] ~= "0") then
-          local xScale = tonumber(orgPhotoWidth)  / (tonumber(faceDetectFrameSize[(i-1)*2+1]))
-          local yScale = tonumber(orgPhotoHeight) / (tonumber(faceDetectFrameSize[(i-1)*2+2]))
-          local k
-          for j=1, detectedFaces[i], 1 do
-            if i == 1 then k=(j-1)*4 else k = maxFaces[i-1]*4 + (j-1)*4 end
-            x = (faceDetectArea[k+1] - faceDetectFrameCrop[(i-1)*4 + 1]) * xScale
-            y = (faceDetectArea[k+2] - faceDetectFrameCrop[(i-1)*4 + 2]) * yScale
-            w = (faceDetectArea[k+3]                                   ) * xScale
-            h = (faceDetectArea[k+3]                                   ) * yScale
-
-            facesDetected = true
-            Log.logInfo("Olympus", "Face detected at [" .. x .. ", " .. y .. "]")
-            table.insert(pointsTable.points, {
-              pointType = DefaultDelegates.POINTTYPE_FACE,
-              x = x,
-              y = y,
-              width  = w,
-              height = h,
-            })
-          end
-        end
-      end
-    else
-      Log.logError("Olympus", "Error at extracting x/y positions from focus point tag")
-      return
-    end
-  end
-end
-
---[[
-  @@public table getOMDSAfPoints(table photo, table metadata)
-  ----
   Get autofocus point, AF target area and subject detection frames from OMDS specific metadata:
   https://exiftool.org/TagNames/Olympus.html#AFTargetInfo
   https://exiftool.org/TagNames/Olympus.html#SubjectDetectInfo
---]]
-local function getOMDSAfPoints(photo, metadata)
+------------------------------------------------------------------------------]]
+function getOMDSAfPoints(photo, metadata)
 
   -- Table to insert the detected elements for visualization
   local pointsTable = { pointTemplates = DefaultDelegates.pointTemplates, points = {} }
@@ -370,14 +306,15 @@ local function getOMDSAfPoints(photo, metadata)
   return pointsTable
 end
 
---[[
-  @@public table getOlympusAfPoints(table photo, table metadata)
-  ----
+--[[----------------------------------------------------------------------------
+  private table
+  getOlympusAfPoints(table photo, table metadata)
+
   #TODO proper doc to be done
   Get the autofocus point from Olympus metadata:
   - position represented by AFPointSelected tag
---]]
-local function getOlympusAfPoints(photo, metadata)
+------------------------------------------------------------------------------]]
+function getOlympusAfPoints(photo, metadata)
 
   local focusPoint, focusAreas
   local pointsTable = {
@@ -516,34 +453,118 @@ local function getOlympusAfPoints(photo, metadata)
   return pointsTable
 end
 
---[[
-  @@public table getAfPoints(table photo, table metadata)
-  ----
-  Top level function to get the autofocus points from metadata
---]]
-function OlympusDelegates.getAfPoints(photo, metadata)
-  local pointsTable
+--[[----------------------------------------------------------------------------
+  private void
+  addFaces(table photo, table metadata, table pointsTable)
 
-  -- OM Digital Solution cameras support advanced metadata structures to detect focus areas/points
-  local cameraMake = string.lower(photo:getFormattedMetadata("cameraMake"))
-  if cameraMake == makerOMDS then
-    pointsTable = getOMDSAfPoints(photo, metadata)
-  else
-    pointsTable = getOlympusAfPoints(photo, metadata)
+  Add the face detection frames to the table with the focus points and areas.
+  The table must not be set to nil; it needs to be initialised by the caller.
+------------------------------------------------------------------------------]]
+function addFaces(photo, metadata, pointsTable)
+
+  facesDetected = false
+
+  -- Sanity check
+  if not pointsTable then return end
+
+  -- Get photo dimensions for proper scaling of focus point
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+
+  -- Let's see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
+  -- (a, b, c) are the numbers of detected faces in each of the 2 supported sets of face detect area
+  local detectedFaces = Utils.split(ExifUtils.findValue(metadata, metaKeyFacesDetected), " ")
+  local maxFaces      = Utils.split(ExifUtils.findValue(metadata, metaKeyMaxFaces), " ")
+
+  local faceDetectArea
+  if detectedFaces and ((detectedFaces[1] ~= "0") or (detectedFaces[2] ~= "0")) then
+    -- Faces have been detected for this image, let's get the details
+
+    local faceDetectFrameCrop = ExifUtils.findValue(metadata, metaKeyFaceDetectFrameCrop)
+    if faceDetectFrameCrop then
+      faceDetectFrameCrop = Utils.split(faceDetectFrameCrop, " ")
+    end
+
+    local faceDetectFrameSize = ExifUtils.findValue(metadata, metaKeyFaceDetectFrameSize)
+    if faceDetectFrameSize then
+      faceDetectFrameSize = Utils.split(faceDetectFrameSize, " ")
+    end
+
+    faceDetectArea = ExifUtils.findValue(metadata, metaKeyFaceDetectArea)
+    if string.find(faceDetectArea, "Binary data") then
+      -- for some reason, exiftool.config has not been considered -> extra call to exiftool to read binary data
+      Log.logWarn("Olympus", string.format(
+        "Exiftool.config not found. Need extra call to ExifTool to retrieve binary data for '%s'",
+        metaKeyFaceDetectArea))
+      faceDetectArea = ExifUtils.getBinaryValue(photo, metaKeyFaceDetectArea)
+    end
+
+    if faceDetectArea then
+      faceDetectArea = Utils.split(faceDetectArea, " ")
+
+      -- Loop over FaceDetectArea to construct the face detect face frames
+      -- Format of FaceDetectArea:
+      -- 3 sets x 8 (=MaxFaces) tuples (x,y,h,r) where:
+      -- 'x' and 'y' give the coordinates, 'h' the size and 'r' the rotation angle of the face detect square
+      -- FaceDetectFrameCrop (x,y,w,h) gives x/y offset and width/height of the cropped face detect frame
+      local x,y, w, h
+      for i=1, 3, 1 do
+        if (detectedFaces[i] ~= "0") then
+          local xScale = tonumber(orgPhotoWidth)  / (tonumber(faceDetectFrameSize[(i-1)*2+1]))
+          local yScale = tonumber(orgPhotoHeight) / (tonumber(faceDetectFrameSize[(i-1)*2+2]))
+          local k
+          for j=1, detectedFaces[i], 1 do
+            if i == 1 then k=(j-1)*4 else k = maxFaces[i-1]*4 + (j-1)*4 end
+            x = (faceDetectArea[k+1] - faceDetectFrameCrop[(i-1)*4 + 1]) * xScale
+            y = (faceDetectArea[k+2] - faceDetectFrameCrop[(i-1)*4 + 2]) * yScale
+            w = (faceDetectArea[k+3]                                   ) * xScale
+            h = (faceDetectArea[k+3]                                   ) * yScale
+
+            facesDetected = true
+            Log.logInfo("Olympus", "Face detected at [" .. x .. ", " .. y .. "]")
+            table.insert(pointsTable.points, {
+              pointType = DefaultDelegates.POINTTYPE_FACE,
+              x = x,
+              y = y,
+              width  = w,
+              height = h,
+            })
+          end
+        end
+      end
+    else
+      Log.logError("Olympus", "Error at extracting x/y positions from focus point tag")
+      return
+    end
   end
-
-  return pointsTable
 end
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
+--[[----------------------------------------------------------------------------
+  private string
+  findValue(metadata, key)
 
---[[
-  #TODO
-  ----
-  #TODO
---]]
+  Helper function that looks up a tag name (key) in the metadata and logs whether
+  or not it was found. It returns the tag value, or nil if the tag doesn't exist.
+------------------------------------------------------------------------------]]
+function findValue(metadata, key)
+  local value = ExifUtils.findValue(metadata, key)
+  if value then
+    Log.logInfo("Olympus",
+      string.format("Tag '%s' found: '%s'",key, value))
+    return value
+  else
+    -- no focus points found - handled on upper layers
+    Log.logInfo("Olympus",
+      string.format("Tag '%s' not found", key))
+    return nil
+  end
+end
+
+--[[----------------------------------------------------------------------------
+  private string
+  getFaceDetectInfo(table metadata)
+
+  Extract face detection information from the compound 'AFPointDetails' tag.
+------------------------------------------------------------------------------]]
 local function getFaceDetectInfo(metadata)
   local afPointDetails = ExifUtils.findValue(metadata, metaKeyAfPointDetails)
   if afPointDetails then
@@ -558,11 +579,12 @@ local function getFaceDetectInfo(metadata)
   end
 end
 
---[[
-  @@public string getFocusMode(string focusModeValue)
-  ----
-  Extract the desired focus mode details from a string all kinds of information
---]]
+--[[----------------------------------------------------------------------------
+  private string
+  getFocusMode(string focusModeValue)
+
+  Extract the relevant details from the compound 'FocusMode' tag.
+------------------------------------------------------------------------------]]
 local function getFocusMode(focusModeValue)
 
   local f = Utils.splitTrim(focusModeValue:gsub(", Imager AF", ""), ";,")
@@ -593,11 +615,12 @@ local function getFocusMode(focusModeValue)
   end
 end
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Create view element for adding an item to the info section; creates and populates the corresponding view property
---]]
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
+
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -714,20 +737,22 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
---[[
-  @@public boolean modelSupported(string)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function OlympusDelegates.modelSupported(_model)
   return true
 end
 
---[[
-  @@public boolean makerNotesFound(table, table)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function OlympusDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -737,11 +762,12 @@ function OlympusDelegates.makerNotesFound(_photo, metadata)
   return result ~= nil
 end
 
---[[
-  @@public boolean manualFocusUsed(table, table)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function OlympusDelegates.manualFocusUsed(_photo, metadata)
   local focusMode = ExifUtils.findValue(metadata, metaKeyFocusMode)
   Log.logInfo("Olympus",
@@ -753,11 +779,13 @@ function OlympusDelegates.manualFocusUsed(_photo, metadata)
   return false
 end
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function OlympusDelegates.getImageInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local imageInfo
@@ -769,11 +797,13 @@ function OlympusDelegates.getImageInfo(_photo, props, metadata)
   return imageInfo
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function OlympusDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -789,11 +819,13 @@ function OlympusDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function OlympusDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -812,4 +844,4 @@ function OlympusDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return OlympusDelegates
+return OlympusDelegates -- ok

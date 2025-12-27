@@ -1,23 +1,35 @@
---[[
-  Copyright 2016 Whizzbang Inc
+----[[
+--  Copyright 2016 Whizzbang Inc
+--
+--  Licensed under the Apache License, Version 2.0 (the "License");
+--  you may not use this file except in compliance with the License.
+--  You may obtain a copy of the License at
+--
+--     http://www.apache.org/licenses/LICENSE-2.0
+--
+--  Unless required by applicable law or agreed to in writing, software
+--  distributed under the License is distributed on an "AS IS" BASIS,
+--  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+--  See the License for the specific language governing permissions and
+--  limitations under the License.
+----]]
 
-  Licensed under the Apache License, Version 2.0 (the "License");
-  you may not use this file except in compliance with the License.
-  You may obtain a copy of the License at
+--[[----------------------------------------------------------------------------
+  AppleDelegates.lua
 
-     http://www.apache.org/licenses/LICENSE-2.0
+  Purpose of this module:
+  A collection of delegate functions to be passed into the DefaultPointRenderer
+  when the camera is Apple (iPhone, iPad):
 
-  Unless required by applicable law or agreed to in writing, software
-  distributed under the License is distributed on an "AS IS" BASIS,
-  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-  See the License for the specific language governing permissions and
-  limitations under the License.
---]]
-
---[[
-  A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Apple (iPhone, iPad)
---]]
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local AppleDelegates = {}
 
 -- Imported LR namespaces
 local LrView                = import  'LrView'
@@ -28,11 +40,8 @@ local DefaultPointRenderer  = require 'DefaultPointRenderer'
 local ExifUtils             = require 'ExifUtils'
 local FocusInfo             = require 'FocusInfo'
 local Log                   = require 'Log'
-local strict                = require 'strict'
+local _strict               = require 'strict'
 local Utils                 = require 'Utils'
-
--- This module
-local AppleDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 local metaKeyAfInfoSection        = "Maker Note Version"
@@ -54,11 +63,12 @@ local metaKeyCameraType           = "Camera Type"
 local metaKeyImageCaptureType     = "Image Capture Type"
 local metaKeyOISMode              = "OIS Mode"
 
---[[
-  @@public table getAfPoints(table photo, table metadata)
-  ----
-  Get the autofocus points from metadata
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
+
+  Retrieve the autofocus points from the metadata of the photo.
+------------------------------------------------------------------------------]]
 function AppleDelegates.getAfPoints(photo, metadata)
 
   local result = {
@@ -143,17 +153,13 @@ function AppleDelegates.getAfPoints(photo, metadata)
   return result
 end
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Creates the view element for an item to add to a info section and creates/populates the corresponding property
---]]
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
-  local f = LrView.osFactory()
 
   -- Helper function to create and populate the property corresponding to metadata key
   local function populateInfo(key)
@@ -188,22 +194,24 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
---[[
-  @@public boolean modelSupported(string model)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function AppleDelegates.modelSupported(_model)
   -- #TODO no test samples could not be found for iPhone 4 and older models
   -- so, for the time being assume it's always "true"
   return true
 end
 
---[[
-  @@public boolean makerNotesFound(table photo, table metadata)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function AppleDelegates.makerNotesFound(photo, metadata)
 
   local tag, result
@@ -227,32 +235,37 @@ function AppleDelegates.makerNotesFound(photo, metadata)
   return (result ~= nil)
 end
 
---[[
-  @@public boolean manualFocusUsed(table photo, table metadata)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function AppleDelegates.manualFocusUsed(_photo, _metadata)
   -- #TODO Apple supports tag 'ImageCaptureType' that can be '11 = Manual Focus'
   -- #TODO what does that mean for the plugin imaplementation ??
   return false
 end
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function AppleDelegates.getImageInfo(_photo, _props, _metadata)
   local imageInfo
   return imageInfo
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function AppleDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -267,11 +280,13 @@ function AppleDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function AppleDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -288,4 +303,4 @@ function AppleDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return AppleDelegates
+return AppleDelegates -- ok

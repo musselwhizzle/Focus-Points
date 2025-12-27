@@ -14,10 +14,22 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  FujifilmDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Fuji
---]]
+  the camera is Fuji:
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local FujifilmDelegates = {}
 
 -- Imported LR namespaces
 local LrStringUtils        = import  'LrStringUtils'
@@ -29,11 +41,8 @@ local DefaultPointRenderer = require 'DefaultPointRenderer'
 local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 local Utils                = require 'Utils'
-
--- This module
-local FujifilmDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 -- Note: The very first Fujifilm makernotes entry is "Version", but using a text-based approach
@@ -68,14 +77,12 @@ local metaKeyDriveSpeed                  = "Drive Speed"
 local metaKeySequenceNumber              = "Sequence Number"
 local metaKeyImageStabilization          = "Image Stabilization"
 
--- To control output of AF-C relevant settings
-local focusMode                          = ""
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
 
---[[
-  @@public table getAfPoints(table photo, table metadata)
-  ----
-  Get the autofocus points from metadata
---]]
+  Retrieve the autofocus points from the metadata of the photo.
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.getAfPoints(photo, metadata)
 
   -- Search EXIF for the focus point key
@@ -100,6 +107,15 @@ function FujifilmDelegates.getAfPoints(photo, metadata)
     return nil
   end
 
+  --[[
+    The coordinates of the 'focus pixel' tag on Fuji correspond to the dimensions of the embedded
+    JPG preview image in the RAF file. These are recorded in the ExifImageWidth/ExifImageHeight fields
+    in the Exif IFD section.
+    Unfortunately, the information in these two tags can easily be lost when processing the RAF image
+    in applications such as e.g. Topaz Photo AI or DxO PhotoLab. The tags are missing completely in the
+    DNG file returned by DxO PL. It's even worse for Topaz Photo AI: the tags are retained in the DNG file,
+    but they contain invalid information:(RAF image dimensions), which leads to an incorrect focus point display.
+  --]]
   local imageWidth  = ExifUtils.findValue(metadata, metaKeyExifImageWidth)
   local imageHeight = ExifUtils.findValue(metadata, metaKeyExifImageHeight)
   if imageWidth == nil or imageHeight == nil then
@@ -207,16 +223,12 @@ function FujifilmDelegates.getAfPoints(photo, metadata)
   return result
 end
 
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
-
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Creates the view element for an item to add to a info section and creates/populates the corresponding property
---]]
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -283,8 +295,8 @@ local function addInfo(title, key, props, metadata)
             (key == metaKeyAfCTrackingSensitivity) or
             (key == metaKeyAfCSpeedTrackingSensitivity) or
             (key == metaKeyAfCZoneAreaSwitching))
-                and focusMode ~= "AF-C" then
-      -- these settings are not relevant for focus modes than AF-C
+        and (props[metaKeyFocusMode] ~= "AF-C") then
+      -- these settings are not relevant for focus modes other than AF-C -> skip them!
       return FocusInfo.emptyRow()
 
     elseif key == FacesDetected and props[key] == "0"
@@ -302,24 +314,24 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
 
---[[
-  @@public boolean modelSupported(string model)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.modelSupported(_model)
   -- supports entire X-, GFX-series and FinePix after 2007
   -- so there is not really anything that justifies the effort to write code to exclude ancient models
   return true
 end
 
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
 
---[[
-  @@public boolean makerNotesFound(table photo, table metadata)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -329,26 +341,26 @@ function FujifilmDelegates.makerNotesFound(_photo, metadata)
   return (result ~= nil)
 end
 
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
 
---[[
-  @@public boolean manualFocusUsed(table photo, table metadata)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.manualFocusUsed(_photo, metadata)
   local focusMode, key = ExifUtils.findFirstMatchingValue(metadata, metaKeyFocusMode)
-  focusMode = focusMode
   Log.logInfo("Fujifilm",
     string.format("Tag '%s' found: %s", key, focusMode))
   return (focusMode == "Manual" or focusMode == "AF-M")
 end
 
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
---]]
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.getImageInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local imageInfo
@@ -360,12 +372,13 @@ function FujifilmDelegates.getImageInfo(_photo, props, metadata)
   return imageInfo
 end
 
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -381,12 +394,13 @@ function FujifilmDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function FujifilmDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -408,5 +422,4 @@ function FujifilmDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-
-return FujifilmDelegates
+return FujifilmDelegates -- ok

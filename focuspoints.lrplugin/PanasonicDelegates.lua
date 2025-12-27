@@ -14,10 +14,22 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  PanasonicDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Panasonic
---]]
+  the camera is Panasonic:
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local PanasonicDelegates = {}
 
 -- Imported LR namespaces
 local LrView               = import  'LrView'
@@ -28,11 +40,8 @@ local DefaultPointRenderer = require 'DefaultPointRenderer'
 local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 local Utils                = require 'Utils'
-
--- This module
-local PanasonicDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 local metaKeyAfInfoSection               = "Panasonic Exif Version"
@@ -59,11 +68,12 @@ local metaValueOff                       = "Off"
 local metaKeyAfPointPositionPattern      = "0(%.%d+) 0(%.%d+)"
 local metaKeyAfAreaSizePattern           = "([%d%.]+)%s+([%d%.]+)"
 
---[[
-  @@public table getAfPoints(table photo, table metadata)
-  ----
-  Get the autofocus points from metadata
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
+
+  Retrieve the autofocus points from the metadata of the photo.
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.getAfPoints(photo, metadata)
 
   local result = {
@@ -163,15 +173,12 @@ function PanasonicDelegates.getAfPoints(photo, metadata)
   return result
 end
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Creates the view element for an item to add to a info section and creates/populates the corresponding property
---]]
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -234,21 +241,23 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
---[[
-  @@public boolean modelSupported(string model)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.modelSupported(_model)
   -- #TODO For this to work precisely, would need to identify compact cameras before 2008
   return true
 end
 
---[[
-  @@public boolean makerNotesFound(table photo, table metadata)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -258,32 +267,36 @@ function PanasonicDelegates.makerNotesFound(_photo, metadata)
   return (result ~= nil)
 end
 
---[[
-  @@public boolean manualFocusUsed(table photo, table metadata)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.manualFocusUsed(_photo, metadata)
   local focusMode = ExifUtils.findValue(metadata, metaKeyFocusMode)
   return (focusMode == "Manual")
 end
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  ----
-  Called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.getImageInfo(_photo, _props, _metadata)
   local imageInfo
   return imageInfo
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -297,11 +310,13 @@ function PanasonicDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function PanasonicDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -317,4 +332,4 @@ function PanasonicDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return PanasonicDelegates
+return PanasonicDelegates -- ok

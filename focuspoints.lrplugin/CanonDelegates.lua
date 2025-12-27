@@ -14,10 +14,22 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  CanonDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Canon
---]]
+  the camera is Canon:
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local CanonDelegates = {}
 
 -- Imported LR namespaces
 local LrView               = import  'LrView'
@@ -28,11 +40,8 @@ local DefaultPointRenderer = require 'DefaultPointRenderer'
 local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 local Utils                = require 'Utils'
-
--- This module
-local CanonDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 local metaKeyAfInfoSection           = "Canon Firmware Version"
@@ -63,7 +72,6 @@ local metaKeyCaseAutoSetting         = "Case Auto Setting"
 local metaKeyTrackingSensitivity     = "AF Tracking Sensitivity"
 local metaKeyAccelDecelTracking      = "AF Accel/Decel Tracking"
 local metaKeyAfPointSwitching        = "AF Point Switching"
-local metaKeyEyeDetection            = "Eye Detection"
 local metaKeyActionPriority          = "Action Priority"
 local metaKeySportEvents             = "Sport Events"
 local metaKeyWholeAreaTracking       = "Whole Area Tracking"
@@ -82,11 +90,12 @@ local metaKeyImageStabilization      = "Image Stabilization"
 -- Relevant metadata values
 local metaValueOneShotAf             = "One-shot AF"
 
---[[
-  @@public table getAfPoints(table photo, table metadata)
-  ----
-  Get the autofocus points from metadata
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
+
+  Retrieve the autofocus points from the metadata of the photo.
+------------------------------------------------------------------------------]]
 function CanonDelegates.getAfPoints(photo, metadata)
   local cameraModel = string.lower(photo:getFormattedMetadata("cameraModel"))
 
@@ -231,15 +240,12 @@ function CanonDelegates.getAfPoints(photo, metadata)
   return result
 end
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Creates the view element for an item to add to a info section and creates/populates the corresponding property
---]]
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -338,11 +344,12 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
---[[
-  @@public boolean modelSupported(string model)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function CanonDelegates.modelSupported(model)
   -- extract the model ID for comparison
   local makeID  = "canon eos "
@@ -355,11 +362,12 @@ function CanonDelegates.modelSupported(model)
               modelID == "d30")
 end
 
---[[
-  @@public boolean makerNotesFound(table photo, table metadata)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function CanonDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -369,11 +377,12 @@ function CanonDelegates.makerNotesFound(_photo, metadata)
   return (result ~= nil)
 end
 
---[[
-  @@public boolean manualFocusUsed(table photo, table metadata)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function CanonDelegates.manualFocusUsed(_photo, metadata)
 -- #TODO no test samples!
   local mfName = "Manual Focus"
@@ -381,11 +390,13 @@ function CanonDelegates.manualFocusUsed(_photo, metadata)
   return focusMode and (string.sub(focusMode, 1, #mfName) == mfName )
 end
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function CanonDelegates.getImageInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local imageInfo
@@ -397,11 +408,13 @@ function CanonDelegates.getImageInfo(_photo, props, metadata)
   return imageInfo
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function CanonDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -415,11 +428,13 @@ function CanonDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function CanonDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -454,4 +469,4 @@ function CanonDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return CanonDelegates
+return CanonDelegates -- ok

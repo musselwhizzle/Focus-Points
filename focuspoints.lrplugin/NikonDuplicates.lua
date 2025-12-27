@@ -48,5 +48,4 @@ NikonDuplicates["nikon z 8"]   = "nikon z 9"
 
 NikonDuplicates["nikon z fc"]  = "nikon z 30"
 
-
-return NikonDuplicates
+return NikonDuplicates -- ok
