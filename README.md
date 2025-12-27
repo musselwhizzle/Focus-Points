@@ -12,6 +12,7 @@ New features introduced in V3.2:
 - [Filmstrip Navigation](#filmstrip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314) (not for LR5)
 - [Customizable plugin window size](#customizable-plugin-window-size)&nbsp;&nbsp;[#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
 - [Introduction of visible input field for keyboard shortcuts](#introduction-of-visible-input-field-for-keyboard-shortcuts)&nbsp;&nbsp;[#321](https://github.com/musselwhizzle/Focus-Points/issues/321)
+- [Long metadata names excessively widen the information area](#display-of-long-metadata-names)&nbsp;&nbsp;[#326](https://github.com/musselwhizzle/Focus-Points/issues/326)
 - [Buy the developer a coffee](#buy-the-developer-a-coffee)&nbsp;&nbsp;[#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
 
 Screenshot of user interface with new tagging controls, shortcut input field and "coffee" link :
@@ -130,6 +131,21 @@ Some shortcuts in V3.1 have been changed to avoid collision with Lightroom taggi
 | Open Troubleshooting Information (Help)     | `?`, `H`           |
 | Check Log                                   | `L`                |
 | Close                                       | `C `               |
+
+
+### Display of long metadata names
+
+Some metadata may consist of character strings that are longer than average. This can result in the information area of the dialogue box becoming wider than necessary. This is because most of the space is empty.
+
+For a few selected metadata items, if the character string exceeds a fixed internal length, it is split across multiple lines. However, this approach is not practical for all metadata.
+
+There is a new setting in 'User Interface' that allows you to specify whether long names should be truncated in the display or shown in full in the tooltip. You can choose the truncation limit, which can be set between 10 and 100 characters.
+
+<img src="screens/README%20Truncate%20Setting.jpg" alt="Screenshot" style="width: 600px;"/>
+
+Enabling this setting makes the window content look much tidier:
+
+<img src="screens/README%20Long%20Names.jpg" alt="Screenshot" style="width: 800px;"/>
 
 
 ### Buy the developer a coffee
