@@ -14,6 +14,8 @@
   limitations under the License.
 --]]
 
+local FocusPointsInitialize = {}
+
 local LrPrefs = import "LrPrefs"
 
 local FocusPointPrefs = require 'FocusPointPrefs'
@@ -23,4 +25,6 @@ FocusPointPrefs.InitializePrefs(LrPrefs.prefsForPlugin(nil))
 
 -- Getting the latest released version number requires an async HTTP call
 -- that must not be performed in INFO section so it's done here
-FocusPointPrefs.getLatestVersion()
+FocusPointPrefs.retrieveVersionOfLatestRelease()
+
+return FocusPointsInitialize -- ok

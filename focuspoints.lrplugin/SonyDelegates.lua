@@ -14,10 +14,22 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  SonyDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer when
-  the camera is Sony
---]]
+  the camera is Sony:
+
+  - funcModelSupported:    Does this plugin support the camera model?
+  - funcMakerNotesFound:   Does the photo metadata include maker notes?
+  - funcManualFocusUsed:   Was the current photo taken using manual focus?
+  - funcGetAfPoints:       Provide data for visualizing focus points, faces etc.
+  - funcGetImageInfo:      Provide specific information to be added to the 'Image Information' section.
+  - funcGetShootingInfo:   Provide specific information to be added to the 'Shooting Information' section.
+  - funcGetFocusInfo:      Provide the information to be entered into the 'Focus Information' section.
+------------------------------------------------------------------------------]]
+local SonyDelegates = {}
 
 -- Imported LR namespaces
 local LrStringUtils        = import  'LrStringUtils'
@@ -29,11 +41,8 @@ local DefaultPointRenderer = require 'DefaultPointRenderer'
 local ExifUtils            = require 'ExifUtils'
 local FocusInfo            = require 'FocusInfo'
 local Log                  = require 'Log'
-local strict               = require 'strict'
+local _strict              = require 'strict'
 local Utils                = require 'Utils'
-
--- This module
-local SonyDelegates = {}
 
 -- Tag indicating that makernotes / AF section exists
 local metaKeyAfInfoSection = "Sony Model ID"
@@ -66,11 +75,12 @@ local metaKeySequenceNumber              = "Sequence Number"
 local metaKeyImageStabilization          = "Image Stabilization"
 
 
---[[
-  public table getAfPoints(photo, metadata)
-  ----
-  Get autofocus points and frames for detected face from metadata
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  getAfPoints(table photo, table metadata)
+
+  Retrieve the autofocus points from the metadata of the photo.
+------------------------------------------------------------------------------]]
 function SonyDelegates.getAfPoints(photo, metadata)
 
   -- Get orginal dimensions (in native aspect ratio)
@@ -272,15 +282,12 @@ function SonyDelegates.getAfPoints(photo, metadata)
   return result
 end
 
---[[--------------------------------------------------------------------------------------------------------------------
-   Start of section that deals with display of maker specific metadata
-----------------------------------------------------------------------------------------------------------------------]]
+--[[----------------------------------------------------------------------------
+  private table
+  addInfo(string title, string key, table props, table metadata)
 
---[[
-  @@public table addInfo(string title, string key, table props, table metadata)
-  ----
-  Creates the view element for an item to add to a info section and creates/populates the corresponding property
---]]
+  Generate a row element to be added to the current view container.
+------------------------------------------------------------------------------]]
 local function addInfo(title, key, props, metadata)
   local f = LrView.osFactory()
 
@@ -333,11 +340,12 @@ local function addInfo(title, key, props, metadata)
   end
 end
 
---[[
-  @@public boolean modelSupported(string model)
-  ----
-  Returns whether the given camera model is supported or not
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  modelSupported(string model)
+
+  Indicate whether the given camera model is supported or not.
+------------------------------------------------------------------------------]]
 function SonyDelegates.modelSupported(model)
   -- Note: 'model' string comes already in lower case
 
@@ -364,11 +372,12 @@ function SonyDelegates.modelSupported(model)
   return true
 end
 
---[[
-  @@public boolean makerNotesFound(table photo, table metadata)
-  ----
-  Returns whether the current photo has metadata with makernotes AF information included
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  makerNotesFound(table photo, table metadata)
+
+  Check if the metadata for the current photo includes a 'Makernotes' section.
+------------------------------------------------------------------------------]]
 function SonyDelegates.makerNotesFound(_photo, metadata)
   local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
   if not result then
@@ -378,22 +387,25 @@ function SonyDelegates.makerNotesFound(_photo, metadata)
   return (result ~= nil)
 end
 
---[[
-  @@public boolean manualFocusUsed(table photo, table metadata)
-  ----
-  Returns whether manual focus has been used on the given photo
---]]
+--[[----------------------------------------------------------------------------
+  public boolean
+  manualFocusUsed(table photo, table metadata)
+
+  Indicate whether the photo was taken using manual focus.
+------------------------------------------------------------------------------]]
 function SonyDelegates.manualFocusUsed(_photo, metadata)
   -- #TODO No test samples available for Sony manual focus
   local focusMode = ExifUtils.findValue(metadata, metaKeyAfFocusMode)
   return (focusMode == "Manual")
 end
 
---[[
-  @@public table function getImageInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Image Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getImageInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Image Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function SonyDelegates.getImageInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local imageInfo
@@ -405,11 +417,13 @@ function SonyDelegates.getImageInfo(_photo, props, metadata)
   return imageInfo
 end
 
---[[
-  @@public table function getShootingInfo(table photo, table props, table metadata)
-  -- called by FocusInfo.createInfoView to append maker specific entries to the "Shooting Information" section
-  -- if any, otherwise return an empty column
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getShootingInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to append maker-specific entries to the
+  'Shooting Information' section, if applicable; otherwise, returns an empty column.
+------------------------------------------------------------------------------]]
 function SonyDelegates.getShootingInfo(_photo, props, metadata)
   local f = LrView.osFactory()
   local shootingInfo
@@ -425,11 +439,13 @@ function SonyDelegates.getShootingInfo(_photo, props, metadata)
   return shootingInfo
 end
 
---[[
-  @@public table getFocusInfo(table photo, table info, table metadata)
-  ----
-  Constructs and returns the view to display the items in the "Focus Information" group
---]]
+--[[----------------------------------------------------------------------------
+  public table
+  function getFocusInfo(table photo, table props, table metadata)
+
+  Called by FocusInfo.createInfoView to fetch the items in the 'Focus Information'
+  section (which is entirely maker-specific).
+------------------------------------------------------------------------------]]
 function SonyDelegates.getFocusInfo(_photo, props, metadata)
   local f = LrView.osFactory()
 
@@ -446,4 +462,4 @@ function SonyDelegates.getFocusInfo(_photo, props, metadata)
   return focusInfo
 end
 
-return SonyDelegates
+return SonyDelegates -- ok

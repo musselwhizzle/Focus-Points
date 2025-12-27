@@ -14,6 +14,15 @@
   limitations under the License.
 --]]
 
+--[[----------------------------------------------------------------------------
+  FocusPoint.lua
+
+  Purpose of this module:
+  Entry point for 'Show Focus Point' menu command.
+  Main control of data processing and user dialog.
+------------------------------------------------------------------------------]]
+local FocusPoint = {}
+
 -- Imported LR namespaces
 local LrApplication         = import  'LrApplication'
 local LrApplicationView    -- import only for SDK 7.4 and later
@@ -36,14 +45,24 @@ local GlobalDefs            = require 'GlobalDefs'
 local KeyboardLayout        = require 'KeyboardLayout'
 local Log                   = require 'Log'
 local PointsRendererFactory = require 'PointsRendererFactory'
-local strict                = require 'strict'
+local _strict               = require 'strict'
 local Utf8                  = require 'Utf8'
 local Utils                 = require 'Utils'
 
+--[[----------------------------------------------------------------------------
+  private void
+  showFocusPoint()
 
-local function showDialog()
+  Invoked when 'Focus Point Viewer -> Show Focus Points' is selected.
+  Reads the metadata from the selected photo's image file, processes autofocus
+  information, and displays a dialog to:
+  - visualize focus points
+  - display relevant image/shooting/focus information
+  - tag (flag, rate or color) the current image
+------------------------------------------------------------------------------]]
+local function showFocusPoint()
 
-  LrFunctionContext.callWithContext("showDialog", function(context)
+  LrFunctionContext.callWithContext("showFocusPointDialog", function(context)
 
     local catalog = LrApplication.activeCatalog()
     local current
@@ -105,7 +124,7 @@ local function showDialog()
 
     local function logAppInfo()
       -- Extend logfile header with application level information
-      if FocusPointPrefs.updateAvailable() then
+      if FocusPointPrefs.isUpdateAvailable() then
         Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
       end
       if WIN_ENV then
@@ -255,7 +274,7 @@ local function showDialog()
 
         errorMsg = nil
         if (targetPhoto:checkPhotoAvailability()) then
-          local photoW, photoH = FocusPointDialog.calculatePhotoDimens(targetPhoto)
+          local photoW, photoH = FocusPointDialog.calculatePhotoViewDimens(targetPhoto)
           rendererTable = PointsRendererFactory.createRenderer(targetPhoto)
 
           if rendererTable then
@@ -304,13 +323,6 @@ local function showDialog()
         -- Open main window
         Log.logInfo("FocusPoint", "Present dialog and information")
 
-        -- Output profiling results, if profiling was active
-        if GlobalDefs.DEBUG then
-          local Profiler = require('Profiler')
-          if Profiler.ProfilerActive then
-            Log.logInfo("Profiling", Profiler.sortResults(Debug.profileResults ()))
-          end
-        end
         local function inputFieldWidth()
           if     prefs.keyboardInput == FocusPointPrefs.kbdInputInvisible then return 1
           elseif prefs.keyboardInput == FocusPointPrefs.kbdInputSmall     then return 25
@@ -455,17 +467,12 @@ local function showDialog()
               return true  -- done
             -- Troubleshooting
             elseif string.find(FocusPointPrefs.kbdShortcutsTroubleShooting, char, 1, true) then
-              local statusCode = FocusInfo.getStatusCode()
-              if statusCode > 1 then
-                LrTasks.startAsyncTask(function()
-                  LrHttp.openUrlInBrowser(FocusPointPrefs.urlTroubleShooting .. FocusInfo.status[statusCode].link)
-                end)
-              end
+              FocusInfo.openTroubleShooting()
               return true  -- done
             -- Check log
             elseif string.find(FocusPointPrefs.kbdShortcutsCheckLog, char, 1, true) then
               if prefs.loggingLevel ~= "NONE" then
-                Utils.openFileInApp(Log.getFileName())
+                Utils.openFileInApp(Log.getLogFileName())
               end
               return true  -- done
             -- Close
@@ -716,7 +723,7 @@ local function showDialog()
 
         local f = LrView.osFactory()
         userResponse = LrDialogs.presentModalDialog {
-          title = "Focus-Points (Version " .. Utils.getPluginVersion() .. ")",
+          title = "Focus-Points (Version " .. GlobalDefs.pluginVersion .. ")",
           contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdShortcutInput()),
           accessoryView = f:row {
             margin_left = 0,
@@ -763,4 +770,6 @@ local function showDialog()
   end)
 end
 
-LrTasks.startAsyncTask(showDialog)
+LrTasks.startAsyncTask( showFocusPoint )
+
+return FocusPoint

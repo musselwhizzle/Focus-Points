@@ -14,11 +14,15 @@
   limitations under the License.
 --]]
 
---[[
-  This object is responsible for creating the focus point icon and figuring out where to place it.
-  This logic should be universally reuseable, but if it's not, this object can be replaced in the
-  PointsRendererFactory.
---]]
+--[[----------------------------------------------------------------------------
+  DefaultPointRenderer.lua
+
+  Purpose of this module:
+  The DefaultPointRenderer is responsible for creating the focus point icon and
+  figuring out where to place it. This logic should be universally reuseable,
+  but if it's not, this object can be replaced in the PointsRendererFactory.
+------------------------------------------------------------------------------]]
+local DefaultPointRenderer = {}
 
 -- Imported LR SDK namespaces
 local LrApplication    = import  'LrApplication'
@@ -26,7 +30,6 @@ local LrPrefs          = import  'LrPrefs'
 local LrView           = import  'LrView'
 
 -- Required Lua definitions
-                         require 'strict'
 local a                = require 'affine'
 local DefaultDelegates = require 'DefaultDelegates'
 local ExifUtils        = require 'ExifUtils'
@@ -35,95 +38,185 @@ local FocusPointPrefs  = require 'FocusPointPrefs'
 local GlobalDefs       = require 'GlobalDefs'
 local Log              = require 'Log'
 local MogrifyUtils     = require 'MogrifyUtils'
-local strict           = require 'strict'
+local _strict          = require 'strict'
 local Utils            = require 'Utils'
-
--- This module
-local DefaultPointRenderer = {}
 
 local prefs = LrPrefs.prefsForPlugin( nil )
 
---[[
-  -- method figures out the orientation the photo was shot at by looking at the metadata
-  -- returns the rotation in degrees in trigonometric sense
---]]
-local function getShotOrientation(photo, metadata)
-  local dimens = photo:getFormattedMetadata("dimensions")
-  local orgPhotoW, orgPhotoH = Utils.parseDimens(dimens) -- original dimension before any cropping
+-- Forward references to local functions
+local getShotOrientation, getUserRotationAndMirroring, prepareRendering, createPointView, createOverlayViews
 
-  local metaOrientation = ExifUtils.findValue(metadata, "Orientation")
-  if not metaOrientation then
-    return 0
+--[[----------------------------------------------------------------------------
+  public table
+  createPhotoView(table photo, int photoDisplayWidth, int photoDisplayHeight, table metadata)
+
+  1. Populate focus points table using prepareRendering().
+  2. Overlay control of focus point information onto the image
+     (use overlapping views on MAC or Mogrify tool on a disk image on WIN).
+
+  Returns container to be passed to the dialog as part of the view hierarchy.
+------------------------------------------------------------------------------]]
+function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDisplayHeight, metadata)
+
+  local fpTable = prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata)
+  local f = LrView.osFactory()
+
+  local photoView, overlayViews
+
+  Log.logDebug("DefaultPointRenderer", "Create photo view: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
+
+  if WIN_ENV then
+    local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
+    MogrifyUtils.drawFocusPoints(photo,fpTable)
+    photoView = f:view {
+      f:picture {
+        width = photoDisplayWidth,
+        height = photoDisplayHeight,
+        value = fileName,
+      },
+    }
+  else
+    -- create base view, i.e. only the image
+    local imageView = f:catalog_photo {
+      width = photoDisplayWidth,
+      height = photoDisplayHeight,
+      photo = photo,
+    }
+
+    overlayViews = createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
+
+    if overlayViews then
+      -- create compound view incl. overlays
+      photoView = f:view {
+        imageView, overlayViews,
+        place = 'overlapping',
+      }
+    else      -- no overlays, just display the image
+      photoView = imageView
+    end
   end
 
-  if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
-    return 90     -- 90° CCW
-  elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
-    return -90    -- 270° CCW
-  elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
-    return -90    -- 90° CW
-  elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
-    return 90     -- 270° CCW
+  photoView.mouse_down = function()
+    return true
   end
 
-  return 0
+  return photoView
 end
 
---[[
--- Takes a LrPhoto and returns the rotation and horizontal mirroring that the user has choosen  in Lightroom (generaly in grid mode)
--- photo - the LrPhoto to calculate the values from
--- returns:
--- - rotation in degrees in trigonometric sense
--- - horizontal mirroring (0 -> none, -1 -> yes)
---]]
-local function getUserRotationAndMirroring(photo)
-  -- LR 5 throws an error even trying to access getRawMetadata("orientation")
-  if (LrApplication.versionTable().major < 6) then
-    return getShotOrientation(photo, ExifUtils.readMetadataAsTable(photo)), 0
-  end
+--[[----------------------------------------------------------------------------
+  public table
+  createInfoView(table photo, table props, table metadata)
 
-  local userRotation = photo:getRawMetadata("orientation")
-  if not userRotation then
-  Log.logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
-
-    -- Falling back by trying to find the information with exifs.
-    -- This is not working when the user rotates or mirrors the image within lightroom
-    return getShotOrientation(photo, ExifUtils.readMetadataAsTable(photo)), 0
-  elseif userRotation == "AB" then
-    return 0, 0
-  elseif userRotation == "BC" then
-    return -90, 0
-  elseif userRotation == "CD" then
-    return 180, 0
-  elseif userRotation == "DA" then
-    return 90, 0
-
-  -- Same with horizontal mirroring
-  elseif userRotation == "BA" then
-    return 0, -1
-  elseif userRotation == "CB" then
-    return -90, -1
-  elseif userRotation == "DC" then
-    return 180, -1
-  elseif userRotation == "AD" then
-    return 90, -1
-  end
-
-  Log.logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
-  return 0, 0
+  Calls FocusInfo.createInfoView() to create the content of the information
+  column view container. The purpose of having DefaultPointRenderer act as
+  a gateway is to avoid cyclic dependencies between FocusInfo and
+  DefaultPointRenderer.
+------------------------------------------------------------------------------]]
+function DefaultPointRenderer.createInfoView(photo, props, metadata)
+  return FocusInfo.createInfoView(photo, props, metadata,
+    DefaultPointRenderer.funcGetImageInfo,
+    DefaultPointRenderer.funcGetShootingInfo,
+    DefaultPointRenderer.funcGetFocusInfo)
 end
 
---[[ Prepare raw focus data for rendering: apply crop factor, roation, etc
--- photo - the selected catalog photo
--- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
--- Returns a table with detailed focus point rendering data
---   points: array with  Center-, TopLeft-, TopRight-, BottonLeft-, BottonRight- point
---   rotation: user + crop rotation
---   userMirroring
---   template: template discribing the focus-point. See DefaultDelegates.lua
---   useSmallIcons
---]]
-local function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata)
+--[[----------------------------------------------------------------------------
+  public int originalWidth, int originalHeight, int cropWidth, int cropHeight
+  getNormalizedDimensions(table photo)
+
+  Retrieve the original, uninfluenced by any user rotation, and cropped dimensions
+  of 'photo'.
+  Returns:
+  - originalWidth, originalHeight - original dimensions in unrotated position
+  - cropWidth, cropHeight         -  cropped dimensions in unrotated position
+------------------------------------------------------------------------------]]
+function DefaultPointRenderer.getNormalizedDimensions(photo)
+  local originalWidth, originalHeight = Utils.parseDimens(photo:getFormattedMetadata("dimensions"))
+  local cropWidth, cropHeight = Utils.parseDimens(photo:getFormattedMetadata("croppedDimensions"))
+  local userRotation = getUserRotationAndMirroring(photo)
+
+  if userRotation == 90 or userRotation == -90 or originalWidth < originalHeight then
+    -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
+    -- In this methods, width and height refer to the original width and height
+    local tmp = originalHeight
+    originalHeight = originalWidth
+    originalWidth = tmp
+
+    tmp = cropHeight
+    cropHeight = cropWidth
+    cropWidth = tmp
+  end
+
+  return originalWidth, originalHeight, cropWidth, cropHeight
+end
+
+--[[----------------------------------------------------------------------------
+  public table pointsTable
+  createFocusFrame(int x, int y)
+
+  Creates the correct visualisation for the given focus point location,
+  depending on the size of the focus box selected by the user.
+------------------------------------------------------------------------------]]
+function DefaultPointRenderer.createFocusFrame(x, y, w, h)
+  local pointType
+
+  if not (w and h) then
+    -- focus frame dimensions have not been given -> handle as focus pixel point
+    if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
+    else
+      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
+    end
+    local cropWidth, cropHeight = Utils.parseDimens(GlobalDefs.currentPhoto:getFormattedMetadata("croppedDimensions"))
+    w = math.min(cropWidth, cropHeight) * prefs.focusBoxSize
+    h = w
+  else
+     pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
+  end
+
+  return {
+    pointTemplates = DefaultDelegates.pointTemplates,
+    points = {
+      {
+        pointType = pointType,
+        x = x,
+        y = y,
+        width  = w,
+        height = h,
+      }
+    }
+  }
+end
+
+--[[----------------------------------------------------------------------------
+  public void
+  cleanup()
+
+  Remove any remnants left over from processing the current photo
+------------------------------------------------------------------------------]]
+function DefaultPointRenderer.cleanup()
+  if WIN_ENV then
+    MogrifyUtils.cleanup()
+  end
+end
+
+--[[----------------------------------------------------------------------------
+  private table
+  prepareRendering(table photo, int photoDisplayWidth, int photoDisplayHeight, table metadata)
+
+  Prepare raw focus data for rendering: apply crop factor, rotation, etc
+  photo              - the selected catalog photo
+  photoDisplayWidth,
+  photoDisplayHeight - the width and height that the photo view is going to display as.
+  metadata           - metadata of the photo
+
+  Returns a table with detailed focus point rendering data:
+  - points: array with  Center-, TopLeft-, TopRight-, BottonLeft-, BottonRight- point
+  - rotation: user + crop rotation
+  - userMirroring
+  - template: template discribing the focus-point(s). See DefaultDelegates.lua
+  - useSmallIcons
+------------------------------------------------------------------------------]]
+function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata)
 
   local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
   local userRotation, userMirroring = getUserRotationAndMirroring(photo)
@@ -314,68 +407,18 @@ local function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, me
   return fpTable
 end
 
---[[
--- Creates a view with the focus box placed rotated and mirrored at the right place. As Lightroom does not allow
---   for rotating icons right now nor for drawing, we get the rotated/mirrored image from the corresponding file name template
--- The method replaces the first '%s' in the iconFileTemplate by the passed rotation rounded to angleStep steps
---   and adds "-mirrored" to this if horizontalMirroring == -1
--- x, y - the center of the icon to be drawn
--- rotation - the rotation angle of the icon in degrees
--- horizontalMirroring - 0 or -1
--- iconFileTemplate - the file path of the icon file to be used. %s will be replaced by the rotation angle module angleStep
--- anchorX, anchorY - the position in pixels of the anchor point in the image file
--- angleStep - the angle stepping in degrees used for the icon files. If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
---]]
-local function createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
-  local fileRotationStr
+--[[----------------------------------------------------------------------------
+  private table
+  createOverlayViews(table fpTable, int photoDisplayWidth, int photoDisplayHeight)
 
-  local function count_substring(text, sub)
-    local _, count = text:gsub(sub, "")
-    return count
-  end
+  Create  overlay views for the points in fpTable
+  - fpTable            - table with rendering information for the focus points
+  - photoDisplayWidth,
+    photoDisplayHeight - the width and height that the photo view is going to display as.
 
-  if angleStep and angleStep ~= 0 then
-    local closestAngle = (angleStep * math.floor(0.5 + rotation / angleStep)) % 360
-    if horizontalMirroring == -1 then
-        fileRotationStr = (630 - closestAngle) % 360
-    else
-        fileRotationStr = closestAngle
-    end
-  end
-
-  local fileName
-  if count_substring(iconFileTemplate, "%%s") == 2 then
-    -- two placeholders to be filled in
-    fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
-  elseif string.find(iconFileTemplate, "center") then
-    -- center dot, fill in the color placeholder
-    fileName = string.format(iconFileTemplate, prefs.focusBoxColor)
-  else
-    -- fill in the rotation placeholder
-    fileName = string.format(iconFileTemplate, fileRotationStr)
-  end
-
-  Log.logDebug("createPointView", "fileName: " .. fileName)
-
-  local f = LrView.osFactory()
-
-  local view = f:view {
-    f:picture {
-      value = _PLUGIN:resourceId(fileName)
-    },
-    margin_left = x - anchorX,
-    margin_top = y - anchorY,
-  }
-
-  return view
-end
-
---[[ Create  overlay views
--- fpTable - table with rendering information for the focus points
--- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
--- Returns a table with overlay view
---]]
-local function createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
+  Returns a table with overlay views
+------------------------------------------------------------------------------]]
+function createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
 
   local viewsTable = {
     place = "overlapping"
@@ -420,132 +463,145 @@ local function createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight
   return LrView.osFactory():view(viewsTable)
 end
 
---[[
--- Returns a LrView.osFactory():view containg all needed icons to draw the points returned by DefaultPointRenderer.funcGetAfPoints
--- photo - the selected catalog photo
--- photoDisplayWidth, photoDisplayHeight - the width and height that the photo view is going to display as.
---]]
-function DefaultPointRenderer.createPhotoView(photo, photoDisplayWidth, photoDisplayHeight, metadata)
+--[[----------------------------------------------------------------------------
+  private int rotation,
+  getShotOrientation(table photo, table metadata)
 
-  local fpTable = prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata)
+  Figure out the orientation the photo was shot at by looking at the metadata.
+  Returns the rotation in degrees in trigonometric sense.
+------------------------------------------------------------------------------]]
+function getShotOrientation(photo, metadata)
+  local dimens = photo:getFormattedMetadata("dimensions")
+  local orgPhotoW, orgPhotoH = Utils.parseDimens(dimens) -- original dimension before any cropping
+
+  local metaOrientation = ExifUtils.findValue(metadata, "Orientation")
+  if not metaOrientation then
+    return 0
+  end
+
+  if string.match(metaOrientation, "90 CCW") and orgPhotoW < orgPhotoH then
+    return 90     -- 90° CCW
+  elseif string.match(metaOrientation, "270 CCW") and orgPhotoW < orgPhotoH then
+    return -90    -- 270° CCW
+  elseif string.match(metaOrientation, "90") and orgPhotoW < orgPhotoH then
+    return -90    -- 90° CW
+  elseif string.match(metaOrientation, "270") and orgPhotoW < orgPhotoH then
+    return 90     -- 270° CCW
+  end
+
+  return 0
+end
+
+--[[----------------------------------------------------------------------------
+  private int rotation, int mirroring
+  getUserRotationAndMirroring(table photo)
+
+  Return the rotation and horizontal mirroring that the user has applied
+  to the photo in Lightroom.
+  Returns:
+  1. rotation in degrees in trigonometric sense
+  2. horizontal mirroring (0 -> none, -1 -> yes)
+------------------------------------------------------------------------------]]
+function getUserRotationAndMirroring(photo)
+  -- LR 5 throws an error even trying to access getRawMetadata("orientation")
+  if (LrApplication.versionTable().major < 6) then
+    return getShotOrientation(photo, ExifUtils.readMetadataAsTable(photo)), 0
+  end
+
+  local userRotation = photo:getRawMetadata("orientation")
+  if not userRotation then
+  Log.logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
+
+    -- Falling back by trying to find the information with exifs.
+    -- This is not working when the user rotates or mirrors the image within lightroom
+    return getShotOrientation(photo, ExifUtils.readMetadataAsTable(photo)), 0
+  elseif userRotation == "AB" then
+    return 0, 0
+  elseif userRotation == "BC" then
+    return -90, 0
+  elseif userRotation == "CD" then
+    return 180, 0
+  elseif userRotation == "DA" then
+    return 90, 0
+
+  -- Same with horizontal mirroring
+  elseif userRotation == "BA" then
+    return 0, -1
+  elseif userRotation == "CB" then
+    return -90, -1
+  elseif userRotation == "DC" then
+    return 180, -1
+  elseif userRotation == "AD" then
+    return 90, -1
+  end
+
+  Log.logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)
+  return 0, 0
+end
+
+--[[----------------------------------------------------------------------------
+  private table
+  createPointView(int x, int y, int rotation, int horizontalMirroring,
+                  string iconFileTemplate, int anchorX, int anchorY, int angleStep)
+
+  Creates a view with the focus box placed rotated and mirrored at the right place.
+  As Lightroom does not allow for rotating icons nor for drawing, we get the
+  rotated/mirrored image from the corresponding file name template.
+  The method replaces the first '%s' in the iconFileTemplate by the passed rotation
+  rounded to angleStep steps and adds "-mirrored" to this if horizontalMirroring == -1.
+  - x, y - the center of the icon to be drawn
+  - rotation            - the rotation angle of the icon in degrees
+  - horizontalMirroring - 0 or -1
+  - iconFileTemplate    - the file path of the icon file to be used. %s will be
+                          replaced by the rotation angle module angleStep
+  - anchorX, anchorY    - the position in pixels of the anchor point in the image file
+  - angleStep           - the angle stepping in degrees used for the icon files.
+                          If angleStep = 10 and rotation = 26.7°, then "%s" will be replaced by "30"
+
+  Returns a f:picture() view
+------------------------------------------------------------------------------]]
+function createPointView(x, y, rotation, horizontalMirroring, iconFileTemplate, anchorX, anchorY, angleStep)
+  local fileRotationStr
+
+  local function count_substring(text, sub)
+    local _, count = text:gsub(sub, "")
+    return count
+  end
+
+  if angleStep and angleStep ~= 0 then
+    local closestAngle = (angleStep * math.floor(0.5 + rotation / angleStep)) % 360
+    if horizontalMirroring == -1 then
+        fileRotationStr = (630 - closestAngle) % 360
+    else
+        fileRotationStr = closestAngle
+    end
+  end
+
+  local fileName
+  if count_substring(iconFileTemplate, "%%s") == 2 then
+    -- two placeholders to be filled in
+    fileName = string.format(iconFileTemplate, prefs.focusBoxColor, fileRotationStr)
+  elseif string.find(iconFileTemplate, "center") then
+    -- center dot, fill in the color placeholder
+    fileName = string.format(iconFileTemplate, prefs.focusBoxColor)
+  else
+    -- fill in the rotation placeholder
+    fileName = string.format(iconFileTemplate, fileRotationStr)
+  end
+
+  Log.logDebug("createPointView", "fileName: " .. fileName)
+
   local f = LrView.osFactory()
 
-  local photoView, overlayViews
-
-  Log.logDebug("DefaultPointRenderer", "Create photo view: " .. photoDisplayWidth .. " x " .. photoDisplayHeight)
-
-  if WIN_ENV then
-    local fileName = MogrifyUtils.createDiskImage(photo, photoDisplayWidth, photoDisplayHeight)
-    MogrifyUtils.drawFocusPoints(photo,fpTable)
-    photoView = f:view {
-      f:picture {
-        width = photoDisplayWidth,
-        height = photoDisplayHeight,
-        value = fileName,
-      },
-    }
-  else
-    -- create base view, i.e. only the image
-    local imageView = f:catalog_photo {
-      width = photoDisplayWidth,
-      height = photoDisplayHeight,
-      photo = photo,
-    }
-
-    overlayViews = createOverlayViews(fpTable, photoDisplayWidth, photoDisplayHeight)
-
-    if overlayViews then
-      -- create compound view incl. overlays
-      photoView = f:view {
-        imageView, overlayViews,
-        place = 'overlapping',
-      }
-    else      -- no overlays, just display the image
-      photoView = imageView
-    end
-  end
-
-  photoView.mouse_down = function()
-    return true
-  end
-
-  return photoView
-end
-
---[[
--- Takes a LrPhoto and returns the normalized original dimensions and cropped dimensions uninfluenced by the rotation
--- photo - the LrPhoto to calculate the values from
--- returns:
--- - originalWidth, originalHeight - original dimensions in unrotated position
--- - cropWidth, cropHeight - cropped dimensions in unrotated position
---]]
-function DefaultPointRenderer.getNormalizedDimensions(photo)
-  local originalWidth, originalHeight = Utils.parseDimens(photo:getFormattedMetadata("dimensions"))
-  local cropWidth, cropHeight = Utils.parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  local userRotation = getUserRotationAndMirroring(photo)
-
-  if userRotation == 90 or userRotation == -90 or originalWidth < originalHeight then
-    -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
-    -- In this methods, width and height refer to the original width and height
-    local tmp = originalHeight
-    originalHeight = originalWidth
-    originalWidth = tmp
-
-    tmp = cropHeight
-    cropHeight = cropWidth
-    cropWidth = tmp
-  end
-
-  return originalWidth, originalHeight, cropWidth, cropHeight
-end
-
---[[
-  @@public table DefaultPointRenderer.createFocusFrame(x, y)
-  ----
-  According to current viewing option settings, determines shape and size of focus box to be drawn around focus pixel
---]]
-function DefaultPointRenderer.createFocusFrame(x, y, w, h)
-  local pointType
-
-  if not (w and h) then
-    -- focus frame dimensions have not been given -> handle as focus pixel point
-    if prefs.focusBoxSize == FocusPointPrefs.focusBoxSize[FocusPointPrefs.focusBoxSizeSmall] then
-      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL
-    else
-      pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_PIXEL_BOX
-    end
-    local cropWidth, cropHeight = Utils.parseDimens(GlobalDefs.currentPhoto:getFormattedMetadata("croppedDimensions"))
-    w = math.min(cropWidth, cropHeight) * prefs.focusBoxSize
-    h = w
-  else
-     pointType = DefaultDelegates.POINTTYPE_AF_FOCUS_BOX
-  end
-
-  return {
-    pointTemplates = DefaultDelegates.pointTemplates,
-    points = {
-      {
-        pointType = pointType,
-        x = x,
-        y = y,
-        width  = w,
-        height = h,
-      }
-    }
+  local view = f:view {
+    f:picture {
+      value = _PLUGIN:resourceId(fileName)
+    },
+    margin_left = x - anchorX,
+    margin_top = y - anchorY,
   }
+
+  return view
 end
 
-function DefaultPointRenderer.createInfoView(photo, props, metadata)
-  return FocusInfo.createInfoView(photo, props, metadata,
-    DefaultPointRenderer.funcGetImageInfo,
-    DefaultPointRenderer.funcGetShootingInfo,
-    DefaultPointRenderer.funcGetFocusInfo)
-end
-
-function DefaultPointRenderer.cleanup()
-  if WIN_ENV then
-    MogrifyUtils.cleanup()
-  end
-end
-
-return DefaultPointRenderer
+return DefaultPointRenderer -- ok
