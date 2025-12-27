@@ -520,13 +520,21 @@ local function showFocusPoint()
         end
 
         local function fileNameDisplay()
-          local s
+          local f = LrView.osFactory()
+          local utfEllipsis = string.char(0xE2, 0x80, 0xA6)
+          local fileName = Utils.getPhotoFileName(targetPhoto)
+          local tooltip
+          if prefs.truncateLongText and #fileName > FocusInfo.maxValueLen then
+              tooltip  = fileName
+              fileName = string.sub(fileName, 1, FocusInfo.maxValueLen-1) .. utfEllipsis
+            end
           if #selectedPhotos > 1 then
-            s = Utils.getPhotoFileName(targetPhoto) .. " (" .. current .. "/" .. #selectedPhotos .. ")"
-          else
-            s = Utils.getPhotoFileName(targetPhoto)
+            fileName = fileName .. " (" .. current .. "/" .. #selectedPhotos .. ")"
           end
-          return s
+          return f:static_text {
+            title = fileName,
+            tooltip = tooltip,
+          }
         end
 
         local function navigationControls()
@@ -547,9 +555,7 @@ local function showFocusPoint()
               end
           },
             f:spacer { width = 15 }, -- space before the file name
-          f:static_text{
-              title = fileNameDisplay(),
-            },
+            fileNameDisplay(),
 
             f:spacer { width = 5 }, -- space before the next button
             f:push_button {
