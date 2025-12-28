@@ -1,4 +1,4 @@
-# Focus Points – V3.2 Prelease
+# Focus Points – V3.2 Prerelease
 
 ### Current version: [V3.2 PRE 4 updated December 28, 2025](https://github.com/musselwhizzle/Focus-Points/releases/tag/v3.2_pre4)
 
