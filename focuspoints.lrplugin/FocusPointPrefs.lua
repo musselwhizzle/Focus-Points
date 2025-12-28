@@ -67,7 +67,10 @@ FocusPointPrefs.kbdInputRegular    = 2
 
 -- URL to handle Update mechanism
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
+FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prelease"
+
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
+FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/v3.2_pre/focuspoints.lrplugin/Version.txt"
 
 -- URL definitions
 FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
@@ -238,8 +241,9 @@ function FocusPointPrefs.retrieveVersionOfLatestRelease()
   -- Need to execute this as a collaborative task
   LrTasks.startAsyncTask(function()
     local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
+    prefs.dummy = latestVersionNumber
     if latestVersionNumber then
-      prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+")
+      prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+%.%d+")
     end
   end)
 end
@@ -273,7 +277,7 @@ function FocusPointPrefs.isUpdateAvailable()
   if isUpdateAvailable == nil then
     -- information still empty, so determine its status
     if prefs.latestVersion then
-      local major, minor, revision = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)")
+      local major, minor, revision, build = prefs.latestVersion:match("v(%d+)%.(%d+)%.(%d+)%.(%d+)")
       if major and minor and revision then
         -- we have a valid version number from the URL
         local pluginVersion = Info.VERSION
@@ -289,10 +293,28 @@ function FocusPointPrefs.isUpdateAvailable()
               -- new revision available
               result = true
             elseif tonumber(revision) == pluginVersion.revision then
-              -- major, minor versions and revision numbers are the same
-              if pluginVersion.build and tonumber(pluginVersion.build) >= 9000 then
-                -- release available for local pre-release version
-                result = true
+              -- major, minor versions and revision numbers are the same, so check the build version
+              if build then
+                if tonumber(build) >= 9000 then
+                  -- latest release is a pre-release
+                  if  pluginVersion.build
+                  and pluginVersion.build >= 9000
+                  and pluginVersion.build < tonumber(build) then
+                    -- new pre-release available
+                    result = true
+                  end
+                else
+                  -- latest release is a regular release
+                  if pluginVersion.build then
+                    if tonumber(pluginVersion.build) >= 9000 then
+                      -- release available for local pre-release version
+                      result = true
+                    elseif tonumber(build) > pluginVersion.build then
+                      -- new build available
+                      result = true
+                    end
+                  end
+                end
               end
             end
           end
