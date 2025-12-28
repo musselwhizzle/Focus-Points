@@ -13,6 +13,7 @@ New features introduced in V3.2:
 - [Customizable plugin window size](#customizable-plugin-window-size)&nbsp;&nbsp;[#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
 - [Introduction of visible input field for keyboard shortcuts](#introduction-of-visible-input-field-for-keyboard-shortcuts)&nbsp;&nbsp;[#321](https://github.com/musselwhizzle/Focus-Points/issues/321)
 - [Long metadata names excessively widen the information area](#display-of-long-metadata-names)&nbsp;&nbsp;[#326](https://github.com/musselwhizzle/Focus-Points/issues/326)
+- [Improved sizing of metadata window](#improved-sizing-of-metadata-window)&nbsp;&nbsp;[#333](https://github.com/musselwhizzle/Focus-Points/issues/333)
 - [Buy the developer a coffee](#buy-the-developer-a-coffee)&nbsp;&nbsp;[#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
 
 Screenshot of user interface with new tagging controls, shortcut input field and "coffee" link :
@@ -146,6 +147,22 @@ There is a new setting in 'User Interface' that allows you to specify whether lo
 Enabling this setting makes the window content look much tidier:
 
 <img src="screens/README%20Long%20Names.jpg" alt="Screenshot" style="width: 800px;"/>
+
+
+### Improved sizing of metadata window
+
+In version 3.1, metadata tag names that were significantly longer than 40 characters could result in an unusual display in the metadata viewer.
+
+This has been improved in V3.2:
+
+1. The maximum length of tags displayed is limited to 32 characters.
+2. The maximum length of values displayed is limited to 128 characters.
+3. Truncated strings are indicated by an ellipsis symbol '...' <br> If this is relevant information, it can still be reviewed by opening the metadata as text.
+5. The edit fields for the 'Tag' and 'Value' filters are the same size as in point 1.
+6. The heigth of the metadata window is given by the `Size of plugin window` setting S .. XXL
+7. The width of the metadata window chosen that the head line (filter entry fields, hint) fits in but minimum 70% of the window height.
+
+<img src="screens/README%20Metadata%20Window.jpg" alt="Screenshot" style="width: 800px;"/>
 
 
 ### Buy the developer a coffee
