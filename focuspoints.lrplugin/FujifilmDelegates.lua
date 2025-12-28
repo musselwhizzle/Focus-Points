@@ -108,13 +108,9 @@ function FujifilmDelegates.getAfPoints(photo, metadata)
   end
 
   --[[
-    The coordinates of the 'focus pixel' tag on Fuji correspond to the dimensions of the embedded
-    JPG preview image in the RAF file. These are recorded in the ExifImageWidth/ExifImageHeight fields
-    in the Exif IFD section.
-    Unfortunately, the information in these two tags can easily be lost when processing the RAF image
-    in applications such as e.g. Topaz Photo AI or DxO PhotoLab. The tags are missing completely in the
-    DNG file returned by DxO PL. It's even worse for Topaz Photo AI: the tags are retained in the DNG file,
-    but they contain invalid information:(RAF image dimensions), which leads to an incorrect focus point display.
+     The ExifImageWidth and ExifImageHeight values in the Exif IFD section define the coordinate system
+     to which FocusPixel relates. For RAF files, these values indicate the dimensions of the embedded
+     JPEG image. This information may be lost during the processing or conversion of the RAF image to DNG.
   --]]
   local imageWidth  = ExifUtils.findValue(metadata, metaKeyExifImageWidth)
   local imageHeight = ExifUtils.findValue(metadata, metaKeyExifImageHeight)
@@ -332,13 +328,37 @@ end
 
   Check if the metadata for the current photo includes a 'Makernotes' section.
 ------------------------------------------------------------------------------]]
-function FujifilmDelegates.makerNotesFound(_photo, metadata)
-  local result = ExifUtils.findValue(metadata, metaKeyAfInfoSection)
-  if not result then
+function FujifilmDelegates.makerNotesFound(photo, metadata)
+
+  local function getExtension(filename)
+    return filename:match("^.+%.([^%.]+)$")
+  end
+
+  -- 1. Check if makernotes section exists
+  if not ExifUtils.findValue(metadata, metaKeyAfInfoSection) then
     Log.logWarn("Fujifilm",
       string.format("Tag '%s' not found", metaKeyAfInfoSection))
+    return false
   end
-  return (result ~= nil)
+  --[[
+    2. Check if photo is a DNG file
+    The coordinates of the 'focus pixel' tag on Fuji correspond to the dimensions of the embedded
+    JPG preview image in the RAF file. These are recorded in the ExifImageWidth/ExifImageHeight fields
+    in the Exif IFD section.
+    Unfortunately, the information in these two tags can easily be lost when processing the RAF image
+    in applications such as e.g. Topaz Photo AI or DxO PhotoLab. The tags are missing completely in the
+    DNG file returned by DxO PL. It's even worse for Topaz Photo AI: the tags are retained in the DNG file,
+    but they contain invalid information:(RAF image dimensions), which leads to an incorrect focus point display.
+    As a consequence, treat DNG files as files w/o makernotes section in the context of focus point coordinates.
+  --]]
+  local ext = getExtension(Utils.getPhotoFileName(photo))
+  if ext:upper() == "DNG" then
+    Log.logWarn("Fujifilm",
+      string.format("Fuji DNG files do not contain valid information on image width/height",
+        metaKeyExifImageWidth, metaKeyExifImageHeight))
+    return false
+  end
+  return true
 end
 
 --[[----------------------------------------------------------------------------
