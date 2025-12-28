@@ -4,7 +4,9 @@
 
 This document describes the new features and changes in V3.2.<br>
 
-Unless stated otherwise, the latest official version (V3.1) of the [README](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md) document continues to serve as an overview of the plugin's features and how they operate. The user manual will be updated to include V3.2 content at the time of its public release. 
+Unless stated otherwise, the latest official version (V3.1) of the [README](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md) document continues to serve as an overview of the plugin's features and how they operate. The user manual will be updated to include V3.2 content at the time of its public release.
+
+If you would like to share your feedback or suggestions, please go **[here](https://github.com/musselwhizzle/Focus-Points/discussions/337)**.
 
 New features introduced in V3.2: 
 
