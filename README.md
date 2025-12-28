@@ -1,6 +1,6 @@
 # Focus Points – V3.2 Prelease
 
-### Current version: V3.2 PRE 4 updated December xx, 2025
+### Current version: V3.2 PRE 4 updated December 28, 2025
 
 This document describes the new features and changes in V3.2.<br>
 
