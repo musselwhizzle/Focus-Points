@@ -136,7 +136,9 @@ function splitForColumns(metadata)
   local maxLabelLength = 0
   local maxValueLength = 0
   local numOfLines = 0
-  local limitValueLength = 255  -- to avoid super-long value strings that whill slow down display
+  local limitLabelLength =  32  -- to avoid super-long value strings that whill slow down display
+  local limitValueLength = 128  -- to avoid long tag names
+  local utfEllipsis = string.char(0xE2, 0x80, 0xA6)
 
   for k in pairs(parts) do
 
@@ -148,8 +150,11 @@ function splitForColumns(metadata)
 
     -- Limit length of a displayed value string, indicate spillover by ellipsis dots.
     -- The original text can still be examined by opening the metadata text file in an editor
+    if string.len(l) > limitLabelLength then
+      l = LrStringUtils.truncate(l, limitLabelLength) .. utfEllipsis
+    end
     if string.len(v) > limitValueLength then
-      v = LrStringUtils.truncate(v, limitValueLength) .. "[...]"
+      v = LrStringUtils.truncate(v, limitValueLength) .. utfEllipsis
     end
 
     -- Update table dimension parameters

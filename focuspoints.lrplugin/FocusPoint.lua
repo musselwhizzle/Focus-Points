@@ -524,7 +524,7 @@ local function showFocusPoint()
           local utfEllipsis = string.char(0xE2, 0x80, 0xA6)
           local fileName = Utils.getPhotoFileName(targetPhoto)
           local tooltip
-          if prefs.truncateLongText and #fileName > FocusInfo.maxValueLen then
+          if prefs.truncateLongText and Utf8.len(fileName) > FocusInfo.maxValueLen then
               tooltip  = fileName
               fileName = string.sub(fileName, 1, FocusInfo.maxValueLen-1) .. utfEllipsis
             end

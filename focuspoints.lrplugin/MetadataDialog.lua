@@ -100,8 +100,9 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
         immediate = true,
         value = LrView.bind( 'tagFilter' ),
         -- for proper window dimensions on MAC and WIN need to set different properties
-        width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
-        width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
+--      width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
+--      This logic obviously does not apply (any more?), since it leads to fields that are too wide on the MAC.
+        width_in_digits = column1Length, -- * bool_to_number[WIN_ENV == true],
       }
 
       local function tagFilterEntryField()
@@ -136,8 +137,9 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
         immediate = true,
         value = LrView.bind( 'valueFilter' ),
         -- for proper window dimensions on MAC and WIN need to set different properties
-        width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
-        width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
+--      width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
+--      This logic obviously does not apply (any more?), since it leads to fields that are too wide on the MAC.
+        width_in_digits = column1Length, -- * bool_to_number[WIN_ENV == true],
       }
 
       local function valueFilterEntryField()
@@ -192,8 +194,9 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
         title = LrView.bind "column1",
         selectable = false,
         -- for proper window dimensions on MAC and WIN need to set different properties
-        width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
-        width_in_digits = column1Length * bool_to_number[WIN_ENV == true],
+--      width_in_chars  = column1Length * bool_to_number[MAC_ENV == true],
+--      This logic obviously does not apply (any more?), since it leads to fields that are too wide on the MAC.
+        width_in_digits = column1Length, -- * bool_to_number[WIN_ENV == true],
         height_in_lines = numLines * bool_to_number[MAC_ENV == true] + 1 * bool_to_number[WIN_ENV == true],  -- #181: numLines for MAC, 1 for WIN
       }
 
@@ -201,8 +204,9 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
         title = LrView.bind "column2",
         selectable = false,
         -- for proper window dimensions on MAC and WIN need to set different properties
-        width_in_chars  = column2Length * bool_to_number[MAC_ENV == true],
-        width_in_digits = column2Length * bool_to_number[WIN_ENV == true],
+--      width_in_chars  = column2Length * bool_to_number[MAC_ENV == true],
+        width_in_digits = column2Length, -- * bool_to_number[WIN_ENV == true],
+--      This logic obviously does not apply (any more?), since it leads to fields that are too wide on the MAC.
         height_in_lines = numLines * bool_to_number[MAC_ENV == true] + 1 * bool_to_number[WIN_ENV == true],  -- #181: numLines for MAC, 1 for WIN
       }
 
@@ -212,8 +216,8 @@ function MetadataDialog.showDialog(photo, column1, column2, column1Length, colum
       }
 
       local function pixelWidth(columnLength)
-        local PX_PER_CHAR_MAC  = 7.0  -- @TODO is this correct on MAC ??
-        local PX_PER_DIGIT_WIN = 7.0
+        local PX_PER_CHAR_MAC  = 7.7  -- empirically determined on MAC
+        local PX_PER_DIGIT_WIN = 7.0  -- measured on Windows
         local pxWidth
         if MAC_ENV then
           pxWidth = columnLength * PX_PER_CHAR_MAC

@@ -684,6 +684,7 @@ local function addInfo(title, key, props, metadata)
   end
 
   if key == metaKeyDriveMode then props[key] = Utils.wrapText(props[key], {';'}, FocusInfo.maxValueLen) end
+
   if key == metaKeyStackedImage and props[key] == "No" then
     return FocusInfo.emptyRow()
   end

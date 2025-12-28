@@ -36,6 +36,7 @@ local ExifUtils            = require 'ExifUtils'
 local FocusPointPrefs      = require 'FocusPointPrefs'
 local Log                  = require 'Log'
 local _strict              = require 'strict'
+local Utf8                 = require 'Utf8'
 local Utils                = require 'Utils'
 
 -- Public variables ------------------------------------------------------------
@@ -198,7 +199,7 @@ function FocusInfo.addRow(key, value)
   -- Truncate value string if it is too long and provide the full text in a tooltip
   local prefs = LrPrefs.prefsForPlugin( nil )
   local tooltip
-  if prefs.truncateLongText and #value > FocusInfo.maxValueLen then
+  if prefs.truncateLongText and Utf8.len(value) > FocusInfo.maxValueLen then
     if string.find(value, "\n") then
       -- do not truncate text that has already been wrapped across multiple lines.
     else
