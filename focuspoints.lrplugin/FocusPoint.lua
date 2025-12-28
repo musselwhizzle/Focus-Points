@@ -125,7 +125,7 @@ local function showFocusPoint()
     local function logAppInfo()
       -- Extend logfile header with application level information
       if FocusPointPrefs.isUpdateAvailable() then
-        Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
+        Log.logInfo("System", "Update to version " .. FocusPointPrefs.getlatestVersion() .. " available")
       end
       if WIN_ENV then
         Log.logInfo("System", "Display scaling level " ..
