@@ -84,7 +84,7 @@ local metaKeyImageStabilization          = "Image Stabilization"
 function SonyDelegates.getAfPoints(photo, metadata)
 
   -- Get orginal dimensions (in native aspect ratio)
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
 
   --[[ commented out code that uses ExifImageWidth and ExifImageHeight
   -- Exif Image dimensions may differ from original for photos taken with non-native aspect ratio

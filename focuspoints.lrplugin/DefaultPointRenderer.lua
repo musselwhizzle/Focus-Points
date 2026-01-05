@@ -129,10 +129,10 @@ end
   - originalWidth, originalHeight - original dimensions in unrotated position
   - cropWidth, cropHeight         -  cropped dimensions in unrotated position
 ------------------------------------------------------------------------------]]
-function DefaultPointRenderer.getNormalizedDimensions(photo)
+function DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
   local originalWidth, originalHeight = Utils.parseDimens(photo:getFormattedMetadata("dimensions"))
   local cropWidth, cropHeight = Utils.parseDimens(photo:getFormattedMetadata("croppedDimensions"))
-  local userRotation = getUserRotationAndMirroring(photo)
+  local userRotation = getUserRotationAndMirroring(photo, metadata)
 
   if userRotation == 90 or userRotation == -90 or originalWidth < originalHeight then
     -- In case the image has been rotated by the user in the grid view, LR inverts width and height but does NOT change cropLeft and cropTop...
@@ -194,6 +194,7 @@ end
   Remove any remnants left over from processing the current photo
 ------------------------------------------------------------------------------]]
 function DefaultPointRenderer.cleanup()
+  ExifUtils.cleanup()
   if WIN_ENV then
     MogrifyUtils.cleanup()
   end
@@ -218,8 +219,8 @@ end
 ------------------------------------------------------------------------------]]
 function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata)
 
-  local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
-  local userRotation, userMirroring = getUserRotationAndMirroring(photo)
+  local originalWidth, originalHeight,cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
+  local userRotation, userMirroring = getUserRotationAndMirroring(photo, metadata)
 
   -- We read the rotation written in the Exif just for logging as it happens that the Lightroom rotation already includes it which is pretty handy
   local exifRotation = getShotOrientation(photo, metadata)
@@ -401,6 +402,16 @@ function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata
         br  = { x = brX, y = brY },
       }
       table.insert(fpTable, { points = points, rotation = cropRotation + userRotation, userMirroring= userMirroring, template = template, useSmallIcons = useSmallIcons})
+
+      -- if any of these coordinates is negative than the focus point or parts of it are not visible
+      if point.pointType:find("^af_focus") then
+        -- only perform this check for focus points
+        FocusInfo.focusPointsInvisible =
+        FocusInfo.focusPointsInvisible or
+          tlX<0 or blX<0 or tlY<0 or trY<0 or
+          trX>photoDisplayWidth or brX >photoDisplayWidth or
+          blY>photoDisplayHeight or brY>photoDisplayHeight
+      end
     end
   end
 
@@ -502,37 +513,37 @@ end
   1. rotation in degrees in trigonometric sense
   2. horizontal mirroring (0 -> none, -1 -> yes)
 ------------------------------------------------------------------------------]]
-function getUserRotationAndMirroring(photo)
+function getUserRotationAndMirroring(photo, metadata)
   -- LR 5 throws an error even trying to access getRawMetadata("orientation")
   if (LrApplication.versionTable().major < 6) then
-    return getShotOrientation(photo, ExifUtils.readMetadataAsTable(photo)), 0
+    return getShotOrientation(photo, metadata), 0
   end
 
   local userRotation = photo:getRawMetadata("orientation")
   if not userRotation then
-  Log.logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
+    Log.logWarn("DefaultPointRenderer", "userRotation = nil, which is unexpected starting with LR6")
 
-    -- Falling back by trying to find the information with exifs.
-    -- This is not working when the user rotates or mirrors the image within lightroom
-    return getShotOrientation(photo, ExifUtils.readMetadataAsTable(photo)), 0
-  elseif userRotation == "AB" then
-    return 0, 0
-  elseif userRotation == "BC" then
-    return -90, 0
-  elseif userRotation == "CD" then
-    return 180, 0
-  elseif userRotation == "DA" then
-    return 90, 0
+      -- Falling back by trying to find the information with exifs.
+      -- This is not working when the user rotates or mirrors the image within lightroom
+      return getShotOrientation(photo, metadata), 0
+    elseif userRotation == "AB" then
+      return 0, 0
+    elseif userRotation == "BC" then
+      return -90, 0
+    elseif userRotation == "CD" then
+      return 180, 0
+    elseif userRotation == "DA" then
+      return 90, 0
 
-  -- Same with horizontal mirroring
-  elseif userRotation == "BA" then
-    return 0, -1
-  elseif userRotation == "CB" then
-    return -90, -1
-  elseif userRotation == "DC" then
-    return 180, -1
-  elseif userRotation == "AD" then
-    return 90, -1
+    -- Same with horizontal mirroring
+    elseif userRotation == "BA" then
+      return 0, -1
+    elseif userRotation == "CB" then
+      return -90, -1
+    elseif userRotation == "DC" then
+      return 180, -1
+    elseif userRotation == "AD" then
+      return 90, -1
   end
 
   Log.logWarn("DefaultPointRenderer", "We should never get there with an userRotation = " .. userRotation)

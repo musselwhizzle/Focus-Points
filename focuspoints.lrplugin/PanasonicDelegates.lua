@@ -83,7 +83,7 @@ function PanasonicDelegates.getAfPoints(photo, metadata)
     }
 
   -- Get photo dimensions for proper scaling
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
 
   local focusPoint = ExifUtils.findValue(metadata, metaKeyAfPointPosition)
   if focusPoint then

@@ -129,7 +129,7 @@ function getOMDSAfPoints(photo, metadata)
   local pointsTable = { pointTemplates = DefaultDelegates.pointTemplates, points = {} }
 
   -- Get photo dimensions for proper scaling of focus point
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
 
   local function isSubjectDetection()
   -- returns true if the photo has been captured using subject tracking
@@ -323,7 +323,7 @@ function getOlympusAfPoints(photo, metadata)
   }
 
   -- Get photo dimensions for proper scaling
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
 
   -- Look for focus point information: available on MFT and E-system models starting with E-420
   focusPoint = findValue(metadata, metaKeyAfPointSelected)
@@ -468,7 +468,7 @@ function addFaces(photo, metadata, pointsTable)
   if not pointsTable then return end
 
   -- Get photo dimensions for proper scaling of focus point
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
 
   -- Let's see if we have detected faces - need to check the tag 'Faces Detected' (format: "a b c")
   -- (a, b, c) are the numbers of detected faces in each of the 2 supported sets of face detect area

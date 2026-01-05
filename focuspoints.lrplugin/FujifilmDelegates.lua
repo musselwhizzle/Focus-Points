@@ -123,7 +123,7 @@ function FujifilmDelegates.getAfPoints(photo, metadata)
     return nil
   end
 
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
   local xScale = orgPhotoWidth / imageWidth
   local yScale = orgPhotoHeight / imageHeight
 
@@ -371,7 +371,8 @@ function FujifilmDelegates.manualFocusUsed(_photo, metadata)
   local focusMode, key = ExifUtils.findFirstMatchingValue(metadata, metaKeyFocusMode)
   Log.logInfo("Fujifilm",
     string.format("Tag '%s' found: %s", key, focusMode))
-  return (focusMode == "Manual" or focusMode == "AF-M")
+  local focusPoint = ExifUtils.findValue(metadata, metaKeyFocusPixel)
+  return (focusMode == "Manual" or focusMode == "AF-M") and not focusPoint
 end
 
 --[[----------------------------------------------------------------------------
