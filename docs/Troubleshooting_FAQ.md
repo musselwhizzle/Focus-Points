@@ -5,6 +5,7 @@
 * [No focus points recorded](#No-focus-points-recorded)
 * [Manual focus, no AF points recorded](#Manual-focus-no-AF-points-recorded)
 * [Focus info missing from file](#Focus-info-missing-from-file)
+* [Focus points outside cropped image area](#Focus-points-outside-cropped-image-area)
 * [Camera model not supported](#Camera-model-not-supported)
 * [Camera maker not supported](#Camera-maker-not-supported)
 * [No camera-specific metadata found](#No-camera-specific-metadata-found)
@@ -58,6 +59,18 @@ The log file reveals whether intact metadata is available or not by indicating w
 
 <img src="../screens/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
+
+### Focus points outside cropped image area
+
+Although focus points have been detected, they may be invisible or partially invisible if they are located outside the cropped image area.
+
+Note: This message is not triggered by face or subject detection frames, only focus points. 
+
+Cropped image (focus point outside):
+<img src="../screens/Troubleshooting 11.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+Original image with focus point:
+<img src="../screens/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 ### "Camera model not supported"
 
