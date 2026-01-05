@@ -192,7 +192,7 @@ function getK3iiiAfPoints(photo, metadata)
 
   -- Make sure imageSize dimensions are in horizontal shotOrientation and thus
   -- same as FaceDetectArea and ContrastDetectArea
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
   local imageSize = {orgPhotoWidth, orgPhotoHeight}
 
   -- Fetch afInfo from metadata and store as table
@@ -415,7 +415,7 @@ end
   -- Calculate scaling factors that are required in case the image is a JPG OOC in low resolution
   local xScale, yScale
   if #fullSizeDimens ~= 0 then  -- #TODO can be removed once all mapping files have been updated to new format!
-    local imageWidth, imageHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+    local imageWidth, imageHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
     xScale = imageWidth  / fullSizeDimens[1]
     yScale = imageHeight / fullSizeDimens[2]
   else
@@ -481,7 +481,7 @@ function getAfPointsContrast(photo, metadata)
 
   -- make sure imageSize dimensions are in horizontal shotOrientation and thus
   -- same as FaceDetectArea and ContrastDetectArea
-  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+  local orgPhotoWidth, orgPhotoHeight = DefaultPointRenderer.getNormalizedDimensions(photo,metadata)
   local imageSize = {orgPhotoWidth, orgPhotoHeight}
 
   -- ContrastDetectAFArea gives the relevant area of contrast AF, related to FaceDetectFrameSize

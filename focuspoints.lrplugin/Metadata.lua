@@ -113,7 +113,7 @@ local function showMetadata()
           Utils.openFileInApp(metadataFileName)
         else
           -- otherwise remove the temp file
-          LrFileUtils.delete(metadataFileName)
+          ExifUtils.cleanup()
         end
       end)
     end)

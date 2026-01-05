@@ -8,6 +8,8 @@ Unless stated otherwise, the latest official version (V3.1) of the [README](http
 
 If you would like to share your feedback or suggestions, please go **[here](https://github.com/musselwhizzle/Focus-Points/discussions/337)**.
 
+If you would like to share your feedback or suggestions, please go **[here](https://github.com/musselwhizzle/Focus-Points/discussions/337)**.
+
 New features introduced in V3.2: 
 
 - [Tagging (Flagging, Rating and Coloring) of photos within the pugin UI](#tagging-of-photos)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302) (not for LR5)

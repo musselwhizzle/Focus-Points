@@ -102,7 +102,8 @@ function AppleDelegates.getAfPoints(photo, metadata)
     --           the values are reversed wrt to ExifImageWidth/ExifImageHeight.
     --           "Orientation" tag is always "Horizontal (normal)"
     -- So, to determine proper scaling factors, we better fetch consistent information from Lightroom
-    local originalWidth, originalHeight, cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo)
+    local originalWidth, originalHeight,
+          cropWidth, cropHeight = DefaultPointRenderer.getNormalizedDimensions(photo, metadata)
     local xScale = cropWidth  / originalWidth
     local yScale = cropHeight / originalHeight
 

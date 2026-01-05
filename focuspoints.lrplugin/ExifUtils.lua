@@ -254,6 +254,22 @@ function ExifUtils.getBinaryValue(photo, key)
 end
 
 --[[----------------------------------------------------------------------------
+  public void
+  cleanup()
+
+  Delete the temporary file (metadata output file created by ExifTool)
+------------------------------------------------------------------------------]]
+function ExifUtils.cleanup()
+  if LrFileUtils.exists(metadataFileName) then
+    local _resultOK, errorMsg = LrFileUtils.delete( metadataFileName )
+    if errorMsg ~= nil then
+      Log.logWarn(string.format(
+        'ExifUtils', "Error deleting metadata temp file %s: %s",  metadataFileName, errorMsg))
+    end
+  end
+end
+
+--[[----------------------------------------------------------------------------
   public boolean
   decodeXmpMWGRegions(table pointsTable, table metadata)
 

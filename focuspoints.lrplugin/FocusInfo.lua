@@ -47,6 +47,7 @@ FocusInfo.cameraModelSupported      = false
 FocusInfo.makerNotesFound           = false
 FocusInfo.manualFocusUsed           = false
 FocusInfo.focusPointsDetected       = false
+FocusInfo.focusPointsNotVisible     = false
 FocusInfo.severeErrorEncountered    = false
 
 FocusInfo.msgImageFileNotOoc        = "Image file not created in-camera"
@@ -59,19 +60,24 @@ FocusInfo.maxValueLen               = LrPrefs.prefsForPlugin(nil).truncateLimit
 
 -- Data structure to handle display of the focus point display status
 local statusFocusPointsDetected     =   1
-local statusNoFocusPointsRecorded   =   2
-local statusManualFocusUsed         =   3
-local statusMakerNotesNotFound      =   4
-local statusModelNotSupported       =   5
-local statusMakerNotSupported       =   6
-local statusMissingMetadata         =   7
-local statusSevereErrorEncountered  =   8
+local statusFocusPointsNotVisible   =   2
+local statusNoFocusPointsRecorded   =   3
+local statusManualFocusUsed         =   4
+local statusMakerNotesNotFound      =   5
+local statusModelNotSupported       =   6
+local statusMakerNotSupported       =   7
+local statusMissingMetadata         =   8
+local statusSevereErrorEncountered  =   9
 local statusUndefined               = 255
 local status = {
     {  message = "Focus points detected",
        color   = LrColor(0, 0.66, 0),
        tooltip = "Metadata information about focus points is found and visualized." ,
        link    = "" },
+    {  message = "Focus points outside cropped image area",
+       color   = LrColor("orange"),
+       tooltip = "Focus points detected but not all of them can be displayed in cropped image" ,
+       link    = "#Focus-points-outside-cropped-image-area" },
     {  message = "No focus points recorded",
        color   = LrColor("orange"),
        tooltip = "Camera has not recorded information on points in focus." ,
@@ -130,6 +136,7 @@ local utfEllipsis   = string.char(0xE2, 0x80, 0xA6)
 ------------------------------------------------------------------------------]]
 function FocusInfo.initialize()
   FocusInfo.focusPointsDetected    = false
+  FocusInfo.focusPointsInvisible   = false
   FocusInfo.severeErrorEncountered = false
   FocusInfo.cropMode               = false
 end
@@ -247,6 +254,7 @@ local function getStatusCode()
   elseif not FocusInfo.cameraMakerSupported   then statusCode = statusMakerNotSupported
   elseif not FocusInfo.cameraModelSupported   then statusCode = statusModelNotSupported
   elseif not FocusInfo.makerNotesFound        then statusCode = statusMakerNotesNotFound
+  elseif     FocusInfo.focusPointsInvisible   then statusCode = statusFocusPointsNotVisible
   elseif     FocusInfo.focusPointsDetected    then statusCode = statusFocusPointsDetected
   elseif     FocusInfo.manualFocusUsed        then statusCode = statusManualFocusUsed
   else                                             statusCode = statusNoFocusPointsRecorded
