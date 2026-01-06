@@ -240,10 +240,9 @@ function Log.sysInfo()
     osName = "macOS "
   end
   Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getLogFileName())
-  Log.logInfo("System", string.format(
-          "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
-            GlobalDefs.pluginVersion, LrApplication.versionTable().major, LrApplication.versionTable().minor,
-            osName, LrSystemInfo.osVersion()))
+  Log.logInfo("System", string.format("Running plugin version %s in Lightroom Classic %s.%s on %s%s",
+    GlobalDefs.pluginDetailedVersion, LrApplication.versionTable().major, LrApplication.versionTable().minor,
+    osName, LrSystemInfo.osVersion()))
   if prefs.keyboardLayout then
     Log.logInfo(
       "System",
