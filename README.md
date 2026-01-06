@@ -1,6 +1,6 @@
 # Focus Points – V3.2 Prerelease
 
-### Current version: [V3.2 PRE 5 updated Januar, 6, 2026](https://github.com/musselwhizzle/Focus-Points/releases/tag/v3.2_pre5)
+### Current version: [V3.2 PRE 5 updated January, 6, 2026](https://github.com/musselwhizzle/Focus-Points/releases/tag/v3.2_pre5)
 
 This document describes the new features and changes in V3.2.<br>
 
