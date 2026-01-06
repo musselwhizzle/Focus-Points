@@ -729,7 +729,7 @@ local function showFocusPoint()
 
         local f = LrView.osFactory()
         userResponse = LrDialogs.presentModalDialog {
-          title = "Focus-Points (Version " .. GlobalDefs.pluginVersion .. ")",
+          title = "Focus-Points (Version " .. GlobalDefs.pluginDisplayVersion .. ")",
           contents = FocusPointDialog.createDialog(targetPhoto, photoView, infoView, kbdShortcutInput()),
           accessoryView = f:row {
             margin_left = 0,
