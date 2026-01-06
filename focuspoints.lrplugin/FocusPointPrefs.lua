@@ -119,7 +119,7 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.focusBoxSize            then	prefs.focusBoxSize        = FocusPointPrefs.focusBoxSize[FocusPointPrefs.initfocusBoxSize] end
   if not prefs.focusBoxColor           then	prefs.focusBoxColor       = "red"    end
   if     prefs.taggingControls  == nil then prefs.taggingControls     = true     end
-  if     prefs.keyboardLayout   == nil then prefs.keyboardLayout        = KeyboardLayout.autoDetectLayout end
+  if     prefs.keyboardLayout   == nil then prefs.keyboardLayout      = KeyboardLayout.autoDetectLayout end
   if not prefs.processMfInfo    == nil then prefs.processMfInfo       = false    end
   if not prefs.loggingLevel            then	prefs.loggingLevel        = "AUTO"   end
   if not prefs.latestVersion           then	prefs.latestVersion       = _PLUGIN.version end

@@ -120,9 +120,13 @@ local metaKeyFocalLength            = "focalLength"
 local metaKeyFocalLength35mm        = "focalLength35mm"
 local metaKeyExposure               = "exposure"
 local metaKeyIsoSpeedRating         = "isoSpeedRating"
-local metaKeyExposureBias           = "exposureBias"
-local metaKeyExposureProgram        = "exposureProgram"
-local metaKeyMeteringMode           = "meteringMode"
+
+-- Keywords for retrieving language-dependent items from English EXIF metadata
+local metaKeyExposureBias           = "Exposure Compensation"
+local metaKeyExposureProgram        = "Exposure Program"
+local metaKeyMeteringMode           = "Metering Mode"
+local metaKeyExposureTime           = "Exposure Time"
+local metaKeyFNumber                = "F Number"
 
 -- @TODO Bring together all the special symbols used by the plugin in one central place!
 local utfLinkSymbol = string.char(0xF0, 0x9F, 0x94, 0x97)
@@ -438,20 +442,40 @@ end
   - Create an entry for 'key' in the property table bound to the dialog view container
   - Compose row, with "[Title]:" on the left, following "props[key]" right aligned
 ------------------------------------------------------------------------------]]
-local function addInfo(title, key, photo, props)
+local function addInfo(title, key, photo, props, metadata)
 
-  -- Helper function to create the
-  local function populateInfo(key, props)
-    local result = photo:getFormattedMetadata(key)
-    if (result ~= nil) then
-      props[key] = result
+  -- Helper function to create and populate the property corresponding to metadata key
+  local function populateInfo(key, props, metadata)
+    local value
+
+    -- Retrieve the value corresponding to 'key'
+    if metadata then
+      -- 'metadata' has been passed as a parameter -> 'key' refers to an EXIF tag
+      if key == metaKeyExposure then
+        -- special handling for compound exposure string
+        local exposureTime = ExifUtils.findValue(metadata, metaKeyExposureTime)
+        local fNumber      = ExifUtils.findValue(metadata, metaKeyFNumber)
+        value = string.format("%s sec at ƒ / %s", exposureTime, fNumber)
+      elseif key == metaKeyExposureBias then
+        value = ExifUtils.findValue(metadata, key) .. " EV"
+      else
+        value = ExifUtils.findValue(metadata, key)
+      end
+    else
+      -- 'metadata' has not been passed as a parameter -> 'key' refers to Lightroom metadata
+      value = photo:getFormattedMetadata(key)
+    end
+
+    -- Populate the property
+    if (value ~= nil) then
+      props[key] = value
     else
       props[key] = ExifUtils.metaValueNA
     end
   end
 
   -- Populate property with designated value
-  populateInfo(key, props)
+  populateInfo(key, props, metadata)
 
   -- Check if there is (meaningful) content to add
   if not props[key] or props[key] == ExifUtils.metaValueNA then
@@ -476,6 +500,7 @@ end
 ------------------------------------------------------------------------------]]
 function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, funcGetShootingInfo, funcGetFocusInfo)
   local f = LrView.osFactory()
+  local prefs = LrPrefs.prefsForPlugin( nil )
 
   local makerImageInfo    = getMakerInfo(photo, props, metadata, funcGetImageInfo)
   local makerShootingInfo = getMakerInfo(photo, props, metadata, funcGetShootingInfo)
@@ -483,7 +508,8 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
 
   -- For manually focused images there will be only a summary message
   local statusCode = getStatusCode()
-  if statusCode >= statusManualFocusUsed then
+  if statusCode >  statusManualFocusUsed
+  or statusCode == statusManualFocusUsed and not prefs.processMfInfo then
     makerFocusInfo = f:column {
       fill = 1,
       spacing = 2,
@@ -496,7 +522,7 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
       statusMessage(statusCode),
       makerFocusInfo,
     }
-  end
+   end
 
   local infoView = f:column{ fill_vertical = 1,
 
@@ -518,11 +544,11 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
                   addInfo("Lens"                   , metaKeyLens               , photo, props),
                   addInfo("Focal Length"           , metaKeyFocalLength        , photo, props),
                   addInfo("FL Equivalent Crop Mode", metaKeyFocalLength35mm    , photo, props),
-                  addInfo("Exposure"               , metaKeyExposure           , photo, props),
+                  addInfo("Exposure"               , metaKeyExposure           , photo, props, metadata),
                   addInfo("ISO"                    , metaKeyIsoSpeedRating     , photo, props),
-                  addInfo("Exposure Bias"          , metaKeyExposureBias       , photo, props),
-                  addInfo("Exposure Program"       , metaKeyExposureProgram    , photo, props),
-                  addInfo("Metering Mode"          , metaKeyMeteringMode       , photo, props),
+                  addInfo("Exposure Bias"          , metaKeyExposureBias       , photo, props, metadata),
+                  addInfo("Exposure Program"       , metaKeyExposureProgram    , photo, props, metadata),
+                  addInfo("Metering Mode"          , metaKeyMeteringMode       , photo, props, metadata),
                   makerShootingInfo
              },
           },

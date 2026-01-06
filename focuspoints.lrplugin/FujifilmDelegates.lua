@@ -371,8 +371,7 @@ function FujifilmDelegates.manualFocusUsed(_photo, metadata)
   local focusMode, key = ExifUtils.findFirstMatchingValue(metadata, metaKeyFocusMode)
   Log.logInfo("Fujifilm",
     string.format("Tag '%s' found: %s", key, focusMode))
-  local focusPoint = ExifUtils.findValue(metadata, metaKeyFocusPixel)
-  return (focusMode == "Manual" or focusMode == "AF-M") and not focusPoint
+  return (focusMode == "Manual" or focusMode == "AF-M")
 end
 
 --[[----------------------------------------------------------------------------

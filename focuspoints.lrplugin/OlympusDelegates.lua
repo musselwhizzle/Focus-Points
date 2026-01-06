@@ -731,6 +731,9 @@ local function addInfo(title, key, props, metadata)
         addInfo("CAF Sensitivity",  metaKeyCafSensitivity, props, metadata),
         addInfo("AF Search",        metaKeyAfSearch,       props, metadata),
       }
+    else
+      -- add row as composed
+      return result
     end
 
   else
