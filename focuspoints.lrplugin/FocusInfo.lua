@@ -455,9 +455,14 @@ local function addInfo(title, key, photo, props, metadata)
         -- special handling for compound exposure string
         local exposureTime = ExifUtils.findValue(metadata, metaKeyExposureTime)
         local fNumber      = ExifUtils.findValue(metadata, metaKeyFNumber)
-        value = string.format("%s sec at ƒ / %s", exposureTime, fNumber)
+        if exposureTime and fNumber then
+          value = string.format("%s sec at ƒ / %s", exposureTime, fNumber)
+        end
       elseif key == metaKeyExposureBias then
-        value = ExifUtils.findValue(metadata, key) .. " EV"
+        value = ExifUtils.findValue(metadata, key)
+        if value then
+          value = value .. " EV"
+        end
       else
         value = ExifUtils.findValue(metadata, key)
       end

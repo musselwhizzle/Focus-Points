@@ -39,6 +39,8 @@ GlobalDefs.appWidth, GlobalDefs.appHeight = LrSystemInfo.appWindowSize()
 GlobalDefs.DEBUG = _PLUGIN.path:sub (-12) == ".lrdevplugin"
 
 -- Version number of this plugin
-GlobalDefs.pluginVersion = Info.VERSION.display
+GlobalDefs.pluginDisplayVersion  = Info.VERSION.display
+GlobalDefs.pluginDetailedVersion = string.format("%s.%s.%s.%s",
+  Info.VERSION.major, Info.VERSION.minor, Info.VERSION.revision, Info.VERSION.build)
 
 return GlobalDefs -- ok
