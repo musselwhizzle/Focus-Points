@@ -353,7 +353,7 @@ function SonyDelegates.modelSupported(model)
     return not arrayKeyOf({"1", "10", "100", "100m2", "100m3"}, modelID)
   elseif series == "ilce-" then
     -- Alpha supported with α6100, α7 III / α7R III  and later models
-    return not arrayKeyOf({"6000", "7", "7m2", "7r", "7rm2"}, modelID)
+    return not arrayKeyOf({"6000", "7", "7m2", "7r", "7s"}, modelID)
   end
   return true
 end
