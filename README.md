@@ -1,4 +1,4 @@
-# Focus Points – [V3.2 Prerelease availabe!](https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prerelease)
+# Focus Points – [V3.2 Pre-release availabe!](https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prerelease)
 
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
 - Show which focus point was active when the picture was taken <sup>2</sup>
