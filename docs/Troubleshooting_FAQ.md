@@ -86,7 +86,7 @@ Cropped image (focus point outside):
 Original image with focus point:
 <img src="../screens/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-<a id="camera-model-not-supported"></a>
+<a id="cameramodelnotsupported"></a>
 ### "Camera model not supported"
 
 The selected photo was taken by a camera that the plugin cannot handle.
@@ -115,7 +115,7 @@ Clearly, the plugin is unable to perform any actions on this photo other than di
 
 <img src="../screens/Troubleshooting 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-<a id="Severe-error-encountered"></a>
+<a id="severe-error-encountered"></a>
 ### "Severe error encountered"
 
 This message is displayed when something serious and unexpected happens during the process of reading focus information from the metadata, processing it, and displaying the visualization elements.
