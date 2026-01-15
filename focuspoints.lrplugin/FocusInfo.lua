@@ -91,7 +91,7 @@ local status = {
        color   = LrColor("orange"),
        tooltip = "The photo was taken in manual focus mode and focus point information was recorded in the metadata. " ..
                  "Attention: the displayed focus point may differ from the point in the image that is actually sharpest!",
-       link    = "#Manual-focus-focus-points-recorded" },
+       link    = "#Focus-point-recorded-in-manual-focus-mode" },
     {  message = "Manual focus, no AF points recorded",
        color   = LrColor("orange"),
        tooltip = "The photo was taken with manual focus (MF), there is no autofocus (AF) information in the metadata.",
