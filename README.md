@@ -8,7 +8,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 - Display and search (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
-<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](../README.md#supported-cameras).<br>
+<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](#supported-cameras).<br>
 <sup>3</sup> Depending on the presence of metadata.<br> 
 <sup>4</sup> Currently supported for Pentax and OM System.<br> 
 <sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br> 
@@ -60,12 +60,6 @@ If you have any questions, comments or suggestions for improving this plugin, pl
   * Includes ExifTool 13.45 (Dec 26, 2025)
 
 See [README V3.2](https://github.com/musselwhizzle/Focus-Points/blob/master/docs/README_V3.2.md) for an overview of the new features.<br>
-
-**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.2.zip)** or see detailed **[installation instructions](https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md#21-installation)**.
-
-
-* **Supported cameras:**
-[See here for full list](#supported-cameras).
 
 <br>
 
