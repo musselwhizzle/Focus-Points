@@ -276,12 +276,11 @@ The tag `CameraSettingsVersion` has not been found which means that this file do
 
 ### Navigation Controls
 
-In V3.2 you no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos.<br> 
-The plugin now supports next and previous function when run on a single image (the current one). `Next image` will advance to the next photo in the filmstrip, and `Previous image` will advance to the previous photo in the filmstrip. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
+In V3.2, you no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. The plugin now supports next and previous function when run on a single image (the current one in Lightroom filmstrip). `Next image` will advance to the next photo in the _filmstrip_, and `Previous image` will advance to the previous photo in the _filmstrip_. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
 
-Running the plugin on a selection of multiple photos is still possible.
+To run the plugin on a specific series of photos, select those photos in Lightroom _before_ running the plugin.
 
-<u>Note</u>: Filmstrip navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
+<u>Note</u>: _Filmstrip_ navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
 
 
 ### Flagging Controls
