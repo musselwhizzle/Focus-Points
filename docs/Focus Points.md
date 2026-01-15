@@ -303,7 +303,7 @@ The keyboard layout in use can be configured in the plugin preferences, under th
   
 - The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
 
-- The display of tagging controls and related keyboard shortcut operation can be disabled in the plugin settings, under section `User Interface`.
+- The display of tagging controls and related keyboard shortcut operation can be disabled in the plugin preferences, under section `User Interface`.
 
 - Note: Tagging features use the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, these features is not available on LR5.7 (which is still in use by a few plugin users!).
 
@@ -361,7 +361,7 @@ n V3.1, the text input field for keyboard shortcuts was invisible. The user coul
 
 To make this procedure more transparent and intuitive, the text input field is now visible by default.
 
-You can configure the size of the text input field, including the labelling, in the [plugin settings](#text-input-field-for-keyboard shortcuts).
+You can configure the size of the text input field, including the labelling, in the [plugin preferences](#text-input-field-for-keyboard shortcuts).
 
 <br>
 
@@ -466,7 +466,7 @@ Depending on the camera maker and model, focus points may have a dimension (widt
 
 ### Logging
 
-Default setting: `Auto`
+**_Level of information to be logged_**. Default setting: `Auto`
 
 The logging feature serves two purposes:
 1. Gather information to explain why focus points are not displayed
