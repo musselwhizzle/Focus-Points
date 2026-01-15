@@ -52,8 +52,8 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 - Show which focus point was active when the picture was taken <sup>2</sup>
 - Display user-selected autofocus points/area <sup>3,4</sup>
 - Visualize faces and subjects detected by the camera <sup>3,5</sup>
-- Tagging (Flagging, Rating and Coloring) of photos within the plugin UI <sup>6</sup>
-- Display (EXIF) metadata of the selected image 
+- Tagging (flagging, rating and coloring) of photos within the plugin UI <sup>6</sup>
+- Display and search (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
 <sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](../README.md#supported-cameras).<br>
@@ -62,14 +62,15 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 <sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br> 
 <sup>6</sup> Not for LR5.<br>
 
-To understand the principles of this plugin, how to use it and how to interpret the results, it is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
+To understand the principles of this plugin, how to use it and how to interpret the results, **it is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
 <br>
 <br>
 
 <big>**Principle of operation**</big>
 <br>
 
-The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera to each JPG or RAW file.<br>The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera to each JPG or RAW file.<br>
+The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
 
 <u>Note:</u> ExifTool is part of the plugin package and does not need to be installed separately.
 
@@ -120,9 +121,10 @@ Important: Copying the downloaded files over those in the existing folder is not
 
 
 5. Move the downloaded plugin folder `focuspoints.lrplugin` to the folder where you keep your Lightroom plugins.<br> 
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br><br>
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.
 
-4. Open Lightroom and go to `File → Plug-in Manager`.<br>
+
+6. Open Lightroom and go to `File → Plug-in Manager`.<br>
 **New installation**:<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
 _MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br>
@@ -138,6 +140,7 @@ See [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-sh
 
 If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
 
+<br>
 
 ### 2.2 Focus Point Viewer
 Once the plugin is installed, you can run it with one or more photos selected<sup>1</sup>:
