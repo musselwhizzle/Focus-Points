@@ -249,7 +249,7 @@ The first line of text in the `Focus Information` section contains a message sum
 | Warning | [Focus point recorded in manual focus mode](./Troubleshooting_FAQ.md#focus-point-recorded-in-manual-focus-mode) |
 | Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#manual-focus-no-AF-points-recorded)                |
 |  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#focus-info-missing-from-file)                             |
-|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#cameramodelnotsupported)                                 |
+|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#camera-model-not-supported)                                 |
 |  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#camera-maker-not-supported)                                 |
 |  Error  | [No camera-specific metadata found](Troubleshooting_FAQ.md#no-camera-specific-metadata-found)                   |
 |  Error  | [Severe error encountered](Troubleshooting_FAQ.md#severe-error-encountered)                                     |
