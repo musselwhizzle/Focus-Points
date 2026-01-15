@@ -420,7 +420,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           items = KeyboardLayout.buildDropdownItems(),
         },
         f:static_text {
-          title = 'Keyboard layout. Required to process shortcuts 0..9 for rating and coloring'
+            title = 'Keyboard layout. Required to process shortcuts 0..9 for rating and coloring'
         },
       }
     end

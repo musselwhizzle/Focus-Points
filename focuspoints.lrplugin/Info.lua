@@ -49,7 +49,7 @@ return {
     },
   },
 
-	VERSION = { major=3, minor=2, revision=0, build=9061, display="3.2 PRE 6" },
+	VERSION = { major=3, minor=2, revision=0, build=1, display="3.2" },
 
   LrPluginInfoProvider = 'FocusPointsInfoProvider.lua',
 
