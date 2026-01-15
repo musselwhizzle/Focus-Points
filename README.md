@@ -97,7 +97,7 @@ Once the plugin has been installed, choose one or more photos and select:
 * `Library → Plug-in Extras → Show Focus Point`, or  
 * `File → Plug-in Extras → Show Focus Point`
 
-See [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
+See [How to use a keyboard shortcut to run the plugin](docs/Focus%20Points.md#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
 
 If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
 
@@ -105,7 +105,7 @@ If you have never used Lightroom plugins before and are looking for some basic i
 ## Supported AF Points
 
 
-The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in [User Interface](docs/Focus%20Points.md#user-interface).
+The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in the [User Manual](docs/Focus%20Points.md#photo-view).
 
 |                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                               |
 |:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
@@ -116,8 +116,8 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 |       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |  
 |       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md#22-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#24-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md#24-configuration-and-settings).<br>
 <sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](docs/Focus%20Points.md) for a detailed explanation.
 
 
