@@ -1,8 +1,6 @@
 # Focus Points V3.2 
 
-This document describes the new features and changes in V3.2.<br>
-
-New features introduced in V3.2: 
+This document summarizes the new features and changes in V3.2:
 
 - [Tagging (Flagging, Rating and Coloring) of photos within the plugin UI](#tagging-of-photos)&nbsp;&nbsp;[#302](https://github.com/musselwhizzle/Focus-Points/issues/302) (not for LR5)
 - [Filmstrip Navigation](#filmstrip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314) (not for LR5)
