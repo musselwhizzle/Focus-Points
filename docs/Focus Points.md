@@ -420,7 +420,7 @@ The drawing routines used on Windows are not aware of any display scale factor t
 
 This section is new in version 3.2. It contains several settings that can be used to customize the appearance and functionality of the plugin's user interface. 
 
-**_Size of plugin window_**. Default setting: `L`
+**_Size of plugin window_**. Default setting: `L`<br>
 <a id="size-of-plugin-window"></a>
 This setting allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. 
 
