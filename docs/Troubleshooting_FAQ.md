@@ -2,15 +2,15 @@
 
 ## Focus Points Viewer ##
 
-* [No focus points recorded](#No-focus-points-recorded)
-* [Manual focus, no AF points recorded](#Manual-focus-no-AF-points-recorded)
-* [Focus point recorded in manual focus mode](#Focus-point-recorded-in-manual-focus-mode)
-* [Focus info missing from file](#Focus-info-missing-from-file)
-* [Focus points outside cropped image area](#Focus-points-outside-cropped-image-area)
-* [Camera model not supported](#Camera-model-not-supported)
-* [Camera maker not supported](#Camera-maker-not-supported)
-* [No camera-specific metadata found](#No-camera-specific-metadata-found)
-* [Severe error encountered](#Severe-error-encountered)
+* [No focus points recorded](#no-focus-points-recorded)
+* [Manual focus, no AF points recorded](#manual-focus-no-AF-points-recorded)
+* [Focus point recorded in manual focus mode](#focus-point-recorded-in-manual-focus-mode)
+* [Focus info missing from file](#focus-info-missing-from-file)
+* [Focus points outside cropped image area](#focus-points-outside-cropped-image-area)
+* [Camera model not supported](#camera-model-not-supported)
+* [Camera maker not supported](#camera-maker-not-supported)
+* [No camera-specific metadata found](#no-camera-specific-metadata-found)
+* [Severe error encountered](#severe-error-encountered)
 
 ## General
 
@@ -35,7 +35,7 @@ Log file:
 <img src="../screens/Troubleshooting 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
-### Manual focus, no AF points recorded
+### "Manual focus, no AF points recorded"
 This is a special but very typical case of "No focus points recorded". The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.
 
 <img src="../screens/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
