@@ -35,7 +35,7 @@ Log file:
 <img src="../screens/Troubleshooting 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
-### "Manual focus, no AF points recorded"
+### Manual focus, no AF points recorded
 This is a special but very typical case of "No focus points recorded". The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.
 
 <img src="../screens/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
