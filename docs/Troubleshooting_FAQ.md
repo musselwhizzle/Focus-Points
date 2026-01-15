@@ -19,6 +19,7 @@
 
 ## Focus Points Viewer
 
+<a id="No focus points recorded"></a>
 ### "No focus points recorded"
 The camera was set to use autofocus (AF) but did not focus when the image was captured. Information about "in focus" AF points is not available in the metadata; it was not recorded by the camera.
 
@@ -34,13 +35,14 @@ Log file:
 
 <img src="../screens/Troubleshooting 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-
+<a id="manual-focus-no-af-points-recorded"></a>
 ### "Manual focus, no AF points recorded"
 This is a special but very typical case of "No focus points recorded". The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.
 
 <img src="../screens/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
+<a id="focus-point-recorded-in-manual-focus-mode"></a>
 ### "Focus point recorded in manual focus mode"
 
 Fujifilm cameras store focus information when using the manual focus mode (AF-M). 
@@ -51,7 +53,7 @@ When the photographer uses the selected focus area to focus the image and this a
 
 In manual focus mode, you need to recall the circumstances in which the image was captured in order to make sense of the focus point information.
 
-
+<a id="focus-info-missing-from-file"></a>
 ### "Focus info missing from file"
 
 The selected photo lacks the metadata needed to process and visualize focus information. This error message typically occurs when you try to view focus points for an image that was processed outside of Lightroom (for example, in Photoshop).
@@ -71,7 +73,7 @@ The log file reveals whether intact metadata is available or not by indicating w
 
 <img src="../screens/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-
+<a id="focus-points-outside-cropped-image-area"></a>
 ### Focus points outside cropped image area
 
 Although focus points have been detected, they may be invisible or partially invisible if they are located outside the cropped image area.
@@ -84,6 +86,7 @@ Cropped image (focus point outside):
 Original image with focus point:
 <img src="../screens/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
+<a id="camera-model-not-supported"></a>
 ### "Camera model not supported"
 
 The selected photo was taken by a camera that the plugin cannot handle.
@@ -94,7 +97,7 @@ Example for the original Canon 1D from 2001:
 
 <img src="../screens/Troubleshooting 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-
+<a id="camera-maker-not-supported"></a>
 ### "Camera maker not supported"
 
 The selected photo was taken with a camera from a manufacturer that the plugin cannot handle.
@@ -103,7 +106,7 @@ While it is not difficult to add at least basic support for a camera brand, this
 
 <img src="../screens/Troubleshooting 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-
+<a id="no-camera-specific-metadata-found"></a>
 ### "No camera-specific metadata found"
 
 The selected photo does not include information about the camera used. The make and model of the camera are both unknown, as is usually the case when an image file is exported from Lightroom (or any other program) without metadata. 
@@ -112,7 +115,7 @@ Clearly, the plugin is unable to perform any actions on this photo other than di
 
 <img src="../screens/Troubleshooting 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
-
+<a id="Severe-error-encountered"></a>
 ### "Severe error encountered"
 
 This message is displayed when something serious and unexpected happens during the process of reading focus information from the metadata, processing it, and displaying the visualization elements.
