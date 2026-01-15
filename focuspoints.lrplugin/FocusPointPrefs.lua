@@ -66,19 +66,19 @@ FocusPointPrefs.kbdInputSmall      = 1
 FocusPointPrefs.kbdInputRegular    = 2
 
 -- URL to handle Update mechanism
-FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prelease"
+FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 
-FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/v3.2_pre/focuspoints.lrplugin/Version.txt"
+FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
 -- URL definitions
-FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
 FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/v3.2_pre/docs/Focus%20Points.md"
-FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
+FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
 FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/v3.2_pre/docs/Troubleshooting_FAQ.md"
-FocusPointPrefs.urlkbdShortcuts    = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md#keyboard-shortcuts"
+FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
 FocusPointPrefs.urlkbdShortcuts    = "https://github.com/musselwhizzle/Focus-Points/blob/v3.2_pre/docs/Focus%20Points.md#keyboard-shortcuts"
+FocusPointPrefs.urlkbdShortcuts    = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md#keyboard-shortcuts"
 FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
 FocusPointPrefs.urlKofi            = "https://ko-fi.com/focuspoints"
 
