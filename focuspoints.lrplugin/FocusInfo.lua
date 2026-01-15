@@ -59,15 +59,20 @@ FocusInfo.maxValueLen               = LrPrefs.prefsForPlugin(nil).truncateLimit
 -- Local variables -------------------------------------------------------------
 
 -- Data structure to handle display of the focus point display status
+
+-- Success and Warning codes
 local statusFocusPointsDetected     =   1
 local statusFocusPointsNotVisible   =   2
 local statusNoFocusPointsRecorded   =   3
-local statusManualFocusUsed         =   4
-local statusMakerNotesNotFound      =   5
-local statusModelNotSupported       =   6
-local statusMakerNotSupported       =   7
-local statusMissingMetadata         =   8
-local statusSevereErrorEncountered  =   9
+local statusMfFocusPointsRecorded   =   4
+local statusManualFocusUsed         =   5
+-- Error codes (there will be only a summary message no details in Focus Information)
+local statusError                   =   6
+local statusMakerNotesNotFound      =   6
+local statusModelNotSupported       =   7
+local statusMakerNotSupported       =   8
+local statusMissingMetadata         =   9
+local statusSevereErrorEncountered  =  10
 local statusUndefined               = 255
 local status = {
     {  message = "Focus points detected",
@@ -82,9 +87,14 @@ local status = {
        color   = LrColor("orange"),
        tooltip = "Camera has not recorded information on points in focus." ,
        link    = "#No-focus-points-recorded" },
+    {  message = "Focus point recorded in manual focus mode",
+       color   = LrColor("orange"),
+       tooltip = "The photo was taken in manual focus mode and focus point information was recorded in the metadata. " ..
+                 "Attention: the displayed focus point may differ from the point in the image that is actually sharpest!",
+       link    = "#Manual-focus-focus-points-recorded" },
     {  message = "Manual focus, no AF points recorded",
        color   = LrColor("orange"),
-       tooltip = "The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.",
+       tooltip = "The photo was taken with manual focus (MF), there is no autofocus (AF) information in the metadata.",
        link    = "#Manual-focus-no-AF-points-recorded" },
     {  message = "Focus info missing from file",
        tooltip = "The photo lacks the metadata needed to process and visualize focus information." ,
@@ -259,6 +269,8 @@ local function getStatusCode()
   elseif not FocusInfo.cameraModelSupported   then statusCode = statusModelNotSupported
   elseif not FocusInfo.makerNotesFound        then statusCode = statusMakerNotesNotFound
   elseif     FocusInfo.focusPointsInvisible   then statusCode = statusFocusPointsNotVisible
+  elseif     FocusInfo.focusPointsDetected
+         and FocusInfo.manualFocusUsed        then statusCode = statusMfFocusPointsRecorded
   elseif     FocusInfo.focusPointsDetected    then statusCode = statusFocusPointsDetected
   elseif     FocusInfo.manualFocusUsed        then statusCode = statusManualFocusUsed
   else                                             statusCode = statusNoFocusPointsRecorded
@@ -511,10 +523,9 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
   local makerShootingInfo = getMakerInfo(photo, props, metadata, funcGetShootingInfo)
   local makerFocusInfo    = getMakerInfo(photo, props, metadata, funcGetFocusInfo)
 
-  -- For manually focused images there will be only a summary message
+  -- For errors there will be only a summary message, no focus information details
   local statusCode = getStatusCode()
-  if statusCode >  statusManualFocusUsed
-  or statusCode == statusManualFocusUsed and not prefs.processMfInfo then
+  if statusCode >= statusError then
     makerFocusInfo = f:column {
       fill = 1,
       spacing = 2,
@@ -527,7 +538,7 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
       statusMessage(statusCode),
       makerFocusInfo,
     }
-   end
+  end
 
   local infoView = f:column{ fill_vertical = 1,
 

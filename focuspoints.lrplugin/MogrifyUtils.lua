@@ -316,7 +316,7 @@ function MogrifyUtils.cleanup()
   if LrFileUtils.exists(imageFileName) then
     local _resultOK, errorMsg = LrFileUtils.delete( imageFileName )
     if errorMsg ~= nil then
-      Log.logWarn('Mogrify', "Error deleting mogrify temp file " .. imageFileName .. ": " .. errorMsg)
+      Log.logWarn('Mogrify', "Unable to delete Mogrify temp file " .. imageFileName .. ": " .. errorMsg)
     end
   end
 end

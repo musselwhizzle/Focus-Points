@@ -227,14 +227,13 @@ end
 ------------------------------------------------------------------------------]]
 function KeyboardLayout.mapTypedCharToDigit(char, layoutId)
 
-  local errorMsg =
-    "Keyboard layout not specified",
-    "This is required for proper handling of shifted '0'-'9' keystrokes.\n\n" ..
-    "Go to Plug-in Manager > Plugin Settings > User Interface to set your keyboard layout!"
+  local errorMsg  = "Keyboard layout not specified"
+  local errorInfo = "This is required for proper handling of shifted '0'-'9' keystrokes.\n\n" ..
+                    "Go to Plug-in Manager > Plugin Settings > User Interface to set your keyboard layout!"
 
   if not layoutId then
     -- user has not chosen keyboard layout yet in plugin settings
-    LrDialogs.message(errorMsg)
+    LrDialogs.message(errorMsg, errorInfo)
     return nil, nil
   end
 

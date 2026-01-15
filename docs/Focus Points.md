@@ -10,13 +10,11 @@ Focus Points Plugin for Lightroom Classic
 ### [Overview and Basic Operation](#2-overview-and-basic-operation)
 
 *  [Installation](#21-installation)
-*  [Configuration and Settings](#22-configuration-and-settings)
-   - [Screen Scaling](#screen-scaling), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check) 
-
-*  [Focus Point Viewer](#23-focus-point-viewer)<br>
-   - [User Interface](#user-interface), [Information Section](#information-section), [User Messages](#user-messages), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
-*  [Metadata Viewer](#24-metadata-viewer)
-
+*  [Focus Point Viewer](#22-focus-point-viewer)<br>
+   - [User Interface](#user-interface), [User Messages](#user-messages), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
+*  [Metadata Viewer](#23-metadata-viewer)
+*  [Configuration and Settings](#24-configuration-and-settings)
+   - [Screen Scaling](#screen-scaling), [User Interface](#user-interface-settings), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check)
 
 ### [Display of Focus Points](#3-display-of-focus-points)
 
@@ -40,35 +38,38 @@ Focus Points Plugin for Lightroom Classic
 
 * [Apple](#310-apple)
 
-### [Appendix](#appendix)
+### [Special Topics](#4-special-topics)
 
 * [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin)
 
 ___
 
 
-## 1. Scope and Limitations
+# 1. Scope and Limitations
 
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
 - Show which focus point was active when the picture was taken <sup>2</sup>
 - Display user-selected autofocus points/area <sup>3,4</sup>
-- Visualize faces and subjects detected by the camera <sup>3,5</sup> 
-- Display (EXIF) metadata of the selected image 
+- Visualize faces and subjects detected by the camera <sup>3,5</sup>
+- Tagging (flagging, rating and coloring) of photos within the plugin UI <sup>6</sup>
+- Display and search (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
 <sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](../README.md#supported-cameras).<br>
-<sup>3</sup> Depending on the presence of metadata. 
-<sup>4</sup> Currently supported for Pentax and OM System.      
-<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
+<sup>3</sup> Depending on the presence of metadata.<br> 
+<sup>4</sup> Currently supported for Pentax and OM System.<br> 
+<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br> 
+<sup>6</sup> Not for LR5.<br>
 
-To understand the principles of this plugin, how to use it and how to interpret the results, it is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
+To understand the principles of this plugin, how to use it and how to interpret the results, **it is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
 <br>
 <br>
 
 <big>**Principle of operation**</big>
 <br>
 
-The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera to each JPG or RAW file.<br>The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
+The plugin uses [ExifTool](https://exiftool.org/) to retrieve metadata from the image file. Autofocus related information is extracted from the metadata and processed to detect and visualize focus points, faces and subjects. For this to work, the plugin needs an image file that contains camera manufacturer specific metadata information (_makernotes_) as written by the camera to each JPG or RAW file.<br>
+The plugin will not be able to show focus points for image files that do not contain makernotes.<br>
 
 <u>Note:</u> ExifTool is part of the plugin package and does not need to be installed separately.
 
@@ -78,6 +79,7 @@ Because the plugin works inside Lightroom, it is important to understand that Li
 - Original image edited in Photoshop and returned as PSD or TIF
 - Original image transferred as TIFF/JPG to a 3rd party editor (_Photo → Edit In_) and returned as TIF,<br> e.g. Topaz, NIK, Photomatix
 - Photos exported to disk
+- Smart Preview but the original image file is not present 
 
 For external applications launched from within Lightroom that take a RAW file as input (typically invoked from the 'Plug-in Extras' menu), the plugin may work on the resulting file imported into Lightroom if the application leaves the original file's makernotes intact. This is because in this case Lightroom does not physically pass on the file to the external application but only the name of the image file.
 
@@ -86,7 +88,9 @@ For external applications launched from within Lightroom that take a RAW file as
 - DNG files created by DxO PhotoLab, Luminar Neo, Topaz Photo AI
 - DNG files created by LrC Enhance, e.g. AI Denoise (prior to LrC 14.4)
 
-Note that this may depend on the specific camera make/model. E.g. for Fuji it does not.
+Note that this may depend on the specific camera make/model.<br> 
+E.g. for Fuji DNG files the plugin will not be able to display focus points.
+
 
 **Cases where the Focus Points plugin may not be able to display meaningful information:**
 
@@ -95,11 +99,13 @@ Note that this may depend on the specific camera make/model. E.g. for Fuji it do
 
 <br>
 
-## 2. Overview and Basic Operation
+# 2. Overview and Basic Operation
 This section will explain how to install, configure, and use the plugin.
 
-### 2.1 Installation
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.1.zip).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
+
+## 2.1 Installation
+1. Download the [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) of the plugin package.<br>
+A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
 
 
 2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`.<br>
@@ -110,14 +116,15 @@ _MAC users_: According to your macOS preferences the zip file will be automatica
 
 
 4. To **update an existing installation**, first remove the folder containing the version of the plugin you want to update. You can delete the folder or rename it, for example, `to focuspoints.lrplugin.303` (for version 3.03). This allows you to easily revert to the previous version if the update causes issues.<br>
-Note: It is necessary to remove the plugin folder at OS level because deleting a plugin in Lightroom's Plug-in Manager only removes it from Lightroom's list of known plugins. The plugin folder and its contents on disk remain as they are.<br>
+<u>Note</u>: It is necessary to remove the plugin folder at OS level because deleting a plugin in Lightroom's Plug-in Manager only removes it from Lightroom's list of known plugins. The plugin folder and its contents on disk remain as they are.<br>
 Important: Copying the downloaded files over those in the existing folder is not recommended!
 
 
 5. Move the downloaded plugin folder `focuspoints.lrplugin` to the folder where you keep your Lightroom plugins.<br> 
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br><br>
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.
 
-4. Open Lightroom and go to `File → Plug-in Manager`.<br>
+
+6. Open Lightroom and go to `File → Plug-in Manager`.<br>
 **New installation**:<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
 _MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br>
@@ -133,81 +140,10 @@ See [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-sh
 
 If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
 
-
 <br>
 
-### 2.2 Configuration and Settings
-
-Selecting Focus Point Viewer in the list of installed plugins (_Library → File → Plug-in Manager_) displays the plugin's settings page:
-
-<img src="../screens/Plugin Options.jpg" alt="Plugin Options" style="width: 750px;"/>
-
-<br>
-
-#### Screen Scaling
-
- _Display scaling factor_
-Windows only. Default setting: `Auto`
-
-The drawing routines used on Windows are not aware of any display scale factor that may have been applied to the Windows configuration (_Settings → Display → Scale_). In order to avoid that the plugin window gets bigger than the screen size, the plugin has to reverse this scaling when calculating the size of the dialog window.
-
- The `Auto` setting causes the plugin to scale its windows in sync with a system scale factor. Optionally, a predefined fixed scale value can be selected, which avoids a registry access via an external command (REG.EXE) on each call of the plugin. The meaning of the predefined values 100%, 125%, 150%, etc. is the same as in the Windows Settings dialog. I.e. to undo a system-wide zoom of 150%, the same value '150%' must be selected from the drop-down list.
-
-
-#### Viewing Options
-
-Default settings: `Red, Medium`
-
-_Size of focus box for 'focus pixel' points_<br>
-Depending on the camera maker and model, focus points may have a dimension (width and height) or they may be represented by a 'focus pixel'. For focus points that have a dimension, a box with the specified width and height is displayed. For 'focus pixel' points you can choose how to display them: small box or medium/large with a center dot.
-
-_Color of in-focus points_<br> You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
-
-#### Logging
-
-Default setting: `Auto`
-
-The logging feature serves two purposes:
-1. Gather information to explain why focus points are not displayed
-2. Gather information to help the developer figure out what went wrong if the plugin does not work as expected.
-
-For 1. `Auto` is the recommended setting, because it logs relevant information that can help to understand why, for example, the plugin is not able to correctly determine the focus point(s) for a given image. If the plugin encounters any errors or warnings during its operation, it will provide a link to view the log for additional information. See example in "User Messages" below.
-
-The logging mechanism provides a fine-grained hierarchy of levels at which information should be logged. Setting a certain logging level in the plugin preferences will cause all messages of that level to be written, including those at lower levels. description, from lower to higher levels:
-
-   | Level   | Information logged                                                      |
-   |---------|-------------------------------------------------------------------------|
-   | None    | No logging output. No logfile created.                                  |
-   | Error   | Only error messages.                                                    |
-   | Warning | + warnings                                                              |
-   | Info    | + information on progress and intermediate results                      |
-   | Debug   | + important debug information. No noticeable slow down.                 |
-   | Full    | Full debug information, including entire EXIF data. Slow down.          |
-   | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |
-
-
-<u>Hint</u>: `Auto`logging will start on an empty log file for each image. When you open such a log file, it will immediately focus on the most recent image. The log file will be emptied when the plugin starts for all other logging levels. 
-
-
-#### Update Check
-
-The plugin checks for an updated version that is available to download.
-If so, this will be highlighted, and you can click the `Open URL` button to access the latest version's release notice. Follow the [installation instructions](#21-installation) to install the update.
-
-The availability of an update will be indicated:
-- on the plugin's settings page (see above)
-- in the 'Plug-in status' section of the text pane (provided the `Display message` checkbox is selected)
-- in the log file
-
-<img src="../screens/UpdateAvailable1.jpg" alt="Update Available" style="width: 1000px;"/><br>
-
-<img src="../screens/UpdateAvailable2.jpg" alt="Update Available" style="width: 1000px;"/>
-
-
-<br>
-
-### 2.3 Focus Point Viewer
-Once the plugin is installed, you can run it with one or more photos selected<sup>1</sup>:
+## 2.2 Focus Point Viewer
+Once the plugin is installed, you can run it with one or more photos selected:
 
 Library module:<br>
 _Library → Plug-in Extras → Focus Point_
@@ -215,18 +151,40 @@ _Library → Plug-in Extras → Focus Point_
 Develop module:<br>
 _File → Plug-in Extras → Focus Point_
 
-<sup>1</sup> If you want to run the plugin on a series of photos, you need to select those photos in Lightroom _before_ running the plugin. Technically, it is no big deal to support browsing through the photos visible in the active source (collection, folder, etc.) using the `Next image` and `Previous image` buttons, starting from a single photo. However, the LR SDK does not provide a way to retrieve these images in the order in which they are currently sorted and displayed in Lightroom. Because this can lead to a confusing user experience, it is not supported.
-  
+In V3.2, you no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. The plugin now supports next and previous function when run on a single image (the current one in Lightroom filmstrip). `Next image` will advance to the next photo in the _filmstrip_, and `Previous image` will advance to the previous photo in the _filmstrip_. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
+
+To run the plugin on a specific series of photos, select those photos in Lightroom _before_ running the plugin.
+
+<u>Note</u>: _Filmstrip_ navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
 
 
 ### User Interface
 
-The user interface  is divided into two main parts. On the left is the photo view with visualized focus points and detected elements, and on the right is a side-by-side view of selected information that may be useful for evaluating the photo in terms of focus results.<br>
+The user interface is divided into three main areas. On the left is the Photo View, which shows visualized focus points and detected elements. On the right is the Info View, a side-by-side view of information that may be useful for evaluating the photo in terms of focus results. The controls for navigating and flagging images are located at the bottom of the window.
 
-<img src="../screens/BasicOperation1.jpg" alt="Basic Operation 1" style="width: 750px;"/>
+<img src="../screens/User%20Interface.jpg" alt="User Interface" style="width: 1000px;"/>
+
+The Focus Point Viewer window is not dynamically resizable. However, V3.2 introduces a [Size of plugin window](#size-of-plugin-window) setting that allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. This setting corresponds to 80% (XXL) downto 40% (S), in increments of 10%, of the size of the Lightroom application window and it refers to the dimensions of the photo view. 
+The info view and the bottom row of user controls are not included in this percentage. The space allocated to these areas is in addition to the size setting.
+
+Click on the following links for more detailed information:
+
+1. [Photo View](#photo-view)
+2. [Info View](#info-view)
+3. [Plugin Status](#plugin-status)
+4. [Navigation Controls](#navigation-controls)
+5. [Flagging Controls](#flagging-controls)
+6. [Keyboard Shortcuts](#keyboard-shortcuts)
+7. [Buy me a coffee](#buy-me-a-coffee)
 
 
-The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols*.
+### Photo View
+
+The plugin uses colors to visualize autofocus points, detected faces, subjects and details. This means that the respective area is highlighted by a rectangular marker:<br>
+
+<img src="../screens/BasicOperation1.jpg" alt="Basic Operation 1" style="width: 1000px;"/>
+
+This overview shows which elements are supported by the plugin, and the shapes and colors used to visualize them. On Windows, the rectangular marker is a solid frame. On macOS, the frame is indicated by corner symbols*.
 
 |                                       MAC                                       |                                         WIN                                         |       Color       | Meaning                                                                               |
 |:-------------------------------------------------------------------------------:|:-----------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
@@ -246,12 +204,12 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 
 Availability of the same method(s) on both platforms (ideally chosen by the user) would be desirable, but this is challenging and requires significant effort.
 
-### Information section
+### Info View
 
 The text pane right to the photo view comprises three groups:
-- Image information
-- Shooting information
-- Focus information
+- Image Information
+- Shooting Information
+- Focus Information
 
 Image information and Shooting information are largely taken from the Lightroom catalog, so this information is available for every photo. Depending on the availability of information in the makernotes, these two sections may be expanded to include various camera-specific information such as crop mode, drive mode, shot number, etc., which may be useful in the context of evaluating focus results.
 
@@ -283,16 +241,17 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 
 The first line of text in the `Focus Information` section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
-|  Type   | Message                                                                                          |
-|:-------:|--------------------------------------------------------------------------------------------------|
-| Success | Focus points detected                                                                            |
-| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded)                      |
-| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded) |
-|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file)              |
-|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported)                  |
-|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported)                  |
-|  Error  | [No camera-specific metadata found](Troubleshooting_FAQ.md#No-camera-specific-metadata-found)                  |
-|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered)                      |
+|  Type   | Message                                                                                                         |
+|:-------:|-----------------------------------------------------------------------------------------------------------------|
+| Success | Focus points detected                                                                                           |
+| Warning | [No focus points recorded](./Troubleshooting_FAQ.md#no-focus-points-recorded)                            |
+| Warning | [Focus point recorded in manual focus mode](./Troubleshooting_FAQ.md#focus-point-recorded-in-manual-focus-mode) |
+| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#manual-focus-no-AF-points-recorded)                |
+|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#focus-info-missing-from-file)                             |
+|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#camera-model-not-supported)                                 |
+|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#camera-maker-not-supported)                                 |
+|  Error  | [No camera-specific metadata found](Troubleshooting_FAQ.md#no-camera-specific-metadata-found)                   |
+|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#severe-error-encountered)                                     |
 
 Click on the message to learn what it means and how to deal with it in case of an error or warning.
 
@@ -314,9 +273,46 @@ There are two warnings and one error:
 The tag `CameraSettingsVersion` has not been found which means that this file does not contain a makernotes section with AF information (which is required for the plugin to work). The image file was not created in-camera but by an application. In this case, it is a JPG file exported from (and created! by) Lightroom.
 
 
+### Navigation Controls
+
+In V3.2, you no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. The plugin now supports next and previous function when run on a single image (the current one in Lightroom filmstrip). `Next image` will advance to the next photo in the _filmstrip_, and `Previous image` will advance to the previous photo in the _filmstrip_. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
+
+To run the plugin on a specific series of photos, select those photos in Lightroom _before_ running the plugin.
+
+<u>Note</u>: _Filmstrip_ navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
+
+
+### Flagging Controls
+
+Users for whom focus point accuracy is critical when selecting shots now have the ability to flag, reject, rate or color images directly within the plugin. The user interface has been updated to include the relevant controls: 
+
+
+<img src="../screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/> Windows
+
+<img src="../screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/> macOS
+
+Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard-shortcuts) as in Lightroom. Pressing the Shift key during tagging moves the plugin to the next photo.
+
+**Notes / Restrictions:**
+
+- Although the plugin allows you to set the flag status, rating and color label of a photo, these settings are **not** reflected in the plugin's user interface. Any changes to the flag status, rating or color will be acknowledged immediately with a standard message in Lightroom, and these changes will be reflected in the filmstrip for the selected photo. **It is recommended that you adjust the sizes of the plugin window and Lightroom's filmstrip when using tagging, so that both are visible at the same time.**
+
+- Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input. See [Keyboard Shortcuts](#keyboard-shortcuts).<br>
+The keyboard layout in use can be configured in the plugin preferences, under the `User Interface`' section, [Keyboard Layout](#keyboard-layout) setting.
+  
+- The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
+
+- The display of tagging controls and related keyboard shortcut operation can be disabled in the plugin preferences, under section `User Interface`.
+
+- Note: Tagging features use the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, these features is not available on LR5.7 (which is still in use by a few plugin users!).
+
+
 ### Keyboard Shortcuts
 
-To simplify the operation of the plugin, keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse:
+To simplify the operation of the plugin, keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse.
+
+Some shortcuts in V3.1 have been changed to avoid collision with Lightroom tagging shortcuts. Previously, 'p' was used for 'previous', 'x' for 'exit', and 'u' for 'user manual'. Instead of 'Exit', the plugin will now close using the 'Close' button (shortcut 'C').
+
 
 | Action                                      | Keyboard shortcuts |
 |---------------------------------------------|--------------------|
@@ -350,25 +346,33 @@ To simplify the operation of the plugin, keyboard shortcuts are supported. These
 
 The Lightroom SDK does not support the native handling of keyboard events in modal dialogs, so the plugin uses a "trick" to implement keyboard shortcuts. This approach has certain limitations, which are described here for a better understanding.
 
-The plugin cannot recognize key codes; it can only work with text input. It uses an 'edit_field' control to capture keyboard input and check whether the last character typed matches a keyboard shortcut. If it does, the appropriate action is triggered. 
+Due to limitations in the LR SDK, the plugin can only work with text input and cannot recognize key codes. Keyboard shortcuts entered by the user, such as 'P' for 'Set as Pick' or '+' for 'Next Image', are collected as text in a designated input field. If the character entered corresponds to a defined shortcut, the related action is performed. 
 
 **Arrow keys, Function keys, Esc, Return, etc. do not change text input, so the choice of hotkeys is limited to text (i.e. printable ASCII characters).**
- 
-In V3.1, the text input field was invisible to the user; in V3.2 this is changed.
 
-While it is easily possible to perform operations using keyboard shortcuts and the mouse simultaneously for the same image on Windows, this does not work seamlessly on macOS. As soon as a control is clicked on macOS, the text input field loses focus. This means that any further keyboard input will not be recognized unless the user clicks on the input field again to make it the active control.
+This approach works well as long as the focus remains on the input field.
 
-To introduce transparency and intuitively instruct the user on how to proceed with keyboard shortcuts after losing focus, the text input field is now visible by default:
+In Windows, only pressing the Tab key or clicking on the photo will remove the focus from the input field. As a result, further keyboard input will not be recognized. Mouse operation does not remove the focus.
 
-<img src="../screens/OM System 21.jpg" alt="Basic Operation 6" style="width: 850px;"/>
+On macOS, clicking on any control (button, link text or tagging icon) takes focus away from the input field. With the large number of new controls in V3.2, it is not possible to perform operations using keyboard shortcuts and the mouse simultaneously for the same image.
 
-You can configure the size of the text input field, including the labelling, in the plugin settings.
+n V3.1, the text input field for keyboard shortcuts was invisible. The user could not understand why keyboard shortcuts stopped working when focus was removed from the input field by mouse operation. As the LR SDK offers no option to focus on a specific control, the input field must be refocused by the userto continue working with keyboard shortcuts.
 
+To make this procedure more transparent and intuitive, the text input field is now visible by default.
 
+You can configure the size of the text input field, including the labelling, in the [plugin preferences](#text-input-field-for-keyboard shortcuts).
 
-<br><br>                               
+<br>
 
-### 2.4 Metadata Viewer
+### Buy me a coffee
+Several of you have asked how you can show your appreciation for the work I have done to significantly improve the plugin over the past year and months. If you care about this issue, you can now show your [support via Ko-fi](https://ko-fi.com/focuspoints)*. Simply click the link next to the coffee cup.
+
+*Ko-fi is a well-established service that enables users to support creators through voluntary donations.
+Payments are processed securely via PayPal or credit/debit card, and no account or subscription is required.
+
+<br>                               
+
+## 2.3 Metadata Viewer
 The plugin also features a Metadata Viewer with live search:
 
 * _Library → Plug-in Extras → Show Metadata_, or
@@ -389,12 +393,132 @@ The plugin is written in the Lua programming language and uses Lua string.find()
 
 For further processing as text, the full metadata (retrieved via 'exiftool -a -u -sort <file>') can also be opened in a text editor.
 
+### Sizing of the Metadata Viewer window
+
+In V3.1, tag names that were significantly longer than 40 characters could result in an unusual display in the metadata viewer.
+
+This has been improved in V3.2:
+
+- The maximum length of tags displayed is limited to 32 characters.
+- The maximum length of values displayed is limited to 128 characters.
+- Truncated strings are indicated by an ellipsis symbol '...'.<br>If the truncated part contains  relevant information, it can still be reviewed by opening the metadata as text.
+- The edit fields for the 'Tag' and 'Value' filters are the same size as in point 1.
+- The heigth of the metadata window is given by the Size of plugin window setting S .. XXL
+- The width of the metadata window is chosen so that the head line (filter entry fields, hint) fits in but is minimum 70% of the window height.
 
 <img src="../screens/metadata1.jpg" alt="Metdata 1" style="width: 200px;"/>         <img src="../screens/metadata2.jpg" alt="Metadata 2" style="width: 200px;"/>         <img src="../screens/metadata3.jpg" alt="Metadata 3" style="width: 200px;"/>
 
 <br>
 
-## 3. Display of Focus Points
+## 2.4 Configuration and Settings
+
+Selecting 'Focus Point Viewer' from the list of installed plugins (_Library → File → Plug-in Manager_) opens the plugin's settings page:
+
+<img src="../screens/Plugin Options.jpg" alt="Plugin Options" style="width: 750px;"/>
+
+<br>
+
+### Screen Scaling
+
+ **_Display scale factor_**. Windows only. Default setting: `Auto`
+
+The drawing routines used on Windows are not aware of any display scale factor that may have been applied to the Windows configuration (_Settings → Display → Scale_). In order to avoid that the plugin window gets bigger than the screen size, the plugin has to reverse this scaling when calculating the size of the dialog window.
+
+ The `Auto` setting causes the plugin to scale its windows in sync with a system scale factor. Optionally, a predefined fixed scale value can be selected, which avoids a registry access via an external command (REG.EXE) on each call of the plugin. The meaning of the predefined values 100%, 125%, 150%, etc. is the same as in the Windows Settings dialog. I.e. to undo a system-wide zoom of 150%, the same value '150%' must be selected from the drop-down list.
+
+
+### User Interface Settings
+
+This section is new in version 3.2. It contains several settings that can be used to customize the appearance and functionality of the plugin's user interface. 
+
+**_Size of plugin window_**. Default setting: `L`<br>
+<a id="size-of-plugin-window"></a>
+This setting allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. 
+
+<img src="../screens/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
+
+In the Focus Point dialog, this setting corresponds to 80% (XXL) to 40% (S), in increments of 10%, of the size of the Lightroom application window used to display the photo. Please note that the text pane to the right of the photo and the bottom row of user controls are not included in this percentage.
+
+In the Metadata Viewer, this setting determines the height of the dialog box. The width is determined by the header line, which includes the two filter entry fields and the hint text. 
+
+<u>Note</u>: Windows users already had the option to adjust the size of the focus points window using the screen scaling option specific to Windows. This setting remains as it is.
+
+**_Appearance of text input field for keyboard shortcuts_**. Default setting: `Regular`<br>
+<a id="text-input-field-for-keyboard shortcuts"></a>
+To make keyboard shortcuts more transparent and intuitive to use, the text input field that captures them is now visible by default. For a more detailed explanation, see xxx.
+This setting can be used to customize the appearance of the input field:
+
+<img src="../screens/README%20TextInputSetting.jpg" alt="Screenshot" style="width: 600px;"/>
+
+- Invisible. This is self-explaining
+- Small. A narrow input field without labelling
+- Regular. An input field that can display a minimum of 10 characters, along with a label containing a link to the 'Keyboard Shortcuts' section of the user manual.
+
+**_Truncate or wrap long strings_**. Default setting: `On`, `32` characters<br>
+This setting enables you to specify whether long strings, such as metadata values or file names, should be truncated in the display. You can choose the truncation limit, which can be set between 10 and 100 characters. A truncated string is marked with the symbol '...' at the end. The full text can be seen in the tooltip that appears when you hover over a truncated string with the mouse.
+
+**_Enable controls for flagging_**. Default setting: `On`<br>
+If you don't need the controls for flagging, rating or coloring photos in the Focus Point viewer, and you want to avoid overloading the navigation bar, use this setting to hide the tagging controls and disable the related keyboard shortcuts. 
+
+**_Keyboard layout_**. Default setting: empty<br>
+<a id="keyboard-layout"></a>
+The keyboard shortcuts for flagging, rating and coloring are the same as those used in Lightroom, including the `Shift` combinations that perform an action and advance to the next photo. Since the plugin cannot recognize key codes and can only work with text input, using the `Shift` + `0`-`9` keyboard shortcuts requires the plugin to be aware of the currently used international keyboard layout.<br>
+The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.
+<br><br>
+<img src="../screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
+<br>
+
+### Viewing Options
+
+**_Size of focus box for 'focus pixel' points_**. Default setting: `Red`<br>
+Depending on the camera maker and model, focus points may have a dimension (width and height) or they may be represented by a 'focus pixel'. For focus points that have a dimension, a box with the specified width and height is displayed. For 'focus pixel' points you can choose how to display them: small box or medium/large with a center dot.
+
+**_Color of in-focus points_**. Default setting: `Medium`<br> You can choose between three different colors for the presentation of focus point boxes: red, green and blue.
+
+### Logging
+
+**_Level of information to be logged_**. Default setting: `Auto`
+
+The logging feature serves two purposes:
+1. Gather information to explain why focus points are not displayed
+2. Gather information to help the developer figure out what went wrong if the plugin does not work as expected.
+
+For 1. `Auto` is the recommended setting, because it logs relevant information that can help to understand why, for example, the plugin is not able to correctly determine the focus point(s) for a given image. If the plugin encounters any errors or warnings during its operation, it will provide a link to view the log for additional information. See example in "User Messages" below.
+
+The logging mechanism provides a fine-grained hierarchy of levels at which information should be logged. Setting a certain logging level in the plugin preferences will cause all messages of that level to be written, including those at lower levels. description, from lower to higher levels:
+
+   | Level   | Information logged                                                      |
+   |---------|-------------------------------------------------------------------------|
+   | None    | No logging output. No logfile created.                                  |
+   | Error   | Only error messages.                                                    |
+   | Warning | + warnings                                                              |
+   | Info    | + information on progress and intermediate results                      |
+   | Debug   | + important debug information. No noticeable slow down.                 |
+   | Full    | Full debug information, including entire EXIF data. Slow down.          |
+   | Auto    | Same as 'Info'. Recommended setting. No noticeable slow down of plugin. |
+
+
+<u>Hint</u>: `Auto`logging will start on an empty log file for each image. When you open such a log file, it will immediately focus on the most recent image. The log file will be emptied when the plugin starts for all other logging levels. 
+
+
+### Update Check
+
+The plugin checks for an updated version that is available to download.
+If so, this will be highlighted, and you can click the `Open URL` button to access the latest version's release notice. Follow the [installation instructions](#21-installation) to install the update.
+
+The availability of an update will be indicated:
+- on the plugin's settings page (see above)
+- in the 'Plug-in status' section of the text pane (provided the `Display message` checkbox is selected)
+- in the log file
+
+<img src="../screens/UpdateAvailable1.jpg" alt="Update Available" style="width: 1000px;"/><br>
+
+<img src="../screens/UpdateAvailable2.jpg" alt="Update Available" style="width: 1000px;"/>
+
+
+<br>
+
+# 3. Display of Focus Points
 The subchapters in this section describe in more detail which features are supported by the plugin for individual camera makers and specific lines or models. In this context, "feature" means visualization of:
 
 * User-selected focus points/areas
@@ -830,7 +954,6 @@ K-01 image taken with viewfinder using "Multiple AF Points".<br><br>
 <img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 750px;"/><br>
 Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.<br><br>
 
-
 ## 3.9 Ricoh
 
 Supported features:
@@ -885,7 +1008,7 @@ Face detection for an image exported from Apple Photos:
 
 <br>
 
-## Appendix
+# 4 Special Topics
 
 
 ## How to use a keyboard shortcut to run the plugin

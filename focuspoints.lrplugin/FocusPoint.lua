@@ -133,7 +133,7 @@ local function showFocusPoint()
       end
       Log.logInfo("System", string.format(
        "Application window size: %s x %s. Plugin window size: %sx",
-          GlobalDefs.appWidth, GlobalDefs.appHeight, prefs.windowSize))
+          GlobalDefs.appWidth, GlobalDefs.appHeight, prefs.pluginWindowScaling))
     end
 
     -- Get the active photo plus additionally selected photos

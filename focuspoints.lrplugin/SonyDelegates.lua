@@ -366,8 +366,8 @@ function SonyDelegates.modelSupported(model)
     -- RX series supported with RX10M2, RX100M4 and later models
     return not Utils.arrayKeyOf({"1", "10", "100", "100m2", "100m3"}, modelID)
   elseif series == "ilce-" then
-    -- Alpha supported with α6100, α7 III / α7R III  and later models
-    return not Utils.arrayKeyOf({"6000", "7", "7m2", "7r", "7rm2"}, modelID)
+    -- Alpha supported with α6100, α7 III / α7R II / α7S II and later models
+    return not Utils.arrayKeyOf({"6000", "7", "7m2", "7r", "7s"}, modelID)
   end
   return true
 end

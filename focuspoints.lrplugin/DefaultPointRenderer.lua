@@ -308,10 +308,6 @@ function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata
   end
 
   FocusInfo.manualFocusUsed = DefaultPointRenderer.funcManualFocusUsed(photo, metadata)
-  if FocusInfo.manualFocusUsed and not prefs.processMfInfo then
-    Log.logWarn("DefaultPointRenderer", "Manual focus mode used, no autofocus points recorded")
-    return nil
-  end
 
   local pointsTable
   if DefaultPointRenderer.funcGetAfPoints then
