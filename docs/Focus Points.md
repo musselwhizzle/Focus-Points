@@ -105,7 +105,8 @@ This section will explain how to install, configure, and use the plugin.
 
 
 ### 2.1 Installation
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.1.zip).<br>A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
+1. Download the [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) of the plugin package.<br>
+A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
 
 
 2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`.<br>
