@@ -78,6 +78,7 @@ In the Metadata Viewer, this setting determines the height or half the width of 
 
 * Windows users already had the option to adjust the size of the focus points window using the screen scaling option specific to Windows. This setting remains as it is.
 
+<br>
 
 ### Introduction of visible input field for keyboard shortcuts
 
@@ -100,6 +101,8 @@ Users who find the new control disturbing can customize its appearance in the pl
 - Invisible. This is self-explaining
 - Small. A narrow input field without labelling
 - Regular. An input field that can display a minimum of 10 characters, along with a label containing a link to the 'Keyboard Shortcuts' section of the user manual.
+
+<br>
 
 ### Keyboard Shortcuts
 
@@ -135,6 +138,7 @@ Some shortcuts in V3.1 have been changed to avoid collision with Lightroom taggi
 | Check Log                                   | `L`                |
 | Close                                       | `C `               |
 
+<br>
 
 ### Display of long names
 
@@ -150,6 +154,7 @@ Enabling this setting makes the window content look much tidier:
 
 <img src="../screens/README%20Long%20Names.jpg" alt="Screenshot" style="width: 800px;"/>
 
+<br>
 
 ### Unify language used in the Shooting Information section
 
@@ -163,6 +168,7 @@ To avoid this issue, the 'Shooting Information' items containing language-depend
 
 <img src="../screens/README%20Unify%20Shooting%20Information%20Language%202.jpg" alt="Screenshot" style="width: 800px;"/>
 
+<br>
 
 ### Focus points outside cropped image area
 
@@ -176,6 +182,7 @@ Cropped image (focus point outside):
 Original image with focus point:
 <img src="../screens/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
+<br>
 
 ### Improved sizing of metadata window
 
@@ -192,6 +199,7 @@ This has been improved in V3.2:
 
 <img src="../screens/README%20Metadata%20Window.jpg" alt="Screenshot" style="width: 800px;"/>
 
+<br>
 
 ### Buy the developer a coffee
 Several of you have asked how you can show your appreciation for the work I have done to significantly improve the plugin over the past year or so. If you care about this issue, you can now show your [support via Ko-fi](https://ko-fi.com/focuspoints)*. Simply click the link next to the coffee cup.
