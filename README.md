@@ -1,21 +1,22 @@
-# Focus Points – [V3.2 Pre-release availabe!](https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prerelease)
+# Focus Points
 
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
 - Show which focus point was active when the picture was taken <sup>2</sup>
 - Display user-selected autofocus points/area <sup>3,4</sup>
-- Visualize faces and subjects detected by the camera <sup>3,5</sup> 
-- Display (EXIF) metadata of the selected image 
+- Visualize faces and subjects detected by the camera <sup>3,5</sup>
+- Tagging (flagging, rating and coloring) of photos within the plugin UI <sup>6</sup>
+- Display and search (EXIF) metadata of the selected image 
 
 <sup>1</sup> LR5.7 and LR6 perpetual licenses and LrC subscriptions.<br>
-<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](#supported-cameras).<br>
-<sup>3</sup> Depending on the presence of metadata. 
-<sup>4</sup> Currently supported for Pentax and OM System.      
-<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br>
+<sup>2</sup> For Canon, Nikon, Sony, Fuji, Olympus/OM, Panasonic, Pentax, Ricoh, Apple. See full [list of supported cameras](../README.md#supported-cameras).<br>
+<sup>3</sup> Depending on the presence of metadata.<br> 
+<sup>4</sup> Currently supported for Pentax and OM System.<br> 
+<sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br> 
+<sup>6</sup> Not for LR5.<br>
 
+To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. **It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
 
-To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera.
-
-**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.2.zip)** or see detailed **[installation instructions](#installation)**.
+**[Download the latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest)**  or see detailed **[installation instructions](#installation)**.
 
 If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
 
@@ -26,55 +27,41 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 <br>
 
-## Current Release
+## Current Release:
 
-## V3.1.2 updated November 6, 2025
+## V3.2 updated January 15, 2026
 
-### New features and changes in V3.1.x:
-
-* **Camera support**
-  * Pentax:
-    * Redesign of Pentax support [#269](https://github.com/musselwhizzle/Focus-Points/issues/269)
-    * Visualization of selected and in-focus CAF points (LiveView) [#261](https://github.com/musselwhizzle/Focus-Points/issues/261)
-    * Focus point display for Pentax K-3 III [#262](https://githubcom/musselwhizzle/Focus-Points/issues/262)
-    * Face detection for Pentax K-3 III [#264](https://github.com/musselwhizzle/Focus-Points/issues/264)
-    * Display status of Pentax AF-related camera settings [#270](https://github.com/musselwhizzle/Focus-Points/issues/270)
-  * Olympus/OM
-    * Indicate use of digital zoom factor [#253](https://github.com/musselwhizzle/Focus-Points/issues/253)
-  * OM System: 
-    * Visualization of AF selection (AF target area) [#259](https://github.com/musselwhizzle/Focus-Points/issues/259) 
-    * Visualization of subject detection [#260](https://github.com/musselwhizzle/Focus-Points/issues/260) 
-  * Olympus: 
-    * Support entire Olympus E-System [#267](https://github.com/musselwhizzle/Focus-Points/issues/267)
-  * Nikon
-    * Support Nikon Z5 II [#286](https://github.com/musselwhizzle/Focus-Points/issues/286)
-  * Ricoh: 
-    * Support Ricoh GR III / IIIx / IV models [#263](https://github.com/musselwhizzle/Focus-Points/issues/263)
-  * Sony:
-    * Visualization of focus points considering `FocusFrameSize` tag on newer α bodies [part of #176](https://github.com/musselwhizzle/Focus-Points/issues/176)   
-  * Canon
-    * Improved display of Canon focus information [#285](https://github.com/musselwhizzle/Focus-Points/issues/285) 
-
+### New features and changes:
 
 * **User interface**
-  * Usability improvements:
-    * Consistent layout of controls in single and multi-image operation modes [#266](https://github.com/musselwhizzle/Focus-Points/issues/266)
-    * Improved user interaction when no focus points can be found [#272](https://github.com/musselwhizzle/Focus-Points/issues/272)
-    * Keyboard shortcuts for plugin operation  [#271](https://github.com/musselwhizzle/Focus-Points/issues/271)
-  * Metadata display:
-    * Display effective focal length for images captured in crop mode [#252](https://github.com/musselwhizzle/Focus-Points/issues/252)
- 
-     
-* **Bugfixes**
-  * Center dot is missing for 'focus pixel' points on macOS [#294](https://github.com/musselwhizzle/Focus-Points/issues/294)
-  * Internal error (macOS) or crippled error message (Windows) for photo where the image file is missing on disk [#296](https://github.com/musselwhizzle/Focus-Points/issues/296)
-  * Support Ricoh GR III / IIIx HDF (High Diffusion Filter) models [#300](https://github.com/musselwhizzle/Focus-Points/issues/300)
+  * Tagging (Flagging, Rating and Coloring) of photos within the plugin UI [#302](https://github.com/musselwhizzle/Focus-Points/issues/302) (not for LR5)
+  * Filmstrip Navigation [#314](https://github.com/musselwhizzle/Focus-Points/issues/314) (not for LR5)
+  * Customizable plugin window size [#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
+  * Introduction of visible input field for keyboard shortcuts [#321](https://github.com/musselwhizzle/Focus-Points/issues/321)
+  * Long metadata names excessively widen the information area [#326](https://github.com/musselwhizzle/Focus-Points/issues/326)
+  * Unify language used in the Shooting Information section [#342](https://github.com/musselwhizzle/Focus-Points/issues/342)
+  * Improved sizing of metadata window [#333](https://github.com/musselwhizzle/Focus-Points/issues/333)
 
+* **Bugfixes**
+  * V3.1 doesn't display focus points for manually focused captures on Fuji cameras while V3.0 did [#292](https://github.com/musselwhizzle/Focus-Points/issues/292)
+  * Missing data for Sony DNG files  [#305](https://github.com/musselwhizzle/Focus-Points/issues/305)
+  * No or wrong display of focus points for Fujifilm DNG files [#332](https://github.com/musselwhizzle/Focus-Points/issues/332)
+  * Metadata text files are not deleted from the disk  [#338](https://github.com/musselwhizzle/Focus-Points/issues/338)
+  * Focus points may be invisible for cropped images [#339](https://github.com/musselwhizzle/Focus-Points/issues/339)
+  
+* **Camera support:**
+  * Ricoh GR III / IIIx HDF (High Diffusion Filter) models [#300](https://github.com/musselwhizzle/Focus-Points/issues/300)
+  * Sony A7R2 [#347](https://github.com/musselwhizzle/Focus-Points/issues/347)
+  * Canon R6m3, Sony A7V, Panasonic S1II (new cameras) 
+  * in addition to the cameras supported by V3.1. [See here for full list](https://github.com/musselwhizzle/Focus-Points/blob/master/README.md#supported-cameras)
 
 * **Other**
-  * Keyboard shortcuts to launch the plugin [#268](https://github.com/musselwhizzle/Focus-Points/issues/268), [#202](https://github.com/musselwhizzle/Focus-Points/issues/202)
-  * User documentation reworked
-  * Includes ExifTool 13.41 (Nov. 05, 2025)
+  * Buy the developer a coffee [#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
+  * Includes ExifTool 13.45 (Dec 26, 2025)
+
+See [README V3.2](https://github.com/musselwhizzle/Focus-Points/blob/master/docs/README_V3.2.md) for an overview of the new features.<br>
+
+**[Download plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.2.zip)** or see detailed **[installation instructions](https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md#21-installation)**.
 
 
 * **Supported cameras:**
@@ -84,28 +71,42 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Installation
 
-**Installation steps**
+1. Download the [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) of the plugin package.<br>
+A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
 
-1. Download the [plugin package](https://github.com/musselwhizzle/Focus-Points/archive/refs/tags/v3.1.2.zip). A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.<br>  _MAC users_: According to your macOS preferences the zip file will be automatically unzipped.<br>
 
-2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`<br>
+2. Unzip the downloaded file. Inside the extracted content locate the plugin folder `focuspoints.lrplugin`.<br>
+_MAC users_: According to your macOS preferences the zip file will be automatically unzipped.
 
-3. Move this folder to where you normally keep your Lightroom plugins.<br>Hint: if you don't know this location, the Plugin Manager will show you (see next step).<br>
-_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.<br>
 
-4. Open Lightroom and go to `File → Plug-in Manager`.<br>
+3. Find the folder where you keep your Lightroom plugins.<br> If you don't know where this is, open Lightroom, go to `File → Plug-in Manager` and click `Add`. This will open a "Select Folder" dialog in Lightroom's default folder for plugins. 
+
+
+4. To **update an existing installation**, first remove the folder containing the version of the plugin you want to update. You can delete the folder or rename it, for example, `to focuspoints.lrplugin.303` (for version 3.03). This allows you to easily revert to the previous version if the update causes issues.<br>
+<u>Note</u>: It is necessary to remove the plugin folder at OS level because deleting a plugin in Lightroom's Plug-in Manager only removes it from Lightroom's list of known plugins. The plugin folder and its contents on disk remain as they are.<br>
+Important: Copying the downloaded files over those in the existing folder is not recommended!
+
+
+5. Move the downloaded plugin folder `focuspoints.lrplugin` to the folder where you keep your Lightroom plugins.<br> 
+_MAC users_: if you have to navigate into the content of the `adobe lightroom classic.app`, use the control-click and choose  `show package content`.
+
+
+6. Open Lightroom and go to `File → Plug-in Manager`.<br>
+**New installation**:<br>
 _Windows_: Click the `Add` button and select the plugin.<br>
-_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.
+_MAC_: In case of you'd copied the plugin to the default LR-plugin location, the new plugin is already listed - activate it. Otherwise, click on the `Add` button and select the plugin.<br>
+**Update installation**:<br>
+Select the plug-in and click `Reload plug-in` (only applies if Lightroom is open during the installation of the update.)
+
 
 Once the plugin has been installed, choose one or more photos and select:
 * `Library → Plug-in Extras → Show Focus Point`, or  
 * `File → Plug-in Extras → Show Focus Point`
 
-See [How to use a keyboard shortcut to run the plugin](docs/Focus%20Points.md#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
+See [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
 
 If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
 
-<br>
 
 ## Supported AF Points
 
@@ -174,7 +175,7 @@ The Metadata Viewer is useful for viewing information that is neither visible in
 
   
 * Sony
-  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R III) 
+  * Full-frame: α7, α9, α1 bodies beginning 2018 (with α7 III / α7R II) 
   * APS-C: α6100, α6300, α6400, α6500, α6600, α6700, ..
   * Compact: RX series, beginning 2015 (with RX10 II and RX100 IV)
   * Face detection
@@ -205,7 +206,7 @@ The Metadata Viewer is useful for viewing information that is neither visible in
   
 
 * Ricoh
-  * GR III, GR IIIx, GR IV
+  * GR III, GR IIIx, GR IV including HDF versions
   * Face detection
 
 
@@ -213,12 +214,7 @@ The Metadata Viewer is useful for viewing information that is neither visible in
   * iPhone (starting from at least iPhone 5)
   * Face/pet detection frames (visualizing "Person & Pets" information from Apple's Photos App)
 
-<br>
 
-
-## Contributing as a Developer
-
-Please see the [Contributing.md](Contributing.md) file before being any new work.
 
 ## Special Thanks
 

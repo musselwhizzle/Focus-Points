@@ -2,14 +2,15 @@
 
 ## Focus Points Viewer ##
 
-* [No focus points recorded](#No-focus-points-recorded)
-* [Manual focus, no AF points recorded](#Manual-focus-no-AF-points-recorded)
-* [Focus info missing from file](#Focus-info-missing-from-file)
-* [Focus points outside cropped image area](#Focus-points-outside-cropped-image-area)
-* [Camera model not supported](#Camera-model-not-supported)
-* [Camera maker not supported](#Camera-maker-not-supported)
-* [No camera-specific metadata found](#No-camera-specific-metadata-found)
-* [Severe error encountered](#Severe-error-encountered)
+* [No focus points recorded](#no-focus-points-recorded)
+* [Manual focus, no AF points recorded](#manual-focus-no-AF-points-recorded)
+* [Focus point recorded in manual focus mode](#focus-point-recorded-in-manual-focus-mode)
+* [Focus info missing from file](#focus-info-missing-from-file)
+* [Focus points outside cropped image area](#focus-points-outside-cropped-image-area)
+* [Camera model not supported](#camera-model-not-supported)
+* [Camera maker not supported](#camera-maker-not-supported)
+* [No camera-specific metadata found](#no-camera-specific-metadata-found)
+* [Severe error encountered](#severe-error-encountered)
 
 ## General
 
@@ -17,6 +18,7 @@
 
 
 ## Focus Points Viewer
+
 
 ### "No focus points recorded"
 The camera was set to use autofocus (AF) but did not focus when the image was captured. Information about "in focus" AF points is not available in the metadata; it was not recorded by the camera.
@@ -38,6 +40,18 @@ Log file:
 This is a special but very typical case of "No focus points recorded". The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.
 
 <img src="../screens/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+
+<a id="focus-point-recorded-in-manual-focus-mode"></a>
+### "Focus point recorded in manual focus mode"
+
+Fujifilm cameras store focus information when using the manual focus mode (AF-M). 
+
+Unlike autofocus-determined focus points, manual focus points do not necessarily indicate the sharpest parts of an image. Instead, they **represent the center of the focus area** selected by the camera user (single point / zone / wide).
+
+When the photographer uses the selected focus area to focus the image and this area is small (single point), the displayed focus point will probably correspond to a sharp part of the image. Otherwise, the displayed focus point may end up over an unsharp part of the image.
+
+In manual focus mode, you need to recall the circumstances in which the image was captured in order to make sense of the focus point information.
 
 
 ### "Focus info missing from file"
@@ -71,6 +85,7 @@ Cropped image (focus point outside):
 
 Original image with focus point:
 <img src="../screens/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
 
 ### "Camera model not supported"
 

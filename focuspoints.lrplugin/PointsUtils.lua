@@ -14,20 +14,37 @@
   limitations under the License.
 --]]
 
-local LrFileUtils = import 'LrFileUtils'
-local LrPathUtils = import 'LrPathUtils'
-local LrStringUtils = import "LrStringUtils"
+--[[----------------------------------------------------------------------------
+  PointsUtils.lua
 
-require "Utils"
-require "Log"
+  Purpose of this module:
+  Functions to read the focus points layout .txt files (for Nikon and Pentax)
+  and parse the information so symbolic focus point names (A1, B2, C3 etc)
+  can be mapped to pixel coordinates.
+------------------------------------------------------------------------------]]
+local PointsUtils = {}
 
+-- Imported LR namespaces
+local LrFileUtils   = import  'LrFileUtils'
+local LrPathUtils   = import  'LrPathUtils'
+local LrStringUtils = import  'LrStringUtils'
 
-PointsUtils = {}
+-- Required Lua definitions
+local FocusInfo     = require 'FocusInfo'
+local Log           = require 'Log'
+local _strict       = require 'strict'
+local Utils         = require 'Utils'
 
-function PointsUtils.readFromFile(folder, filename)
+--[[----------------------------------------------------------------------------
+  private string
+  readFromFile(string folder, string fileName)
+
+  Reads the mapping file 'fileName' and returns its contents as a string.
+------------------------------------------------------------------------------]]
+local function readFromFile(folder, fileName)
   local file = LrPathUtils.child( _PLUGIN.path, "focus_points" )
   file = LrPathUtils.child(file, folder)
-  file = LrPathUtils.child(file, filename)
+  file = LrPathUtils.child(file, fileName)
 
   -- replace special character.  '*' is an invalid char on windows file systems
   file = string.gsub(file, "*", "_a_")
@@ -43,16 +60,29 @@ function PointsUtils.readFromFile(folder, filename)
   end
 end
 
-function PointsUtils.readIntoTable(folder, filename)
+--[[----------------------------------------------------------------------------
+  public table focusPoints, table focusPointDimens, table fullSizeDimens
+  readIntoTable(string folder, string fileName)
+
+  Reads the mapping file 'fileName' and parses its contents into three tables
+  1. focusPoints:      x, y, width, heigth for each individual point listed
+  2. focusPointDimens: width/heigth dimensions (applies to all points)
+  3. fullSizeDimens:   full size image dimensions*
+
+  * This information is required to handle crop modes for certain Pentax models,
+    as the original image dimensions are not included in the photo's metadata.
+------------------------------------------------------------------------------]]
+function PointsUtils.readIntoTable(folder, fileName)
   local focusPoints = {}
   local focusPointDimens = {}
   local fullSizeDimens = {}
-  local data = PointsUtils.readFromFile(folder, filename)
+  local data = readFromFile(folder, fileName)
+
   if (data == nil) then return nil end
   for i in string.gmatch(data, "[^\\\n]+") do
     -- skip comment lines
     if i:match("^%s*%-%-") == nil then
-      local p = splitToKeyValue(i, "=")
+      local p = Utils.splitToKeyValue(i, "=")
       if p ~= nil then
 
         -- variable or focus point name
@@ -64,7 +94,7 @@ function PointsUtils.readIntoTable(folder, filename)
         value = string.gsub(value, "{", "")
         value = string.gsub(value, "}", "")
         value = LrStringUtils.trimWhitespace(p.value)
-        local dataPoints = splitTrim(value, ",")
+        local dataPoints = Utils.splitTrim(value, ",")
 
         -- parse the single value items: x, y, [h, w]
         local points = {}
@@ -97,3 +127,5 @@ function PointsUtils.readIntoTable(folder, filename)
   end
   return focusPoints, focusPointDimens, fullSizeDimens
 end
+
+return PointsUtils -- ok

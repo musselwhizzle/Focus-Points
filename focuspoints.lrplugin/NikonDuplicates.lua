@@ -19,7 +19,8 @@
   NikonDuplicates["d7100"] = "d7200" means that the D7100 has the same mapping
   as the D7200, and the D7200 text file will be used.
 --]]
-NikonDuplicates = {}
+
+local NikonDuplicates = {}
 
 NikonDuplicates["nikon d3"]    = "nikon d700"
 NikonDuplicates["nikon d3s"]   = "nikon d700"
@@ -46,3 +47,5 @@ NikonDuplicates["nikon z 7_2"] = "nikon z 7"
 NikonDuplicates["nikon z 8"]   = "nikon z 9"
 
 NikonDuplicates["nikon z fc"]  = "nikon z 30"
+
+return NikonDuplicates -- ok

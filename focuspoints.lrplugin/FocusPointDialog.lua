@@ -14,45 +14,60 @@
   limitations under the License.
 --]]
 
-local LrView = import 'LrView'
+--[[----------------------------------------------------------------------------
+  FocusPointDialog.lua
 
-require "Utils"
-require "Log"
+  Purpose of this module:
+  Entry point for 'Show Focus Point' menu command.
+  Main control of data processing and user dialog.
+------------------------------------------------------------------------------]]
+local FocusPointDialog = {}
 
+-- Imported LR namespaces
+local LrView           = import  'LrView'
 
-FocusPointDialog = {}
+-- Required Lua definitions
+local FocusPointPrefs  = require 'FocusPointPrefs'
+local GlobalDefs       = require 'GlobalDefs'
+local Log              = require 'Log'
+local _strict          = require 'strict'
+local Utils            = require 'Utils'
 
-FocusPointDialog.PhotoWidth  = 0
-FocusPointDialog.PhotoHeight = 0
-FocusPointDialog.AppWidth    = 0
-FocusPointDialog.AppHeight   = 0
+GlobalDefs.currentPhoto = nil
 
-FocusPointDialog.currentPhoto = nil
+--[[----------------------------------------------------------------------------
+  public int width, int height
+  calculatePhotoViewDimens(table photo)
 
-
-function FocusPointDialog.calculatePhotoDimens(photo)
+  Calculates the dimensions of the view element for the current photo. This involves:
+  - Cropped dimensions of the image
+  - LR application window size (the plugin window cannot go bigger)
+  - Scaling factor corresponding to user-defined plugin windows size S..XXL
+  - On Windows: Display scaling factor (Auto or user-defined)
+------------------------------------------------------------------------------]]
+function FocusPointDialog.calculatePhotoViewDimens(photo)
 
   -- Retrieve photo dimensions
   local dimens = photo:getFormattedMetadata("croppedDimensions")
-  local w, h = parseDimens(dimens)
+  local w, h = Utils.parseDimens(dimens)
   Log.logInfo("FocusPointDialog", string.format(
     "Image: %s (%s x %s)", photo:getFormattedMetadata('fileName'), w, h))
 
-  -- Store for use with drawing variable sized focus boxes around 'focus pixels'
-  FocusPointDialog.PhotoWidth  = w
-  FocusPointDialog.PhotoHeight = h
+  -- Take user-defined plugin window size into account
+  local windowSize    = FocusPointPrefs.getPluginWindowSize()  -- sizing factor for S..XXL
+  local contentWidth  = GlobalDefs.appWidth  * windowSize
+  local contentHeight = GlobalDefs.appHeight * windowSize
 
-  local contentWidth  = FocusPointDialog.AppWidth  * .8
-  local contentHeight = FocusPointDialog.AppHeight * .8
-
+  -- Take Windows scaling factor into account
   if WIN_ENV then
-    local scalingLevel = FocusPointPrefs.getDisplayScaleFactor()
-    contentWidth  = contentWidth  * scalingLevel
-    contentHeight = contentHeight * scalingLevel
+    local displayScalingLevel = FocusPointPrefs.getDisplayScaleFactor()
+    contentWidth  = contentWidth  * displayScalingLevel
+    contentHeight = contentHeight * displayScalingLevel
   end
-  
-  local photoWidth
-  local photoHeight
+
+  -- Now do the math how the photo fits into the width/height limits
+  local photoWidth = 0
+  local photoHeight = 0
   if (w > h) then
     photoWidth = math.min(  (w), contentWidth)
     photoHeight = h/w * photoWidth
@@ -70,37 +85,28 @@ function FocusPointDialog.calculatePhotoDimens(photo)
   end
 
   return math.floor(photoWidth), math.floor(photoHeight)
-
 end
 
+--[[----------------------------------------------------------------------------
+  public table
+  createDialog(_photo, photoView, infoView, kbdShortcutInput)
 
-function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdHandler)
-  local myView
+  Creates the view container for the entire dialog except the accessory view.
+------------------------------------------------------------------------------]]
+function FocusPointDialog.createDialog(_photo, photoView, infoView, kbdShortcutInput)
   local f = LrView.osFactory()
 
-  -- view for photo with focus point visualization
-  local column1 = f:column {
-    photoView
+  return f:view {
+    f:column {
+       f:row {
+         kbdShortcutInput,
+       },
+       f:row {
+         f:column { photoView },
+         f:column { fill_vertical = 1, infoView },
+       }
+    }
   }
-
-  -- view for textual information on image, shooting and focus information
-  if infoView ~= nil then
-    local column2 = f:column { fill_vertical = 1,
-      infoView,
-    }
-    local row = f:row {
-      kbdHandler, column1, column2
-    }
-    myView = f:view {
-      row,
-    }
-  else
-    -- if infoView is not (yet) supported for a specific make, only include the photoView
-    myView = f:view {
-      column1,
-    }
-  end
-
-  return myView
-
 end
+
+return FocusPointDialog -- ok

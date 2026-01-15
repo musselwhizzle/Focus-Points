@@ -34,7 +34,7 @@ use Image::ExifTool qw(:DataAccess :Utils);
 use Image::ExifTool::Exif;
 use Image::ExifTool::Minolta;
 
-$VERSION = '3.79';
+$VERSION = '3.83';
 
 sub ProcessSRF($$$);
 sub ProcessSR2($$$);
@@ -261,7 +261,7 @@ sub PrintInvLensSpec($;$$);
     49475 => 'Tamron 50-300mm F4.5-6.3 Di III VC VXD', #JR (Model A069)
     49476 => 'Tamron 28-300mm F4-7.1 Di III VC VXD', #JR (Model A074)
     49477 => 'Tamron 90mm F2.8 Di III Macro VXD', #JR (Model F072)
-    49478 => 'Tamron 16-30mm F2.8 Di III VXD G2', #JR (Model A064) 
+    49478 => 'Tamron 16-30mm F2.8 Di III VXD G2', #JR (Model A064)
 
     49712 => 'Tokina FiRIN 20mm F2 FE AF',       # (firmware Ver.01)
     49713 => 'Tokina FiRIN 100mm F2.8 FE MACRO', # (firmware Ver.01)
@@ -1534,6 +1534,7 @@ my %hidUnk = ( Hidden => 1, Unknown => 1 );
             0 => 'Compressed RAW',
             1 => 'Uncompressed RAW',
             2 => 'Lossless Compressed RAW', #JR (NC) seen for ILCE-1
+            3 => 'Compressed RAW 2', # ILCE-7M5
            65535 => 'n/a', # seen for ILCE-7SM3 JPEG-only
         },
     },
@@ -1591,9 +1592,25 @@ my %hidUnk = ( Hidden => 1, Unknown => 1 );
             '1 3' => 'RAW + Extra Fine',
             '1 4' => 'RAW + Light', #JR
             '2 0' => 'S-size RAW',
+            '2 1' => 'S-size RAW + Standard', # (NC)
+            '2 2' => 'S-size RAW + Fine', # (NC)
+            '2 3' => 'S-size RAW + Extra Fine', # (NC)
+            '2 4' => 'S-size RAW + Light', # (NC)
             '3 0' => 'M-size RAW', # ILCE-1/7RM5, APS-C mode
+            '3 1' => 'M-size RAW + Standard', # (NC)
             '3 2' => 'M-size RAW + Fine',
             '3 3' => 'M-size RAW + Extra Fine',
+            '3 4' => 'M-size RAW + Light', # (NC)
+            '4 0' => 'Compressed RAW', # (NC)
+            '4 1' => 'Compressed RAW + Standard', # (NC)
+            '4 2' => 'Compressed RAW + Fine',
+            '4 3' => 'Compressed RAW + Extra Fine', # (NC)
+            '4 4' => 'Compressed RAW + Light', # (NC)
+            '5 0' => 'Compressed HQ RAW', # (NC)
+            '5 1' => 'Compressed HQ RAW + Standard', # (NC)
+            '5 2' => 'Compressed HQ RAW + Fine',
+            '5 3' => 'Compressed HQ RAW + Extra Fine', # (NC)
+            '5 4' => 'Compressed HQ RAW + Light', # (NC)
         },
     },
     0x202f => { #JR (ILCE-7RM3)
@@ -2095,6 +2112,7 @@ my %hidUnk = ( Hidden => 1, Unknown => 1 );
             '4 0 1 0' => 'ARW 4.0.1', #github195 (ZV-E1)
             '5 0 0 0' => 'ARW 5.0', # (ILCE-9M3)
             '5 0 1 0' => 'ARW 5.0.1', # (ILCE-1 with FirmWare 2.0)
+            '6 0 0 0' => 'ARW 6.0.0', # (ILCE-7M5)
             # what about cRAW images?
         },
     },
@@ -2215,6 +2233,7 @@ my %hidUnk = ( Hidden => 1, Unknown => 1 );
             403 => 'ILCE-6100A', #JR
             404 => 'DSC-RX100M7A', #github347
             406 => 'ILME-FX2', #JR
+            407 => 'ILCE-7M5', #PH
             408 => 'ZV-1A', #JR
         },
     },
@@ -7563,6 +7582,12 @@ my %isoSetting2010 = (
 #           appears to be difference between used FNumber and MaxAperture, 256 being +1 APEX or stop
 #           however, not always valid e.g. bracketing, Shutter-prio e.a.
 #           difference between 0x0002 and 0x0004 mostly 0.0, 0.1 or 0.2 stops.
+    0x000a => { #github369
+        Name => 'ShutterCount',
+        Format => 'int32u',
+        Condition => '$$self{Model} =~ /^ILCE-7M5$/',
+        Notes => 'ILCE-7M5',
+    },
     0x0020 => {
         Name => 'Shutter',
         Format => 'int16u[3]',
@@ -7593,6 +7618,7 @@ my %isoSetting2010 = (
         # NEX-5N/7.  For the A99V it is definitely more than 16 bits, but it wraps at
         # 65536 for the A7R.
         Format => 'int32u',
+        Condition => '$$self{Model} !~ /^ILCE-7M5$/',
         Notes => q{
             total number of image exposures made by the camera, modulo 65536 for some
             models
@@ -9987,7 +10013,7 @@ my %isoSetting2010 = (
         PrintConv => \%sonyExposureProgram3,
     },
     0x0037 => {
-        Name => 'CreativeStyle',    
+        Name => 'CreativeStyle',
         Notes => 'offsets after this are shifted by 1 for the ILME-FX2',
         Hook => '$varSize += 1 if $$self{Model} =~ /^(ILME-FX2)/',
         PrintConv => {
@@ -10656,7 +10682,7 @@ my %isoSetting2010 = (
     0x8101 => { Name => 'Sony_rtmd_0x8101', Format => 'int8u',  %hidUnk }, # seen: 0,1,2
     0x8104 => { Name => 'Sony_rtmd_0x8104', Format => 'int16u', %hidUnk }, # seen: 35616
     0x8105 => { Name => 'Sony_rtmd_0x8105', Format => 'int16u', %hidUnk }, # seen: 20092
-    0x8106 => { Name => 'Sony_rtmd_0x8106', Format => 'int32u', %hidUnk }, # seen: "25 1","24000 1001" frame rate?
+    0x8106 => { Name => 'FrameRate', Format => 'rational64u', PrintConv => 'sprintf("%.2f",$val)' },
     0x8109 => { #forum12218
         Name => 'ExposureTime',
         Format => 'rational64u',
@@ -10674,7 +10700,9 @@ my %isoSetting2010 = (
         Format => 'int16u',
     },
     0x810d => { Name => 'Sony_rtmd_0x810d', Format => 'int8u',  %hidUnk }, # seen: 0,1
+    0x8114 => { Name => 'SerialNumber', Format => 'string' }, # (and model, eg. "ILCE-7SM3 5072108")
     0x8115 => { Name => 'Sony_rtmd_0x8115', Format => 'int16u', %hidUnk }, # seen: 100 - ISO
+  # 0x8119 - seen "P" (same as 0x811e?)
   # 0x8300 - container for other tags in this format
     0x8500 => {
         Name => 'GPSVersionID',

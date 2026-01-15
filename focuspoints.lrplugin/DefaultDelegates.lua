@@ -14,17 +14,13 @@
   limitations under the License.
 --]]
 
---[[
+--[[----------------------------------------------------------------------------
+  DefaultDelegates.lua
+
+  Purpose of this module:
   A collection of delegate functions to be passed into the DefaultPointRenderer.
---]]
-
-require "Utils"
-require "Log"
-
-
-DefaultDelegates = {}
-
-DefaultDelegates.metaData             = nil
+------------------------------------------------------------------------------]]
+local DefaultDelegates = {}
 
 DefaultDelegates.cameraMake           = nil
 DefaultDelegates.cameraModel          = nil
@@ -37,10 +33,9 @@ DefaultDelegates.POINTTYPE_AF_FOCUS_BOX_PRIMARY = "af_focus_box_primary"  -- sam
 DefaultDelegates.POINTTYPE_AF_SELECTED          = "af_selected"           -- AF-point is selected but not in focus
 DefaultDelegates.POINTTYPE_AF_INACTIVE          = "af_inactive"           -- AF-point is inactive
 DefaultDelegates.POINTTYPE_FACE                 = "face"                  -- Face has been detected
-DefaultDelegates.POINTTYPE_CROP                 = "crop"                 -- Crop has been detected
-DefaultDelegates.POINTTYPE_TEST                 = "test"                 -- for testing purposes
+DefaultDelegates.POINTTYPE_CROP                 = "crop"                  -- Crop has been detected
+DefaultDelegates.POINTTYPE_TEST                 = "test"                  -- for testing purposes
 DefaultDelegates.pointTemplates = {
--- #TODO the point templates need a cleanup once the different maker needs are clear!
   af_focus_pixel = {
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/%s/small_fat_%s.png", anchorX = 23, anchorY = 23 },
@@ -73,7 +68,7 @@ DefaultDelegates.pointTemplates = {
     minCornerDist = 10,
     angleStep = 5
   },
-  af_focus_box_primary = {
+  af_focus_box_primary = { -- currently not used
     center = { fileTemplate = "assets/imgs/center/white/normal.png", anchorX = 23, anchorY = 23 },
     center_small = { fileTemplate = "assets/imgs/center/white/small.png", anchorX = 23, anchorY = 23 },
     corner = { fileTemplate = "assets/imgs/corner/%s/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
@@ -110,7 +105,7 @@ DefaultDelegates.pointTemplates = {
     minCornerDist = 10,
     angleStep = 5
   },
-  test = {
+  test = { -- for testing purposes; WIN only since orange color requires Mogrify for rendering
     corner = { fileTemplate = "assets/imgs/corner/orange/normal_fat_%s.png", anchorX = 23, anchorY = 23 },
     corner_small = { fileTemplate = "assets/imgs/corner/orange/small_fat_%s.png", anchorX = 23, anchorY = 23 },
     bigToSmallTriggerDist = 100,
@@ -118,3 +113,5 @@ DefaultDelegates.pointTemplates = {
     angleStep = 5
   },
 }
+
+return DefaultDelegates -- ok

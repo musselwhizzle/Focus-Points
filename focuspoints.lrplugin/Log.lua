@@ -14,62 +14,81 @@
   limitations under the License.
 --]]
 
+--[[----------------------------------------------------------------------------
+  Log.lua
 
-local LrApplication = import 'LrApplication'
-local LrPathUtils = import 'LrPathUtils'
-local LrFileUtils = import 'LrFileUtils'
-local LrLogger = import 'LrLogger'
-local LrPrefs = import "LrPrefs"
-local LrSystemInfo = import "LrSystemInfo"
+  Purpose of this module:
+  Add a logging facility to the plugin.
+  Uses the SDK's LrLogger infrastructure to log defined data during the plugin's
+  execution to the file "FocusPoints.log" in LrC's log folder.
+------------------------------------------------------------------------------]]
+local Log = {}
 
-require "Info"
+-- Imported LR namespaces
+local LrApplication    = import  'LrApplication'
+local LrFileUtils      = import  'LrFileUtils'
+local LrLogger         = import  'LrLogger'
+local LrPathUtils      = import  'LrPathUtils'
+local LrPrefs          = import  'LrPrefs'
+local LrSystemInfo     = import  'LrSystemInfo'
 
+-- Required Lua definitions
+local GlobalDefs       = require 'GlobalDefs'
+local KeyboardLayout   = require 'KeyboardLayout'
+local _strict          = require 'strict'
 
-Log = {}
-
-Log.logName  = "FocusPoints"
-Log.logger    = LrLogger(Log.logName)
-Log.logger:enable("logfile")
+local logName   = "FocusPoints"
+local logger    = LrLogger(logName)
+logger:enable("logfile")
 
 Log.warningsEncountered = nil
 Log.errorsEncountered   = nil
 
-local prefs = LrPrefs.prefsForPlugin( nil )
-
 --[[----------------------------------------------------------------------------
--- Use the SDK's LrLogger infrastructure to log the plugin's execution to the
--- file "FocusPoints.log" in LrC's log folder (see note below).
+
+  Logging functions. You are provided 5 levels of logging.
+  Wisely choose the level of the message you want to report to prevent to much messages.
+
+  Typical use cases:
+  - logDebug: Informations diagnostically helpful to people (developers, IT, sysadmins, etc.)
+  - logInfo:  Informations generally useful to log (service start/stop, configuration assumptions, etc)
+  - logWarn:  Informations about an unexpected state that won't generate a problem
+  - logError: An error which is fatal to the operation
+
+  All these methods expects 2 parameters:
+  - group:    a logical grouping string (limited to 20 chars and converted to upper case)
+              to make it easier to find the messages you are looking for
+  - message:  the message to be logged
+
+  Examples:
+  A call to logDebug("ExifUtils", "Searching for 'AF Point Used'") will result in the following log entry:
+     EXIFUTILS | Searching for 'AF Point Used'
+  A call to logWarn("FUJIDELEGATE", "Face recognition algorithm returned an unexcepted value")
+  will result in the following log entry:
+     FUJIDELEGATE | Face recognition algorithm returned an unexcepted value
 ------------------------------------------------------------------------------]]
 
---[[
--- Logging functions. You are provided 5 levels of logging. Wisely choose the level of the message you want to report
--- to prevent to much messages.
--- Typical use cases:
---   - logDebug - Informations diagnostically helpful to people (developers, IT, sysadmins, etc.)
---   - logInfo - Informations generally useful to log (service start/stop, configuration assumptions, etc)
---   - logWarn - Informations about an unexpected state that won't generate a problem
---   - logError - An error which is fatal to the operation
--- These methods expects 2 parameters:
---   - group - a logical grouping string (limited to 20 chars and converted to upper case) to make it easier to find the messages you are looking for
---   - message - the message to be logged
--- A call to logDebug("ExifUtils", "Searching for 'AF Point Used'") will result in the following log entry
---    EXIFUTILS | Searching for 'AF Point Used'
--- A call to logWarn("FUJIDELEGATE", "Face recognition algorithm returned an unexcepted value") will result in the following log entry
--- FUJIDELEGATE | Face recognition algorithm returned an unexcepted value
---]]
+--[[----------------------------------------------------------------------------
+  private void
+  doLog(int level, string group, string message)
 
+  Writes a 'message' classified by 'level' and 'group' to the log file.
+  Messages with a higher 'level' than that set for the 'Logging' user will be ignored.
+  E.g. if the 'Logging' setting is ERROR, no WARN or INFO messages will be logged.
+------------------------------------------------------------------------------]]
 local function doLog(level, group, message)
   local levels = {
     NONE  = 0,
     ERROR = 1,
     WARN  = 2,
     INFO  = 3,
-    AUTO  = 5,  -- AUTO includes ERROR, WARN and INFO entries - if errors or warnings have been encountered
+    AUTO  = 5,  -- AUTO includes ERROR, WARN and INFO entries
     DEBUG = 7,
     FULL  = 9
   }
 
   -- Looking for the prefs
+  local prefs = LrPrefs.prefsForPlugin( nil )
   if prefs.loggingLevel == nil or levels[prefs.loggingLevel] == nil then
     prefs.loggingLevel = "AUTO"
   end
@@ -85,43 +104,75 @@ local function doLog(level, group, message)
 
   local str = string.format("%20s | %s", string.upper(string.sub(group, 1, 20)), message)
   if level == "ERROR" then
-    Log.logger:error(str)
+    logger:error(str)
   elseif level == "WARN" then
-    Log.logger:warn(str)
+    logger:warn(str)
   elseif level == "INFO" then
-    Log.logger:info(str)
+    logger:info(str)
   else
-    Log.logger:debug(str)
+    logger:debug(str)
   end
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  logFull(string group, string message)
+
+  Logs a FULL level message classified by 'group'
+------------------------------------------------------------------------------]]
 function Log.logFull(group, message)
   doLog("FULL", group, message)
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  logDebug(string group, string message)
+
+  Logs a DEBUG level message classified by 'group'
+------------------------------------------------------------------------------]]
 function Log.logDebug(group, message)
   doLog("DEBUG", group, message)
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  logInfo(string group, string message)
+
+  Logs a INFO level message classified by 'group'
+------------------------------------------------------------------------------]]
 function Log.logInfo(group, message)
   doLog("INFO", group, message)
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  logWarn(string group, string message)
+
+  Logs a WARN level message classified by 'group'
+------------------------------------------------------------------------------]]
 function Log.logWarn(group, message)
   doLog("WARN", group, message)
   Log.warningsEncountered = true
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  logError(string group, string message)
+
+  Logs a ERROR level message classified by 'group'
+------------------------------------------------------------------------------]]
 function Log.logError(group, message)
   doLog("ERROR", group, message)
   Log.errorsEncountered = true
 end
 
+--[[----------------------------------------------------------------------------
+  public string
+  getLogFileName()
 
---[[
-  @@public string Log.getFileName()
-  ----
-  Retrieves the full path name of the plugin log file. Returns nil if no log file exists.
+  Retrieves the full path name of the plugin log file.
+  Returns nil if no log file exists.
+
   LrC 14 logs interface note (Oct 2024):
   We (Adobe) have changed the log file location for the LrLogger interface.
   The timestamps are no longer appended to the folders. The updated locations are:
@@ -129,8 +180,8 @@ end
   Mac: /Users/<user>/Library/Logs/Adobe/Lightroom/LrClassicLogs/
   Before LrC 14, plugin logfiles have been stored under Documents/LrClassicLogs
   on both WIN and MAC computers.
---]]
-function Log.getFileName()
+------------------------------------------------------------------------------]]
+function Log.getLogFileName()
   local userHome = LrPathUtils.getStandardFilePath("home")
   local logFolder
   if (LrApplication.versionTable().major < 14) then
@@ -146,19 +197,29 @@ function Log.getFileName()
         logFolder = "/Library/Logs/Adobe/Lightroom/LrClassicLogs/"
     end
   end
-  Log.fileName = LrPathUtils.child(userHome, LrPathUtils.child(logFolder, Log.logName .. ".log"))
+  Log.fileName = LrPathUtils.child(userHome, LrPathUtils.child(logFolder, logName .. ".log"))
   return Log.fileName
 end
 
+--[[----------------------------------------------------------------------------
+  public boolean
+  fileExists()
 
+  Returns true if a log file exists.
+------------------------------------------------------------------------------]]
 function Log.fileExists()
-  return LrFileUtils.exists(Log.getFileName())
+  return LrFileUtils.exists(Log.getLogFileName())
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  delete()
 
+  Delete/reset log file. Called during Log.initialize().
+------------------------------------------------------------------------------]]
 function Log.delete()
   -- delete / reset log
-  local logFileName = Log.getFileName()
+  local logFileName = Log.getLogFileName()
   if Log.fileExists() then
     if not LrFileUtils.delete(logFileName) then
       Log.logWarn("Utils", "Error deleting log file " .. logFileName)
@@ -166,63 +227,53 @@ function Log.delete()
   end
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  sysInfo()
 
---[[
-  @@public void Log.sysInfo()
-  ----
-  Output logfile header with system level information. Cqlled during Log.initialize()
---]]
+  Output logfile header with system level information. Called during Log.initialize()
+------------------------------------------------------------------------------]]
 function Log.sysInfo()
-
+  local prefs = LrPrefs.prefsForPlugin( nil )
   local osName = ""
   if not WIN_ENV then
     osName = "macOS "
   end
-  Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getFileName())
-  Log.logInfo("System", string.format(
-          "Running plugin version %s in Lightroom Classic %s.%s on %s%s",
-            getPluginVersion(), LrApplication.versionTable().major, LrApplication.versionTable().minor,
-            osName, LrSystemInfo.osVersion()))
+  Log.logInfo("System", "'" .. prefs.loggingLevel .. "' logging to " .. Log.getLogFileName())
+  Log.logInfo("System", string.format("Running plugin version %s in Lightroom Classic %s.%s on %s%s",
+    GlobalDefs.pluginDetailedVersion, LrApplication.versionTable().major, LrApplication.versionTable().minor,
+    osName, LrSystemInfo.osVersion()))
+  if prefs.keyboardLayout then
+    Log.logInfo(
+      "System",
+      "Keyboard layout (user setting): '" .. KeyboardLayout.layoutById[prefs.keyboardLayout].label .. "'")
+  end
 end
 
---[[
-  @@public void Log.appInfo()
-  ----
-  Extend logfile header with application level information. Needs to be called separately.
---]]
-function Log.appInfo()
+--[[----------------------------------------------------------------------------
+  public void
+  resetErrorsWarnings()
 
-  if FocusPointPrefs.updateAvailable() then
-    Log.logInfo("System", "Update to version " .. FocusPointPrefs.latestVersion() .. " available")
-  end
-  if WIN_ENV then
-    Log.logInfo("System", "Display scaling level " ..
-            math.floor(100/FocusPointPrefs.getDisplayScaleFactor() + 0.5) .. "%")
-  end
-  Log.logInfo("System", string.format(
-    "Application window size: %s x %s", FocusPointDialog.AppWidth, FocusPointDialog.AppHeight))
-end
-
-
---[[
-  @@public void Log.resetErrorsWarnings()
-  ----
   Reset indicator flags for errors/warnings encountered
---]]
+------------------------------------------------------------------------------]]
 function Log.resetErrorsWarnings()
   Log.warningsEncountered = nil
   Log.errorsEncountered   = nil
 end
 
+--[[----------------------------------------------------------------------------
+  public void
+  initialize()
 
---[[
-  @@public void Log.initialize()
-  ----
-  Initialize/reset log handling for processing of next image
---]]
+  Initialize/reset log handling for processing of next image:
+  - Delete previous log file
+  - Reset indicator flags for errors/warnings encountered
+  - Open new logfile and write system info header
+------------------------------------------------------------------------------]]
 function Log.initialize()
   Log.delete()
   Log.resetErrorsWarnings()
   Log.sysInfo()
 end
 
+return Log -- ok

@@ -111,7 +111,7 @@ my %insvLimit = (
         The tags below are extracted from timed metadata in QuickTime and other
         formats of video files when the ExtractEmbedded option is used.  Although
         most of these tags are combined into the single table below, ExifTool
-        currently reads 116 different types of timed GPS metadata from video files.
+        currently reads 117 different types of timed GPS metadata from video files.
     },
     GPSLatitude  => { PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "N")', RawConv => '$$self{FoundGPSLatitude} = 1; $val' },
     GPSLongitude => { PrintConv => 'Image::ExifTool::GPS::ToDMS($self, $val, 1, "E")' },
@@ -211,7 +211,7 @@ my %insvLimit = (
         },
     },{
         Name => 'gpmd_Wolfbox', # Wolfbox G900 Dashcam and Redtiger F9 4K
-        Condition => '$$valPt =~ /^.{136}0{16}(HYTH|XXXX)/s',
+        Condition => '$$valPt =~ /^.{136}(0{16}[A-Z]{4}|https:\/\/www.redtiger\0)/s',
         SubDirectory => {
             TagTable => 'Image::ExifTool::QuickTime::Stream',
             ProcessProc => \&ProcessWolfbox,

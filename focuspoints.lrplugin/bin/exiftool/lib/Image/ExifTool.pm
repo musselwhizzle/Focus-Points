@@ -29,7 +29,7 @@ use vars qw($VERSION $RELEASE @ISA @EXPORT_OK %EXPORT_TAGS $AUTOLOAD @fileTypes
             %jpegMarker %specialTags %fileTypeLookup $testLen $exeDir
             %static_vars $advFmtSelf $configFile @configFiles $noConfig);
 
-$VERSION = '13.41';
+$VERSION = '13.45';
 $RELEASE = '';
 @ISA = qw(Exporter);
 %EXPORT_TAGS = (
@@ -200,7 +200,7 @@ $defaultLang = 'en';    # default language
                 GZIP PLIST RAR 7Z BZ2 CZI TAR EXE EXR HDR CHM LNK WMF AVC DEX
                 DPX RAW Font JUMBF RSRC M2TS MacOS PHP PCX DCX DWF DWG DXF WTV
                 Torrent VCard LRI R3D AA PDB PFM2 MRC LIF JXL MOI ISO ALIAS PCAP
-                JSON MP3 TNEF DICOM PCD NKA ICO TXT AAC);
+                JSON MP3 KVAR TNEF DICOM PCD NKA ICO TXT AAC);
 
 # file types that we can write (edit)
 my @writeTypes = qw(JPEG TIFF GIF CRW MRW ORF RAF RAW PNG MIE PSD XMP PPM EPS
@@ -387,14 +387,15 @@ my %createTypes = map { $_ => 1 } qw(XMP ICC MIE VRD DR4 EXIF EXV);
     KDC  => ['TIFF', 'Kodak Digital Camera RAW'],
     KEY  => ['ZIP',  'Apple Keynote presentation'],
     KTH  => ['ZIP',  'Apple Keynote Theme'],
+    KVAR => ['KVAR', 'Kandao Video Asset Resource'], #PH (NC)
     LA   => ['RIFF', 'Lossless Audio'],
     LFP  => ['LFP',  'Lytro Light Field Picture'],
     LFR  =>  'LFP', # (Light Field RAW)
     LIF  => ['LIF',  'Leica Image File'],
     LNK  => ['LNK',  'Windows shortcut'],
-    LRF  => ['MOV',  'Low-Resolution video File'],
+    LRF  => ['MOV',  'Low-Resolution video File'], # (DJI)
     LRI  => ['LRI',  'Light RAW'],
-    LRV  => ['MOV',  'Low-Resolution Video'],
+    LRV  => ['MOV',  'Low-Resolution Video'], # (GoPro)
     M2T  =>  'M2TS',
     M2TS => ['M2TS', 'MPEG-2 Transport Stream'],
     M2V  => ['MPEG', 'MPEG-2 Video'],
@@ -881,6 +882,7 @@ my %moduleName = (
     JPEG => '',
     JUMBF=> 'Jpeg2000',
     JXL  => 'Jpeg2000',
+    KVAR => 'Kandao',
     LFP  => 'Lytro',
     LRI  => 0,
     MOV  => 'QuickTime',
@@ -976,6 +978,7 @@ $testLen = 1024;    # number of bytes to read when testing for magic number
     JSON => '(\xef\xbb\xbf)?\s*(\[\s*)?\{\s*"[^"]*"\s*:',
     JUMBF=> '.{4}jumb\0.{3}jumd',
     JXL  => '(\xff\x0a|\0\0\0\x0cJXL \x0d\x0a......ftypjxl )',
+    KVAR => '.{2}\0\0[A-Z].{31}(CHAR|BOOL|[US](8|16|32|64)|FLOAT|DOUBLE)\0',
     LFP  => '\x89LFP\x0d\x0a\x1a\x0a',
     LIF  => '\x70\0{3}.{4}\x2a.{4}<\0',
     LNK  => '(.{4}\x01\x14\x02\0{5}\xc0\0{6}\x46|\[[InternetShortcut\][\x0d\x0a])',
@@ -1190,6 +1193,7 @@ my @availableOptions = (
     [ 'Struct',           undef,  'return structures as hash references' ],
     [ 'StructFormat',     undef,  'format for structure serialization when reading/writing' ],
     [ 'SystemTags',       undef,  'extract additional File System tags' ],
+    [ 'SystemTimeRes',    0,      'number of sub-second digits in system and epoch times' ],
     [ 'TextOut',        \*STDOUT, 'file for Verbose/HtmlDump output' ],
     [ 'TimeZone',         undef,  'local time zone' ],
     [ 'UndefTags',        undef,  'leave undef tags in -if conditions when -m or -f are used' ],
@@ -2621,7 +2625,7 @@ sub Options($$;@)
             # add to existing plot settings
             $newVal = "$oldVal,$newVal" if defined $oldVal and defined $newVal;
             $$options{$param} = $newVal;
-        } elsif ($param eq 'KeepUTCTime') {
+        } elsif ($param eq 'KeepUTCTime' or $param eq 'SystemTimeRes') {
             $$options{$param} = $static_vars{$param} = $newVal;
         } elsif (lc $param eq 'geodir') {
             $Image::ExifTool::Geolocation::geoDir = $newVal;
@@ -4283,7 +4287,11 @@ sub Init($)
     my $self = shift;
     # delete all DataMember variables (lower-case names)
     delete $$self{$_} foreach grep /[a-z]/, keys %$self;
-    %static_vars = ( KeepUTCTime => $$self{OPTIONS}{KeepUTCTime} ); # reset static variables
+    # reset static variables
+    %static_vars = (
+        KeepUTCTime => $$self{OPTIONS}{KeepUTCTime},
+        SystemTimeRes => $$self{OPTIONS}{SystemTimeRes},
+    );
     delete $$self{FOUND_TAGS};      # list of found tags
     delete $$self{EXIF_DATA};       # the EXIF data block
     delete $$self{EXIF_POS};        # EXIF position in file
@@ -6710,34 +6718,33 @@ sub TimeZoneString($;$)
 
 #------------------------------------------------------------------------------
 # Convert Unix time to EXIF date/time string
-# Inputs: 0) Unix time value, 1) non-zero to convert to local time,
-#         2) number of digits after the decimal for fractional seconds
+# Inputs: 0) Unix time value, 1) non-zero to convert to local time, 2) number of
+#         digits after the decimal for fractional seconds, negative to trim
+#         trailing zeros, or undef to use SystemTimeRes
 # Returns: EXIF date/time string (with timezone for local times)
 sub ConvertUnixTime($;$$)
 {
     my ($time, $toLocal, $dec) = @_;
     return '0000:00:00 00:00:00' if $time == 0;
-    my (@tm, $tz);
-    if ($dec) {
-        my $frac = $time - int($time);
-        $time = int($time);
-        $frac < 0 and $frac += 1, $time -= 1;
-        $dec = sprintf('%.*f', $dec, $frac);
-        # remove number before decimal and increment integer time if it was rounded up
-        $dec =~ s/^(\d)// and $1 eq '1' and $time += 1;
-    } else {
-        $time = int($time + 1e-6) if $time != int($time);  # avoid round-off errors
-        $dec = '';
-    }
+    my (@tm, $tz, $trim);
+    $dec = $static_vars{SystemTimeRes} || 0 unless defined $dec;
+    $dec < 0 and $dec = -$dec, $trim = 1;
+    my $itime = int($time);
+    my $frac = $time - $itime;
+    $frac < 0 and $frac += 1, $itime -= 1;
+    $dec = sprintf('%.*f', $dec, $frac);
+    # remove number before decimal and increment integer time if necessary
+    $dec =~ s/^(\d)// and $1 eq '1' and $itime += 1;
+    $dec =~ s/\.?0+$// if $trim;    # trim trailing zeros if specified
     if (not $toLocal) {
-        @tm = gmtime($time);
+        @tm = gmtime($itime);
         $tz = '';
     } elsif ($static_vars{KeepUTCTime}) {
-        @tm = gmtime($time);
+        @tm = gmtime($itime);
         $tz = 'Z';
     } else {
-        @tm = localtime($time);
-        $tz = TimeZoneString(\@tm, $time);
+        @tm = localtime($itime);
+        $tz = TimeZoneString(\@tm, $itime);
     }
     my $str = sprintf("%4d:%.2d:%.2d %.2d:%.2d:%.2d$dec%s",
                       $tm[5]+1900, $tm[4]+1, $tm[3], $tm[2], $tm[1], $tm[0], $tz);
@@ -8124,11 +8131,11 @@ sub ProcessJPEG($$;$)
                 $self->ProcessDirectory(\%dirInfo, $tagTablePtr);
             }
         } elsif ($marker == 0xe7) {         # APP7 (InfiRay, Pentax, Huawei, Qualcomm)
-            if ($$segDataPt =~ /^PENTAX \0(II|MM)/) {
-                # found in K-3 images (is this multi-segment??)
-                SetByteOrder($1);
+            if ($$segDataPt =~ /^(PENTAX |RICOH)\0(II|MM)/) {
+                # found in K-3 and Ricoh GR_IV images (is this multi-segment??)
+                SetByteOrder($2);
                 undef $dumpType; # (dump this ourself)
-                my $hdrLen = 10;
+                my $hdrLen = length($1) + 3;
                 my $tagTablePtr = GetTagTable('Image::ExifTool::Pentax::Main');
                 DirStart(\%dirInfo, $hdrLen, 0);
                 $dirInfo{DirName} = 'Pentax APP7';

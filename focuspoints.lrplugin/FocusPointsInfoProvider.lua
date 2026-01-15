@@ -14,8 +14,10 @@
   limitations under the License.
 --]]
 
-require 'FocusPointPrefs'
+local FocusPointsInfoProvider = {}
 
-return {
-  sectionsForBottomOfDialog = FocusPointPrefs.genSectionsForBottomOfDialog,
-}
+local FocusPointPrefs = require 'FocusPointPrefs'
+
+FocusPointsInfoProvider.sectionsForBottomOfDialog = FocusPointPrefs.genSectionsForBottomOfDialog
+
+return FocusPointsInfoProvider -- ok
