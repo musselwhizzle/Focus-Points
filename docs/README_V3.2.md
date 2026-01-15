@@ -54,7 +54,7 @@ The keyboard layout can be configured in the `User Interface` section. The prede
 
 <br>
 
-### Filmstrip Navigation
+### Filmstrip navigation
 You no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos.<br> 
 The plugin now supports next and previous function when run on a single image (the current one). `Next image` will advance to the next photo in the filmstrip, and `Previous image` will advance to the previous photo in the filmstrip. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
 
@@ -102,7 +102,7 @@ Users who find the new control disturbing can customize its appearance in the pl
 
 <br>
 
-### Keyboard Shortcuts
+### Keyboard shortcuts
 
 Several new keyboard shortcuts have been introduced to support photo tagging (flagging, rating, and color labeling). These shortcuts are identical to those used in Lightroom.
 
@@ -182,7 +182,7 @@ Original image with focus point:
 
 <br>
 
-### Improved sizing of metadata window
+### Improved sizing of Metadata Viewer window
 
 In version 3.1, metadata tag names that were significantly longer than 40 characters could result in an unusual display in the metadata viewer.
 
