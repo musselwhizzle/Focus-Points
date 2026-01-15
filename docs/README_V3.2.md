@@ -27,6 +27,7 @@ Screenshot of plugin settings page with new `User Interface` section:
 
 <img src="../screens/README V3.2%20Settings.jpg" alt="Screenshot" style="width: 600px;"/>
 
+<br><br>
 
 ### Tagging of photos
 
@@ -43,12 +44,10 @@ Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard
 **Notes / Restrictions:**
 
 - Although the plugin allows you to set a photo's flag status, rating and color label, these settings are **not** reflected in the plugin's user interface. Any changes to the flag status, rating or color will be acknowledged immediately with a standard message in Lightroom Classic, and these changes will be reflected in the filmstrip for the selected photo. It is recommended that you adjust the sizes of the plugin window and Lightroom's filmstrip when using tagging, so that both are visible at the same time.
-<br><br>
+
 - Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input. See xxx.<br>
-The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.
-<br><br>
+The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.<br>
 <img src="../screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
-<br><br>
   
 - The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
 
@@ -56,7 +55,7 @@ The keyboard layout can be configured in the `User Interface` section. The prede
 
 - Note: Tagging features use the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, these features is not available on LR5.7 (which is still in use by a few plugin users!).
 
-
+<br><br>
 
 ### Filmstrip Navigation
 You no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos.<br> 
@@ -66,6 +65,7 @@ Running the plugin on a selection of multiple photos is still possible.
 
 Note: Filmstrip navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
 
+<br><br>
 
 ### Customizable plugin window size
 
