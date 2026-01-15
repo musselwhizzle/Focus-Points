@@ -14,7 +14,7 @@ Focus Points Plugin for Lightroom Classic
    - [User Interface](#user-interface), [User Messages](#user-messages), [Plugin Status](#plugin-status), [Keyboard Shortcuts](#keyboard-shortcuts) 
 *  [Metadata Viewer](#23-metadata-viewer)
 *  [Configuration and Settings](#24-configuration-and-settings)
-   - [Screen Scaling](#screen-scaling), [User Interface](#user-interface), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check)
+   - [Screen Scaling](#screen-scaling), [User Interface](#user-interface-settings), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check)
 
 ### [Display of Focus Points](#3-display-of-focus-points)
 
@@ -406,16 +406,16 @@ Selecting 'Focus Point Viewer' from the list of installed plugins (_Library → 
 
 <br>
 
-### Screen Scaling (Windows only)
+### Screen Scaling
 
- **_Display scale factor_**. Default setting: `Auto`
+ **_Display scale factor_**. Windows only. Default setting: `Auto`
 
 The drawing routines used on Windows are not aware of any display scale factor that may have been applied to the Windows configuration (_Settings → Display → Scale_). In order to avoid that the plugin window gets bigger than the screen size, the plugin has to reverse this scaling when calculating the size of the dialog window.
 
  The `Auto` setting causes the plugin to scale its windows in sync with a system scale factor. Optionally, a predefined fixed scale value can be selected, which avoids a registry access via an external command (REG.EXE) on each call of the plugin. The meaning of the predefined values 100%, 125%, 150%, etc. is the same as in the Windows Settings dialog. I.e. to undo a system-wide zoom of 150%, the same value '150%' must be selected from the drop-down list.
 
 
-### User Interface
+### User Interface Settings
 
 This section is new in version 3.2. It contains several settings that can be used to customize the appearance and functionality of the plugin's user interface. 
 
