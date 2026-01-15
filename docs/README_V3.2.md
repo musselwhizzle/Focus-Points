@@ -27,7 +27,7 @@ Screenshot of plugin settings page with new `User Interface` section:
 
 <img src="../screens/README V3.2%20Settings.jpg" alt="Screenshot" style="width: 600px;"/>
 
-<br><br>
+<br>
 
 ### Tagging of photos
 
@@ -55,7 +55,7 @@ The keyboard layout can be configured in the `User Interface` section. The prede
 
 - Note: Tagging features use the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, these features is not available on LR5.7 (which is still in use by a few plugin users!).
 
-<br><br>
+<br>
 
 ### Filmstrip Navigation
 You no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos.<br> 
@@ -65,7 +65,7 @@ Running the plugin on a selection of multiple photos is still possible.
 
 Note: Filmstrip navigation uses the 'LrSelection' namespace, which is only available in SDK version 6.0 and above. Therefore, this feature is not available on LR5.7.
 
-<br><br>
+<br>
 
 ### Customizable plugin window size
 
