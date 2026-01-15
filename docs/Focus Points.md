@@ -165,7 +165,10 @@ The user interface is divided into three main areas. On the left is the Photo Vi
 
 <img src="../screens/User%20Interface.jpg" alt="User Interface" style="width: 1000px;"/>
 
-For more detailed information, click on the following links:
+The Focus Point Viewer window is not dynamically resizable. However, V3.2 introduces a [Size of plugin window](#size-of-plugin-window) setting that allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. This setting corresponds to 80% (XXL) downto 40% (S), in increments of 10%, of the size of the Lightroom application window and it refers to the dimensions of the photo view. 
+The info view and the bottom row of user controls are not included in this percentage. The space allocated to these areas is in addition to the size setting.
+
+Click on the following links for more detailed information:
 
 1. [Photo View](#photo-view)
 2. [Info View](#info-view)
@@ -175,8 +178,6 @@ For more detailed information, click on the following links:
 6. [Keyboard Shortcuts](#keyboard-shortcuts)
 7. [Buy me a coffee](#buy-me-a-coffee)
 
-The Focus Point Viewer window is not dynamically resizable. However, V3.2 introduces a [Size of plugin window](#size-of-plugin-window) setting that allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. This setting corresponds to 80% (XXL) downto 40% (S), in increments of 10%, of the size of the Lightroom application window and it refers to the dimensions of the photo view. 
-The info view and the bottom row of user controls are not included in this percentage. The space allocated to these areas is in addition to the size setting.
 
 
 
