@@ -16,7 +16,6 @@ Focus Points Plugin for Lightroom Classic
 *  [Configuration and Settings](#24-configuration-and-settings)
    - [Screen Scaling](#screen-scaling), [User Interface](#user-interface), [Viewing Options](#viewing-options), [Logging](#logging), [Update Check](#update-check)
 
-
 ### [Display of Focus Points](#3-display-of-focus-points)
 
 * [Canon](#32-canon)
@@ -39,14 +38,14 @@ Focus Points Plugin for Lightroom Classic
 
 * [Apple](#310-apple)
 
-### [Appendix](#appendix)
+### [Special Topics](#4-special-topics)
 
 * [How to use a keyboard shortcut to run the plugin](#how-to-use-a-keyboard-shortcut-to-run-the-plugin)
 
 ___
 
 
-## 1. Scope and Limitations
+# 1. Scope and Limitations
 
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
 - Show which focus point was active when the picture was taken <sup>2</sup>
@@ -100,11 +99,11 @@ E.g. for Fuji DNG files the plugin will not be able to display focus points.
 
 <br>
 
-## 2. Overview and Basic Operation
+# 2. Overview and Basic Operation
 This section will explain how to install, configure, and use the plugin.
 
 
-### 2.1 Installation
+## 2.1 Installation
 1. Download the [latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest) of the plugin package.<br>
 A file named `Focus-Points-[plugin_version].zip` will be downloaded to your computer.
 
@@ -143,7 +142,7 @@ If you have never used Lightroom plugins before and are looking for some basic i
 
 <br>
 
-### 2.2 Focus Point Viewer
+## 2.2 Focus Point Viewer
 Once the plugin is installed, you can run it with one or more photos selected:
 
 Library module:<br>
@@ -373,7 +372,7 @@ Payments are processed securely via PayPal or credit/debit card, and no account 
 
 <br>                               
 
-### 2.3 Metadata Viewer
+## 2.3 Metadata Viewer
 The plugin also features a Metadata Viewer with live search:
 
 * _Library → Plug-in Extras → Show Metadata_, or
@@ -399,7 +398,7 @@ For further processing as text, the full metadata (retrieved via 'exiftool -a -u
 
 <br>
 
-### 2.4 Configuration and Settings
+## 2.4 Configuration and Settings
 
 Selecting 'Focus Point Viewer' from the list of installed plugins (_Library → File → Plug-in Manager_) opens the plugin's settings page:
 
@@ -507,8 +506,7 @@ The availability of an update will be indicated:
 
 <br>
 
-
-## 3. Display of Focus Points
+# 3. Display of Focus Points
 The subchapters in this section describe in more detail which features are supported by the plugin for individual camera makers and specific lines or models. In this context, "feature" means visualization of:
 
 * User-selected focus points/areas
@@ -944,7 +942,6 @@ K-01 image taken with viewfinder using "Multiple AF Points".<br><br>
 <img src="../screens/Pentax 10.jpg" alt="Pentax 10" style="width: 750px;"/><br>
 Support for Pentax DSLRs dates back to the *ist D models introduced in 2003. However, due to the established focus-and-pan method on older DSLRs with only a few AF points, the use of the plugin for these cameras will be limited.<br><br>
 
-
 ## 3.9 Ricoh
 
 Supported features:
@@ -999,7 +996,7 @@ Face detection for an image exported from Apple Photos:
 
 <br>
 
-## Appendix
+# 4 Special Topics
 
 
 ## How to use a keyboard shortcut to run the plugin
