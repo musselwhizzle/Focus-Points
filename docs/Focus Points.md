@@ -179,8 +179,6 @@ Click on the following links for more detailed information:
 7. [Buy me a coffee](#buy-me-a-coffee)
 
 
-
-
 ### Photo View
 
 The plugin uses colors to visualize autofocus points, detected faces, subjects and details. This means that the respective area is highlighted by a rectangular marker:<br>
@@ -290,10 +288,10 @@ Running the plugin on a selection of multiple photos is still possible.
 Users for whom focus point accuracy is critical when selecting shots now have the ability to flag, reject, rate or color images directly within the plugin. The user interface has been updated to include the relevant controls: 
 
 Windows:
-<img src="screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="../screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/>
 
 macOS:
- <img src="screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/>
+ <img src="../screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/>
 
 Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard-shortcuts) as in Lightroom. Pressing the Shift key during tagging moves the plugin to the next photo.
 
@@ -304,7 +302,7 @@ Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard
 - Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input. See xxx.<br>
 The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.
 <br><br>
-<img src="screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="../screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
 <br><br>
   
 - The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
@@ -426,7 +424,7 @@ This section is new in version 3.2. It contains several settings that can be use
 <a id="size-of-plugin-window"></a>
 This setting allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. 
 
-<img src="screens/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="../screens/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
 
 In the Focus Point dialog, this setting corresponds to 80% (XXL) to 40% (S), in increments of 10%, of the size of the Lightroom application window used to display the photo. Please note that the text pane to the right of the photo and the bottom row of user controls are not included in this percentage.
 
@@ -439,7 +437,7 @@ In the Metadata Viewer, this setting determines the height of the dialog box. Th
 To make keyboard shortcuts more transparent and intuitive to use, the text input field that captures them is now visible by default. For a more detailed explanation, see xxx.
 This setting can be used to customize the appearance of the input field:
 
-<img src="screens/README%20TextInputSetting.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="../screens/README%20TextInputSetting.jpg" alt="Screenshot" style="width: 600px;"/>
 
 - Invisible. This is self-explaining
 - Small. A narrow input field without labelling
@@ -455,7 +453,7 @@ If you don't need the controls for flagging, rating or coloring photos in the Fo
 The keyboard shortcuts for flagging, rating and coloring are the same as those used in Lightroom, including the `Shift` combinations that perform an action and advance to the next photo. Since the plugin cannot recognize key codes and can only work with text input, using the `Shift` + `0`-`9` keyboard shortcuts requires the plugin to be aware of the currently used international keyboard layout.<br>
 The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.
 <br><br>
-<img src="screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="../screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
 <br>
 
 ### Viewing Options
