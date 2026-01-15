@@ -1,4 +1,4 @@
-## Focus Points V3.2 
+# Focus Points V3.2 
 
 This document describes the new features and changes in V3.2.<br>
 
@@ -8,12 +8,13 @@ New features introduced in V3.2:
 - [Filmstrip Navigation](#filmstrip-navigation)&nbsp;&nbsp;[#314](https://github.com/musselwhizzle/Focus-Points/issues/314) (not for LR5)
 - [Customizable plugin window size](#customizable-plugin-window-size)&nbsp;&nbsp;[#317](https://github.com/musselwhizzle/Focus-Points/issues/317)
 - [Introduction of visible input field for keyboard shortcuts](#introduction-of-visible-input-field-for-keyboard-shortcuts)&nbsp;&nbsp;[#321](https://github.com/musselwhizzle/Focus-Points/issues/321)
-- [Long metadata names excessively widen the information area](#display-of-long-metadata-names)&nbsp;&nbsp;[#326](https://github.com/musselwhizzle/Focus-Points/issues/326)
+- [Long metadata names excessively widen the information area](#display-of-long-names)&nbsp;&nbsp;[#326](https://github.com/musselwhizzle/Focus-Points/issues/326)
 - [Unify language used in the Shooting Information section](#unify-language-used-in-the-shooting-information-section)&nbsp;&nbsp;[#342](https://github.com/musselwhizzle/Focus-Points/issues/342)
 - [Focus points outside cropped image area](#focus-points-outside-cropped-image-area)&nbsp;&nbsp;[#339](https://github.com/musselwhizzle/Focus-Points/issues/339)
 - [Improved sizing of metadata window](#improved-sizing-of-metadata-window)&nbsp;&nbsp;[#333](https://github.com/musselwhizzle/Focus-Points/issues/333)
 - [Buy the developer a coffee](#buy-the-developer-a-coffee)&nbsp;&nbsp;[#319](https://github.com/musselwhizzle/Focus-Points/issues/319)
 
+<br>
 
 ### User Interface changes
 
