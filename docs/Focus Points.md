@@ -242,17 +242,17 @@ Example: DoF in this capture is only ~2 cm, so with the chosen aperture of f/1.8
 
 The first line of text in the `Focus Information` section contains a message summarizing whether the plugin was successful in its task to detect and visualize focus points. This can be a success message (in green letters), a warning (orange) or an error message (red):
 
-|  Type   | Message                                                                                                       |
-|:-------:|---------------------------------------------------------------------------------------------------------------|
-| Success | Focus points detected                                                                                         |
-| Warning | [No focus points recorded](Troubleshooting_FAQ.md#No-focus-points-recorded)                                   |
-| Warning | [Focus point recorded in manual focus mode](Troubleshooting_FAQ.md#focus-point-recorded-in-manual-focus-mode) |
-| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#Manual-focus-no-AF-points-recorded)              |
-|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#Focus-info-missing-from-file)                           |
-|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#Camera-model-not-supported)                               |
-|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#Camera-maker-not-supported)                               |
-|  Error  | [No camera-specific metadata found](Troubleshooting_FAQ.md#no-camera-specific-metadata-found)                |
-|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#Severe-error-encountered)                                   |
+|  Type   | Message                                                                                                         |
+|:-------:|-----------------------------------------------------------------------------------------------------------------|
+| Success | Focus points detected                                                                                           |
+| Warning | [No focus points recorded](./Troubleshooting_FAQ.md#no-focus-points-recorded)                            |
+| Warning | [Focus point recorded in manual focus mode](./Troubleshooting_FAQ.md#focus-point-recorded-in-manual-focus-mode) |
+| Warning | [Manual focus, no AF points recorded](Troubleshooting_FAQ.md#manual-focus-no-AF-points-recorded)                |
+|  Error  | [Focus info missing from file](Troubleshooting_FAQ.md#focus-info-missing-from-file)                             |
+|  Error  | [Camera model not supported](Troubleshooting_FAQ.md#camera-model-not-supported)                                 |
+|  Error  | [Camera maker not supported](Troubleshooting_FAQ.md#camera-maker-not-supported)                                 |
+|  Error  | [No camera-specific metadata found](Troubleshooting_FAQ.md#no-camera-specific-metadata-found)                   |
+|  Error  | [Severe error encountered](Troubleshooting_FAQ.md#severe-error-encountered)                                     |
 
 Click on the message to learn what it means and how to deal with it in case of an error or warning.
 
