@@ -120,12 +120,10 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if not prefs.focusBoxColor           then	prefs.focusBoxColor       = "red"    end
   if     prefs.taggingControls  == nil then prefs.taggingControls     = true     end
   if     prefs.keyboardLayout   == nil then prefs.keyboardLayout      = KeyboardLayout.autoDetectLayout end
-  if not prefs.processMfInfo    == nil then prefs.processMfInfo       = false    end
   if not prefs.loggingLevel            then	prefs.loggingLevel        = "AUTO"   end
   if not prefs.latestVersion           then	prefs.latestVersion       = _PLUGIN.version end
   if     prefs.checkForUpdates  == nil then	prefs.checkForUpdates     = true     end   -- here we need a nil pointer check!!
-  if     prefs.keyboardInput    == nil then prefs.keyboardInput       = FocusPointPrefs.kbdInputReguar
-  end
+  if     prefs.keyboardInput    == nil then prefs.keyboardInput       = FocusPointPrefs.kbdInputRegular end
   -- get the latest plugin version for update checks
   FocusPointPrefs.retrieveVersionOfLatestRelease()
 end
@@ -477,7 +475,7 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
           },
         },
         f:static_text {
-            title = 'Truncate or wrap long metadata value strings after'
+            title = 'Truncate or wrap strings after'
         },
         f:edit_field {
           value = bind ("truncateLimit"),
@@ -530,28 +528,6 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
         },
         f:static_text {
           title = "  Size of focus box for 'focus pixel' points ",
-        },
-      },
-    }
-  end
-  local function sectionProcessingOptions()
-    return
-    {
-      title = "Processing Options",
-      f:row {
-        bind_to_object = prefs,
-        spacing = f:control_spacing(),
-        f:popup_menu {
-          title = "processMfInfo",
-          value = bind ("processMfInfo"),
-          width = dropDownWidth,
-          items = {
-            { title = "On",  value = true  },
-            { title = "Off", value = false },
-          }
-        },
-        f:static_text {
-          title = 'Process focus information for images taken with manual focus (MF)',
         },
       },
     }
@@ -665,7 +641,6 @@ function FocusPointPrefs.genSectionsForBottomOfDialog( f, _p )
     sectionScreenScaling(),
     sectionUserInterface(),
     sectionViewingOptions(),
-    sectionProcessingOptions(),
     sectionLogging(),
     sectionUpdates(),
     sectionAcknowledgements(),
