@@ -393,6 +393,18 @@ The plugin is written in the Lua programming language and uses Lua string.find()
 
 For further processing as text, the full metadata (retrieved via 'exiftool -a -u -sort <file>') can also be opened in a text editor.
 
+### Sizing of the Metadata Viewer window
+
+In V3.1, tag names that were significantly longer than 40 characters could result in an unusual display in the metadata viewer.
+
+This has been improved in V3.2:
+
+- The maximum length of tags displayed is limited to 32 characters.
+- The maximum length of values displayed is limited to 128 characters.
+- Truncated strings are indicated by an ellipsis symbol '...'.<br>If the truncated part contains  relevant information, it can still be reviewed by opening the metadata as text.
+- The edit fields for the 'Tag' and 'Value' filters are the same size as in point 1.
+- The heigth of the metadata window is given by the Size of plugin window setting S .. XXL
+- The width of the metadata window is chosen so that the head line (filter entry fields, hint) fits in but is minimum 70% of the window height.
 
 <img src="../screens/metadata1.jpg" alt="Metdata 1" style="width: 200px;"/>         <img src="../screens/metadata2.jpg" alt="Metadata 2" style="width: 200px;"/>         <img src="../screens/metadata3.jpg" alt="Metadata 3" style="width: 200px;"/>
 

@@ -33,11 +33,9 @@ Screenshot of plugin settings page with new `User Interface` section:
 
 Users for whom focus point accuracy is critical when selecting shots now have the ability to flag, reject, rate or color images directly within the plugin. The user interface has been updated to include the relevant controls: 
 
-Windows:
-<img src="../screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="../screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/> Windows
 
-macOS:
- <img src="../screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="../screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/> macOS
 
 Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard-shortcuts) as in Lightroom. Pressing the Shift key during tagging moves the plugin to the next photo.
 
@@ -45,7 +43,7 @@ Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard
 
 - Although the plugin allows you to set a photo's flag status, rating and color label, these settings are **not** reflected in the plugin's user interface. Any changes to the flag status, rating or color will be acknowledged immediately with a standard message in Lightroom Classic, and these changes will be reflected in the filmstrip for the selected photo. It is recommended that you adjust the sizes of the plugin window and Lightroom's filmstrip when using tagging, so that both are visible at the same time.
 
-- Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input. See xxx.<br>
+- Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input.<br>
 The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.<br><img src="../screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
   
 - The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
@@ -195,7 +193,7 @@ This has been improved in V3.2:
 3. Truncated strings are indicated by an ellipsis symbol '...' <br> If this is relevant information, it can still be reviewed by opening the metadata as text.
 5. The edit fields for the 'Tag' and 'Value' filters are the same size as in point 1.
 6. The heigth of the metadata window is given by the `Size of plugin window` setting S .. XXL
-7. The width of the metadata window chosen that the head line (filter entry fields, hint) fits in but minimum 70% of the window height.
+7. The width of the metadata window is chosen so that the head line (filter entry fields, hint) fits in but is minimum 70% of the window height.
 
 <img src="../screens/README%20Metadata%20Window.jpg" alt="Screenshot" style="width: 800px;"/>
 
