@@ -4,6 +4,7 @@
 
 * [No focus points recorded](#No-focus-points-recorded)
 * [Manual focus, no AF points recorded](#Manual-focus-no-AF-points-recorded)
+* [Focus point recorded in manual focus mode](#Focus-point-recorded-in-manual-focus-mode)
 * [Focus info missing from file](#Focus-info-missing-from-file)
 * [Focus points outside cropped image area](#Focus-points-outside-cropped-image-area)
 * [Camera model not supported](#Camera-model-not-supported)
@@ -38,6 +39,17 @@ Log file:
 This is a special but very typical case of "No focus points recorded". The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.
 
 <img src="../screens/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+
+
+### "Focus point recorded in manual focus mode"
+
+Fujifilm cameras store focus information when using the manual focus mode (AF-M). 
+
+Unlike autofocus-determined focus points, manual focus points do not necessarily indicate the sharpest parts of an image. Instead, they **represent the center of the focus area** selected by the camera user (single point / zone / wide).
+
+When the photographer uses the selected focus area to focus the image and this area is small (single point), the displayed focus point will probably correspond to a sharp part of the image. Otherwise, the displayed focus point may end up over an unsharp part of the image.
+
+In manual focus mode, you need to recall the circumstances in which the image was captured in order to make sense of the focus point information.
 
 
 ### "Focus info missing from file"
