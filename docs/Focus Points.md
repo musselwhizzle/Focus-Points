@@ -310,7 +310,10 @@ The keyboard layout in use can be configured in the plugin preferences, under th
 
 ### Keyboard Shortcuts
 
-To simplify the operation of the plugin, keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse:
+To simplify the operation of the plugin, keyboard shortcuts are supported. These shortcuts can be used to perform all actions associated with the user interface, so the plugin can be controlled entirely by the keyboard, without the need to touch the mouse.
+
+Some shortcuts in V3.1 have been changed to avoid collision with Lightroom tagging shortcuts. Previously, 'p' was used for 'previous', 'x' for 'exit', and 'u' for 'user manual'. Instead of 'Exit', the plugin will now close using the 'Close' button (shortcut 'C').
+
 
 | Action                                      | Keyboard shortcuts |
 |---------------------------------------------|--------------------|
@@ -360,6 +363,7 @@ To make this procedure more transparent and intuitive, the text input field is n
 
 You can configure the size of the text input field, including the labelling, in the [plugin settings](#text-input-field-for-keyboard shortcuts).
 
+<br>
 
 ### Buy me a coffee
 Several of you have asked how you can show your appreciation for the work I have done to significantly improve the plugin over the past year and months. If you care about this issue, you can now show your [support via Ko-fi](https://ko-fi.com/focuspoints)*. Simply click the link next to the coffee cup.
