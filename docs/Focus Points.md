@@ -143,7 +143,7 @@ If you have never used Lightroom plugins before and are looking for some basic i
 <br>
 
 ### 2.2 Focus Point Viewer
-Once the plugin is installed, you can run it with one or more photos selected<sup>1</sup>:
+Once the plugin is installed, you can run it with one or more photos selected:
 
 Library module:<br>
 _Library → Plug-in Extras → Focus Point_
@@ -151,8 +151,7 @@ _Library → Plug-in Extras → Focus Point_
 Develop module:<br>
 _File → Plug-in Extras → Focus Point_
 
-<sup>1</sup> 
-In V3.2, you no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. The plugin now supports next and previous function when run on a single image (the current one). `Next image` will advance to the next photo in the _filmstrip_, and `Previous image` will advance to the previous photo in the filmstrip. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
+In V3.2, you no longer need to select the corresponding photos before starting the plugin to display the focus point for multiple photos. The plugin now supports next and previous function when run on a single image (the current one in Lightroom filmstrip). `Next image` will advance to the next photo in the _filmstrip_, and `Previous image` will advance to the previous photo in the _filmstrip_. Unlike with a set of selected photos, there is no wrap-around when the beginning or end of the film strip is reached.
 
 To run the plugin on a specific series of photos, select those photos in Lightroom _before_ running the plugin.
 
@@ -161,11 +160,11 @@ To run the plugin on a specific series of photos, select those photos in Lightro
 
 ### User Interface
 
-The user interface is divided into three main areas. On the left is the photo view, which shows visualized focus points and detected elements. On the right is a side-by-side view of information that may be useful for evaluating the photo in terms of focus results. The controls for navigating and flagging images are located at the bottom of the window.
+The user interface is divided into three main areas. On the left is the Photo View, which shows visualized focus points and detected elements. On the right is the Info View, a side-by-side view of information that may be useful for evaluating the photo in terms of focus results. The controls for navigating and flagging images are located at the bottom of the window.
 
 <img src="../screens/User%20Interface.jpg" alt="User Interface" style="width: 1000px;"/>
 
-In detail:
+For more detailed information, click on the following links:
 
 1. [Photo View](#photo-view)
 2. [Info View](#info-view)
@@ -175,7 +174,7 @@ In detail:
 6. [Keyboard Shortcuts](#keyboard-shortcuts)
 7. [Buy me a coffee](#buy-me-a-coffee)
 
-The Focus Point Viewer window is not dynamically resizable. However, V3.2 introduces a "Size of plugin window" setting that allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. This setting corresponds to 80% (XXL) downto 40% (S), in increments of 10%, of the size of the Lightroom application window and it refers to the dimensions of the photo view. 
+The Focus Point Viewer window is not dynamically resizable. However, V3.2 introduces a [Size of plugin window](#size-of-plugin-window) setting that allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. This setting corresponds to 80% (XXL) downto 40% (S), in increments of 10%, of the size of the Lightroom application window and it refers to the dimensions of the photo view. 
 The info view and the bottom row of user controls are not included in this percentage. The space allocated to these areas is in addition to the size setting.
 
 
@@ -422,7 +421,7 @@ The drawing routines used on Windows are not aware of any display scale factor t
 This section is new in version 3.2. It contains several settings that can be used to customize the appearance and functionality of the plugin's user interface. 
 
 **_Size of plugin window_**. Default setting: `L`
-
+<a id="size-of-plugin-window"></a>
 This setting allows you to customize the size of the plugin window. You can choose from five options ranging from XXL to S. 
 
 <img src="screens/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
