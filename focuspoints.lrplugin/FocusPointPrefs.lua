@@ -69,6 +69,7 @@ FocusPointPrefs.kbdInputRegular    = 2
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prelease"
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 
+FocusPointPrefs.masterVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/v3.2_pre/focuspoints.lrplugin/Version.txt"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
@@ -121,7 +122,6 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if     prefs.taggingControls  == nil then prefs.taggingControls     = true     end
   if     prefs.keyboardLayout   == nil then prefs.keyboardLayout      = KeyboardLayout.autoDetectLayout end
   if not prefs.loggingLevel            then	prefs.loggingLevel        = "AUTO"   end
-  if not prefs.latestVersion           then	prefs.latestVersion       = _PLUGIN.version end
   if     prefs.checkForUpdates  == nil then	prefs.checkForUpdates     = true     end   -- here we need a nil pointer check!!
   if     prefs.keyboardInput    == nil then prefs.keyboardInput       = FocusPointPrefs.kbdInputRegular end
   -- get the latest plugin version for update checks
@@ -234,14 +234,32 @@ end
   The result is stored in 'prefs.latestVersion' for use by update-related routines.
 ------------------------------------------------------------------------------]]
 function FocusPointPrefs.retrieveVersionOfLatestRelease()
-  local prefs = LrPrefs.prefsForPlugin( nil )
+
   -- Need to execute this as a collaborative task
-  LrTasks.startAsyncTask(function()
-    local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
-    prefs.dummy = latestVersionNumber
-    if latestVersionNumber then
-      prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+%.%d+")
+  LrTasks.startAsyncTask( function()
+    local prefs = LrPrefs.prefsForPlugin( nil )
+    local body, headers
+
+    -- By default, if an error occurs, it is assumed that there is no update available
+    prefs.latestVersion = nil
+
+    -- Read the contents of the 'latest version' file
+    body, headers = LrHttp.get(FocusPointPrefs.latestVersionFile)
+    if headers and headers.status == 200 then
+      -- file found: parse contents
+      prefs.latestVersion = string.match(body, "v%d+%.%d+%.%d+%.%d+")
+    else
+      -- file not found: has the branch been removed?
+      if FocusPointPrefs.latestVersionFile ~= FocusPointPrefs.masterVersionFile then
+        -- Public version update for pre-release available!
+        body, headers = LrHttp.get(FocusPointPrefs.masterVersionFile)
+        if headers and headers.status == 200 then
+          -- file found: parse contents
+          prefs.latestVersion = string.match(body, "v%d+%.%d+%.%d+%.%d+")
+        end
+      end
     end
+    return
   end)
 end
 
