@@ -63,7 +63,7 @@ The plugin requires the metadata of original, out-of-camera JPGs or RAW files in
 Lightroom does not retain or even read makernotes when importing files. Therefore, if a separate file is created from the original image (e.g. by exporting to another application such as Photoshop), this information will not be present in the file and the plugin will not have the necessary inputs to work.
 
 
-For more details and concrete examples, see [Scope and Limitations](Focus%20Points.md#scope-and-limitations).  
+For more details and concrete examples, see [Scope and Limitations](Focus-Points.md#scope-and-limitations).  
 
 For example, this image was imported into Lightroom as a RAW file and then edited in Photoshop. The re-imported TIFF file is missing the makernotes and focus information, so the plugin does not have the data it needs to work.
 

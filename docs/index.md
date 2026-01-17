@@ -93,7 +93,7 @@ Once the plugin has been installed, choose one or more photos and select:
 * `Library → Plug-in Extras → Show Focus Point`, or  
 * `File → Plug-in Extras → Show Focus Point`
 
-See [How to use a keyboard shortcut to run the plugin](Focus%20Points.md#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
+See [How to use a keyboard shortcut to run the plugin](Focus-Points.md#how-to-use-a-keyboard-shortcut-to-run-the-plugin) to learn how to invoke the plugin using a hotkey.
 
 If you have never used Lightroom plugins before and are looking for some basic information, a video tutorial would be a good place to start. For example, [Plugin Installation (5:16)](https://www.youtube.com/watch?app=desktop&v=dxB4eVcNPuU) or [How to Install & Remove Lightroom Plug-ins (11:30)](https://www.youtube.com/watch?v=DFFA8nKBsJw). 
 
@@ -111,8 +111,8 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 |       <img src="images/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="images/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |  
 |       <img src="images/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="images/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
 
-<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](Focus%20Points.md#24-configuration-and-settings).<br>
-<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](Focus%20Points.md#24-configuration-and-settings).<br>
+<sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](Focus-Points.md#24-configuration-and-settings).<br>
+<sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](Focus-Points.md#24-configuration-and-settings).<br>
 <sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](focus-points.html) for a detailed explanation.
 
 
@@ -123,7 +123,7 @@ On macOS, the focus point display of title photo looks like this:
 
 Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, cameras from Canon and Nikon do not store any information on face or subject recognition (at least as far as is known), so visualization is not possible. 
 
-See [chapter 3](Focus%20Points.md#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
+See [chapter 3](Focus-Points.md#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
 
 
 ## Metadata viewer
