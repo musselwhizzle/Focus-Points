@@ -640,16 +640,16 @@ CAF-focused shot using the 'green' color for in-focus points for better visibili
 
 As with Nikon, Canon mirrorless models feature a hybrid autofocus system. However, in terms of focusing information stored in EXIF, the cooperation of PDAF and CAF is transparent. You can find the x, y positions of the focus point area(s) used to focus the shot as well as their width and height always in the same format.
 
-<img src= "../screens/Canon 3.jpg" alt="Canon 3" style="width: 1000px;"/><br>
+<img src= "images/Canon 3.jpg" alt="Canon 3" style="width: 1000px;"/><br>
 R3. AI Servo AF with Case A preset and subject detection 'Animals'<br><br> 
 
-<img src= "../screens/Canon 5.jpg" alt="Canon 5" style="width: 1000px;"/><br>
+<img src= "images/Canon 5.jpg" alt="Canon 5" style="width: 1000px;"/><br>
 R5 Mark II. AI Servo AF with Case A preset and subject detection 'Auto'<br><br> 
 
-<img src= "../screens/Canon 6.jpg" alt="Canon 6" style="width: 1000px;"/><br>
+<img src= "images/Canon 6.jpg" alt="Canon 6" style="width: 1000px;"/><br>
 R1. AI Servo AF with Action Priority "On" and Sport Events "Basketball".<br><br> 
 
-<img src= "../screens/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/><br>
+<img src= "images/Canon 4.jpg" alt="Canon 4" style="width: 1000px;"/><br>
 R1. When capturing flat subjects, focus point display for Canon R-series can be funny sometimes. 
 
 <br>
@@ -670,32 +670,32 @@ Supported features:
 
 In Sony models, the focus point of an image is specified by the (x, y) coordinates in the `FocusLocation` tag. Newer models also support a `FocusFrameSize` tag, which specifies the size of the focus area. Custom focus frame size settings in the plugin's preferences only apply when the focus frame size is not available in the metadata. In this case, medium and large focus boxes will display a center dot.
 
-<img src= "../screens/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 1000px;"/><br>
+<img src= "images/Sony 1a.jpg" alt="Sony 1a.jpg" style="width: 1000px;"/><br>
 α9. The focus point recorded by the camera corresponds to the center dot. The box is only there to make the dot more visible.<br><br>
 
-<img src= "../screens/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 1000px;"/><br>
+<img src= "images/Sony 1b.jpg" alt="Sony 1b.jpg" style="width: 1000px;"/><br>
 α9 II. If the focal plane phase detection autofocus points have been engaged during the focusing process, they will be displayed in grey.<br><br>
 
 
-<img src= "../screens/Sony 2.jpg" alt="Sony 2" style="width: 1000px;"/><br>
+<img src= "images/Sony 2.jpg" alt="Sony 2" style="width: 1000px;"/><br>
 α9 III. When focus frame size is given in metadata, the focus box cannot be changed in size (since this is determined by the camera) and the box will not have a center dot.<br><br>
 
 
 Sony supports face detection on almost all of their mirrorless (alpha) and also compact (RX series) camera. The plugin can display the yellow face detection frames even on images taken with cameras 14 years back where it's not possible to detect focus points using EXIF data.
 
-<img src= "../screens/Sony 5.jpg" alt="Sony 5" style="width: 750px;"/><br>
+<img src= "images/Sony 5.jpg" alt="Sony 5" style="width: 750px;"/><br>
 α6600 Detected face indicated by a yellow frame. Detected eye in focus indicated by a red dot.<br><br>
 
-<img src= "../screens/Sony 3.jpg" alt="Sony 3" style="width: 1000px;"/><br>
+<img src= "images/Sony 3.jpg" alt="Sony 3" style="width: 1000px;"/><br>
 α7 IV. Two face detected, one eye in focus.<br><br>
 
-<img src= "../screens/Sony 6.jpg" alt="Sony 6" style="width: 750px;"/><br>
+<img src= "images/Sony 6.jpg" alt="Sony 6" style="width: 750px;"/><br>
 RX10 IV. Detected face indicated by a yellow frame. Detected eye in focus indicated by a red dot.<br><br>
 
 
 In contrast to Canon and Nikon, there's not much that you can find in the EXIF maker notes for Sony's AF menu settings. This is why the focus information section is rather empty. Sony also lacks a focus distance tag, meaning there is no Depth of Field section.
 
-<img src= "../screens/Sony 4.jpg" alt="Sony 4" style="width: 750px;"/><br>
+<img src= "images/Sony 4.jpg" alt="Sony 4" style="width: 750px;"/><br>
 α1 II. The number of known* AF settings entries is small compared to a Canon R5 Mark II.<br>
 
 \* not "known" means that information may be present in metadata but has not been identified and decoded yet.
