@@ -23,7 +23,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 
 If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
 
-To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](focus-points.html)**. **It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
+To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](Focus-Points.html)**. **It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
 
 ### [V3.2 updated January 15, 2026](https://github.com/musselwhizzle/Focus-Points/releases/latest)
 
@@ -100,7 +100,7 @@ If you have never used Lightroom plugins before and are looking for some basic i
 
 ## Supported AF Points
 
-The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in the [User Manual]((focus-points.html#photo-view).
+The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in the [User Manual]((Focus-Points.html#photo-view).
 
 |                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                               |
 |:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
@@ -113,7 +113,7 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](Focus-Points.md#24-configuration-and-settings).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](Focus-Points.md#24-configuration-and-settings).<br>
-<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](focus-points.html) for a detailed explanation.
+<sup>3</sup> The meaning may vary depending on the camera manufacturer. See the camera-specific chapters in the [User Manual](Focus-Points.html) for a detailed explanation.
 
 
 On macOS, the focus point display of title photo looks like this:
