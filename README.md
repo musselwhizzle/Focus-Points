@@ -29,7 +29,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 ## Current Release:
 
-## V3.2 updated January 15, 2026
+## [V3.2 updated January 15, 2026](https://github.com/musselwhizzle/Focus-Points/releases/latest)
 
 ### New features and changes:
 
