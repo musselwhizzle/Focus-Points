@@ -4,8 +4,6 @@ title: Focus Points – User Manual
 
 # Focus Points – User Manual
 
-# Focus Points – User Manual
-
 ## Content ##
 
 ### [Troubleshooting / FAQ](Troubleshooting_FAQ.md#troubleshooting--faq)
