@@ -29,17 +29,17 @@ A common potential reason for this situation is that the AF system has not compl
 
 Take a look at the example below (Olympus camera). The shot was taken with "Release Priority", "AF Search" was "not ready". However, the shot looks sharp. Maybe the AF system just didn't finish fine-tuning the focus.
 
-<img src="docs/images/Troubleshooting 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 1.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 Log file:
 
-<img src="docs/images/Troubleshooting 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 2.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### "Manual focus, no AF points recorded"
 This is a special but very typical case of "No focus points recorded". The photo was taken with manual focus (MF), so there is no autofocus (AF) information in the metadata.
 
-<img src="docs/images/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 3.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 <a id="focus-point-recorded-in-manual-focus-mode"></a>
@@ -67,11 +67,11 @@ For more details and concrete examples, see [Scope and Limitations](Focus%20Poin
 
 For example, this image was imported into Lightroom as a RAW file and then edited in Photoshop. The re-imported TIFF file is missing the makernotes and focus information, so the plugin does not have the data it needs to work.
 
-<img src="docs/images/Troubleshooting 6.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 6.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 The log file reveals whether intact metadata is available or not by indicating which tag has not been found:
 
-<img src="docs/images/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 7.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### Focus points outside cropped image area
@@ -81,10 +81,10 @@ Although focus points have been detected, they may be invisible or partially inv
 Note: This message is not triggered by face or subject detection frames, only focus points. 
 
 Cropped image (focus point outside):
-<img src="docs/images/Troubleshooting 11.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 11.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 Original image with focus point:
-<img src="docs/images/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### "Camera model not supported"
@@ -95,7 +95,7 @@ This message may be displayed for older camera models that do not use the same s
 
 Example for the original Canon 1D from 2001:
 
-<img src="docs/images/Troubleshooting 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 4.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### "Camera maker not supported"
@@ -104,7 +104,7 @@ The selected photo was taken with a camera from a manufacturer that the plugin c
 
 While it is not difficult to add at least basic support for a camera brand, this requires that the relevant AF metadata be available. This means they have to be "known" by exifool, which is not the case for Leica, Hasselblad, Sigma, Samsung phones and others.
 
-<img src="docs/images/Troubleshooting 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 5.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### "No camera-specific metadata found"
@@ -113,7 +113,7 @@ The selected photo does not include information about the camera used. The make 
 
 Clearly, the plugin is unable to perform any actions on this photo other than display it.
 
-<img src="docs/images/Troubleshooting 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 10.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ### "Severe error encountered"
@@ -127,11 +127,11 @@ If you encounter this problem and cannot fix it yourself, please go to the plugi
 
 Example error:
 
-<img src="docs/images/Troubleshooting 8.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 8.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 The log file reveals what the problem is (artificially induced to provoke this error message ;)
 
-<img src="docs/images/Troubleshooting 9.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 9.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 
 ## General 
