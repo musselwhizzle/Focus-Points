@@ -319,31 +319,33 @@ Some shortcuts in V3.1 have been changed to avoid collision with Lightroom taggi
 
 | Action                                      | Keyboard shortcuts |
 |---------------------------------------------|--------------------|
-| **Navigation**                              |                    | 
+| **Navigation**                              | .                  | 
 | Previous image                              | `-`, `<`           |
 | Next image                                  | `+`, `Spacebar`    |
-| **Flagging**                                |                    |
+| **Flagging**                                | .                  |
 | Flag photo as a pick                        | `P`                |
 | Flag photo as a pick and go to next photo   | `Shift`+`P`        |
 | Flag photo as a reject                      | `X`                |
 | Flag photo as a reject and go to next photo | `Shift`+`X`        |
 | Unflag photo                                | `U`                |
 | Unflag photo and go to next photo           | `Shift`+`U`        |
-| **Rating**                                  |                    |
+| **Rating**                                  | .                  |
 | Set star rating                             | `1`-`5`            |
 | Set star rating and go to next photo        | `Shift`+`1`-`5`    |
-| **Color**                                   |                    |
+| **Color**                                   | .                  |
 | Assign a red label                          | `6`                |
 | Assign a yellow label                       | `7`                |
 | Assign a green label                        | `8`                |
 | Assign a blue label                         | `9`                |
 | Assign a color label and go to next photo   | `Shift`+`6`-`9`    |
-| **Miscelleanous**                           |                    |
+| **Miscelleanous**                           | .                  |
 | Open User Manual                            | `M`                |
 | Open Troubleshooting Information (Help)     | `?`, `H`           |
 | Check Log                                   | `L`                |
 | Close                                       | `C `               |
+
 <br>
+
 
 **IMPORTANT Technical Note:**
 
