@@ -1,4 +1,4 @@
-# Focus Points
+# Focus Points for Lightroom Classic
 
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
 - Show which focus point was active when the picture was taken <sup>2</sup>
@@ -13,23 +13,19 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 <sup>4</sup> Currently supported for Pentax and OM System.<br> 
 <sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br> 
 <sup>6</sup> Not for LR5.<br>
+<br>
+<img src="docs/images/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
+<br>
 
-To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. **It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
+## Current Release:
 
 **[Download the latest release](https://github.com/musselwhizzle/Focus-Points/releases/latest)**  and see detailed **[installation instructions](#installation)**.
 
 If you have any questions, comments or suggestions for improving this plugin, please share your feedback in **[Focus-Points Discusssions](https://github.com/musselwhizzle/Focus-Points/discussions)**.
 
-<br>
+To understand the principles of this plugin, how to use it and how to interpret the results, please refer to the **[User Manual](docs/Focus%20Points.md)**. **It is recommended that you read chapters 1, 2 and the part of chapter 3 that applies to your camera**.
 
-<img src="screens/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
-
-
-<br>
-
-## Current Release:
-
-## [V3.2 updated January 15, 2026](https://github.com/musselwhizzle/Focus-Points/releases/latest)
+### [V3.2 updated January 15, 2026](https://github.com/musselwhizzle/Focus-Points/releases/latest)
 
 ### New features and changes:
 
@@ -61,7 +57,7 @@ If you have any questions, comments or suggestions for improving this plugin, pl
 
 See [README V3.2](https://github.com/musselwhizzle/Focus-Points/blob/master/docs/README_V3.2.md) for an overview of the new features.<br>
 
-<br>
+
 
 ## Installation
 
@@ -104,17 +100,16 @@ If you have never used Lightroom plugins before and are looking for some basic i
 
 ## Supported AF Points
 
-
 The plugin uses different colors to visualize AF points, detected faces, subjects and details. Visualization means that the respecive area is highlighted by a rectangular marker. On Windows this is a solid frame. On macOS, the frame is indicated by corner symbols. The reason for this OS-specific difference is explained in the [User Manual](docs/Focus%20Points.md#photo-view).
 
 |                                     MAC                                      |                                       WIN                                        |       Color       | Meaning                                                                               |
 |:----------------------------------------------------------------------------:|:--------------------------------------------------------------------------------:|:-----------------:|---------------------------------------------------------------------------------------|
-|    <img src="screens/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="screens/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                        |
-| <img src="screens/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="screens/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera |
-|   <img src="screens/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="screens/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                |   
-|   <img src="screens/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="screens/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup>      |   
-|       <img src="screens/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="screens/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |  
-|       <img src="screens/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="screens/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
+|    <img src="docs/images/af_infocus.png" alt="infocus" style="width: 20px;"/>    |    <img src="docs/images/af_infocus_win.png" alt="infocus" style="width: 20px;"/>    |  red<sup>1</sup>  | Active AF point. Focus area, dimensions reported by the camera                        |
+| <img src="docs/images/af_infocusdot.png" alt="infocusdot" style="width: 20px;"/> | <img src="docs/images/af_infocusdot_win.png" alt="infocusdot" style="width: 20px;"/> | red<sup>1,2</sup> | Active AF point. Focus location<sup>3</sup>, pixel coordinates reported by the camera |
+|   <img src="docs/images/af_selected.png" alt="selected" style="width: 29px;"/>   |   <img src="docs/images/af_selected_win.png" alt="selected" style="width: 29px;"/>   |       white       | User-selected AF point                                                                |   
+|   <img src="docs/images/af_inactive.png" alt="inactive" style="width: 20px;"/>   |   <img src="docs/images/af_inactive_win.png" alt="inactive" style="width: 20px;"/>   |       gray        | Inactive AF point. Part of DSLR AF points but not used for the image<sup>3</sup>      |   
+|       <img src="docs/images/af_face.png" alt="face" style="width: 20px;"/>       |       <img src="docs/images/af_face_win.png" alt="face" style="width: 20px;"/>       |      yellow       | Face or subject detected by the camera in this area                                   |  
+|       <img src="docs/images/af_crop.png" alt="crop" style="width: 20px;"/>       |       <img src="docs/images/af_crop_win.png" alt="crop" style="width: 20px;"/>       |       black       | Part of the image that is used by the camera in 'crop mode'                           |
 
 <sup>1</sup> AF point color can be chosen from red, green, blue in [Configuration and Settings](docs/Focus%20Points.md#24-configuration-and-settings).<br>
 <sup>2</sup> 'Focus-pixel' shape and size can be chosen from different options (small box or medium/large with center dot) in [Configuration and Settings](docs/Focus%20Points.md#24-configuration-and-settings).<br>
@@ -123,14 +118,13 @@ The plugin uses different colors to visualize AF points, detected faces, subject
 
 On macOS, the focus point display of title photo looks like this:
 
-<img src="screens/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="docs/images/ReadMe 2.jpg" alt="Screenshot" style="width: 800px;"/>
 
 
 Please note that not all cameras store the necessary information to support these features in the photo's metadata. For example, cameras from Canon and Nikon do not store any information on face or subject recognition (at least as far as is known), so visualization is not possible. 
 
 See [chapter 3](docs/Focus%20Points.md#3-display-of-focus-points) of the user manual for detailed information on which types of visualization are supported for which cameras.
 
-<br>
 
 ## Metadata viewer
 
@@ -150,7 +144,7 @@ The Metadata Viewer is useful for viewing information that is neither visible in
  |   $   | end of line/string                             |              
 
 
-<img src="screens/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="screens/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
+<img src="docs/images/metadata1.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="docs/images/metadata2.jpg" alt="Screenshot" style="width: 200px;"/>         <img src="docs/images/metadata3.jpg" alt="Screenshot" style="width: 200px;"/>
 
 <br>
 
