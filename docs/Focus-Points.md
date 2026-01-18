@@ -1,7 +1,3 @@
----
-title: Focus Points – User Manual
----
-
 # Focus Points – User Manual
 
 ## Content ##

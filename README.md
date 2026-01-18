@@ -1,5 +1,7 @@
 # Focus Points for Lightroom Classic
 
+<img src="docs/images/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
+
 A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS: 
 - Show which focus point was active when the picture was taken <sup>2</sup>
 - Display user-selected autofocus points/area <sup>3,4</sup>
@@ -13,9 +15,7 @@ A plugin for Lightroom Classic<sup>1</sup> on Windows and macOS:
 <sup>4</sup> Currently supported for Pentax and OM System.<br> 
 <sup>5</sup> Currently supported for Fuji, OM System (subjects, faces) and Sony, Olympus, Pentax (faces).<br> 
 <sup>6</sup> Not for LR5.<br>
-<br>
-<img src="docs/images/ReadMe 1.jpg" alt="Screenshot" style="width: 800px;"/>
-<br>
+
 
 ## Current Release:
 
