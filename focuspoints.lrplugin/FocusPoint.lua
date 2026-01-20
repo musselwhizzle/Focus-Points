@@ -1,5 +1,3 @@
-local Require = require "Require".path ("../debuggingtoolkit.lrdevplugin").reload ()
-local Debug   = require "Debug".init ()
 --[[
   Copyright 2016 Whizzbang Inc
 
@@ -64,10 +62,7 @@ local Utils                 = require 'Utils'
 ------------------------------------------------------------------------------]]
 local function showFocusPoint()
 
--- Debug.pauseIfAsked()
--- if GlobalDefs.DEBUG then require('Profiler').init() end
-
-  LrFunctionContext.callWithContext("showFocusPointDialog", Debug.showErrors( function(context)
+  LrFunctionContext.callWithContext("showFocusPointDialog", function(context)
 
     local catalog = LrApplication.activeCatalog()
     local current
@@ -275,7 +270,7 @@ local function showFocusPoint()
         height = inputFieldHeight(),
         border_enabled = false, -- optionally suppress borders
         immediate = true,
-        validate = Debug.showErrors(function(view, text)
+        validate = function(view, text)
           --[[
             Use the validate() function to interpret user keystrokes as shortcuts
             BUT, attention: for each keystoke, validate() is called twice!!
@@ -427,7 +422,7 @@ local function showFocusPoint()
           end
           -- always return true; in case of false the entire text is displayed in red color if visible
           return true
-        end),
+        end,
       }
     end
 
@@ -716,7 +711,7 @@ local function showFocusPoint()
       -- Make the current photo the only selected one:
       -- otherwise potential flagging operations will apply to all selected photos
       catalog:setSelectedPhotos(targetPhoto, {})
-      Debug.callWithContext("innerContext", Debug.showErrors( function(dialogContext)
+      LrFunctionContext.callWithContext("innerContext", function(dialogContext)
         dialogScope = LrDialogs.showModalProgressDialog {
           title = "Loading Data",
           caption = "Calculating Focus Point",
@@ -745,7 +740,7 @@ local function showFocusPoint()
         else
           errorMsg = "Photo is not available. Make sure hard drives are attached and try again"
         end
-      end))
+      end)
       LrTasks.sleep(0.02) -- this actually closes the dialog. go figure.
 
       -- "Loading Data" dialog has been canceled
@@ -776,14 +771,6 @@ local function showFocusPoint()
 
         -- Open main window
         Log.logInfo("FocusPoint", "Present dialog and information")
-
-        -- Output profiling results, if profiling was active
-        if GlobalDefs.DEBUG then
-          local Profiler = require('Profiler')
-          if Profiler.ProfilerActive then
-            Log.logInfo("Profiling", Profiler.sortResults(Debug.profileResults ()))
-          end
-        end
 
         local f = LrView.osFactory()
         userResponse = LrDialogs.presentModalDialog {
@@ -828,7 +815,7 @@ local function showFocusPoint()
       LrTasks.yield()
     end
 
-  end))
+  end)
 end
 
 LrTasks.startAsyncTask( showFocusPoint )
