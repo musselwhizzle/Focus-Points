@@ -69,17 +69,14 @@ FocusPointPrefs.kbdInputRegular    = 2
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/tree/v3.2_pre?tab=readme-ov-file#focus-points--v32-prelease"
 FocusPointPrefs.latestReleaseURL   = "https://github.com/musselwhizzle/Focus-Points/releases/latest"
 
+FocusPointPrefs.masterVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/v3.2_pre/focuspoints.lrplugin/Version.txt"
 FocusPointPrefs.latestVersionFile  = "https://raw.githubusercontent.com/musselwhizzle/Focus-Points/master/focuspoints.lrplugin/Version.txt"
 
--- URL definitions
-FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/v3.2_pre/docs/Focus%20Points.md"
-FocusPointPrefs.urlUserManual      = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md"
-FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/v3.2_pre/docs/Troubleshooting_FAQ.md"
-FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
-FocusPointPrefs.urlkbdShortcuts    = "https://github.com/musselwhizzle/Focus-Points/blob/v3.2_pre/docs/Focus%20Points.md#keyboard-shortcuts"
-FocusPointPrefs.urlkbdShortcuts    = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Focus%20Points.md#keyboard-shortcuts"
-FocusPointPrefs.urlTroubleShooting = "https://github.com/musselwhizzle/Focus-Points/blob/master/docs/Troubleshooting_FAQ.md"
+-- URL definitions for accessing documents from the UI
+FocusPointPrefs.urlUserManual      = "https://musselwhizzle.github.io/Focus-Points/docs/Focus-Points.html"
+FocusPointPrefs.urlTroubleShooting = "https://musselwhizzle.github.io/Focus-Points/docs/Troubleshooting_FAQ.html"
+FocusPointPrefs.urlkbdShortcuts    = "https://musselwhizzle.github.io/Focus-Points/docs/Focus-Points.html#keyboard-shortcuts"
 FocusPointPrefs.urlKofi            = "https://ko-fi.com/focuspoints"
 
 -- Keyboard shortcut definitions
@@ -91,8 +88,13 @@ FocusPointPrefs.kbdShortcutsReject          = "x"
 FocusPointPrefs.kbdShortcutsPickNext        = "P"
 FocusPointPrefs.kbdShortcutsUnflagNext      = "U"
 FocusPointPrefs.kbdShortcutsRejectNext      = "X"
+FocusPointPrefs.kbdShortcutsToggleImageInfo = "iI"
+FocusPointPrefs.kbdShortcutsToggleShootInfo = "sS"
+FocusPointPrefs.kbdShortcutsToggleFocusInfo = "fF"
+FocusPointPrefs.kbdShortcutsToggleInfoView  = "vV"
 FocusPointPrefs.kbdShortcutsCheckLog        = "lL"
 FocusPointPrefs.kbdShortcutsTroubleShooting = "?hH"
+FocusPointPrefs.kbdShortcutsHelp            = "kK"
 FocusPointPrefs.kbdShortcutsUserManual      = "mM"
 FocusPointPrefs.kbdShortcutsClose           = "cC"
 
@@ -121,7 +123,6 @@ function FocusPointPrefs.InitializePrefs(prefs)
   if     prefs.taggingControls  == nil then prefs.taggingControls     = true     end
   if     prefs.keyboardLayout   == nil then prefs.keyboardLayout      = KeyboardLayout.autoDetectLayout end
   if not prefs.loggingLevel            then	prefs.loggingLevel        = "AUTO"   end
-  if not prefs.latestVersion           then	prefs.latestVersion       = _PLUGIN.version end
   if     prefs.checkForUpdates  == nil then	prefs.checkForUpdates     = true     end   -- here we need a nil pointer check!!
   if     prefs.keyboardInput    == nil then prefs.keyboardInput       = FocusPointPrefs.kbdInputRegular end
   -- get the latest plugin version for update checks
@@ -143,6 +144,13 @@ local function getWinScalingFactor()
 
   -- Query registry value by calling REG.EXE
   local rc = LrTasks.execute(cmd)
+
+  -- Avoid Windows process queue saturation
+  if WIN_ENV then
+      LrTasks.sleep(0.02)
+      LrTasks.yield()
+  end
+
   Log.logDebug("Utils", "Retrieving DPI scaling level from Windosws registry using REG.EXE")
   Log.logDebug("Utils", "REG command: " .. cmd .. ", rc=" .. rc)
 
@@ -234,14 +242,32 @@ end
   The result is stored in 'prefs.latestVersion' for use by update-related routines.
 ------------------------------------------------------------------------------]]
 function FocusPointPrefs.retrieveVersionOfLatestRelease()
-  local prefs = LrPrefs.prefsForPlugin( nil )
+
   -- Need to execute this as a collaborative task
-  LrTasks.startAsyncTask(function()
-    local latestVersionNumber = LrHttp.get(FocusPointPrefs.latestVersionFile)
-    prefs.dummy = latestVersionNumber
-    if latestVersionNumber then
-      prefs.latestVersion = string.match(latestVersionNumber, "v%d+%.%d+%.%d+%.%d+")
+  LrTasks.startAsyncTask( function()
+    local prefs = LrPrefs.prefsForPlugin( nil )
+    local body, headers
+
+    -- By default, if an error occurs, it is assumed that there is no update available
+    prefs.latestVersion = nil
+
+    -- Read the contents of the 'latest version' file
+    body, headers = LrHttp.get(FocusPointPrefs.latestVersionFile)
+    if headers and headers.status == 200 then
+      -- file found: parse contents
+      prefs.latestVersion = string.match(body, "v%d+%.%d+%.%d+%.%d+")
+    else
+      -- file not found: has the branch been removed?
+      if FocusPointPrefs.latestVersionFile ~= FocusPointPrefs.masterVersionFile then
+        -- Public version update for pre-release available!
+        body, headers = LrHttp.get(FocusPointPrefs.masterVersionFile)
+        if headers and headers.status == 200 then
+          -- file found: parse contents
+          prefs.latestVersion = string.match(body, "v%d+%.%d+%.%d+%.%d+")
+        end
+      end
     end
+    return
   end)
 end
 
