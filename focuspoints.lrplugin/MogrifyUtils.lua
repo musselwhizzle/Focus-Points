@@ -104,8 +104,16 @@ local function mogrifyExecute(photo, params, script)
   else
     cmdline = cmdline .. 'mogrify ' .. params
   end
+
   Log.logDebug("Mogrify", cmdline )
   local rc = LrTasks.execute( '\"' .. cmdline .. '\"' )
+
+  -- Avoid Windows process queue saturation
+  if WIN_ENV then
+      LrTasks.sleep(0.02)
+      LrTasks.yield()
+  end
+
   if rc ~= 0 then
     Log.logError("Mogrify", 'Error calling: ' .. cmdline .. ", return code " .. rc)
     LrErrors.throwUserError(string.format(
@@ -267,6 +275,8 @@ local function buildDrawParams(focuspointsTable)
         Log.logDebug("Mogrify", "Building command line: " .. '[' .. i .. '] ' .. para .. ' ' .. fpPoint.template.corner.fileTemplate)
         params = params .. para
       end
+      -- To prevent UI freeze and keep plugin responsive
+      LrTasks.yield()
     end
     return params
   else

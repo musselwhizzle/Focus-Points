@@ -27,6 +27,7 @@ local DefaultPointRenderer = {}
 -- Imported LR SDK namespaces
 local LrApplication    = import  'LrApplication'
 local LrPrefs          = import  'LrPrefs'
+local LrTasks          = import  'LrTasks'
 local LrView           = import  'LrView'
 
 -- Required Lua definitions
@@ -194,6 +195,7 @@ end
   Remove any remnants left over from processing the current photo
 ------------------------------------------------------------------------------]]
 function DefaultPointRenderer.cleanup()
+  LrTasks.yield()
   ExifUtils.cleanup()
   if WIN_ENV then
     MogrifyUtils.cleanup()
@@ -408,6 +410,8 @@ function prepareRendering(photo, photoDisplayWidth, photoDisplayHeight, metadata
           trX>photoDisplayWidth or brX >photoDisplayWidth or
           blY>photoDisplayHeight or brY>photoDisplayHeight
       end
+      -- To prevent UI freeze and keep plugin responsive
+      LrTasks.yield()
     end
   end
 
