@@ -58,6 +58,7 @@ FocusInfo.maxValueLen               = LrPrefs.prefsForPlugin(nil).truncateLimit
 
 -- Local variables -------------------------------------------------------------
 
+
 -- Data structure to handle display of the focus point display status
 
 -- Success and Warning codes
@@ -82,40 +83,40 @@ local status = {
     {  message = "Focus points outside cropped image area",
        color   = LrColor("orange"),
        tooltip = "Focus points detected but not all of them can be displayed in cropped image" ,
-       link    = "#Focus-points-outside-cropped-image-area" },
+       link    = "#focus-points-outside-cropped-image-area" },
     {  message = "No focus points recorded",
        color   = LrColor("orange"),
        tooltip = "Camera has not recorded information on points in focus." ,
-       link    = "#No-focus-points-recorded" },
+       link    = "#fo-focus-points-recorded" },
     {  message = "Focus point recorded in manual focus mode",
        color   = LrColor("orange"),
        tooltip = "The photo was taken in manual focus mode and focus point information was recorded in the metadata. " ..
                  "Attention: the displayed focus point may differ from the point in the image that is actually sharpest!",
-       link    = "#Focus-point-recorded-in-manual-focus-mode" },
+       link    = "#focus-point-recorded-in-manual-focus-mode" },
     {  message = "Manual focus, no AF points recorded",
        color   = LrColor("orange"),
        tooltip = "The photo was taken with manual focus (MF), there is no autofocus (AF) information in the metadata.",
-       link    = "#Manual-focus-no-AF-points-recorded" },
+       link    = "#manual-focus-no-af-points-recorded" },
     {  message = "Focus info missing from file",
        tooltip = "The photo lacks the metadata needed to process and visualize focus information." ,
        color   = LrColor("red"),
-       link    = "#Focus-info-missing-from-file" },
+       link    = "#focus-info-missing-from-file" },
     {  message = "Camera model not supported",
        color   = LrColor("red"),
        tooltip = "The photo was taken by a camera that the plugin cannot handle." ,
-       link    = "#Camera-model-not-supported" },
+       link    = "#camera-model-not-supported" },
     {  message = "Camera maker not supported",
        color   = LrColor("red"),
        tooltip = "The photo was taken with a camera from a manufacturer that the plugin cannot handle.",
-       link    = "#Camera-maker-not-supported" },
+       link    = "#camera-maker-not-supported" },
     {  message = "No camera-specific metadata found",
        color   = LrColor("red"),
        tooltip = "The photo lacks camera-specific metadata.",
-       link    = "#No-camera-specific-metadata-found" },
+       link    = "#no-camera-specific-metadata-found" },
     {  message = "Severe error encountered",
        color   = LrColor("red"),
        tooltip = "Something unexpected happened. Check log file." ,
-       link    = "#Severe-error-encountered" },
+       link    = "#severe-error-encountered" },
 }
 
 -- Keywords for retrieving generic items from Lightroom-stored metadata
@@ -544,6 +545,7 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
 
       f:column { fill = 1, spacing = 2,
           f:group_box { title = "Image Information", fill = 1, font = "<system/bold>",
+                        visible = LrView.bind {key = "imageInfoEnabled", object = props},
               f:column {fill = 1, spacing = 2,
                   addInfo("Filename"               , metaKeyFileName           , photo, props),
                   addInfo("Capture Date/Time"      , metaKeyDateTimeOriginal   , photo, props),
@@ -553,7 +555,8 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
               },
           },
           f:spacer { height = 20 },
-          f:group_box { title = "Shooting Information", fill = 1, font = "<system/bold>",
+          f:group_box { title = "Shooting Information", fill = 1, font = "<system/bold>", visible=false,
+                        visible = LrView.bind {key = "shootInfoEnabled", object = props},
               f:column {fill = 1, fill_vertical = 0, spacing = 2,
                   addInfo("Make"                   , metaKeyCameraMake         , photo, props),
                   addInfo("Model"                  , metaKeyCameraModel        , photo, props),
@@ -570,6 +573,7 @@ function FocusInfo.createInfoView(photo, props, metadata, funcGetImageInfo, func
           },
           f:spacer { height = 20 },
           f:group_box { title = "Focus Information", fill = 1, font = "<system/bold>",
+                        visible = LrView.bind {key = "focusInfoEnabled", object = props},
               makerFocusInfo
           },
       },
