@@ -19,11 +19,11 @@ This document summarizes the new features and changes in V3.2:
 
 Screenshot of user interface with new tagging controls, shortcut input field and "coffee" link :
 
-<img src="../screens/README%20V3.2%20UI.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="images/README%20V3.2%20UI.jpg" alt="Screenshot" style="width: 800px;"/>
 
 Screenshot of plugin settings page with new `User Interface` section:
 
-<img src="../screens/README V3.2%20Settings.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="images/README V3.2%20Settings.jpg" alt="Screenshot" style="width: 600px;"/>
 
 <br>
 
@@ -31,9 +31,9 @@ Screenshot of plugin settings page with new `User Interface` section:
 
 Users for whom focus point accuracy is critical when selecting shots now have the ability to flag, reject, rate or color images directly within the plugin. The user interface has been updated to include the relevant controls: 
 
-<img src="../screens/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/> Windows
+<img src="images/README TaggingControlsWIN.jpg" alt="Screenshot" style="width: 800px;"/> Windows
 
-<img src="../screens/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/> macOS
+<img src="images/README TaggingControlsMAC.jpg" alt="Screenshot" style="width: 800px;"/> macOS
 
 Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard-shortcuts) as in Lightroom. Pressing the Shift key during tagging moves the plugin to the next photo.
 
@@ -42,7 +42,7 @@ Tagging can be performed using the same logic and [keyboard shortcuts](#keyboard
 - Although the plugin allows you to set a photo's flag status, rating and color label, these settings are **not** reflected in the plugin's user interface. Any changes to the flag status, rating or color will be acknowledged immediately with a standard message in Lightroom Classic, and these changes will be reflected in the filmstrip for the selected photo. It is recommended that you adjust the sizes of the plugin window and Lightroom's filmstrip when using tagging, so that both are visible at the same time.
 
 - Use of `Shift` + `0`-`9` keyboard shortcuts require that the plugin is aware which international keyboard layout is currently used. This is necessary because the plugin cannot recognize key codes; it can only work with text input.<br>
-The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.<br><img src="../screens/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
+The keyboard layout can be configured in the `User Interface` section. The predefined options cover a large percentage of the available layouts, and more can be added on request. In this specific context, it is important to note that the term 'layout' refers only to the codes produced by the `0`–`9` keys in the top row, and not to the entire keyboard.<br><img src="images/README KeyboardLayoutSettings.jpg" alt="Screenshot" style="width: 600px;"/>
   
 - The LR SDK does not support clickable images, so all control elements must be text or text buttons. As the plugin UI displays all Unicode 'star symbol' characters as small, hardly recognizable stars, the rating controls are represented by numbers 1–5 instead.
 
@@ -68,7 +68,7 @@ V3.2 introduces a "Size of plugin window" option, that is valid for both macOS a
 
 In the Focus Point dialog, this setting corresponds to 80% (XXL) to 40% (S), in increments of 10%, of the size of the Lightroom application window used to display the photo. Please note that the text pane to the right of the photo and the bottom row of user controls are not included in this percentage.
 
-<img src="../screens/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="images/README WindowSize.jpg" alt="Screenshot" style="width: 600px;"/>
 
 In the Metadata Viewer, this setting determines the height or half the width of the dialog window.
 
@@ -88,11 +88,11 @@ n V3.1, the text input field for keyboard shortcuts was invisible. The user coul
 
 To make this procedure more transparent and intuitive, the text input field is now visible by default:
 
-<img src="../screens/README%20TextInputField.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="images/README%20TextInputField.jpg" alt="Screenshot" style="width: 600px;"/>
 
 Users who find the new control disturbing can customize its appearance in the plugin settings:
 
-<img src="../screens/README%20TextInputSetting.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="images/README%20TextInputSetting.jpg" alt="Screenshot" style="width: 600px;"/>
 
 - Invisible. This is self-explaining
 - Small. A narrow input field without labelling
@@ -144,11 +144,11 @@ For a few selected metadata items, if the character string exceeds a fixed inter
 
 There is a new setting in 'User Interface' that allows you to specify whether long names should be truncated in the display or shown in full in the tooltip. You can choose the truncation limit, which can be set between 10 and 100 characters.
 
-<img src="../screens/README%20Truncate%20Setting.jpg" alt="Screenshot" style="width: 600px;"/>
+<img src="images/README%20Truncate%20Setting.jpg" alt="Screenshot" style="width: 600px;"/>
 
 Enabling this setting makes the window content look much tidier:
 
-<img src="../screens/README%20Long%20Names.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="images/README%20Long%20Names.jpg" alt="Screenshot" style="width: 800px;"/>
 
 <br>
 
@@ -156,13 +156,13 @@ Enabling this setting makes the window content look much tidier:
 
 When running Lightroom with a non-English user interface, the 'Shooting Information' section shows a mix of English and UI language (here: German):
 
-<img src="../screens/README%20Unify%20Shooting%20Information%20Language%201.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="images/README%20Unify%20Shooting%20Information%20Language%201.jpg" alt="Screenshot" style="width: 800px;"/>
 
 The plugin user interface is designed in English. The metadata information retrieved by ExifTool is also in English. However, the metadata information stored in Lightroom, which is used to fill in the 'Image' and 'Shooting Information' fields, is in the same language as the Lightroom user interface. This results in a mixture of languages.
 
 To avoid this issue, the 'Shooting Information' items containing language-dependent text are retrieved from ExifTool rather than Lightroom in V3.2.
 
-<img src="../screens/README%20Unify%20Shooting%20Information%20Language%202.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="images/README%20Unify%20Shooting%20Information%20Language%202.jpg" alt="Screenshot" style="width: 800px;"/>
 
 <br>
 
@@ -173,10 +173,10 @@ Although focus points have been detected, they may be invisible or partially inv
 Note: This message is not triggered by face or subject detection frames, only focus points. 
 
 Cropped image (focus point outside):
-<img src="../screens/Troubleshooting 11.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 11.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 Original image with focus point:
-<img src="../screens/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
+<img src="images/Troubleshooting 12.jpg" alt="User Interface (Multi-image)" style="width: 800px;"/>
 
 <br>
 
@@ -193,7 +193,7 @@ This has been improved in V3.2:
 6. The heigth of the metadata window is given by the `Size of plugin window` setting S .. XXL
 7. The width of the metadata window is chosen so that the head line (filter entry fields, hint) fits in but is minimum 70% of the window height.
 
-<img src="../screens/README%20Metadata%20Window.jpg" alt="Screenshot" style="width: 800px;"/>
+<img src="images/README%20Metadata%20Window.jpg" alt="Screenshot" style="width: 800px;"/>
 
 <br>
 
